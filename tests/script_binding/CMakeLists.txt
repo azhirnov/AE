@@ -1,0 +1,13 @@
+cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
+
+if (${FG_ENABLE_TESTS} AND ${FG_ENABLE_ANGELSCRIPT})
+	file( GLOB_RECURSE SOURCES "*.*" )
+	if (DEFINED ANDROID)
+		add_library( "Tests.ScriptBinding" SHARED ${SOURCES} )
+	else()
+		add_executable( "Tests.ScriptBinding" ${SOURCES} )
+	endif()
+	source_group( TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} )
+	set_property( TARGET "Tests.ScriptBinding" PROPERTY FOLDER "Tests" )
+	target_link_libraries( "Tests.ScriptBinding" "ScriptBinding" )
+endif()

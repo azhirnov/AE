@@ -1,17 +1,23 @@
+cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
+
+set( CMAKE_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake" )
 
 if (${FG_ENABLE_SIMPLE_COMPILER_OPTIONS})
-	include( "../../cmake/compilers_minimal.cmake" )
+	include( "${CMAKE_FOLDER}/compilers_minimal.cmake" )
 else()
-	include( "../../cmake/compilers.cmake" )
+	include( "${CMAKE_FOLDER}/compilers.cmake" )
 endif()
 
-include( "../../cmake/compiler_tests.cmake" )
+include( "${CMAKE_FOLDER}/compiler_tests.cmake" )
+include( "${CMAKE_FOLDER}/ci_build.cmake" )
 
 file( GLOB_RECURSE SOURCES "*.*" )
-add_library( "ProjectTemplate" STATIC EXCLUDE_FROM_ALL ${SOURCES} )
+file( GLOB_RECURSE CMAKE_SOURCES "${CMAKE_FOLDER}/*.*" )
+
+add_library( "ProjectTemplate" STATIC EXCLUDE_FROM_ALL ${SOURCES} ${CMAKE_SOURCES} )
 set_property( TARGET "ProjectTemplate" PROPERTY FOLDER "Utils" )
 source_group( TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} )
-set_target_properties( "ProjectTemplate" PROPERTIES LINKER_LANGUAGE CXX )
+source_group( TREE "${CMAKE_FOLDER}/.." FILES ${CMAKE_SOURCES} )
 
 target_compile_definitions( "ProjectTemplate" PUBLIC ${FG_COMPILER_DEFINITIONS} )
 target_link_libraries( "ProjectTemplate" PUBLIC "${FG_LINK_LIBRARIES}" )
@@ -44,4 +50,7 @@ if (PROJECTS_SHARED_CXX_FLAGS_PROFILE)
 	target_compile_options( "ProjectTemplate" PUBLIC $<$<CONFIG:Profile>: ${PROJECTS_SHARED_CXX_FLAGS_PROFILE}> )
 endif()
 set_target_properties( "ProjectTemplate" PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
+if (FG_CI_BUILD)
+	target_compile_definitions( "ProjectTemplate" PUBLIC "FG_CI_BUILD" )
+endif()
 	
