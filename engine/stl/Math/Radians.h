@@ -172,27 +172,27 @@ namespace FGC
 =================================================
 	ASinH
 =================================================
-*
+*/
 	template <typename T>
-	ND_ inline Radians<T>  ASinH (const T& x)
+	ND_ inline RadiansTempl<T>  ASinH (const T& x)
 	{
 		STATIC_ASSERT( CompileTime::IsScalarOrEnum<T> );
 
-		return Radians<T>( SignOrZero( x ) * Ln( x + Sqrt( (x*x) + T(1) ) ) );
+		return RadiansTempl<T>( SignOrZero( x ) * Ln( x + Sqrt( (x*x) + T(1) ) ) );
 	}
 	
 /*
 =================================================
 	ACosH
 =================================================
-*
+*/
 	template <typename T>
-	ND_ inline Radians<T>  ACosH (const T& x)
+	ND_ inline RadiansTempl<T>  ACosH (const T& x)
 	{
 		STATIC_ASSERT( CompileTime::IsScalarOrEnum<T> );
 
 		ASSERT( x >= T(1) );
-		return Radians<T>{Ln( x + Sqrt( (x*x) - T(1) ) )};
+		return RadiansTempl<T>{Ln( x + Sqrt( (x*x) - T(1) ) )};
 	}
 	
 /*

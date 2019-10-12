@@ -81,6 +81,77 @@ namespace FGC
 
 	template <typename T>
 	static constexpr uint  VecSize = _fgc_hidden_::_VecSize<T>::value;
+	
+/*
+=================================================
+	operator !
+=================================================
+*/
+	template <typename T, uint I>
+	ND_ forceinline Vec<T,I>  operator ! (const Vec<T,I> &value)
+	{
+		Vec<T,I>	res;
+		for (uint i = 0; i < I; ++i) {
+			res[i] = !value[i];
+		}
+		return res;
+	}
+	
+/*
+=================================================
+	operator %
+=================================================
+*/
+	/*template <typename T, uint I>
+	ND_ forceinline EnableIf<IsFloatPoint<T>, Vec<T,I>>  operator % (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	{
+		return glm::mod( lhs, rhs );
+	}*/
+	
+	template <typename T, uint I>
+	ND_ forceinline EnableIf<IsFloatPoint<T>, Vec<T,I>&>  operator %= (Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	{
+		return (lhs = glm::mod( lhs, rhs ));
+	}
+/*
+=================================================
+	All
+=================================================
+*/
+	ND_ forceinline bool  All (const bool2 &v)
+	{
+		return v.x & v.y;
+	}
+
+	ND_ forceinline bool  All (const bool3 &v)
+	{
+		return v.x & v.y & v.z;
+	}
+
+	ND_ forceinline bool  All (const bool4 &v)
+	{
+		return v.x & v.y & v.z & v.w;
+	}
+	
+/*
+=================================================
+	Any
+=================================================
+*/
+	ND_ forceinline bool  Any (const bool2 &v)
+	{
+		return v.x | v.y;
+	}
+
+	ND_ forceinline bool  Any (const bool3 &v)
+	{
+		return v.x | v.y | v.z;
+	}
+
+	ND_ forceinline bool  Any (const bool4 &v)
+	{
+		return v.x | v.y | v.z | v.w;
+	}
 
 /*
 =================================================
@@ -135,6 +206,28 @@ namespace FGC
 	ND_ forceinline Vec<T,I>  Lerp (const Vec<T,I> &lhs, const Vec<T,I> &rhs, const T factor)
 	{
 		return glm::mix( lhs, rhs, factor );
+	}
+	
+/*
+=================================================
+	Dot
+=================================================
+*/
+	template <typename T, uint I>
+	ND_ forceinline T  Dot (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	{
+		return glm::dot( lhs, rhs );
+	}
+
+/*
+=================================================
+	Cross
+=================================================
+*/
+	template <typename T>
+	ND_ forceinline Vec<T,3>  Cross (const Vec<T,3> &lhs, const Vec<T,3> &rhs)
+	{
+		return glm::cross( lhs, rhs );
 	}
 
 /*

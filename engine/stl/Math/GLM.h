@@ -4,15 +4,22 @@
 
 #include "stl/Common.h"
 
-#define GLM_FORCE_RADIANS
+// for vulkan
 #define GLM_FORCE_LEFT_HANDED
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
+
+#define GLM_FORCE_RADIANS
 #define GLM_ENABLE_EXPERIMENTAL
 #define GLM_FORCE_CXX14
 //#define GLM_FORCE_EXPLICIT_CTOR
-//#define GLM_FORCE_XYZW_ONLY
-#define GLM_FORCE_SWIZZLE
+#define GLM_FORCE_XYZW_ONLY
+//#define GLM_FORCE_SWIZZLE
 #define GLM_FORCE_CTOR_INIT
+#define GLM_FORCE_INLINE
+
+#ifdef FG_RELEASE
+#	define GLM_FORCE_INTRINSICS
+#endif
 
 #ifdef COMPILER_MSVC
 #	pragma warning (push)

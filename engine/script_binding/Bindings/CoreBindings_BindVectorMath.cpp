@@ -10,51 +10,42 @@ namespace FGScript
 	template <typename T>
 	struct InitVecFields
 	{};
-
-/*
-=================================================
-	BaseVecCtors
-=================================================
-*/
-	template <typename T>
-	struct BaseVecCtors
-	{
-		static void Ctor1 (void *mem, typename T::value_type value)
-		{
-			new( mem ) T( value );
-		}
-			
-		static void Ctor2 (void *mem, Vec< typename T::value_type, 2 > value)
-		{
-			new( mem ) T( value );
-		}
-			
-		static void Ctor3 (void *mem, Vec< typename T::value_type, 3 > value)
-		{
-			new( mem ) T( value );
-		}
-			
-		static void Ctor4 (void *mem, Vec< typename T::value_type, 4 > value)
-		{
-			new( mem ) T( value );
-		}
-	};
-		
+	
 /*
 =================================================
 	InitVecFields (Vec2)
 =================================================
 */
 	template <typename T>
-	struct InitVecFields< Vec<T,2> > : BaseVecCtors< Vec<T,2> >
+	struct InitVecFields< Vec<T,2> >
 	{
-		using Base_t = BaseVecCtors< Vec<T,2> >;
+	private:
+		static void _Ctor1 (void *mem, const T value)
+		{
+			new( mem ) Vec<T,2>( value );
+		}
+			
+		static void _Ctor2 (void *mem, const Vec<T,2> &value)
+		{
+			new( mem ) Vec<T,2>( value );
+		}
+			
+		static void _Ctor3 (void *mem, const Vec<T,3> &value)
+		{
+			new( mem ) Vec<T,2>( value );
+		}
+			
+		static void _Ctor4 (void *mem, const Vec<T,4> &value)
+		{
+			new( mem ) Vec<T,2>( value );
+		}
 
-		static void CtorArg2 (void *mem, T x, T y)
+		static void _CtorArg2 (void *mem, T x, T y)
 		{
 			new( mem ) Vec<T,2>( x, y );
 		}
 			
+	public:
 		static void Init (ClassBinder< Vec<T,2> > &binder)
 		{
 			using Vec_t		= Vec< T, 2 >;
@@ -63,10 +54,10 @@ namespace FGScript
 			binder.AddProperty( &Vec_t::x, "x" );
 			binder.AddProperty( &Vec_t::y, "y" );
 
-			binder.AddConstructor( &Base_t::Ctor1 );
-			binder.AddConstructor( &Base_t::Ctor3 );
-			binder.AddConstructor( &Base_t::Ctor4 );
-			binder.AddConstructor( &CtorArg2 );
+			binder.AddConstructor( &_Ctor1 );
+			binder.AddConstructor( &_Ctor3 );
+			binder.AddConstructor( &_Ctor4 );
+			binder.AddConstructor( &_CtorArg2 );
 		}
 	};
 		
@@ -76,20 +67,40 @@ namespace FGScript
 =================================================
 */
 	template <typename T>
-	struct InitVecFields< Vec<T,3> > : BaseVecCtors< Vec<T,3> >
+	struct InitVecFields< Vec<T,3> >
 	{
-		using Base_t = BaseVecCtors< Vec<T,3> >;
+	private:
+		static void _Ctor1 (void *mem, const T value)
+		{
+			new( mem ) Vec<T,3>( value );
+		}
+			
+		static void _Ctor2 (void *mem, const Vec<T,2> &value)
+		{
+			new( mem ) Vec<T,3>( value.x, value.y, T(0) );
+		}
+			
+		static void _Ctor3 (void *mem, const Vec<T,3> &value)
+		{
+			new( mem ) Vec<T,3>( value );
+		}
+			
+		static void _Ctor4 (void *mem, const Vec<T,4> &value)
+		{
+			new( mem ) Vec<T,3>( value.x, value.y, value.z );
+		}
 
-		static void CtorArg2 (void *mem, const Vec<T,2> &xy, T z)
+		static void _CtorArg2 (void *mem, const Vec<T,2> &xy, T z)
 		{
 			new( mem ) Vec<T,3>( xy, z );
 		}
 
-		static void CtorArg3 (void *mem, T x, T y, T z)
+		static void _CtorArg3 (void *mem, T x, T y, T z)
 		{
 			new( mem ) Vec<T,3>( x, y, z );
 		}
 
+	public:
 		static void Init (ClassBinder< Vec<T,3> > &binder)
 		{
 			using Vec_t		= Vec< T, 3 >;
@@ -99,11 +110,11 @@ namespace FGScript
 			binder.AddProperty( &Vec_t::y, "y" );
 			binder.AddProperty( &Vec_t::z, "z" );
 
-			binder.AddConstructor( &Base_t::Ctor1 );
-			binder.AddConstructor( &Base_t::Ctor2 );
-			binder.AddConstructor( &Base_t::Ctor4 );
-			binder.AddConstructor( &CtorArg2 );
-			binder.AddConstructor( &CtorArg3 );
+			binder.AddConstructor( &_Ctor1 );
+			binder.AddConstructor( &_Ctor2 );
+			binder.AddConstructor( &_Ctor4 );
+			binder.AddConstructor( &_CtorArg2 );
+			binder.AddConstructor( &_CtorArg3 );
 		}
 	};
 		
@@ -113,25 +124,45 @@ namespace FGScript
 =================================================
 */
 	template <typename T>
-	struct InitVecFields< Vec<T,4> > : BaseVecCtors< Vec<T,4> >
+	struct InitVecFields< Vec<T,4> >
 	{
-		using Base_t = BaseVecCtors< Vec<T,4> >;
+	private:
+		static void _Ctor1 (void *mem, const T value)
+		{
+			new( mem ) Vec<T,4>( value );
+		}
+			
+		static void _Ctor2 (void *mem, const Vec<T,2> &value)
+		{
+			new( mem ) Vec<T,4>( value.x, value.y, T(0), T(0) );
+		}
+			
+		static void _Ctor3 (void *mem, const Vec<T,3> &value)
+		{
+			new( mem ) Vec<T,4>( value.x, value.y, value.z, T(0) );
+		}
+			
+		static void _Ctor4 (void *mem, const Vec<T,4> &value)
+		{
+			new( mem ) Vec<T,4>( value );
+		}
 
-		static void CtorArg2 (void *mem, const Vec<T,2> &xy, const Vec<T,2> &zw)
+		static void _CtorArg2 (void *mem, const Vec<T,2> &xy, const Vec<T,2> &zw)
 		{
 			new( mem ) Vec<T,4>( xy, zw );
 		}
 			
-		static void CtorArg3 (void *mem, const Vec<T,3> &xyz, T w)
+		static void _CtorArg3 (void *mem, const Vec<T,3> &xyz, T w)
 		{
 			new( mem ) Vec<T,4>( xyz, w );
 		}
 
-		static void CtorArg4 (void *mem, T x, T y, T z, T w)
+		static void _CtorArg4 (void *mem, T x, T y, T z, T w)
 		{
 			new( mem ) Vec<T,4>( x, y, z, w );
 		}
 
+	public:
 		static void Init (ClassBinder< Vec<T,4> > &binder)
 		{
 			using Vec_t		= Vec< T, 4 >;
@@ -142,12 +173,12 @@ namespace FGScript
 			binder.AddProperty( &Vec_t::z, "z" );
 			binder.AddProperty( &Vec_t::w, "w" );
 
-			binder.AddConstructor( &Base_t::Ctor1 );
-			binder.AddConstructor( &Base_t::Ctor2 );
-			binder.AddConstructor( &Base_t::Ctor3 );
-			binder.AddConstructor( &CtorArg2 );
-			binder.AddConstructor( &CtorArg3 );
-			binder.AddConstructor( &CtorArg4 );
+			binder.AddConstructor( &_Ctor1 );
+			binder.AddConstructor( &_Ctor2 );
+			binder.AddConstructor( &_Ctor3 );
+			binder.AddConstructor( &_CtorArg2 );
+			binder.AddConstructor( &_CtorArg3 );
+			binder.AddConstructor( &_CtorArg4 );
 		}
 	};
 	
@@ -158,6 +189,12 @@ namespace FGScript
 */
 	struct VecFunc
 	{
+		template <typename V, typename R>
+		using FloatOnly = EnableIf<IsFloatPoint<typename V::value_type>, R>;
+
+		template <typename V, typename R>
+		using ExceptFloat = EnableIf<not IsFloatPoint<typename V::value_type>, R>;
+
 		template <typename V>
 		static bool Equal (const V &lhs, const V &rhs) {
 			return FGC::All( lhs == rhs );
@@ -165,7 +202,7 @@ namespace FGScript
 
 		template <typename V>
 		static int Cmp (const V &lhs, const V &rhs) {
-			for ( size_t i = 0; i < V::size(); ++i ) {
+			for ( uint i = 0; i < VecSize<V>; ++i ) {
 				if ( lhs[i] > rhs[i] )	return +1;
 				if ( lhs[i] < rhs[i] )	return -1;
 			}
@@ -196,12 +233,18 @@ namespace FGScript
 		template <typename V> static V   Div_v_s (const V &lhs, typename V::value_type rhs)		{ return lhs / rhs; }
 		template <typename V> static V   Div_s_v (typename V::value_type lhs, const V &rhs)		{ return lhs / rhs; }
 		
-		template <typename V> static V&  Mod_a_v (V& lhs, const V &rhs)							{ return lhs %= rhs; }
-		template <typename V> static V&  Mod_a_s (V& lhs, typename V::value_type rhs)			{ return lhs %= rhs; }
-		template <typename V> static V   Mod_v_v (const V& lhs, const V &rhs)					{ return lhs % rhs; }
-		template <typename V> static V   Mod_v_s (const V &lhs, typename V::value_type rhs)		{ return lhs % rhs; }
-		template <typename V> static V   Mod_s_v (typename V::value_type lhs, const V &rhs)		{ return lhs % rhs; }
+		template <typename V> static FloatOnly<V, V&>  Mod_a_v (V& lhs, const V &rhs)						{ return lhs = glm::mod( lhs, rhs ); }
+		template <typename V> static FloatOnly<V, V&>  Mod_a_s (V& lhs, typename V::value_type rhs)			{ return lhs = glm::mod( lhs, rhs ); }
+		template <typename V> static FloatOnly<V, V>   Mod_v_v (const V& lhs, const V &rhs)					{ return glm::mod( lhs, rhs ); }
+		template <typename V> static FloatOnly<V, V>   Mod_v_s (const V &lhs, typename V::value_type rhs)	{ return glm::mod( lhs, rhs ); }
+		template <typename V> static FloatOnly<V, V>   Mod_s_v (typename V::value_type lhs, const V &rhs)	{ return glm::mod( V(lhs), rhs ); }
 		
+		template <typename V> static ExceptFloat<V, V&>  Mod_a_v (V& lhs, const V &rhs)						{ return lhs %= rhs; }
+		template <typename V> static ExceptFloat<V, V&>  Mod_a_s (V& lhs, typename V::value_type rhs)		{ return lhs %= rhs; }
+		template <typename V> static ExceptFloat<V, V>   Mod_v_v (const V& lhs, const V &rhs)				{ return lhs % rhs; }
+		template <typename V> static ExceptFloat<V, V>   Mod_v_s (const V &lhs, typename V::value_type rhs)	{ return lhs % rhs; }
+		template <typename V> static ExceptFloat<V, V>   Mod_s_v (typename V::value_type lhs, const V &rhs)	{ return lhs % rhs; }
+
 		template <typename V> static V&  And_a_v (V& lhs, const V &rhs)							{ return lhs &= rhs; }
 		template <typename V> static V&  And_a_s (V& lhs, typename V::value_type rhs)			{ return lhs &= rhs; }
 		template <typename V> static V   And_v_v (const V& lhs, const V &rhs)					{ return lhs & rhs; }
@@ -244,36 +287,6 @@ namespace FGScript
 		static V Cross (const V &x, const V &y) {
 			return FGC::Cross( x, y );
 		}
-
-		/*template <typename V>
-		static V Sin (const V &x) {
-			return GXMath::Sin( x.template To< RadiansVec<typename V::value_type, V::STATIC_COUNT> >() );
-		}
-		
-		template <typename V>
-		static V Cos (const V &x) {
-			return GXMath::Cos( x.template To< RadiansVec<typename V::value_type, V::STATIC_COUNT> >() );
-		}
-
-		template <typename V>
-		static V Tan (const V &x) {
-			return GXMath::Tan( x.template To< RadiansVec<typename V::value_type, V::STATIC_COUNT> >() );
-		}
-
-		template <typename V>
-		static V Square (const V &x) {
-			return GXMath::Square( x );
-		}
-
-		template <typename V>
-		static V Sqrt (const V &x) {
-			return GXMath::Sqrt( x );
-		}
-
-		template <typename V>
-		static V Lerp (const V &x, const V &y, typename V::value_type factor) {
-			return GXMath::Lerp( x, y, factor );
-		}*/
 	};
 
 /*
@@ -418,7 +431,7 @@ namespace FGScript
 			.Equals( &VecFunc::template Equal< Vec_t > )
 			.Compare( &VecFunc::template Cmp< Vec_t > );
 
-		if constexpr( Vec_t::size() == 3 ) {
+		if constexpr( VecSize<Vec_t> == 3 ) {
 			se->AddFunction( &VecFunc::template Cross<Vec_t>,	"Cross" );
 		}
 	}
