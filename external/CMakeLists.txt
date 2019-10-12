@@ -48,3 +48,4 @@ endif ()
 set( CMAKE_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/../cmake" )
 
 include( "${CMAKE_FOLDER}/download_angelscript.cmake" )
+include( "${CMAKE_FOLDER}/download_glm.cmake" )

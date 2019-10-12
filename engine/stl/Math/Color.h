@@ -258,7 +258,7 @@ namespace FGC
 		return result;
 	}
 
-	ND_ inline constexpr RGBA8u  Lerp (const RGBA8u &x, const RGBA8u &y, float factor)
+	ND_ inline RGBA8u  Lerp (const RGBA8u &x, const RGBA8u &y, float factor)
 	{
 		float4 v = Lerp( float4{float(x.r), float(x.g), float(x.b), float(x.a)},
 						 float4{float(y.r), float(y.g), float(y.b), float(y.a)}, factor );

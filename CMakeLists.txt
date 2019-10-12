@@ -32,8 +32,8 @@ set( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${MAIN_BINARY_DIR}" )
 
 add_subdirectory( "external" )
 add_subdirectory( "utils/project_template" )
-add_subdirectory( "stl" )
-add_subdirectory( "script_binding" )
+add_subdirectory( "engine/stl" )
+add_subdirectory( "engine/script_binding" )
 
 # tests
 add_subdirectory( "tests/stl" )
