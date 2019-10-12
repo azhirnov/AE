@@ -1,4 +1,4 @@
-# find or download AngelScript SDK
+# find or download AngelScript SDK (ZLib license)
 
 if (${FG_EXTERNALS_USE_PREBUILD} AND ${FG_ENABLE_ANGELSCRIPT})
 	add_library( "AngelScript-lib" INTERFACE )

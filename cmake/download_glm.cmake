@@ -1,4 +1,4 @@
-# find or download glm
+# find or download glm (MIT license)
 
 set( FG_EXTERNAL_GLM_PATH "" CACHE PATH "path to glm source" )
 mark_as_advanced( FG_EXTERNAL_GLM_PATH )

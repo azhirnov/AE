@@ -8,9 +8,11 @@
 #pragma once
 
 #include "stl/Containers/Ptr.h"
+#include "stl/Containers/ArrayView.h"
 #include "stl/Containers/StringView.h"
 #include "stl/Containers/NtStringView.h"
 #include "stl/CompileTime/TypeList.h"
+#include "stl/CompileTime/FunctionInfo.h"
 
 // AngelScript + Addons //
 #define AS_USE_NAMESPACE
@@ -22,6 +24,31 @@ namespace FGScript
 
 	using ScriptModulePtr = SharedPtr< class ScriptModule >;
 	using ScriptEnginePtr = SharedPtr< class ScriptEngine >;
+	
+	template <typename Fn>
+	class ScriptFn;
+
+	template <typename Fn>
+	using ScriptFnPtr = SharedPtr< ScriptFn<Fn> >;
+	
+
+
+	//
+	// Script Module
+	//
+
+	class ScriptModule final : public std::enable_shared_from_this<ScriptModule>
+	{
+		friend class ScriptEngine;
+
+	private:
+		AngelScript::asIScriptModule*	_module;
+
+	private:
+		explicit ScriptModule (AngelScript::asIScriptModule* mod);
+	public:
+		~ScriptModule ();
+	};
 
 
 
@@ -33,29 +60,31 @@ namespace FGScript
 	{
 	// types
 	public:
-		class ScriptSharedObj : public std::enable_shared_from_this<ScriptSharedObj>
-		{};
+		struct ModuleSource
+		{
+			String	name;
+			String	script;
 
-		using ScriptSharedObjPtr = SharedPtr< ScriptSharedObj >;
+			ModuleSource (StringView name, StringView script) : name{name}, script{script} {}
+			ModuleSource (String&& name, String&& script) : name{std::move(name)}, script{std::move(script)} {}
+		};
 
 
 	// variables
 	private:
 		Ptr< AngelScript::asIScriptEngine >		_engine;
-
-		ScriptModulePtr							_defModule;
-
-		HashSet< ScriptSharedObjPtr >			_objects;
+		size_t									_moduleIndex	= 0;
 
 
 	// methods
-	private:
-		ScriptEngine (const ScriptEngine &) {}
-		void operator = (const ScriptEngine &) {}
-
 	public:
 		ScriptEngine ();
 		~ScriptEngine ();
+		
+		ScriptEngine (const ScriptEngine &) = delete;
+		ScriptEngine (ScriptEngine &&) = delete;
+		ScriptEngine& operator = (const ScriptEngine &) = delete;
+		ScriptEngine& operator = (ScriptEngine &&) = delete;
 
 		ND_ AngelScript::asIScriptEngine *			Get ()					{ return _engine.operator->(); }
 		ND_ AngelScript::asIScriptEngine const *	Get ()	const			{ return _engine.operator->(); }
@@ -65,6 +94,11 @@ namespace FGScript
 
 		bool Create ();
 		bool Create (AngelScript::asIScriptEngine *se);
+
+		ND_ ScriptModulePtr  CreateModule (ArrayView<ModuleSource> src);
+		
+		template <typename Fn>
+		ND_ ScriptFnPtr<Fn>  CreateScript (StringView entry, const ScriptModulePtr &module);
 
 		template <typename T>
 		void AddFunction (T func, StringView name);
@@ -81,16 +115,11 @@ namespace FGScript
 		void SetNamespace (NtStringView name);
 		void SetDefaultNamespace ();
 
-		void AddSharedObject (const ScriptSharedObjPtr &obj);
-		
-		template <typename Ret, typename ...Args>
-		bool Run (StringView script, StringView entry, OUT Ret &result, Args ...args);
-		bool Run (StringView script, StringView entry);
-
 		ND_ static bool _CheckError (int err, StringView asFunc, StringView func, StringView file, int line);
 
-
 	private:
+		bool _CreateContext (const String &signature, const ScriptModulePtr &module, AngelScript::asIScriptContext* &ctx);
+
 		static void _MessageCallback (const AngelScript::asSMessageInfo *msg, void *param);
 	};
 	

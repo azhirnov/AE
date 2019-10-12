@@ -4,7 +4,6 @@
 
 #include "script_binding/Impl/ScriptEngine.h"
 #include "script_binding/Impl/ScriptTypes.h"
-#include "script_binding/Impl/FunctionInfo.h"
 
 namespace FGScript
 {
@@ -194,7 +193,7 @@ namespace _fgscript_hidden_ {
 	template <typename Func>
 	inline constexpr bool IsGlobal ()
 	{
-		return IsSameTypes< typename _fgscript_hidden_::FunctionInfo<Func>::clazz, void >;
+		return IsSameTypes< typename FunctionInfo<Func>::clazz, void >;
 	}
 }	// _fgscript_hidden_
 
@@ -241,8 +240,8 @@ namespace _fgscript_hidden_ {
 		static String Desc (StringView name)
 		{
 			String signature;
-			ScriptTypeInfo< TOut >::Name( OUT signature );		signature << " " << name << "(";
-			ScriptTypeInfo< TIn >::ArgName( OUT signature );	signature << ") const";
+			ScriptTypeInfo< TOut >::Name( OUT signature );		((signature += " ") += name) += "(";
+			ScriptTypeInfo< TIn >::ArgName( OUT signature );	signature += ") const";
 			return signature;
 		}
 	};
@@ -328,7 +327,7 @@ namespace _fgscript_hidden_ {
 		if ( create != null )
 		{
 			AS_CALL_R( GetASEngine()->RegisterObjectBehaviour( _name.c_str(), asBEHAVE_FACTORY,
-														(String(_name) << "@ new_" << _name << "()").c_str(),
+														(String(_name) + "@ new_" + _name + "()").c_str(),
 														asFUNCTION( create ),	asCALL_CDECL ));
 		}
 		/*
@@ -367,7 +366,7 @@ namespace _fgscript_hidden_ {
 		if ( EnumEq( flags, asOBJ_APP_CLASS_COPY_CONSTRUCTOR ) )
 		{
 			AS_CALL_R( GetASEngine()->RegisterObjectBehaviour( _name.c_str(), asBEHAVE_CONSTRUCT,
-											(String("void f(const ") << _name << " &in)").c_str(),
+											(String("void f(const ") + _name + " &in)").c_str(),
 											asFUNCTION( &AngelScriptHelper::CopyConstructor<T> ), asCALL_GENERIC ));
 		}
 
@@ -375,7 +374,7 @@ namespace _fgscript_hidden_ {
 		if ( EnumEq( flags, asOBJ_APP_CLASS_ASSIGNMENT ) )
 		{
 			AS_CALL_R( GetASEngine()->RegisterObjectMethod( _name.c_str(),
-											(String(_name) << " & opAssign(const " << _name << " &in)").c_str(),
+											(String(_name) + " & opAssign(const " + _name + " &in)").c_str(),
 											asFUNCTION( &AngelScriptHelper::CopyAssign<T> ), asCALL_GENERIC ));
 		}
 		return true;
@@ -413,7 +412,7 @@ namespace _fgscript_hidden_ {
 	{
 		String	signature;
 		ScriptTypeInfo<B>::Name( OUT signature );
-		signature << ' ' << name;
+		(signature += ' ') += name;
 
 		AS_CALL_R( GetASEngine()->RegisterObjectProperty( _name.c_str(), signature.c_str(), int(OffsetOf( value )) ));
 		return true;
@@ -430,7 +429,7 @@ namespace _fgscript_hidden_ {
 	{
 		String	signature;
 		ScriptTypeInfo<B>::Name( OUT signature );
-		signature << ' ' << name;
+		(signature += ' ') += name;
 
 		const isize	offset = isize(&value) - isize(&self);
 		CHECK_ERR( offset >= 0 and offset < isize(sizeof(T) - sizeof(B)) );
@@ -492,7 +491,7 @@ namespace _fgscript_hidden_ {
 	{
 		using namespace AngelScript;
 		
-		using FuncInfo	= _fgscript_hidden_::FunctionInfo<Func>;
+		using FuncInfo	= FunctionInfo<Func>;
 		using FrontArg	= typename FuncInfo::args::Front::type;
 
 		STATIC_ASSERT( _IsSame< FrontArg >::value );
@@ -502,7 +501,7 @@ namespace _fgscript_hidden_ {
 
 		if constexpr( IsConst< FrontArg > or IsConst<std::remove_all_extents_t< FrontArg >> )
 		{
-			signature << " const";
+			signature += " const";
 		}
 
 		AS_CALL_R( GetASEngine()->RegisterObjectMethod( _name.c_str(), signature.c_str(), asFUNCTION( *funcPtr ), asCALL_CDECL_OBJFIRST ));
@@ -520,7 +519,7 @@ namespace _fgscript_hidden_ {
 	{
 		using namespace AngelScript;
 		
-		using FuncInfo	= _fgscript_hidden_::FunctionInfo<Func>;
+		using FuncInfo	= FunctionInfo<Func>;
 		using BackArg	= typename FuncInfo::args::Get< FuncInfo::args::Count-1 >;
 
 		STATIC_ASSERT( _IsSame< BackArg >::value );
@@ -530,7 +529,7 @@ namespace _fgscript_hidden_ {
 		
 		if constexpr( IsConst< BackArg > or IsConst<std::remove_all_extents_t< BackArg >> )
 		{
-			signature << " const";
+			signature += " const";
 		}
 
 		AS_CALL_R( GetASEngine()->RegisterObjectMethod( _name.c_str(), signature.c_str(), asFUNCTION( *funcPtr ), asCALL_CDECL_OBJLAST ));
@@ -729,7 +728,7 @@ namespace _fgscript_hidden_ {
 	template <typename T> template <typename Func>
 	inline typename ClassBinder<T>::OperatorBinder&  ClassBinder<T>::OperatorBinder::Equals (Func func)
 	{
-		using FuncInfo = _fgscript_hidden_::FunctionInfo<Func>;
+		using FuncInfo = FunctionInfo<Func>;
 
 		STATIC_ASSERT( IsSameTypes< typename FuncInfo::result, bool > );
 		
@@ -755,7 +754,7 @@ namespace _fgscript_hidden_ {
 	template <typename T> template <typename Func>
 	inline typename ClassBinder<T>::OperatorBinder&  ClassBinder<T>::OperatorBinder::Compare (Func func)
 	{
-		using FuncInfo = _fgscript_hidden_::FunctionInfo<Func>;
+		using FuncInfo = FunctionInfo<Func>;
 
 		STATIC_ASSERT( IsSameTypes< typename FuncInfo::result, int > );
 		STATIC_ASSERT( FuncInfo::args::Count == 2 );

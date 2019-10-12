@@ -1,12 +1,36 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "script_binding/Impl/ScriptEngine.h"
-#include "script_binding/Impl/ScriptModule.h"
 #include "stl/Algorithms/StringUtils.h"
 
 namespace FGScript
 {
 	
+/*
+=================================================
+	constructor
+=================================================
+*/
+	ScriptModule::ScriptModule (AngelScript::asIScriptModule* mod) :
+		_module{ mod }
+	{
+		ASSERT( _module );
+	}
+	
+/*
+=================================================
+	destructor
+=================================================
+*/
+	ScriptModule::~ScriptModule ()
+	{
+		if ( _module ) {
+			_module->Discard();
+		}
+	}
+//-----------------------------------------------------------------------------
+
+
 /*
 =================================================
 	constructor
@@ -23,10 +47,6 @@ namespace FGScript
 */
 	ScriptEngine::~ScriptEngine ()
 	{
-		_defModule = null;
-
-		_objects.clear();
-
 		if ( _engine ) {
 			_engine->ShutDownAndRelease();
 		}
@@ -40,15 +60,11 @@ namespace FGScript
 	bool ScriptEngine::Create ()
 	{
 		CHECK_ERR( not _engine );
-		CHECK_ERR( not _defModule );
 
 		using namespace AngelScript;
 
 		_engine = asCreateScriptEngine( ANGELSCRIPT_VERSION );
 		_engine->SetMessageCallback( asFUNCTION( _MessageCallback ), 0, asCALL_CDECL );
-
-		_defModule = MakeShared<ScriptModule>( shared_from_this() );
-		CHECK_ERR( _defModule->Create( "def" ));
 
 		return true;
 	}
@@ -61,18 +77,60 @@ namespace FGScript
 	bool ScriptEngine::Create (AngelScript::asIScriptEngine *se)
 	{
 		CHECK_ERR( not _engine );
-		CHECK_ERR( not _defModule );
 		CHECK_ERR( se != null );
 
 		_engine = se;
 		_engine->AddRef();
 		
-		_defModule = MakeShared<ScriptModule>( shared_from_this() );
-		CHECK_ERR( _defModule->Create( "def" ));
-
 		return true;
 	}
 	
+/*
+=================================================
+	CreateModule
+=================================================
+*/
+	ScriptModulePtr  ScriptEngine::CreateModule (ArrayView<ModuleSource> sources)
+	{
+		using namespace AngelScript;
+		using ModulePtr = std::unique_ptr<asIScriptModule, void (*)(asIScriptModule*)>;
+
+		const String	name = "module_" + ToString(++_moduleIndex);
+
+		ASSERT( not _engine->GetModule( name.c_str(), asGM_ONLY_IF_EXISTS ));
+
+		ModulePtr	module{
+			_engine->GetModule( name.c_str(), asGM_ALWAYS_CREATE ),
+			[](asIScriptModule* m) { m->Discard(); }
+		};
+
+		for (auto& src : sources) {
+			AS_CALL_R( module->AddScriptSection( src.name.c_str(), src.script.data(), src.script.length() ));
+		}
+		AS_CALL_R( module->Build() );
+
+		return ScriptModulePtr{ new ScriptModule{ module.release() }};
+	}
+	
+/*
+=================================================
+	_CreateContext
+=================================================
+*/
+	bool  ScriptEngine::_CreateContext (const String &signature, const ScriptModulePtr &module, AngelScript::asIScriptContext* &ctx)
+	{
+		using namespace AngelScript;
+		
+		ctx = _engine->CreateContext();
+		CHECK_ERR( ctx );
+
+		asIScriptFunction* func = module->_module->GetFunctionByDecl( signature.c_str() );
+		CHECK_ERR( func );
+
+		AS_CALL_R( ctx->Prepare( func ));
+		return true;
+	}
+
 /*
 =================================================
 	SetNamespace
@@ -91,16 +149,6 @@ namespace FGScript
 	void ScriptEngine::SetDefaultNamespace ()
 	{
 		SetNamespace( "" );
-	}
-	
-/*
-=================================================
-	AddSharedObject
-=================================================
-*/
-	void ScriptEngine::AddSharedObject (const ScriptSharedObjPtr &obj)
-	{
-		_objects.insert( obj );
 	}
 	
 /*

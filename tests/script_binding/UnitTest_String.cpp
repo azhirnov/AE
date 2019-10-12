@@ -4,7 +4,7 @@
 #include "UnitTest_Common.h"
 
 
-static void ScriptString_Test1 (ScriptEngine &se)
+static void ScriptString_Test1 (const ScriptEnginePtr &se)
 {
 	const char	script[] = R"#(
 		int main () {
@@ -15,12 +15,12 @@ static void ScriptString_Test1 (ScriptEngine &se)
 	)#";
 
 	int	res = 0;
-	TEST( se.Run( script, "main", OUT res ));
+	TEST( Run< int() >( se, script, "main", OUT res ));
 	TEST( res == 8 );
 }
 
 
-static void ScriptString_Test2 (ScriptEngine &se)
+static void ScriptString_Test2 (const ScriptEnginePtr &se)
 {
 	const char	script[] = R"#(
 		int main () {
@@ -32,12 +32,12 @@ static void ScriptString_Test2 (ScriptEngine &se)
 	)#";
 
 	int	res = 0;
-	TEST( se.Run( script, "main", OUT res ));
+	TEST( Run< int() >( se, script, "main", OUT res ));
 	TEST( res == 12 );
 }
 
 
-static void ScriptString_Test3 (ScriptEngine &se)
+static void ScriptString_Test3 (const ScriptEnginePtr &se)
 {
 	const char	script[] = R"#(
 		int main () {
@@ -49,12 +49,12 @@ static void ScriptString_Test3 (ScriptEngine &se)
 	)#";
 
 	int	res = 0;
-	TEST( se.Run( script, "main", OUT res ));
+	TEST( Run< int() >( se, script, "main", OUT res ));
 	TEST( res == 8 );
 }
 
 
-static void ScriptString_Test4 (ScriptEngine &se)
+static void ScriptString_Test4 (const ScriptEnginePtr &se)
 {
 	const char	script[] = R"#(
 		int main () {
@@ -66,12 +66,12 @@ static void ScriptString_Test4 (ScriptEngine &se)
 	)#";
 
 	int	res = 0;
-	TEST( se.Run( script, "main", OUT res ));
+	TEST( Run< int() >( se, script, "main", OUT res ));
 	TEST( res == 1 );
 }
 
 
-static void ScriptString_Test5 (ScriptEngine &se)
+static void ScriptString_Test5 (const ScriptEnginePtr &se)
 {
 	const char	script[] = R"#(
 		int main (string str) {
@@ -83,12 +83,12 @@ static void ScriptString_Test5 (ScriptEngine &se)
 
 	String	arg = "a";
 	int		res = 0;
-	TEST( se.Run( script, "main", OUT res, arg ));
+	TEST( Run< int(String) >( se, script, "main", OUT res, arg ));
 	TEST( res == 1 );
 }
 
 
-static void ScriptString_Test6 (ScriptEngine &se)
+static void ScriptString_Test6 (const ScriptEnginePtr &se)
 {
 	const char	script[] = R"#(
 		string main () {
@@ -98,7 +98,7 @@ static void ScriptString_Test6 (ScriptEngine &se)
 	)#";
 
 	String	res;
-	TEST( se.Run( script, "main", OUT res ));
+	TEST( Run< String() >( se, script, "main", OUT res ));
 	TEST( res == "a0b1c2" );
 }
 
@@ -112,12 +112,12 @@ extern void UnitTest_String ()
 	CoreBindings::BindString( se );
 	CoreBindings::BindLog( se );
 
-	ScriptString_Test1( *se );
-	ScriptString_Test2( *se );
-	ScriptString_Test3( *se );
-	ScriptString_Test4( *se );
-	ScriptString_Test5( *se );
-	ScriptString_Test6( *se );
+	ScriptString_Test1( se );
+	ScriptString_Test2( se );
+	ScriptString_Test3( se );
+	ScriptString_Test4( se );
+	ScriptString_Test5( se );
+	ScriptString_Test6( se );
 
 	FG_LOGI( "UnitTest_String - passed" );
 }

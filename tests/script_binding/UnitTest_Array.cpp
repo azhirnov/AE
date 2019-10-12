@@ -4,7 +4,7 @@
 #include "UnitTest_Common.h"
 
 
-static void ScriptArray_Test1 (ScriptEngine &se)
+static void ScriptArray_Test1 (const ScriptEnginePtr &se)
 {
 	const char	script[] = R"#(
 		int main () {
@@ -18,7 +18,7 @@ static void ScriptArray_Test1 (ScriptEngine &se)
 	)#";
 
 	int	res = 0;
-	TEST( se.Run( script, "main", OUT res ));
+	TEST( Run< int() >( se, script, "main", OUT res ));
 	TEST( res == 3 );
 }
 
@@ -30,7 +30,7 @@ extern void UnitTest_Array ()
 
 	CoreBindings::BindArray( se );
 
-	ScriptArray_Test1( *se );
+	ScriptArray_Test1( se );
 
 	FG_LOGI( "UnitTest_Array - passed" );
 }

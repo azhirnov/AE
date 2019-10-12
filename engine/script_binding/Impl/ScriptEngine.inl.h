@@ -14,7 +14,7 @@ namespace FGScript
 =================================================
 */
 	template <typename T>
-	inline void ScriptEngine::AddFunction (T func, StringView name)
+	inline void  ScriptEngine::AddFunction (T func, StringView name)
 	{
 		using namespace AngelScript;
 
@@ -30,7 +30,7 @@ namespace FGScript
 =================================================
 */
 	template <typename T>
-	inline void ScriptEngine::AddProperty (INOUT T &var, StringView name)
+	inline void  ScriptEngine::AddProperty (INOUT T &var, StringView name)
 	{
 		String	signature;
 		ScriptTypeInfo<T>::Name( OUT signature );
@@ -45,13 +45,34 @@ namespace FGScript
 =================================================
 */
 	template <typename T>
-	inline void ScriptEngine::AddConstProperty (const T &var, StringView name)
+	inline void  ScriptEngine::AddConstProperty (const T &var, StringView name)
 	{
 		String	signature( "const " );
 		ScriptTypeInfo<T>::Name( OUT signature );
 		signature << ' ' << name;
 
 		AS_CALL( _engine->RegisterGlobalProperty( signature.c_str(), Cast<void *>(const_cast<T*>(&var)) ) );
+	}
+	
+/*
+=================================================
+	CreateScript
+=================================================
+*/
+	template <typename Fn>
+	inline ScriptFnPtr<Fn>  ScriptEngine::CreateScript (StringView entry, const ScriptModulePtr &module)
+	{
+		String	signature;
+		GlobalFunction<Fn>::GetDescriptor( OUT signature, entry );
+
+		AngelScript::asIScriptContext*	ctx = null;
+		if ( not _CreateContext( signature, module, ctx ) )
+		{
+			if ( ctx )
+				ctx->Release();
+		}
+
+		return ScriptFnPtr<Fn>{ new ScriptFn<Fn>{ module, ctx }};
 	}
 
 }	// FGScript

@@ -2,7 +2,6 @@
 
 #include "script_binding/Impl/ClassBinder.h"
 #include "script_binding/Impl/EnumBinder.h"
-#include "script_binding/Impl/ScriptModule.h"
 #include "UnitTest_Common.h"
 
 
@@ -38,7 +37,7 @@ static void ScriptClass_Test1 (const ScriptEnginePtr &se)
 	)#";
 
 	int	res = 0;
-	TEST( se->Run( script, "main", OUT res, 1 ));
+	TEST( Run< int (int) >( se, script, "main", OUT res, 1 ));
 	TEST( res == 3+1 );
 }
 //-----------------------------------------------------------------------------
@@ -83,7 +82,7 @@ static void ScriptClass_Test2 (const ScriptEnginePtr &se)
 	)#";
 
 	int	res = 0;
-	TEST( se->Run( script, "main", OUT res, 2 ));
+	TEST( Run< int (int) >( se, script, "main", OUT res, 2 ));
 	TEST( res == 4+2 );
 }
 //-----------------------------------------------------------------------------
@@ -119,7 +118,7 @@ static void ScriptClass_Test3 (const ScriptEnginePtr &se)
 	)#";
 	
 	int	res = 0;
-	TEST( se->Run( script, "main", OUT res ));
+	TEST( Run< int () >( se, script, "main", OUT res ));
 	TEST( res == 3 );
 }
 //-----------------------------------------------------------------------------
@@ -139,11 +138,8 @@ public:
 			}
 		)#";
 
-		ScriptModulePtr	mod = MakeShared<ScriptModule>( engine );
-		TEST( mod->Create( "def1" ));
-
 		int	res = 0;
-		TEST( mod->Run( script, "main", OUT res, value ));
+		TEST( ::Run< int (int) >( engine, script, "main", OUT res, value ));
 
 		return res;
 	}
@@ -170,7 +166,7 @@ static void ScriptClass_Test4 (const ScriptEnginePtr &se)
 
 
 	int	res = 0;
-	TEST( se->Run( script, "main", OUT res ));
+	TEST( Run< int() >( se, script, "main", OUT res ));
 	TEST( res == 11 );
 }
 //-----------------------------------------------------------------------------
@@ -207,7 +203,7 @@ static void ScriptClass_Test5 (const ScriptEnginePtr &se)
 
 	Test5_CL	arg{ 11 };
 	int			res = 0;
-	TEST( se->Run( script, "main", OUT res, &arg ));
+	TEST( Run< int(Test5_CL*) >( se, script, "main", OUT res, &arg ));
 	TEST( res == 11+22 );
 	TEST( arg.__Counter() == 1 );
 }
@@ -243,7 +239,7 @@ static void ScriptClass_Test6 (const ScriptEnginePtr &se)
 	)#";
 
 	Test6_CL*	res = null;
-	TEST( se->Run( script, "main", OUT res ));
+	TEST( Run< Test6_CL*() >( se, script, "main", OUT res ));
 	TEST( res );
 	TEST( res->__Counter() == 1 );
 	TEST( res->i == 11 );
@@ -288,7 +284,7 @@ static void ScriptClass_Test7 (const ScriptEnginePtr &se)
 
 	Test7_Value	val{3};
 	int			res = 0;
-	TEST( se->Run( script, "main", OUT res, &val ));
+	TEST( Run< int (Test7_Value*) >( se, script, "main", OUT res, &val ));
 	TEST( res == 3+5 );
 }
 //-----------------------------------------------------------------------------
@@ -328,7 +324,7 @@ static void ScriptClass_Test8 (const ScriptEnginePtr &se)
 	Test8_Ptr	arg{ new Test8_CL(), false };
 	Test8_Ptr	res;
 
-	TEST( se->Run( script, "main", OUT res, arg ));
+	TEST( Run< Test8_Ptr (Test8_Ptr) >( se, script, "main", OUT res, arg ));
 	TEST( res );
 	TEST( arg->__Counter() == 1 );
 	TEST( arg->i == 11 );

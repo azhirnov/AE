@@ -396,6 +396,10 @@ namespace FGScript
 			}
 		};
 			
+		template <typename Ret, typename ...Types>
+		struct GlobalFunction < Ret (Types...) > : GlobalFunction< Ret (FG_CDECL *) (Types...) >
+		{};
+
 		template <typename C, typename Ret, typename ...Types>
 		struct MemberFunction < Ret (FG_THISCALL C:: *) (Types...) >
 		{

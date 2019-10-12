@@ -2,9 +2,7 @@
 
 #pragma once
 
-#include "script_binding/Impl/ScriptEngine.h"
-#include "script_binding/Impl/ScriptModule.h"
-#include "script_binding/Impl/ScriptTypes.h"
+#include "script_binding/Impl/ScriptEngine.inl.h"
 
 #include "stl/math/Vec.h"
 #include "stl/math/Color.h"

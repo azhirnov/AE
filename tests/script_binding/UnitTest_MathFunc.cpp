@@ -4,10 +4,10 @@
 #include "UnitTest_Common.h"
 
 
-static void ScriptMath_Test1 (ScriptEngine &se)
+static void ScriptMath_Test1 (const ScriptEnginePtr &se)
 {
 	int script_res;
-	bool res = se.Run( R"#(
+	bool res = Run< int() >( se, R"#(
 		int main() {
 			return Max( 2, -4 );
 		})#", "main", OUT script_res );
@@ -16,10 +16,10 @@ static void ScriptMath_Test1 (ScriptEngine &se)
 }
 
 
-static void ScriptMath_Test2 (ScriptEngine &se)
+static void ScriptMath_Test2 (const ScriptEnginePtr &se)
 {
 	int script_res;
-	bool res = se.Run( R"#(
+	bool res = Run< int() >( se, R"#(
 		int main() {
 			uint2 a( 1, 2 );
 			uint2 b = a + 4;
@@ -39,8 +39,8 @@ extern void UnitTest_MathFunc ()
 	CoreBindings::BindScalarMath( se );
 	CoreBindings::BindVectorMath( se );
 
-	ScriptMath_Test1( *se );
-	ScriptMath_Test2( *se );
+	ScriptMath_Test1( se );
+	ScriptMath_Test2( se );
 
 	FG_LOGI( "UnitTest_MathFunc - passed" );
 }
