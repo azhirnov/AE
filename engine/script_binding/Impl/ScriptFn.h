@@ -5,7 +5,6 @@
 #include "script_binding/Impl/ScriptEngine.h"
 #include "script_binding/Impl/ScriptTypes.h"
 #include "stl/Algorithms/StringUtils.h"
-#include "stl/Containers/Optional.h"
 
 namespace AE::Script
 {

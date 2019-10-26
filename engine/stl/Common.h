@@ -19,6 +19,8 @@
 #include <cmath>
 #include <malloc.h>
 #include <atomic>
+#include <optional>
+#include <string_view>
 
 #include "stl/Log/Log.h"
 #include "stl/Algorithms/Hash.h"
@@ -44,8 +46,13 @@ namespace AE::STL
 	template <typename T>	using Deque			= std::deque< T >;
 
 	template <size_t N>		using BitSet		= std::bitset< N >;
+	
+	template <typename T>	using Optional		= std::optional< T >;
 
 	template <typename...T>	using Tuple			= std::tuple< T... >;
+	
+							using StringView		= std::string_view;
+	template <typename T>	using BasicStringView	= std::basic_string_view<T>;
 
 
 	template <typename T,
