@@ -4,7 +4,7 @@
 
 #include "stl/Math/Vec.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -456,28 +456,28 @@ namespace FGC
 #		undef DEF_COLOR
 	};
 
-}	// FGC
+}	// AE::STL
 
 
 namespace std
 {
 	template <typename T>
-	struct hash< FGC::RGBAColor<T> >
+	struct hash< AE::STL::RGBAColor<T> >
 	{
-		ND_ size_t  operator () (const FGC::RGBAColor<T> &value) const
+		ND_ size_t  operator () (const AE::STL::RGBAColor<T> &value) const
 		{
-			return	size_t(	FGC::HashOf( value.r ) + FGC::HashOf( value.g ) +
-							FGC::HashOf( value.b ) + FGC::HashOf( value.a ));
+			return	size_t(	AE::STL::HashOf( value.r ) + AE::STL::HashOf( value.g ) +
+							AE::STL::HashOf( value.b ) + AE::STL::HashOf( value.a ));
 		}
 	};
 	
 
 	template <>
-	struct hash< FGC::DepthStencil >
+	struct hash< AE::STL::DepthStencil >
 	{
-		ND_ size_t  operator () (const FGC::DepthStencil &value) const
+		ND_ size_t  operator () (const AE::STL::DepthStencil &value) const
 		{
-			return size_t(FGC::HashOf( value.depth ) + FGC::HashOf( value.stencil ));
+			return size_t(AE::STL::HashOf( value.depth ) + AE::STL::HashOf( value.stencil ));
 		}
 	};
 

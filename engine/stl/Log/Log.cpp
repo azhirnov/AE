@@ -3,7 +3,7 @@
 #include "stl/Algorithms/StringUtils.h"
 #include <iostream>
 
-using namespace FGC;
+using namespace AE::STL;
 
 
 /*
@@ -26,12 +26,12 @@ using namespace FGC;
 	
 =================================================
 */
-	Logger::EResult  FGC::Logger::Info (const char *msg, const char *func, const char *file, int line)
+	Logger::EResult  AE::STL::Logger::Info (const char *msg, const char *func, const char *file, int line)
 	{
 		return Info( StringView{msg}, StringView{func}, StringView{file}, line );
 	}
 
-	Logger::EResult  FGC::Logger::Error (const char *msg, const char *func, const char *file, int line)
+	Logger::EResult  AE::STL::Logger::Error (const char *msg, const char *func, const char *file, int line)
 	{
 		return Error( StringView{msg}, StringView{func}, StringView{file}, line );
 	}
@@ -45,7 +45,7 @@ using namespace FGC;
 #	include <android/log.h>
 
 namespace {
-	static constexpr char	FG_ANDROID_TAG[] = "FrameGraph";
+	static constexpr char	AE_ANDROID_TAG[] = "FrameGraph";
 }
 
 /*
@@ -53,9 +53,9 @@ namespace {
 	Info
 =================================================
 */
-	Logger::EResult  FGC::Logger::Info (const StringView &msg, const StringView &func, const StringView &file, int line)
+	Logger::EResult  AE::STL::Logger::Info (StringView msg, StringView func, StringView file, int line)
 	{
-		(void)__android_log_print( ANDROID_LOG_WARN, FG_ANDROID_TAG, "%s (%i): %s", file.data(), line, msg.data() );
+		(void)__android_log_print( ANDROID_LOG_WARN, AE_ANDROID_TAG, "%s (%i): %s", file.data(), line, msg.data() );
 		return EResult::Continue;
 	}
 	
@@ -64,9 +64,9 @@ namespace {
 	Error
 =================================================
 */
-	Logger::EResult  FGC::Logger::Error (const StringView &msg, const StringView &func, const StringView &file, int line)
+	Logger::EResult  AE::STL::Logger::Error (StringView msg, StringView func, StringView file, int line)
 	{
-		(void)__android_log_print( ANDROID_LOG_ERROR, FG_ANDROID_TAG, "%s (%i): %s", file.data(), line, msg.data() );
+		(void)__android_log_print( ANDROID_LOG_ERROR, AE_ANDROID_TAG, "%s (%i): %s", file.data(), line, msg.data() );
 		return EResult::Continue;
 	}
 //-----------------------------------------------------------------------------
@@ -97,7 +97,7 @@ namespace {
 	Info
 =================================================
 */
-	Logger::EResult  FGC::Logger::Info (const StringView &msg, const StringView &, const StringView &file, int line)
+	Logger::EResult  AE::STL::Logger::Info (StringView msg, StringView, StringView file, int line)
 	{
 		IDEConsoleMessage( msg, file, line, false );
 		ConsoleOutput( msg, file, line, false );
@@ -110,7 +110,7 @@ namespace {
 	Error
 =================================================
 */
-	Logger::EResult  FGC::Logger::Error (const StringView &msg, const StringView &func, const StringView &file, int line)
+	Logger::EResult  AE::STL::Logger::Error (StringView msg, StringView func, StringView file, int line)
 	{
 		IDEConsoleMessage( msg, file, line, true );
 		ConsoleOutput( msg, file, line, true );
@@ -145,7 +145,7 @@ namespace {
 	Info
 =================================================
 */
-	Logger::EResult  FGC::Logger::Info (const StringView &msg, const StringView &func, const StringView &file, int line)
+	Logger::EResult  AE::STL::Logger::Info (StringView msg, StringView func, StringView file, int line)
 	{
 		ConsoleOutput( msg, file, line, false );
 		return EResult::Continue;
@@ -156,7 +156,7 @@ namespace {
 	Error
 =================================================
 */
-	Logger::EResult  FGC::Logger::Error (const StringView &msg, const StringView &func, const StringView &file, int line)
+	Logger::EResult  AE::STL::Logger::Error (StringView msg, StringView func, StringView file, int line)
 	{
 		ConsoleOutput( msg, file, line, true );
 		return EResult::Abort;
@@ -177,7 +177,7 @@ namespace {
 	Info
 =================================================
 */
-	Logger::EResult  FGC::Logger::Info (const StringView &msg, const StringView &func, const StringView &file, int line)
+	Logger::EResult  AE::STL::Logger::Info (StringView msg, StringView func, StringView file, int line)
 	{
 		ConsoleOutput( msg, file, line, false );
 		return EResult::Continue;
@@ -188,7 +188,7 @@ namespace {
 	Error
 =================================================
 */
-	Logger::EResult  FGC::Logger::Error (const StringView &msg, const StringView &func, const StringView &file, int line)
+	Logger::EResult  AE::STL::Logger::Error (StringView msg, StringView func, StringView file, int line)
 	{
 		/*Widget top_wid, button;
 		XtAppContext  app;
@@ -222,7 +222,7 @@ namespace {
 	Info
 =================================================
 */
-	Logger::EResult  FGC::Logger::Info (const StringView &msg, const StringView &func, const StringView &file, int line)
+	Logger::EResult  AE::STL::Logger::Info (StringView msg, StringView func, StringView file, int line)
 	{
 		ConsoleOutput( msg, file, line, false );
 		return EResult::Continue;
@@ -233,7 +233,7 @@ namespace {
 	Error
 =================================================
 */
-	Logger::EResult  FGC::Logger::Error (const StringView &msg, const StringView &func, const StringView &file, int line)
+	Logger::EResult  AE::STL::Logger::Error (StringView msg, StringView func, StringView file, int line)
 	{
 		ConsoleOutput( msg, file, line, true );
 		return EResult::Abort;

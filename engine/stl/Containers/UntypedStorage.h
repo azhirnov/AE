@@ -4,7 +4,7 @@
 
 #include "stl/Math/Bytes.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -47,4 +47,4 @@ namespace FGC
 	};
 
 
-}	// FGC
+}	// AE::STL

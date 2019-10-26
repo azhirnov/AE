@@ -5,7 +5,7 @@
 #include "stl/CompileTime/TypeTraits.h"
 #include <typeindex>
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -44,4 +44,4 @@ namespace FGC
 	};
 
 
-}	// FGC
+}	// AE::STL

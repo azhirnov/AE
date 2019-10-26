@@ -3,9 +3,9 @@
 #pragma once
 
 
-namespace FGC
+namespace AE::STL
 {
-	namespace _fgc_hidden_
+	namespace _ae_stl_hidden_
 	{
 		template <typename T, bool IsEnum>
 		struct _IsEnumWithUnknown2 {
@@ -84,9 +84,9 @@ namespace FGC
 			}
 		};
 
-	}	// _fgc_hidden_
+	}	// _ae_stl_hidden_
 
 		
-	static constexpr _fgc_hidden_::DefaultType		Default = {};
+	static constexpr _ae_stl_hidden_::DefaultType		Default = {};
 
-}	// FGC
+}	// AE::STL

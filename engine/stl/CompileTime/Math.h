@@ -5,7 +5,7 @@
 #include "stl/Common.h"
 #include "stl/CompileTime/TypeTraits.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 /*
@@ -13,7 +13,7 @@ namespace FGC
 	CT_IntLog2
 =================================================
 */
-namespace _fgc_hidden_
+namespace _ae_stl_hidden_
 {
 	template <typename T, T X, uint Bit>
 	struct _IntLog2 {
@@ -25,10 +25,10 @@ namespace _fgc_hidden_
 		static const int	value = 0;
 	};
 
-}	// _fgc_hidden_
+}	// _ae_stl_hidden_
 
 	template <auto X>
-	static constexpr int	CT_IntLog2 = (X ? _fgc_hidden_::_IntLog2< decltype(X), X, sizeof(X)*8-1 >::value : -1);
+	static constexpr int	CT_IntLog2 = (X ? _ae_stl_hidden_::_IntLog2< decltype(X), X, sizeof(X)*8-1 >::value : -1);
 
 	
 /*
@@ -43,7 +43,7 @@ namespace _fgc_hidden_
 
 		if constexpr( Power == 0 )
 		{
-			FG_UNUSED( base );
+			AE_UNUSED( base );
 			return 1;
 		}
 		else
@@ -51,4 +51,4 @@ namespace _fgc_hidden_
 	}
 
 
-}	// FGC
+}	// AE::STL

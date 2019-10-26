@@ -5,11 +5,11 @@
 #include "stl/Stream/Stream.h"
 #include <stdio.h>
 
-#ifdef FG_STD_FILESYSTEM
+#ifdef AE_STD_FILESYSTEM
 #   include <filesystem>
 #endif
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -31,7 +31,7 @@ namespace FGC
 		FileRStream (StringView filename);
 		FileRStream (const char *filename);
 		FileRStream (const String &filename);
-	#ifdef FG_STD_FILESYSTEM
+	#ifdef AE_STD_FILESYSTEM
 		FileRStream (const std::filesystem::path &path);
 	#endif
 		~FileRStream ();
@@ -66,7 +66,7 @@ namespace FGC
 		FileWStream (StringView filename);
 		FileWStream (const char *filename);
 		FileWStream (const String &filename);
-	#ifdef FG_STD_FILESYSTEM
+	#ifdef AE_STD_FILESYSTEM
 		FileWStream (const std::filesystem::path &path);
 	#endif
 		~FileWStream ();
@@ -79,7 +79,7 @@ namespace FGC
 		void	Flush () override;
 	};
 
-}	// FGC
+}	// AE::STL
 
 
 // check definitions
@@ -93,10 +93,10 @@ namespace FGC
 #  endif
 # endif
 
-#  ifdef FG_STD_FILESYSTEM
-#	pragma detect_mismatch( "FG_STD_FILESYSTEM", "1" )
+#  ifdef AE_STD_FILESYSTEM
+#	pragma detect_mismatch( "AE_STD_FILESYSTEM", "1" )
 #  else
-#	pragma detect_mismatch( "FG_STD_FILESYSTEM", "0" )
+#	pragma detect_mismatch( "AE_STD_FILESYSTEM", "0" )
 #  endif
 
 #endif	// COMPILER_MSVC or COMPILER_CLANG

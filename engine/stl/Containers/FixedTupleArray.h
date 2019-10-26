@@ -7,7 +7,7 @@
 #include "stl/Memory/MemUtils.h"
 #include "stl/Algorithms/ArrayUtils.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -168,4 +168,4 @@ namespace FGC
 	};
 
 
-}	// FGC
+}	// AE::STL

@@ -5,10 +5,10 @@
 #include "stl/Containers/NtStringView.h"
 #include <thread>
 
-namespace FGC
+namespace AE::STL
 {
 
 	//void SetThreadName (const std::thread &, StringView name);
 	void SetCurrentThreadName (NtStringView name);
 
-}	// FGC
+}	// AE::STL

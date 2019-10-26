@@ -4,7 +4,7 @@
 
 #include "stl/Math/Math.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -108,26 +108,26 @@ namespace FGC
 	};
 
 
-}	// FGC
+}	// AE::STL
 
 
 namespace std
 {
 	template <typename T>
-	struct hash< FGC::ArrayView<T> >
+	struct hash< AE::STL::ArrayView<T> >
 	{
-		ND_ size_t  operator () (const FGC::ArrayView<T> &value) const
+		ND_ size_t  operator () (const AE::STL::ArrayView<T> &value) const
 		{
-			if constexpr ( FG_FAST_HASH and FGC::IsPOD<T> )
+			if constexpr ( AE_FAST_HASH and AE::STL::IsPOD<T> )
 			{
-				return size_t(FGC::HashOf( value.data(), value.size() * sizeof(T) ));
+				return size_t(AE::STL::HashOf( value.data(), value.size() * sizeof(T) ));
 			}
 			else
 			{
-				FGC::HashVal	result = FGC::HashOf( value.size() );
+				AE::STL::HashVal	result = AE::STL::HashOf( value.size() );
 
 				for (auto& item : value) {
-					result << FGC::HashOf( item );
+					result << AE::STL::HashOf( item );
 				}
 				return size_t(result);
 			}
@@ -140,7 +140,7 @@ namespace std
 	{
 		ND_ size_t  operator () (const vector<T> &value) const
 		{
-			return size_t(FGC::HashOf( FGC::ArrayView<T>{ value } ));
+			return size_t(AE::STL::HashOf( AE::STL::ArrayView<T>{ value } ));
 		}
 	};
 
@@ -150,7 +150,7 @@ namespace std
 	{
 		ND_ size_t  operator () (const array<T,S> &value) const
 		{
-			return size_t(FGC::HashOf( FGC::ArrayView<T>{ value } ));
+			return size_t(AE::STL::HashOf( AE::STL::ArrayView<T>{ value } ));
 		}
 	};
 

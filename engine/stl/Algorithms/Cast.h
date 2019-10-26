@@ -6,7 +6,7 @@
 #include "stl/Containers/Ptr.h"
 #include "stl/Math/BitMath.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 /*
@@ -160,4 +160,4 @@ namespace FGC
 	}
 
 
-}	// FGC
+}	// AE::STL

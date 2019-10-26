@@ -4,7 +4,7 @@
 
 #include "stl/Common.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -43,15 +43,15 @@ namespace FGC
 		ND_ bool  operator != (const Ptr<T> &rhs)	const	{ return not (*this == rhs); }
 	};
 
-}	// FGC
+}	// AE::STL
 
 
 namespace std
 {
 
 	template <typename T>
-	struct hash< FGC::Ptr<T> > {
-		ND_ size_t  operator () (const FGC::Ptr<T> &value) const {
+	struct hash< AE::STL::Ptr<T> > {
+		ND_ size_t  operator () (const AE::STL::Ptr<T> &value) const {
 			return hash<T *>()( value.operator->() );
 		}
 	};

@@ -7,7 +7,7 @@
 #include "script_binding/Impl/ScriptFn.h"
 #include "script_binding/Impl/ScriptEngine.inl.h"
 
-using namespace FGScript;
+using namespace AE::Script;
 
 #define TEST	CHECK_FATAL
 

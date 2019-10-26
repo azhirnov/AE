@@ -10,7 +10,7 @@
 #include "stl/Memory/MemUtils.h"
 #include "stl/Memory/UntypedAllocator.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -171,4 +171,4 @@ namespace FGC
 		return true;
 	}
 
-}   // FGC
+}   // AE::STL

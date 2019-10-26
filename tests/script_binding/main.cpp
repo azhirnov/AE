@@ -2,21 +2,19 @@
 
 #include "script_binding/Bindings/CoreBindings.h"
 
-extern void UnitTest_FunctionInfo ();
-extern void UnitTest_MathFunc ();
-extern void UnitTest_String ();
 extern void UnitTest_Array ();
 extern void UnitTest_Class ();
+extern void UnitTest_MathFunc ();
+extern void UnitTest_String ();
 
 
 int main ()
 {
-	UnitTest_FunctionInfo();
-	UnitTest_MathFunc();
-	UnitTest_String();
 	UnitTest_Array();
 	UnitTest_Class();
+	UnitTest_MathFunc();
+	UnitTest_String();
 
-	FG_LOGI( "Tests.ScriptBinding finished" );
+	AE_LOGI( "Tests.ScriptBinding finished" );
 	return 0;
 }

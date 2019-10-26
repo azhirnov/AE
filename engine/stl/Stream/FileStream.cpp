@@ -21,7 +21,7 @@
 #endif
 
 
-namespace FGC
+namespace AE::STL
 {
 
 /*
@@ -36,7 +36,7 @@ namespace FGC
 		if ( _file )
 			_fileSize = _GetSize();
 		else
-			FG_LOGI( "Can't open file: \""s << filename << '"' );
+			AE_LOGI( "Can't open file: \""s << filename << '"' );
 	}
 	
 	FileRStream::FileRStream (const char *filename) : FileRStream{ StringView{filename} }
@@ -50,7 +50,7 @@ namespace FGC
 	constructor
 =================================================
 */
-#ifdef FG_STD_FILESYSTEM
+#ifdef AE_STD_FILESYSTEM
 	FileRStream::FileRStream (const std::filesystem::path &path)
 	{
 #	ifdef PLATFORM_WINDOWS
@@ -62,7 +62,7 @@ namespace FGC
 		if ( _file )
 			_fileSize = _GetSize();
 		else
-			FG_LOGI( "Can't open file: \""s << path.string() << '"' );
+			AE_LOGI( "Can't open file: \""s << path.string() << '"' );
 	}
 #endif
 	
@@ -141,7 +141,7 @@ namespace FGC
 		fopen_s( OUT &_file, filename.data(), "wb" );
 
 		if ( not _file )
-			FG_LOGI( "Can't open file: \""s << filename << '"' );
+			AE_LOGI( "Can't open file: \""s << filename << '"' );
 	}
 	
 	FileWStream::FileWStream (const char *filename) : FileWStream{ StringView{filename} }
@@ -155,7 +155,7 @@ namespace FGC
 	constructor
 =================================================
 */
-#ifdef FG_STD_FILESYSTEM
+#ifdef AE_STD_FILESYSTEM
 	FileWStream::FileWStream (const std::filesystem::path &path)
 	{
 #	ifdef PLATFORM_WINDOWS
@@ -165,7 +165,7 @@ namespace FGC
 #	endif
 		
 		if ( not _file )
-			FG_LOGI( "Can't open file: \""s << path.string() << '"' );
+			AE_LOGI( "Can't open file: \""s << path.string() << '"' );
 	}
 #endif
 	
@@ -235,4 +235,4 @@ namespace FGC
 	}
 
 
-}	// FGC
+}	// AE::STL

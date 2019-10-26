@@ -10,7 +10,7 @@
 # endif
 #endif
 	
-namespace FGC
+namespace AE::STL
 {
 
 /*
@@ -105,4 +105,4 @@ namespace FGC
 	}
 
 
-}	// FGC
+}	// AE::STL

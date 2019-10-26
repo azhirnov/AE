@@ -5,7 +5,7 @@
 #include "stl/Math/Vec.h"
 #include "stl/Algorithms/ArrayUtils.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	enum class EMatrixOrder
@@ -326,7 +326,7 @@ namespace FGC
 	Inverse
 =================================================
 */
-namespace _fgc_hidden_
+namespace _ae_stl_hidden_
 {
 	template <typename T, size_t Align>
 	inline auto  Mat44_Inverse (const Matrix< T, 4, 4, EMatrixOrder::ColumnMajor, Align > &m)
@@ -415,17 +415,17 @@ namespace _fgc_hidden_
 		result[2][2] = + (m[0][0] * m[1][1] - m[1][0] * m[0][1]) * inv_det;
 		return result;
 	}
-}	// _fgc_hidden_
+}	// _ae_stl_hidden_
 
 	template <typename T, uint Columns, uint Rows, size_t Align>
 	inline Matrix< T, Columns, Rows, EMatrixOrder::ColumnMajor, Align >
 		Matrix< T, Columns, Rows, EMatrixOrder::ColumnMajor, Align >::Inverse () const
 	{
 		if constexpr( Columns == 4 and Rows == 4 )
-			return _fgc_hidden_::Mat44_Inverse( *this );
+			return _ae_stl_hidden_::Mat44_Inverse( *this );
 		
 		if constexpr( Columns == 3 and Rows == 3 )
-			return _fgc_hidden_::Mat33_Inverse( *this );
+			return _ae_stl_hidden_::Mat33_Inverse( *this );
 	}
 	
 /*
@@ -433,7 +433,7 @@ namespace _fgc_hidden_
 	Translate
 =================================================
 */
-namespace _fgc_hidden_
+namespace _ae_stl_hidden_
 {
 	template <typename T, uint I, size_t Align>
 	inline auto  Mat44_Translate (const Matrix< T, 4, 4, EMatrixOrder::ColumnMajor, Align > &m, const Vec<T,I> &v)
@@ -443,14 +443,14 @@ namespace _fgc_hidden_
 		return result;
 	}
 
-}	// _fgc_hidden_
+}	// _ae_stl_hidden_
 
 	template <typename T, uint Columns, uint Rows, size_t Align>
 	inline Matrix< T, Columns, Rows, EMatrixOrder::ColumnMajor, Align >
 		Matrix< T, Columns, Rows, EMatrixOrder::ColumnMajor, Align >::Translate (const Vec<T,Rows> &v) const
 	{
 		if constexpr( Columns == 4 and Rows == 4 )
-			return _fgc_hidden_::Mat44_Translate( *this, v );
+			return _ae_stl_hidden_::Mat44_Translate( *this, v );
 	}
 
 	template <typename T, uint Columns, uint Rows, size_t Align>
@@ -458,7 +458,7 @@ namespace _fgc_hidden_
 		Matrix< T, Columns, Rows, EMatrixOrder::ColumnMajor, Align >::Translate (const Vec<T,Rows-1> &v) const
 	{
 		if constexpr( Columns == 4 and Rows == 4 )
-			return _fgc_hidden_::Mat44_Translate( *this, v );
+			return _ae_stl_hidden_::Mat44_Translate( *this, v );
 	}
 	
 /*
@@ -480,4 +480,4 @@ namespace _fgc_hidden_
 	}
 
 
-}	// FGC
+}	// AE::STL

@@ -6,7 +6,7 @@
 #include "stl/Math/Bytes.h"
 #include "stl/Containers/ArrayView.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -192,4 +192,4 @@ namespace FGC
 	};
 
 
-}	// FGC
+}	// AE::STL

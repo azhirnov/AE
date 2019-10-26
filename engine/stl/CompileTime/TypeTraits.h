@@ -5,7 +5,7 @@
 #include <type_traits>
 #include <cstdint>
 
-namespace FGC
+namespace AE::STL
 {
 
 	template <typename T>
@@ -76,4 +76,4 @@ namespace FGC
 										Conditional< sizeof(T) == sizeof(int8_t), int8_t,
 											void >>>>;
 
-}	// FGC
+}	// AE::STL

@@ -23,5 +23,5 @@ extern void UnitTest_NtStringView ()
 {
 	NtStringView_Test1();
 	
-	FG_LOGI( "UnitTest_NtStringView - passed" );
+	AE_LOGI( "UnitTest_NtStringView - passed" );
 }

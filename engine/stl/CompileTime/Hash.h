@@ -4,9 +4,9 @@
 
 #include "stl/Common.h"
 
-namespace FGC
+namespace AE::STL
 {
-namespace _fgc_hidden_
+namespace _ae_stl_hidden_
 {
 	// from https://stackoverflow.com/questions/2111667/compile-time-string-hashing
 	static constexpr uint  crc_table[256] = {
@@ -62,7 +62,7 @@ namespace _fgc_hidden_
 					(prev_crc ^ 0xFFFFFFFF);
 	}
 
-}	// _fgc_hidden_
+}	// _ae_stl_hidden_
 
 
 /*
@@ -72,8 +72,8 @@ namespace _fgc_hidden_
 */
 	ND_ inline constexpr HashVal  CT_Hash (const char *str, size_t len, uint seed)
 	{
-		return HashVal{_fgc_hidden_::crc32_hash( str, len, seed )};
+		return HashVal{_ae_stl_hidden_::crc32_hash( str, len, seed )};
 	}
 
 
-}	// FGC
+}	// AE::STL

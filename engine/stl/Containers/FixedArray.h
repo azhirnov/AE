@@ -5,7 +5,7 @@
 #include "stl/Containers/ArrayView.h"
 #include "stl/Memory/MemUtils.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -271,17 +271,17 @@ namespace FGC
 	};
 
 
-}	// FGC
+}	// AE::STL
 
 
 namespace std
 {
 	template <typename T, size_t ArraySize>
-	struct hash< FGC::FixedArray<T, ArraySize> >
+	struct hash< AE::STL::FixedArray<T, ArraySize> >
 	{
-		ND_ size_t  operator () (const FGC::FixedArray<T, ArraySize> &value) const
+		ND_ size_t  operator () (const AE::STL::FixedArray<T, ArraySize> &value) const
 		{
-			return size_t(FGC::HashOf( FGC::ArrayView<T>{ value } ));
+			return size_t(AE::STL::HashOf( AE::STL::ArrayView<T>{ value } ));
 		}
 	};
 

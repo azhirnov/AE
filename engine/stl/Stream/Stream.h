@@ -7,7 +7,7 @@
 #include "stl/Math/Bytes.h"
 #include "stl/Memory/MemUtils.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -93,5 +93,5 @@ namespace FGC
 	};
 
 
-}	// FGC
+}	// AE::STL
 

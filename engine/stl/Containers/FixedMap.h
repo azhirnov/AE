@@ -13,7 +13,7 @@
 #include "stl/Memory/MemUtils.h"
 #include "stl/Math/Math.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -231,7 +231,7 @@ namespace FGC
 	RecursiveBinarySearch
 =================================================
 */
-namespace _fgc_hidden_
+namespace _ae_stl_hidden_
 {
 	template <typename K, typename V, typename I, size_t N>
 	struct RecursiveBinarySearch
@@ -286,7 +286,7 @@ namespace _fgc_hidden_
 		}
 	};
 
-}	// _fgc_hidden_
+}	// _ae_stl_hidden_
 	
 /*
 =================================================
@@ -297,7 +297,7 @@ namespace _fgc_hidden_
 	inline Pair< typename FixedMap<K,V,S>::iterator, bool >
 		FixedMap<K,V,S>::insert (const pair_type &value)
 	{
-		using BinarySearch = _fgc_hidden_::RecursiveBinarySearch< K, V, Index_t, S >;
+		using BinarySearch = _ae_stl_hidden_::RecursiveBinarySearch< K, V, Index_t, S >;
 
 		size_t	i = BinarySearch::LowerBound( 0, _count, value.first, _indices, _array );
 
@@ -330,7 +330,7 @@ namespace _fgc_hidden_
 	inline Pair< typename FixedMap<K,V,S>::iterator, bool >
 		FixedMap<K,V,S>::insert (pair_type &&value)
 	{
-		using BinarySearch = _fgc_hidden_::RecursiveBinarySearch< K, V, Index_t, S >;
+		using BinarySearch = _ae_stl_hidden_::RecursiveBinarySearch< K, V, Index_t, S >;
 
 		size_t	i = BinarySearch::LowerBound( 0, _count, value.first, _indices, _array );
 
@@ -364,7 +364,7 @@ namespace _fgc_hidden_
 	inline Pair< typename FixedMap<K,V,S>::iterator, bool >
 		FixedMap<K,V,S>::insert_or_assign (const key_type& key, M&& obj)
 	{
-		using BinarySearch = _fgc_hidden_::RecursiveBinarySearch< K, V, Index_t, S >;
+		using BinarySearch = _ae_stl_hidden_::RecursiveBinarySearch< K, V, Index_t, S >;
 
 		size_t	i = BinarySearch::LowerBound( 0, _count, key, _indices, _array );
 
@@ -402,7 +402,7 @@ namespace _fgc_hidden_
 	inline Pair< typename FixedMap<K,V,S>::iterator, bool >
 		FixedMap<K,V,S>::insert_or_assign (key_type&& key, M&& obj)
 	{
-		using BinarySearch = _fgc_hidden_::RecursiveBinarySearch< K, V, Index_t, S >;
+		using BinarySearch = _ae_stl_hidden_::RecursiveBinarySearch< K, V, Index_t, S >;
 
 		size_t	i = BinarySearch::LowerBound( 0, _count, key, _indices, _array );
 
@@ -439,7 +439,7 @@ namespace _fgc_hidden_
 	inline typename FixedMap<K,V,S>::const_iterator
 		FixedMap<K,V,S>::find (const key_type &key) const
 	{
-		using BinarySearch = _fgc_hidden_::RecursiveBinarySearch< K, V, Index_t, S >;
+		using BinarySearch = _ae_stl_hidden_::RecursiveBinarySearch< K, V, Index_t, S >;
 
 		size_t	i = BinarySearch::Find( 0, _count, key, _indices, _array );
 
@@ -458,7 +458,7 @@ namespace _fgc_hidden_
 	inline typename FixedMap<K,V,S>::iterator
 		FixedMap<K,V,S>::find (const key_type &key)
 	{
-		using BinarySearch = _fgc_hidden_::RecursiveBinarySearch< K, V, Index_t, S >;
+		using BinarySearch = _ae_stl_hidden_::RecursiveBinarySearch< K, V, Index_t, S >;
 		
 		size_t	i = BinarySearch::Find( 0, _count, key, _indices, _array );
 		
@@ -476,7 +476,7 @@ namespace _fgc_hidden_
 	template <typename K, typename V, size_t S>
 	inline size_t  FixedMap<K,V,S>::count (const key_type &key) const
 	{
-		using BinarySearch = _fgc_hidden_::RecursiveBinarySearch< K, V, Index_t, S >;
+		using BinarySearch = _ae_stl_hidden_::RecursiveBinarySearch< K, V, Index_t, S >;
 		
 		size_t	cnt = 0;
 		size_t	i   = BinarySearch::Find( 0, _count, key, _indices, _array );
@@ -521,15 +521,15 @@ namespace _fgc_hidden_
 		return result;
 	}
 
-}	// FGC
+}	// AE::STL
 
 
 namespace std
 {
 	template <typename Key, typename Value, size_t ArraySize>
-	struct hash< FGC::FixedMap<Key, Value, ArraySize> >
+	struct hash< AE::STL::FixedMap<Key, Value, ArraySize> >
 	{
-		ND_ size_t  operator () (const FGC::FixedMap<Key, Value, ArraySize> &value) const
+		ND_ size_t  operator () (const AE::STL::FixedMap<Key, Value, ArraySize> &value) const
 		{
 			return size_t(value.CalcHash());
 		}

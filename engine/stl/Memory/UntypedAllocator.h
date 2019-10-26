@@ -4,7 +4,7 @@
 
 #include "stl/Memory/MemUtils.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	template <typename T>
@@ -21,7 +21,7 @@ namespace FGC
 		template <typename T>	using StdAllocator_t = StdAllocator<T>;
 
 	// methods
-		ND_ FG_ALLOCATOR static void*  Allocate (BytesU size)
+		ND_ AE_ALLOCATOR static void*  Allocate (BytesU size)
 		{
 			return ::operator new ( size_t(size), std::nothrow_t{} );
 		}
@@ -54,7 +54,7 @@ namespace FGC
 		template <typename T>	using StdAllocator_t = StdAllocator<T>;
 
 	// methods
-		ND_ FG_ALLOCATOR static void*  Allocate (BytesU size, BytesU align)
+		ND_ AE_ALLOCATOR static void*  Allocate (BytesU size, BytesU align)
 		{
 			return ::operator new ( size_t(size), std::align_val_t(size_t(align)), std::nothrow_t{} );
 		}
@@ -90,4 +90,4 @@ namespace FGC
 	};
 
 
-}	// FGC
+}	// AE::STL

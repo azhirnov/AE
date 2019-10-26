@@ -7,7 +7,7 @@
 #include "stl/math/Vec.h"
 #include "stl/math/Color.h"
 
-namespace FGScript
+namespace AE::Script
 {
 
 	//
@@ -25,30 +25,30 @@ namespace FGScript
 	};
 
 
-	FG_DECL_SCRIPT_TYPE( FGC::bool2,		"bool2" );
-	FG_DECL_SCRIPT_TYPE( FGC::int2,			"int2" );
-	FG_DECL_SCRIPT_TYPE( FGC::uint2,		"uint2" );
-	FG_DECL_SCRIPT_TYPE( FGC::float2,		"float2"  );
-	FG_DECL_SCRIPT_TYPE( FGC::double2,		"double2" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::bool2,		"bool2" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::int2,			"int2" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::uint2,		"uint2" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::float2,		"float2"  );
+	AE_DECL_SCRIPT_TYPE( AE::STL::double2,		"double2" );
 	
-	FG_DECL_SCRIPT_TYPE( FGC::bool3,		"bool3" );
-	FG_DECL_SCRIPT_TYPE( FGC::int3,			"int3" );
-	FG_DECL_SCRIPT_TYPE( FGC::uint3,		"uint3" );
-	FG_DECL_SCRIPT_TYPE( FGC::float3,		"float3"  );
-	FG_DECL_SCRIPT_TYPE( FGC::double3,		"double3" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::bool3,		"bool3" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::int3,			"int3" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::uint3,		"uint3" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::float3,		"float3"  );
+	AE_DECL_SCRIPT_TYPE( AE::STL::double3,		"double3" );
 	
-	FG_DECL_SCRIPT_TYPE( FGC::bool4,		"bool4" );
-	FG_DECL_SCRIPT_TYPE( FGC::int4,			"int4" );
-	FG_DECL_SCRIPT_TYPE( FGC::uint4,		"uint4" );
-	FG_DECL_SCRIPT_TYPE( FGC::float4,		"float4"  );
-	FG_DECL_SCRIPT_TYPE( FGC::double4,		"double4" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::bool4,		"bool4" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::int4,			"int4" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::uint4,		"uint4" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::float4,		"float4"  );
+	AE_DECL_SCRIPT_TYPE( AE::STL::double4,		"double4" );
 	
-	FG_DECL_SCRIPT_TYPE( FGC::RGBA32f,		"RGBA32f" );
-	FG_DECL_SCRIPT_TYPE( FGC::RGBA32u,		"RGBA32u" );
-	FG_DECL_SCRIPT_TYPE( FGC::RGBA32i,		"RGBA32i" );
-	FG_DECL_SCRIPT_TYPE( FGC::RGBA8u,		"RGBA8u" );
-	FG_DECL_SCRIPT_TYPE( FGC::DepthStencil,	"DepthStencil" );
-	FG_DECL_SCRIPT_TYPE( FGC::HSVColor,		"HSVColor" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::RGBA32f,		"RGBA32f" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::RGBA32u,		"RGBA32u" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::RGBA32i,		"RGBA32i" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::RGBA8u,		"RGBA8u" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::DepthStencil,	"DepthStencil" );
+	AE_DECL_SCRIPT_TYPE( AE::STL::HSVColor,		"HSVColor" );
 
 
-}	// FGScript
+}	// AE::Script

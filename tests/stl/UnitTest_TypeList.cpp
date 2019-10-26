@@ -33,5 +33,5 @@ extern void UnitTest_TypeList ()
 	TL::Visit( v );
 	TEST( v.sizeof_sum == (sizeof(int) + sizeof(float) + sizeof(bool) + sizeof(double)) );
 
-	FG_LOGI( "UnitTest_TypeList - passed" );
+	AE_LOGI( "UnitTest_TypeList - passed" );
 }

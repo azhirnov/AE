@@ -5,7 +5,7 @@
 #include "stl/Math/Bytes.h"
 #include "stl/CompileTime/TypeTraits.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 /*
@@ -69,4 +69,4 @@ namespace FGC
 	}*/
 
 
-}	// FGC
+}	// AE::STL

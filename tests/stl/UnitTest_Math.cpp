@@ -62,5 +62,5 @@ extern void UnitTest_Math ()
 	BitScanForward_Test1();
 	Wrap_Test1();
 
-	FG_LOGI( "UnitTest_Math - passed" );
+	AE_LOGI( "UnitTest_Math - passed" );
 }

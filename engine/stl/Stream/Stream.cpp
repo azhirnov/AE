@@ -4,7 +4,7 @@
 #include "stl/Algorithms/StringUtils.h"
 
 
-namespace FGC
+namespace AE::STL
 {
 	
 /*
@@ -91,4 +91,4 @@ namespace FGC
 		return Write2( buf.data(), size ) == size;
 	}
 
-}	// FGC
+}	// AE::STL

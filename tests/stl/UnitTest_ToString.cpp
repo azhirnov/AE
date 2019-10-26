@@ -27,5 +27,5 @@ extern void UnitTest_ToString ()
 {
 	TimeToStringTest();
 
-	FG_LOGI( "UnitTest_ToString - passed" );
+	AE_LOGI( "UnitTest_ToString - passed" );
 }

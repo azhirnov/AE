@@ -3,11 +3,11 @@
 #pragma once
 
 
-#ifdef FG_DEBUG
-#	define FG_ENABLE_DATA_RACE_CHECK
+#ifdef AE_DEBUG
+#	define AE_ENABLE_DATA_RACE_CHECK
 #else
-//#	define FG_OPTIMAL_MEMORY_ORDER
+//#	define AE_OPTIMAL_MEMORY_ORDER
 #endif
 
 
-#define FG_FAST_HASH	0
+#define AE_FAST_HASH	0

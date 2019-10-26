@@ -42,5 +42,5 @@ extern void UnitTest_MathFunc ()
 	ScriptMath_Test1( se );
 	ScriptMath_Test2( se );
 
-	FG_LOGI( "UnitTest_MathFunc - passed" );
+	AE_LOGI( "UnitTest_MathFunc - passed" );
 }

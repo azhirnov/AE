@@ -32,5 +32,5 @@ extern void UnitTest_Array ()
 
 	ScriptArray_Test1( se );
 
-	FG_LOGI( "UnitTest_Array - passed" );
+	AE_LOGI( "UnitTest_Array - passed" );
 }

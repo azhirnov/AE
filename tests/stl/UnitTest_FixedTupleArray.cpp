@@ -65,5 +65,5 @@ extern void UnitTest_FixedTupleArray ()
 	FixedTupleArray_Test1();
 	FixedTupleArray_Test2();
 
-	FG_LOGI( "UnitTest_FixedTupleArray - passed" );
+	AE_LOGI( "UnitTest_FixedTupleArray - passed" );
 }

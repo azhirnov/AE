@@ -4,7 +4,7 @@
 #include "script_binding/Impl/ClassBinder.h"
 #include "script_binding/Impl/ScriptEngine.inl.h"
 
-namespace FGScript
+namespace AE::Script
 {
 	
 /*
@@ -193,4 +193,4 @@ namespace FGScript
 		BindDepthStencil( se );
 	}
 
-}	// FGScript
+}	// AE::Script

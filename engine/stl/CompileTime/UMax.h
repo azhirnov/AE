@@ -5,9 +5,9 @@
 
 #pragma once
 
-namespace FGC
+namespace AE::STL
 {
-namespace _fgc_hidden_
+namespace _ae_stl_hidden_
 {
 	struct _UMax
 	{
@@ -31,9 +31,9 @@ namespace _fgc_hidden_
 		}
 	};
 
-}	// _fgc_hidden_
+}	// _ae_stl_hidden_
 
 
-	static constexpr _fgc_hidden_::_UMax		UMax {};
+	static constexpr _ae_stl_hidden_::_UMax		UMax {};
 
-}	// FGC
+}	// AE::STL

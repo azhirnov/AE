@@ -39,6 +39,6 @@ int main ()
 	UnitTest_ToString();
 	UnitTest_TypeList();
 
-	FG_LOGI( "Tests.STL finished" );
+	AE_LOGI( "Tests.STL finished" );
 	return 0;
 }

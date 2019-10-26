@@ -4,7 +4,7 @@
 
 #include "stl/Common.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 /*
@@ -12,7 +12,7 @@ namespace FGC
 	helpers
 =================================================
 */
-	namespace _fgc_hidden_
+	namespace _ae_stl_hidden_
 	{
 		template <typename T1, typename T2, typename Result>
 		using EnableForInt		= EnableIf< IsSignedInteger<T1> and IsSignedInteger<T2>, Result >;
@@ -20,7 +20,7 @@ namespace FGC
 		template <typename T1, typename T2, typename Result>
 		using EnableForUInt		= EnableIf< IsUnsignedInteger<T1> and IsUnsignedInteger<T2>, Result >;
 
-	}	// _fgc_hidden_
+	}	// _ae_stl_hidden_
 	
 /*
 =================================================
@@ -28,7 +28,7 @@ namespace FGC
 =================================================
 */
 	template <typename T1, typename T2>
-	ND_ forceinline constexpr _fgc_hidden_::EnableForInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
+	ND_ forceinline constexpr _ae_stl_hidden_::EnableForInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
 	{
 		STATIC_ASSERT( IsScalar<T1> and IsScalar<T2> );
 
@@ -50,7 +50,7 @@ namespace FGC
 =================================================
 */
 	template <typename T1, typename T2>
-	ND_ forceinline constexpr _fgc_hidden_::EnableForUInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
+	ND_ forceinline constexpr _ae_stl_hidden_::EnableForUInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
 	{
 		STATIC_ASSERT( IsScalar<T1> and IsScalar<T2> );
 		
@@ -388,4 +388,4 @@ namespace FGC
 		return result;
 	}
 
-}	// FGC
+}	// AE::STL

@@ -6,7 +6,7 @@
 #include "stl/Math/Bytes.h"
 #include "stl/Memory/UntypedAllocator.h"
 
-namespace FGC
+namespace AE::STL
 {
 	template <typename AllocatorType>				struct LinearAllocator;
 	template <typename T, typename AllocatorType>	struct StdLinearAllocator;
@@ -84,7 +84,7 @@ namespace FGC
 		}
 
 
-		ND_ FG_ALLOCATOR void*  Alloc (const BytesU size, const BytesU align)
+		ND_ AE_ALLOCATOR void*  Alloc (const BytesU size, const BytesU align)
 		{
 			for (auto& block : _blocks)
 			{
@@ -108,7 +108,7 @@ namespace FGC
 
 
 		template <typename T>
-		ND_ FG_ALLOCATOR T*  Alloc (size_t count = 1)
+		ND_ AE_ALLOCATOR T*  Alloc (size_t count = 1)
 		{
 			return BitCast<T *>( Alloc( SizeOf<T> * count, AlignOf<T> ));
 		}
@@ -161,7 +161,7 @@ namespace FGC
 		UntypedLinearAllocator (LinearAllocator_t &alloc) : _alloc{alloc} {}
 
 
-		ND_ FG_ALLOCATOR void*  Allocate (BytesU size, BytesU align)
+		ND_ AE_ALLOCATOR void*  Allocate (BytesU size, BytesU align)
 		{
 			return _alloc.Alloc( size, align );
 		}
@@ -221,7 +221,7 @@ namespace FGC
 		Self& operator = (const Self &) = delete;
 
 		
-		ND_ FG_ALLOCATOR T*  allocate (const size_t count)
+		ND_ AE_ALLOCATOR T*  allocate (const size_t count)
 		{
 			return _alloc.template Alloc<T>( count );
 		}
@@ -247,4 +247,4 @@ namespace FGC
 	};
 
 
-}	// FGC
+}	// AE::STL

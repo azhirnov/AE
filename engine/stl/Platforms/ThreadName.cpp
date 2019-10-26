@@ -4,7 +4,7 @@
 #include "stl/Platforms/WindowsHeader.h"
 
 
-namespace FGC
+namespace AE::STL
 {
 namespace
 {
@@ -48,7 +48,7 @@ namespace
 
 	static void SetCurrentThreadNameImpl (const char*)
 	{
-		FG_COMPILATION_MESSAGE( "SetCurrentThreadName() - not supported for current platform" )
+		AE_COMPILATION_MESSAGE( "SetCurrentThreadName() - not supported for current platform" )
 	}
 
 #endif
@@ -65,4 +65,4 @@ namespace
 		SetCurrentThreadNameImpl( name.c_str() );
 	}
 
-}	// FGC
+}	// AE::STL

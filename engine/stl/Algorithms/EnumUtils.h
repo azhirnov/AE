@@ -4,7 +4,7 @@
 
 #include "stl/Common.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	template <typename T>
@@ -75,4 +75,4 @@ namespace FGC
 		return !!( EnumToUInt(lhs) & EnumToUInt(rhs) );
 	}
 
-}	// FGC
+}	// AE::STL

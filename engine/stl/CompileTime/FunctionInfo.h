@@ -4,9 +4,9 @@
 
 #include "stl/CompileTime/TypeList.h"
 
-namespace FGC
+namespace AE::STL
 {
-	namespace _fgc_hidden_
+	namespace _ae_stl_hidden_
 	{
 
 		template <typename T>
@@ -22,7 +22,7 @@ namespace FGC
 		template <typename Result, typename ...Args>
 		struct _FuncInfo< Result (Args...) >
 		{
-			using args		= FGC::TypeList< Args... >;
+			using args		= AE::STL::TypeList< Args... >;
 			using result	= Result;
 			using type		= Result (*) (Args...);
 			using clazz		= void;
@@ -34,7 +34,7 @@ namespace FGC
 		template <typename Result, typename ...Args>
 		struct _FuncInfo< Result (*) (Args...) >
 		{
-			using args		= FGC::TypeList< Args... >;
+			using args		= AE::STL::TypeList< Args... >;
 			using result	= Result;
 			using type		= Result (*) (Args...);
 			using clazz		= void;
@@ -46,7 +46,7 @@ namespace FGC
 		template <typename Class, typename Result, typename ...Args>
 		struct _FuncInfo< Result (Class::*) (Args...) >
 		{
-			using args		= FGC::TypeList< Args... >;
+			using args		= AE::STL::TypeList< Args... >;
 			using result	= Result;
 			using type		= Result (Class::*) (Args...);
 			using clazz		= Class;
@@ -58,7 +58,7 @@ namespace FGC
 		template <typename Result, typename ...Args>
 		struct _FuncInfo< std::function< Result (Args...) > >
 		{
-			using args		= FGC::TypeList< Args... >;
+			using args		= AE::STL::TypeList< Args... >;
 			using result	= Result;
 			using type		= Result (*) (Args...);
 			using clazz		= void;
@@ -71,7 +71,7 @@ namespace FGC
 			template <typename Class, typename Result, typename ...Args> \
 			struct _FuncInfo< Result (Class::*) (Args...) _cv_qual_ > \
 			{ \
-				using args		= FGC::TypeList< Args... >; \
+				using args		= AE::STL::TypeList< Args... >; \
 				using result	= Result; \
 				using type		= Result (Class::*) (Args...) _cv_qual_; \
 				using clazz		= Class; \
@@ -120,10 +120,10 @@ namespace FGC
 			using type = typename _FuncInfo2< T, std::is_class_v<T> >::type;
 		};
 
-	}	// _fgc_hidden_
+	}	// _ae_stl_hidden_
 
 
 	template <typename T>
-	using FunctionInfo = typename _fgc_hidden_::_FuncInfo3<T>::type;
+	using FunctionInfo = typename _ae_stl_hidden_::_FuncInfo3<T>::type;
 
-}	// FGC
+}	// AE::STL

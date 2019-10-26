@@ -5,7 +5,7 @@
 #include "script_binding/Impl/ScriptEngine.h"
 #include "script_binding/Impl/ScriptTypes.h"
 
-namespace FGScript
+namespace AE::Script
 {
 
 /*
@@ -75,4 +75,4 @@ namespace FGScript
 		return ScriptFnPtr<Fn>{ new ScriptFn<Fn>{ module, ctx }};
 	}
 
-}	// FGScript
+}	// AE::Script

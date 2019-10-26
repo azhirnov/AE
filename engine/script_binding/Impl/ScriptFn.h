@@ -7,7 +7,7 @@
 #include "stl/Algorithms/StringUtils.h"
 #include "stl/Containers/Optional.h"
 
-namespace FGScript
+namespace AE::Script
 {
 	template <typename F>
 	class ScriptFn;
@@ -50,7 +50,7 @@ namespace FGScript
 		{
 			using namespace AngelScript;
 
-			_fgscript_hidden_::SetContextArgs<Args...>::Set( _ctx, 0, std::forward<Args>(args)... );
+			_ae_script_hidden_::SetContextArgs<Args...>::Set( _ctx, 0, std::forward<Args>(args)... );
 
 			const int exec_res = _ctx->Execute();
 			
@@ -64,7 +64,7 @@ namespace FGScript
 			else
 			{
 				if ( exec_res == asEXECUTION_FINISHED ) {
-					return {_fgscript_hidden_::ContextSetterGetter<R>::Get( _ctx )};
+					return {_ae_script_hidden_::ContextSetterGetter<R>::Get( _ctx )};
 				}
 				_CheckError( exec_res );
 				return {};
@@ -99,4 +99,4 @@ namespace FGScript
 		}
 	};
 
-}	// FGScript
+}	// AE::Script

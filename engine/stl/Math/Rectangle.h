@@ -4,7 +4,7 @@
 
 #include "stl/Math/Vec.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	template <typename T>
@@ -385,29 +385,29 @@ namespace FGC
 	ND_ inline constexpr bool4  Equals (const Rectangle<T> &lhs, const Rectangle<T> &rhs, const T &err = std::numeric_limits<T>::epsilon() * T(2))
 	{
 		bool4	res;
-		res[0] = FGC::Equals( lhs.left,   rhs.left,   err );
-		res[1] = FGC::Equals( lhs.top,    rhs.top,    err );
-		res[2] = FGC::Equals( lhs.right,  rhs.right,  err );
-		res[3] = FGC::Equals( lhs.bottom, rhs.bottom, err );
+		res[0] = AE::STL::Equals( lhs.left,   rhs.left,   err );
+		res[1] = AE::STL::Equals( lhs.top,    rhs.top,    err );
+		res[2] = AE::STL::Equals( lhs.right,  rhs.right,  err );
+		res[3] = AE::STL::Equals( lhs.bottom, rhs.bottom, err );
 		return res;
 	}
 
 
-}	// FGC
+}	// AE::STL
 
 
 namespace std
 {
 	template <typename T>
-	struct hash< FGC::Rectangle<T> >
+	struct hash< AE::STL::Rectangle<T> >
 	{
-		ND_ size_t  operator () (const FGC::Rectangle<T> &value) const
+		ND_ size_t  operator () (const AE::STL::Rectangle<T> &value) const
 		{
-		#if FG_FAST_HASH
-			return	size_t( FGC::HashOf( this, sizeof(*this) ));
+		#if AE_FAST_HASH
+			return	size_t( AE::STL::HashOf( this, sizeof(*this) ));
 		#else
-			return	size_t( FGC::HashOf( value.left )  + FGC::HashOf( value.bottom ) +
-							FGC::HashOf( value.right ) + FGC::HashOf( value.top ) );
+			return	size_t( AE::STL::HashOf( value.left )  + AE::STL::HashOf( value.bottom ) +
+							AE::STL::HashOf( value.right ) + AE::STL::HashOf( value.top ) );
 		#endif
 		}
 	};

@@ -1,6 +1,6 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
-	FG_BARRIER_MODE:
+	AE_BARRIER_MODE:
 		0 - WinAPI native barrier implementation, requires Windows 8 desctop.
 		1 - implementation based only on atomics.
 		2 - implementation based on boost::fibers::barrier, shows same performance as native WinAPI barrier.
@@ -11,18 +11,18 @@
 
 #include "stl/Common.h"
 
-#ifdef FG_STD_BARRIER
-#	define FG_BARRIER_MODE	3
+#ifdef AE_STD_BARRIER
+#	define AE_BARRIER_MODE	3
 #elif defined(WINDOWS_TARGET_VERSION) and (WINDOWS_TARGET_VERSION >= 8)
-#	define FG_BARRIER_MODE	0
+#	define AE_BARRIER_MODE	0
 #else
-#	define FG_BARRIER_MODE	2
+#	define AE_BARRIER_MODE	2
 #endif
 
 
-#if (FG_BARRIER_MODE == 0)
+#if (AE_BARRIER_MODE == 0)
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -50,22 +50,22 @@ namespace FGC
 		void wait ();
 	};
 
-}	// FGC
+}	// AE::STL
 
 
-#elif (FG_BARRIER_MODE == 1)
+#elif (AE_BARRIER_MODE == 1)
 
 #include <atomic>
 #include <thread>
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
 	// Barrier
 	//
 
-	struct alignas(FG_CACHE_LINE) Barrier
+	struct alignas(AE_CACHE_LINE) Barrier
 	{
 	// types
 	private:
@@ -151,15 +151,15 @@ namespace FGC
 		}
 	};
 
-}	// FGC
+}	// AE::STL
 
 
-#elif (FG_BARRIER_MODE == 2)
+#elif (AE_BARRIER_MODE == 2)
 
 #include <mutex>
 #include <condition_variable>
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -212,14 +212,14 @@ namespace FGC
 		}
 	};
 
-}	// FGC
+}	// AE::STL
 
 
-#elif (FG_BARRIER_MODE == 3)
+#elif (AE_BARRIER_MODE == 3)
 
 #include <barrier>
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -250,25 +250,25 @@ namespace FGC
 		}
 	};
 
-}	// FGC
+}	// AE::STL
 
 #else
 #	error not supported!
 
-#endif	// FG_BARRIER_MODE
+#endif	// AE_BARRIER_MODE
 
 
 // check definitions
 #if defined (COMPILER_MSVC) or defined (COMPILER_CLANG)
 
-#  if FG_BARRIER_MODE == 0
-#	pragma detect_mismatch( "FG_BARRIER_MODE", "0" )
-#  elif FG_BARRIER_MODE == 1
-#	pragma detect_mismatch( "FG_BARRIER_MODE", "1" )
-#  elif FG_BARRIER_MODE == 2
-#	pragma detect_mismatch( "FG_BARRIER_MODE", "2" )
-#  elif FG_BARRIER_MODE == 3
-#	pragma detect_mismatch( "FG_BARRIER_MODE", "3" )
+#  if AE_BARRIER_MODE == 0
+#	pragma detect_mismatch( "AE_BARRIER_MODE", "0" )
+#  elif AE_BARRIER_MODE == 1
+#	pragma detect_mismatch( "AE_BARRIER_MODE", "1" )
+#  elif AE_BARRIER_MODE == 2
+#	pragma detect_mismatch( "AE_BARRIER_MODE", "2" )
+#  elif AE_BARRIER_MODE == 3
+#	pragma detect_mismatch( "AE_BARRIER_MODE", "3" )
 #  else
 #	error fix me!
 #  endif

@@ -30,5 +30,5 @@ extern void UnitTest_StaticString ()
 {
 	StaticString_Test1();
 	StaticString_Test2();
-	FG_LOGI( "UnitTest_StaticString - passed" );
+	AE_LOGI( "UnitTest_StaticString - passed" );
 }

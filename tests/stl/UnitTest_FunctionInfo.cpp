@@ -42,5 +42,5 @@ extern void UnitTest_FunctionInfo ()
 		STATIC_ASSERT( IsSameTypes< fi::type, void (*)(double, int) > );
 	}
 
-	FG_LOGI( "UnitTest_FunctionInfo - passed" );
+	AE_LOGI( "UnitTest_FunctionInfo - passed" );
 }

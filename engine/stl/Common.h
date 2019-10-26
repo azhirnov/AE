@@ -27,7 +27,7 @@
 #include "stl/CompileTime/DefaultType.h"
 
 
-namespace FGC
+namespace AE::STL
 {
 	using uint = uint32_t;
 
@@ -69,7 +69,7 @@ namespace FGC
 	using HashMap = std::unordered_map< Key, Value, Hasher >;
 
 
-#	ifdef FG_OPTIMAL_MEMORY_ORDER
+#	ifdef AE_OPTIMAL_MEMORY_ORDER
 	static constexpr std::memory_order	memory_order_acquire	= std::memory_order_acquire;
 	static constexpr std::memory_order	memory_order_release	= std::memory_order_release;
 	static constexpr std::memory_order	memory_order_acq_rel	= std::memory_order_acq_rel;
@@ -79,7 +79,7 @@ namespace FGC
 	static constexpr std::memory_order	memory_order_release	= std::memory_order_seq_cst;
 	static constexpr std::memory_order	memory_order_acq_rel	= std::memory_order_seq_cst;
 	static constexpr std::memory_order	memory_order_relaxed	= std::memory_order_seq_cst;
-#	endif	// FG_OPTIMAL_MEMORY_ORDER
+#	endif	// AE_OPTIMAL_MEMORY_ORDER
 
 
-}	// FGC
+}	// AE::STL

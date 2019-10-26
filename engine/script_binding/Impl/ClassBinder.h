@@ -5,7 +5,7 @@
 #include "script_binding/Impl/ScriptEngine.h"
 #include "script_binding/Impl/ScriptTypes.h"
 
-namespace FGScript
+namespace AE::Script
 {
 
 	enum class EUnaryOperator
@@ -34,7 +34,7 @@ namespace FGScript
 	};
 
 
-	namespace _fgscript_hidden_
+	namespace _ae_script_hidden_
 	{
 		struct OperatorBinderHelper
 		{
@@ -47,7 +47,7 @@ namespace FGScript
 		template <typename Func>
 		ND_ constexpr bool IsGlobal ();
 
-	}	// _fgscript_hidden_
+	}	// _ae_script_hidden_
 
 
 
@@ -68,7 +68,7 @@ namespace FGScript
 		// Operator Binder (helper class)
 		// see http://www.angelcode.com/angelscript/sdk/docs/manual/doc_script_class_ops.html
 		//
-		struct OperatorBinder final : _fgscript_hidden_::OperatorBinderHelper
+		struct OperatorBinder final : _ae_script_hidden_::OperatorBinderHelper
 		{
 			friend struct ClassBinder<T>;
 
@@ -184,7 +184,7 @@ namespace FGScript
 	};
 
 	
-namespace _fgscript_hidden_ {
+namespace _ae_script_hidden_ {
 /*
 =================================================
 	IsGlobal
@@ -195,7 +195,7 @@ namespace _fgscript_hidden_ {
 	{
 		return IsSameTypes< typename FunctionInfo<Func>::clazz, void >;
 	}
-}	// _fgscript_hidden_
+}	// _ae_script_hidden_
 
 
 /*
@@ -544,7 +544,7 @@ namespace _fgscript_hidden_ {
 	template <typename T> template <typename Func>
 	inline typename ClassBinder<T>::OperatorBinder&  ClassBinder<T>::OperatorBinder::Unary (EUnaryOperator op, Func func)
 	{
-		if constexpr( _fgscript_hidden_::IsGlobal<Func>() )
+		if constexpr( _ae_script_hidden_::IsGlobal<Func>() )
 			_binder->AddMethodFromGlobalObjFirst( func, _UnaryToStr( op ));
 		else
 			_binder->AddMethod( func, _UnaryToStr( op ) );
@@ -560,7 +560,7 @@ namespace _fgscript_hidden_ {
 	template <typename T> template <typename Func>
 	inline typename ClassBinder<T>::OperatorBinder&  ClassBinder<T>::OperatorBinder::BinaryAssign (EBinaryOperator op, Func func)
 	{
-		if constexpr( _fgscript_hidden_::IsGlobal<Func>() )
+		if constexpr( _ae_script_hidden_::IsGlobal<Func>() )
 			_binder->AddMethodFromGlobalObjFirst( func, _BinAssignToStr( op ));
 		else
 			_binder->AddMethod( func, _BinAssignToStr( op ) );
@@ -585,7 +585,7 @@ namespace _fgscript_hidden_ {
 	template <typename T> template <typename Func>
 	inline typename ClassBinder<T>::OperatorBinder&  ClassBinder<T>::OperatorBinder::Index (Func func)
 	{
-		if constexpr( _fgscript_hidden_::IsGlobal<Func>() )
+		if constexpr( _ae_script_hidden_::IsGlobal<Func>() )
 			_binder->AddMethodFromGlobalObjFirst( func, "opIndex" );
 		else
 			_binder->AddMethod( func, "opIndex" );
@@ -698,7 +698,7 @@ namespace _fgscript_hidden_ {
 	template <typename T> template <typename Func>
 	inline typename ClassBinder<T>::OperatorBinder&  ClassBinder<T>::OperatorBinder::Binary (EBinaryOperator op, Func func)
 	{
-		if constexpr( _fgscript_hidden_::IsGlobal<Func>() )
+		if constexpr( _ae_script_hidden_::IsGlobal<Func>() )
 			_binder->AddMethodFromGlobalObjFirst( func, _BinToStr( op ));
 		else
 			_binder->AddMethod( func, _BinToStr( op ) );
@@ -714,7 +714,7 @@ namespace _fgscript_hidden_ {
 	template <typename T> template <typename Func>
 	inline typename ClassBinder<T>::OperatorBinder&  ClassBinder<T>::OperatorBinder::BinaryRH (EBinaryOperator op, Func func)
 	{
-		STATIC_ASSERT( _fgscript_hidden_::IsGlobal<Func>() );
+		STATIC_ASSERT( _ae_script_hidden_::IsGlobal<Func>() );
 		
 		_binder->AddMethodFromGlobalObjLast( func, _BinRightToStr( op ));
 		return *this;
@@ -732,7 +732,7 @@ namespace _fgscript_hidden_ {
 
 		STATIC_ASSERT( IsSameTypes< typename FuncInfo::result, bool > );
 		
-		if constexpr( _fgscript_hidden_::IsGlobal<Func>() )
+		if constexpr( _ae_script_hidden_::IsGlobal<Func>() )
 		{
 			STATIC_ASSERT( FuncInfo::args::Count == 2 );
 			STATIC_ASSERT(( IsSameTypes< typename FuncInfo::args::template Get<0>, T > or IsSameTypes< typename FuncInfo::args::template Get<0>, const T& > ));
@@ -761,7 +761,7 @@ namespace _fgscript_hidden_ {
 		STATIC_ASSERT(( IsSameTypes< typename FuncInfo::args::template Get<0>, T > or IsSameTypes< typename FuncInfo::args::template Get<0>, const T& > ));
 		STATIC_ASSERT(( IsSameTypes< typename FuncInfo::args::template Get<1>, T > or IsSameTypes< typename FuncInfo::args::template Get<1>, const T& > ));
 		
-		if constexpr( _fgscript_hidden_::IsGlobal<Func>() )
+		if constexpr( _ae_script_hidden_::IsGlobal<Func>() )
 			_binder->AddMethodFromGlobalObjFirst( func, "opCmp" );
 		else
 			_binder->AddMethod( func, "opCmp" );
@@ -770,4 +770,4 @@ namespace _fgscript_hidden_ {
 	}
 
 
-}	// FGScript
+}	// AE::Script

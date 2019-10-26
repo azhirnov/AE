@@ -113,5 +113,5 @@ extern void UnitTest_FixedMap ()
 	FixedMap_Test4();
 	FixedMap_Test5();
 
-	FG_LOGI( "UnitTest_FixedMap - passed" );
+	AE_LOGI( "UnitTest_FixedMap - passed" );
 }

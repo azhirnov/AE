@@ -5,7 +5,7 @@
 #include "script_binding/Impl/ClassBinder.h"
 #include "stl/Algorithms/StringUtils.h"
 
-namespace FGScript
+namespace AE::Script
 {
 
 	//
@@ -223,4 +223,4 @@ namespace FGScript
 		return (*this).Op_Set().Op_Reset().Op_Get().Op_Or();
 	}
 
-}	// FGScript
+}	// AE::Script

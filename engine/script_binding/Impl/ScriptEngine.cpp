@@ -3,7 +3,7 @@
 #include "script_binding/Impl/ScriptEngine.h"
 #include "stl/Algorithms/StringUtils.h"
 
-namespace FGScript
+namespace AE::Script
 {
 	
 /*
@@ -222,7 +222,7 @@ namespace FGScript
 			}
 		}
 
-		FG_LOGI( str );
+		AE_LOGI( str );
 	}
 	
 /*
@@ -240,7 +240,7 @@ namespace FGScript
 		String	str("AngelScript error: ");
 
 #		define __AS_CASE_ERR( _val_ ) \
-			case _val_ : str << FG_PRIVATE_TOSTRING( _val_ ); break;
+			case _val_ : str << AE_PRIVATE_TOSTRING( _val_ ); break;
 
 		switch ( err )
 		{
@@ -282,8 +282,8 @@ namespace FGScript
 		str << ", in " << asFunc;
 		str << ", function: " << func;
 
-		FG_LOGE( str, file, line );
+		AE_LOGE( str, file, line );
 		return false;
 	}
 
-}	// FGScript
+}	// AE::Script

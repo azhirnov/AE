@@ -156,5 +156,5 @@ extern void UnitTest_Matrix ()
 	Matrix_Test6();
 	Matrix_Test7();
 
-	FG_LOGI( "UnitTest_Matrix - passed" );
+	AE_LOGI( "UnitTest_Matrix - passed" );
 }

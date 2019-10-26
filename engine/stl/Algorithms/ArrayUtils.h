@@ -5,7 +5,7 @@
 #include "stl/Math/Bytes.h"
 #include "stl/Containers/FixedArray.h"
 
-namespace FGC
+namespace AE::STL
 {
 	
 /*
@@ -197,7 +197,7 @@ namespace FGC
 	Reverse
 =================================================
 */
-namespace _fgc_hidden_
+namespace _ae_stl_hidden_
 {
 	template <typename Container>
 	class ReverseContainerView
@@ -212,18 +212,18 @@ namespace _fgc_hidden_
 		ND_ auto  end ()	{ return std::rend( _container ); }
 	};
 
-}	// _fgc_hidden_
+}	// _ae_stl_hidden_
 
 	template <typename Container>
 	ND_ auto  Reverse (Container& container)
 	{
-		return _fgc_hidden_::ReverseContainerView<Container>{ container };
+		return _ae_stl_hidden_::ReverseContainerView<Container>{ container };
 	}
 
 	template <typename Container>
 	ND_ auto  Reverse (const Container& container)
 	{
-		return _fgc_hidden_::ReverseContainerView<const Container>{ container };
+		return _ae_stl_hidden_::ReverseContainerView<const Container>{ container };
 	}
 
-}	// FGC
+}	// AE::STL

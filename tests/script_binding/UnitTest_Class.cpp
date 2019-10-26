@@ -20,7 +20,7 @@ struct Test1_CL : AngelScriptHelper::SimpleRefCounter
 		return i;
 	}
 };
-FG_DECL_SCRIPT_OBJ_RC( Test1_CL, "Test1_CL" );
+AE_DECL_SCRIPT_OBJ_RC( Test1_CL, "Test1_CL" );
 
 static void ScriptClass_Test1 (const ScriptEnginePtr &se)
 {
@@ -63,7 +63,7 @@ struct Test2_Value
 	}
 };
 
-FG_DECL_SCRIPT_OBJ( Test2_Value, "Test2_Value" );
+AE_DECL_SCRIPT_OBJ( Test2_Value, "Test2_Value" );
 
 static void ScriptClass_Test2 (const ScriptEnginePtr &se)
 {
@@ -98,7 +98,7 @@ enum class EEnum : uint
 	_Count
 };
 
-FG_DECL_SCRIPT_TYPE( EEnum,	"EEnum" );
+AE_DECL_SCRIPT_TYPE( EEnum,	"EEnum" );
 
 static void ScriptClass_Test3 (const ScriptEnginePtr &se)
 {
@@ -125,7 +125,7 @@ static void ScriptClass_Test3 (const ScriptEnginePtr &se)
 
 
 // script in script
-class Script
+class ScriptCl
 {
 public:
 	static ScriptEnginePtr	engine;
@@ -145,7 +145,7 @@ public:
 	}
 };
 
-ScriptEnginePtr	Script::engine;
+ScriptEnginePtr	ScriptCl::engine;
 
 static void ScriptClass_Test4 (const ScriptEnginePtr &se)
 {
@@ -157,12 +157,12 @@ static void ScriptClass_Test4 (const ScriptEnginePtr &se)
 		}
 	)#";
 
-	Script::engine = se;
+	ScriptCl::engine = se;
 
-	ClassBinder<Script>		binder{ se, "Script" };
+	ClassBinder<ScriptCl>		binder{ se, "Script" };
 
 	TEST( binder.CreateClassValue() );
-	TEST( binder.AddMethod( &Script::Run, "Run" ));
+	TEST( binder.AddMethod( &ScriptCl::Run, "Run" ));
 
 
 	int	res = 0;
@@ -186,7 +186,7 @@ struct Test5_CL : AngelScriptHelper::SimpleRefCounter
 		return i;
 	}
 };
-FG_DECL_SCRIPT_OBJ_RC( Test5_CL, "Test5_CL" );
+AE_DECL_SCRIPT_OBJ_RC( Test5_CL, "Test5_CL" );
 
 static void ScriptClass_Test5 (const ScriptEnginePtr &se)
 {
@@ -221,7 +221,7 @@ struct Test6_CL : AngelScriptHelper::SimpleRefCounter
 		this->i = v;
 	}
 };
-FG_DECL_SCRIPT_OBJ_RC( Test6_CL, "Test6_CL" );
+AE_DECL_SCRIPT_OBJ_RC( Test6_CL, "Test6_CL" );
 
 static void ScriptClass_Test6 (const ScriptEnginePtr &se)
 {
@@ -265,7 +265,7 @@ struct Test7_Value
 	}
 };
 
-FG_DECL_SCRIPT_OBJ( Test7_Value, "Test7_Value" );
+AE_DECL_SCRIPT_OBJ( Test7_Value, "Test7_Value" );
 
 static void ScriptClass_Test7 (const ScriptEnginePtr &se)
 {
@@ -301,7 +301,7 @@ struct Test8_CL : AngelScriptHelper::SimpleRefCounter
 		this->i = v;
 	}
 };
-FG_DECL_SCRIPT_OBJ_RC( Test8_CL, "Test8_CL" );
+AE_DECL_SCRIPT_OBJ_RC( Test8_CL, "Test8_CL" );
 
 using Test8_Ptr = AngelScriptHelper::SharedPtr<Test8_CL>;
 
@@ -348,5 +348,5 @@ extern void UnitTest_Class ()
 	ScriptClass_Test7( se );
 	ScriptClass_Test8( se );
 	
-	FG_LOGI( "UnitTest_Class - passed" );
+	AE_LOGI( "UnitTest_Class - passed" );
 }

@@ -4,9 +4,9 @@
 
 #include "stl/Common.h"
 
-namespace FGC
+namespace AE::STL
 {
-namespace _fgc_hidden_
+namespace _ae_stl_hidden_
 {
 	template <typename T>
 	struct _ReverseWrapper
@@ -17,7 +17,7 @@ namespace _fgc_hidden_
 		ND_ auto	end ()		{ return std::rend(container); }
 	};
 
-}	// _fgc_hidden_
+}	// _ae_stl_hidden_
 
 /*
 =================================================
@@ -25,10 +25,10 @@ namespace _fgc_hidden_
 =================================================
 */
 	template <typename Container>
-	ND_ _fgc_hidden_::_ReverseWrapper<Container>  Reverse (Container &&arr)
+	ND_ _ae_stl_hidden_::_ReverseWrapper<Container>  Reverse (Container &&arr)
 	{
 		return { arr };
 	}
 
 
-}	// FGC
+}	// AE::STL

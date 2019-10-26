@@ -11,14 +11,14 @@ message( STATUS "host system: ${CMAKE_HOST_SYSTEM_NAME} (${CMAKE_HOST_SYSTEM_VER
 
 #----------------------------------------------------------
 
-set( FG_ENABLE_TESTS ON CACHE BOOL "enable tests" )
-set( FG_ENABLE_SIMPLE_COMPILER_OPTIONS OFF CACHE BOOL "use simplified compiler settings if you have problem with it" )
+set( AE_ENABLE_TESTS ON CACHE BOOL "enable tests" )
+set( AE_ENABLE_SIMPLE_COMPILER_OPTIONS OFF CACHE BOOL "use simplified compiler settings if you have problem with it" )
 
 # External dependencies
-set( FG_ENABLE_ANGELSCRIPT ON CACHE BOOL "enable script bindings" )
+set( AE_ENABLE_ANGELSCRIPT ON CACHE BOOL "enable script bindings" )
 # Options
-set( FG_EXTERNALS_USE_STABLE_VERSIONS ON CACHE BOOL "use last stable version instead of master branch" )
-set( FG_EXTERNALS_USE_PREBUILD OFF CACHE BOOL "use stable prebuild libraries" )
+set( AE_EXTERNALS_USE_STABLE_VERSIONS ON CACHE BOOL "use last stable version instead of master branch" )
+set( AE_EXTERNALS_USE_PREBUILD OFF CACHE BOOL "use stable prebuild libraries" )
 
 #----------------------------------------------------------
 
@@ -34,10 +34,19 @@ add_subdirectory( "external" )
 add_subdirectory( "utils/project_template" )
 add_subdirectory( "engine/stl" )
 add_subdirectory( "engine/script_binding" )
+add_subdirectory( "engine/ecs" )
+
+#----------------------------------------------------------
 
 # tests
-add_subdirectory( "tests/stl" )
-add_subdirectory( "tests/script_binding" )
+if (${AE_ENABLE_TESTS})
+	enable_testing()
+	add_subdirectory( "tests/stl" )
+	add_subdirectory( "tests/script_binding" )
+	add_subdirectory( "tests/ecs" )
+endif()
+
+#----------------------------------------------------------
 
 message( STATUS "project 'ECS-Engine' generation ended" )
 message( STATUS "\n==========================================================================" )

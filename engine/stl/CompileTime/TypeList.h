@@ -4,9 +4,9 @@
 
 #include "stl/Common.h"
 
-namespace FGC
+namespace AE::STL
 {
-namespace _fgc_hidden_
+namespace _ae_stl_hidden_
 {
 
 	template <typename Type, size_t I, typename TL>
@@ -25,7 +25,7 @@ namespace _fgc_hidden_
 													std::integral_constant<size_t, I>, TL_GetIndex< Type, I+1, std::tuple<Tail...> > >::value;
 	};
 
-}	// _fgc_hidden_
+}	// _ae_stl_hidden_
 
 
 	//
@@ -37,7 +37,7 @@ namespace _fgc_hidden_
 	{
 	public:
 		template <typename T>
-		inline static constexpr size_t	Index	= _fgc_hidden_::TL_GetIndex< T, 0, std::tuple<Types...> >::value;
+		inline static constexpr size_t	Index	= _ae_stl_hidden_::TL_GetIndex< T, 0, std::tuple<Types...> >::value;
 
 		inline static constexpr size_t	Count	= std::tuple_size< std::tuple<Types...> >::value;
 
@@ -66,7 +66,7 @@ namespace _fgc_hidden_
 				fn.operator()<T,I>();
 				_Visit< I+1 >( std::forward<FN>(fn) );
 			}
-			FG_UNUSED( fn );
+			AE_UNUSED( fn );
 		}
 	};
 
@@ -76,4 +76,4 @@ namespace _fgc_hidden_
 	{};
 
 
-}	// FGC
+}	// AE::STL

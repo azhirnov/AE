@@ -6,13 +6,13 @@
 
 #include <shared_mutex>
 
-#ifdef FG_ENABLE_DATA_RACE_CHECK
+#ifdef AE_ENABLE_DATA_RACE_CHECK
 
 #include <atomic>
 #include <mutex>
 #include <thread>
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -116,19 +116,19 @@ namespace FGC
 		}
 	};
 
-}	// FGC
+}	// AE::STL
 
 namespace std
 {
 	template <>
-	struct unique_lock< FGC::DataRaceCheck >
+	struct unique_lock< AE::STL::DataRaceCheck >
 	{
 	private:
-		FGC::DataRaceCheck &	_lock;
+		AE::STL::DataRaceCheck &	_lock;
 		bool					_locked	= false;
 
 	public:
-		explicit unique_lock (FGC::DataRaceCheck &ref) : _lock{ref}
+		explicit unique_lock (AE::STL::DataRaceCheck &ref) : _lock{ref}
 		{
 			_locked = _lock.Lock();
 		}
@@ -144,24 +144,24 @@ namespace std
 	};
 
 	template <>
-	struct unique_lock< const FGC::DataRaceCheck > :
-		unique_lock< FGC::DataRaceCheck >
+	struct unique_lock< const AE::STL::DataRaceCheck > :
+		unique_lock< AE::STL::DataRaceCheck >
 	{
-		explicit unique_lock (const FGC::DataRaceCheck &ref) :
-			unique_lock< FGC::DataRaceCheck >{ const_cast<FGC::DataRaceCheck &>(ref) }
+		explicit unique_lock (const AE::STL::DataRaceCheck &ref) :
+			unique_lock< AE::STL::DataRaceCheck >{ const_cast<AE::STL::DataRaceCheck &>(ref) }
 		{}
 	};
 
 
 	template <>
-	struct unique_lock< FGC::RWDataRaceCheck >
+	struct unique_lock< AE::STL::RWDataRaceCheck >
 	{
 	private:
-		FGC::RWDataRaceCheck &	_lock;
+		AE::STL::RWDataRaceCheck &	_lock;
 		bool					_locked	= false;
 
 	public:
-		explicit unique_lock (FGC::RWDataRaceCheck &ref) : _lock{ref}
+		explicit unique_lock (AE::STL::RWDataRaceCheck &ref) : _lock{ref}
 		{
 			_locked = _lock.LockExclusive();
 		}
@@ -177,24 +177,24 @@ namespace std
 	};
 
 	template <>
-	struct unique_lock< const FGC::RWDataRaceCheck > :
-		unique_lock< FGC::RWDataRaceCheck >
+	struct unique_lock< const AE::STL::RWDataRaceCheck > :
+		unique_lock< AE::STL::RWDataRaceCheck >
 	{
-		explicit unique_lock (const FGC::RWDataRaceCheck &ref) :
-			unique_lock< FGC::RWDataRaceCheck >{ const_cast<FGC::RWDataRaceCheck &>(ref) }
+		explicit unique_lock (const AE::STL::RWDataRaceCheck &ref) :
+			unique_lock< AE::STL::RWDataRaceCheck >{ const_cast<AE::STL::RWDataRaceCheck &>(ref) }
 		{}
 	};
 
 
 	template <>
-	struct shared_lock< FGC::RWDataRaceCheck >
+	struct shared_lock< AE::STL::RWDataRaceCheck >
 	{
 	private:
-		FGC::RWDataRaceCheck &	_lock;
+		AE::STL::RWDataRaceCheck &	_lock;
 		bool					_locked	= false;
 
 	public:
-		explicit shared_lock (FGC::RWDataRaceCheck &ref) : _lock{ref}
+		explicit shared_lock (AE::STL::RWDataRaceCheck &ref) : _lock{ref}
 		{
 			_locked = _lock.LockShared();
 		}
@@ -210,17 +210,17 @@ namespace std
 	};
 
 	template <>
-	struct shared_lock< const FGC::RWDataRaceCheck > :
-		shared_lock< FGC::RWDataRaceCheck >
+	struct shared_lock< const AE::STL::RWDataRaceCheck > :
+		shared_lock< AE::STL::RWDataRaceCheck >
 	{
-		explicit shared_lock (const FGC::RWDataRaceCheck &ref) :
-			shared_lock< FGC::RWDataRaceCheck >{ const_cast<FGC::RWDataRaceCheck &>(ref) }
+		explicit shared_lock (const AE::STL::RWDataRaceCheck &ref) :
+			shared_lock< AE::STL::RWDataRaceCheck >{ const_cast<AE::STL::RWDataRaceCheck &>(ref) }
 		{}
 	};
 
 }	// std
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -302,12 +302,12 @@ namespace FGC
 	};
 
 
-}	// FGC
+}	// AE::STL
 
 
 #else
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -352,7 +352,7 @@ namespace FGC
 	};
 
 
-}	// FGC
+}	// AE::STL
 
-#endif	// FG_ENABLE_DATA_RACE_CHECK
+#endif	// AE_ENABLE_DATA_RACE_CHECK
 

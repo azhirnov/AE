@@ -5,7 +5,7 @@
 #include "stl/Math/Math.h"
 #include "stl/Containers/StringView.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -108,18 +108,18 @@ namespace FGC
 	template <size_t StringSize>
 	using StaticString = TStaticString< char, StringSize >;
 
-}	// FGC
+}	// AE::STL
 
 
 namespace std
 {
 
 	template <typename CharT, size_t StringSize>
-	struct hash< FGC::TStaticString< CharT, StringSize > >
+	struct hash< AE::STL::TStaticString< CharT, StringSize > >
 	{
-		ND_ size_t  operator () (const FGC::TStaticString<CharT, StringSize> &value) const
+		ND_ size_t  operator () (const AE::STL::TStaticString<CharT, StringSize> &value) const
 		{
-			return hash< FGC::BasicStringView<CharT> >()( value );
+			return hash< AE::STL::BasicStringView<CharT> >()( value );
 		}
 	};
 

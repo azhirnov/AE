@@ -4,7 +4,7 @@
 
 #include "script_binding/Impl/ScriptEngine.h"
 
-namespace FGScript
+namespace AE::Script
 {
 
 	//
@@ -37,7 +37,7 @@ namespace FGScript
 		static uint SizeOf ()					{ return 0; }
 	};
 
-#	define FG_DECL_SCRIPT_TYPE( _type_, _name_ ) \
+#	define AE_DECL_SCRIPT_TYPE( _type_, _name_ ) \
 		template <> \
 		struct ScriptTypeInfo < _type_ > \
 		{ \
@@ -51,7 +51,7 @@ namespace FGScript
 			static uint SizeOf ()					{ return sizeof(type); } \
 		}
 	
-#	define FG_DECL_SCRIPT_OBJ( _type_, _name_ ) \
+#	define AE_DECL_SCRIPT_OBJ( _type_, _name_ ) \
 		template <> \
 		struct ScriptTypeInfo < _type_ > \
 		{ \
@@ -65,7 +65,7 @@ namespace FGScript
 			static uint SizeOf ()					{ return sizeof(type); } \
 		}
 
-#	define FG_DECL_SCRIPT_OBJ_RC( _type_, _name_ ) \
+#	define AE_DECL_SCRIPT_OBJ_RC( _type_, _name_ ) \
 		template <> \
 		struct ScriptTypeInfo < _type_ > \
 		{ \
@@ -103,24 +103,24 @@ namespace FGScript
 		template <> struct ScriptTypeInfo < const _type_& > {}
 
 
-#	define DECL_SCRIPT_TYPE( _type_ )	FG_DECL_SCRIPT_TYPE( _type_, FG_PRIVATE_TOSTRING( _type_ ) )
+#	define DECL_SCRIPT_TYPE( _type_ )	AE_DECL_SCRIPT_TYPE( _type_, AE_PRIVATE_TOSTRING( _type_ ) )
 	DECL_SCRIPT_TYPE( bool );
 	DECL_SCRIPT_TYPE( float );
 	DECL_SCRIPT_TYPE( double );
 	DECL_SCRIPT_TYPE( int );
 	DECL_SCRIPT_TYPE( uint );
-	FG_DECL_SCRIPT_TYPE( int8_t,		"int8" );
-	FG_DECL_SCRIPT_TYPE( uint8_t,		"uint8" );
-	FG_DECL_SCRIPT_TYPE( int16_t,		"int16" );
-	FG_DECL_SCRIPT_TYPE( uint16_t,		"uint16" );
-	FG_DECL_SCRIPT_TYPE( int64_t,		"int64" );
-	FG_DECL_SCRIPT_TYPE( uint64_t,		"uint64" );
-	FG_DECL_SCRIPT_OBJ( std::string,	"string" );
+	AE_DECL_SCRIPT_TYPE( int8_t,		"int8" );
+	AE_DECL_SCRIPT_TYPE( uint8_t,		"uint8" );
+	AE_DECL_SCRIPT_TYPE( int16_t,		"int16" );
+	AE_DECL_SCRIPT_TYPE( uint16_t,		"uint16" );
+	AE_DECL_SCRIPT_TYPE( int64_t,		"int64" );
+	AE_DECL_SCRIPT_TYPE( uint64_t,		"uint64" );
+	AE_DECL_SCRIPT_OBJ( std::string,	"string" );
 #	undef DECL_SCRIPT_TYPE
 
 
 	// only 'in' and 'out' are supported
-#	define FG_DECL_SCRIPT_WRAP( _templ_, _buildName_, _buildArg_ ) \
+#	define AE_DECL_SCRIPT_WRAP( _templ_, _buildName_, _buildArg_ ) \
 		template <typename T> \
 		struct ScriptTypeInfo < _templ_ > \
 		{ \
@@ -136,7 +136,7 @@ namespace FGScript
 		}
 
 #	define MULTILINE_ARG( ... )  __VA_ARGS__
-	FG_DECL_SCRIPT_WRAP( const T,
+	AE_DECL_SCRIPT_WRAP( const T,
 						 MULTILINE_ARG(
 							s += "const ";
 							Base_t::Name( s );
@@ -146,7 +146,7 @@ namespace FGScript
 							Base_t::Name( s );
 						 ));
 
-	FG_DECL_SCRIPT_WRAP( const T &,
+	AE_DECL_SCRIPT_WRAP( const T &,
 						 MULTILINE_ARG(
 							s += "const ";
 							Base_t::Name( s );
@@ -158,7 +158,7 @@ namespace FGScript
 							s += " &in";
 						 ));
 		
-	FG_DECL_SCRIPT_WRAP( T &,
+	AE_DECL_SCRIPT_WRAP( T &,
 						 MULTILINE_ARG(
 							Base_t::Name( s );
 							s += " &";
@@ -168,7 +168,7 @@ namespace FGScript
 							s += " &out";
 						 ));
 		
-	FG_DECL_SCRIPT_WRAP( const T *,
+	AE_DECL_SCRIPT_WRAP( const T *,
 						 MULTILINE_ARG(
 							s += "const ";
 							Base_t::Name( s );
@@ -180,7 +180,7 @@ namespace FGScript
 							s += " &in";
 						 ));
 		
-	FG_DECL_SCRIPT_WRAP( T *,
+	AE_DECL_SCRIPT_WRAP( T *,
 						 MULTILINE_ARG(
 							Base_t::Name( s );
 							s += " &";
@@ -304,7 +304,7 @@ namespace FGScript
 	// Script Function Descriptor
 	//
 
-	namespace _fgscript_hidden_
+	namespace _ae_script_hidden_
 	{
 
 		template <typename T>
@@ -362,7 +362,7 @@ namespace FGScript
 
 
 		template <typename Ret, typename ...Types>
-		struct GlobalFunction < Ret (FG_CDECL *) (Types...) >
+		struct GlobalFunction < Ret (AE_CDECL *) (Types...) >
 		{
 			using TypeList_t = typename TypeList< Types... >;
 				
@@ -380,7 +380,7 @@ namespace FGScript
 		};
 
 		template <typename Ret>
-		struct GlobalFunction < Ret (FG_CDECL *) () >
+		struct GlobalFunction < Ret (AE_CDECL *) () >
 		{
 			using TypeList_t = typename TypeList<>;
 				
@@ -397,11 +397,11 @@ namespace FGScript
 		};
 			
 		template <typename Ret, typename ...Types>
-		struct GlobalFunction < Ret (Types...) > : GlobalFunction< Ret (FG_CDECL *) (Types...) >
+		struct GlobalFunction < Ret (Types...) > : GlobalFunction< Ret (AE_CDECL *) (Types...) >
 		{};
 
 		template <typename C, typename Ret, typename ...Types>
-		struct MemberFunction < Ret (FG_THISCALL C:: *) (Types...) >
+		struct MemberFunction < Ret (AE_THISCALL C:: *) (Types...) >
 		{
 			using TypeList_t = typename TypeList< Types... >;
 				
@@ -417,7 +417,7 @@ namespace FGScript
 		};
 			
 		template <typename C, typename Ret>
-		struct MemberFunction < Ret (FG_THISCALL C:: *) () >
+		struct MemberFunction < Ret (AE_THISCALL C:: *) () >
 		{
 			using TypeList_t = typename TypeList<>;
 				
@@ -433,7 +433,7 @@ namespace FGScript
 		};
 			
 		template <typename C, typename Ret, typename ...Types>
-		struct MemberFunction < Ret (FG_THISCALL C:: *) (Types...) const >
+		struct MemberFunction < Ret (AE_THISCALL C:: *) (Types...) const >
 		{
 			using TypeList_t = typename TypeList< Types... >;
 				
@@ -450,7 +450,7 @@ namespace FGScript
 		};
 			
 		template <typename C, typename Ret>
-		struct MemberFunction < Ret (FG_THISCALL C:: *) () const >
+		struct MemberFunction < Ret (AE_THISCALL C:: *) () const >
 		{
 			using TypeList_t = typename TypeList<>;
 				
@@ -466,7 +466,7 @@ namespace FGScript
 			}
 		};
 
-	}	// _fgscript_hidden_
+	}	// _ae_script_hidden_
 
 	
 
@@ -475,7 +475,7 @@ namespace FGScript
 	//
 
 	template <typename T>
-	struct GlobalFunction : _fgscript_hidden_::GlobalFunction<T>
+	struct GlobalFunction : _ae_script_hidden_::GlobalFunction<T>
 	{
 	};
 
@@ -485,12 +485,12 @@ namespace FGScript
 	//
 
 	template <typename T>
-	struct MemberFunction : _fgscript_hidden_::MemberFunction<T>
+	struct MemberFunction : _ae_script_hidden_::MemberFunction<T>
 	{
 	};
 
 
-	namespace _fgscript_hidden_
+	namespace _ae_script_hidden_
 	{
 
 		//
@@ -629,6 +629,6 @@ namespace FGScript
 			using type	= void;
 		};
 
-	}	// _fgscript_hidden_
+	}	// _ae_script_hidden_
 
-}	// FGScript
+}	// AE::Script

@@ -6,7 +6,7 @@
 #include "stl/CompileTime/TypeTraits.h"
 #include "stl/Math/GLM.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	template <typename T, uint I>
@@ -46,7 +46,7 @@ namespace FGC
 	IsVec
 =================================================
 */
-	namespace _fgc_hidden_
+	namespace _ae_stl_hidden_
 	{
 		template <typename T>
 		struct _IsVec {
@@ -60,14 +60,14 @@ namespace FGC
 	}
 
 	template <typename T>
-	static constexpr bool  IsVec = _fgc_hidden_::_IsVec<T>::value;
+	static constexpr bool  IsVec = _ae_stl_hidden_::_IsVec<T>::value;
 	
 /*
 =================================================
 	VecSize
 =================================================
 */
-	namespace _fgc_hidden_
+	namespace _ae_stl_hidden_
 	{
 		template <typename T>
 		struct _VecSize {
@@ -80,7 +80,7 @@ namespace FGC
 	}
 
 	template <typename T>
-	static constexpr uint  VecSize = _fgc_hidden_::_VecSize<T>::value;
+	static constexpr uint  VecSize = _ae_stl_hidden_::_VecSize<T>::value;
 	
 /*
 =================================================
@@ -299,38 +299,38 @@ namespace FGC
 		return res;
 	}
 
-}	// FGC
+}	// AE::STL
 
 
 namespace std
 {
-#if FG_FAST_HASH
+#if AE_FAST_HASH
 	template <typename T, uint I>
-	struct hash< FGC::Vec<T,I> > {
-		ND_ size_t  operator () (const FGC::Vec<T,I> &value) const {
-			return size_t(FGC::HashOf( value.data(), value.size() * sizeof(T) ));
+	struct hash< AE::STL::Vec<T,I> > {
+		ND_ size_t  operator () (const AE::STL::Vec<T,I> &value) const {
+			return size_t(AE::STL::HashOf( value.data(), value.size() * sizeof(T) ));
 		}
 	};
 
 #else
 	template <typename T>
-	struct hash< FGC::Vec<T,2> > {
-		ND_ size_t  operator () (const FGC::Vec<T,2> &value) const {
-			return size_t(FGC::HashOf( value.x ) + FGC::HashOf( value.y ));
+	struct hash< AE::STL::Vec<T,2> > {
+		ND_ size_t  operator () (const AE::STL::Vec<T,2> &value) const {
+			return size_t(AE::STL::HashOf( value.x ) + AE::STL::HashOf( value.y ));
 		}
 	};
 	
 	template <typename T>
-	struct hash< FGC::Vec<T,3> > {
-		ND_ size_t  operator () (const FGC::Vec<T,3> &value) const {
-			return size_t(FGC::HashOf( value.x ) + FGC::HashOf( value.y ) + FGC::HashOf( value.z ));
+	struct hash< AE::STL::Vec<T,3> > {
+		ND_ size_t  operator () (const AE::STL::Vec<T,3> &value) const {
+			return size_t(AE::STL::HashOf( value.x ) + AE::STL::HashOf( value.y ) + AE::STL::HashOf( value.z ));
 		}
 	};
 	
 	template <typename T>
-	struct hash< FGC::Vec<T,4> > {
-		ND_ size_t  operator () (const FGC::Vec<T,4> &value) const {
-			return size_t(FGC::HashOf( value.x ) + FGC::HashOf( value.y ) + FGC::HashOf( value.z ) + FGC::HashOf( value.w ));
+	struct hash< AE::STL::Vec<T,4> > {
+		ND_ size_t  operator () (const AE::STL::Vec<T,4> &value) const {
+			return size_t(AE::STL::HashOf( value.x ) + AE::STL::HashOf( value.y ) + AE::STL::HashOf( value.z ) + AE::STL::HashOf( value.w ));
 		}
 	};
 #endif

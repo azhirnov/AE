@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <filesystem>
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -96,4 +96,4 @@ namespace FGC
 	};
 
 
-}	// FGC
+}	// AE::STL

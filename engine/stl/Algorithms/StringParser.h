@@ -4,7 +4,7 @@
 
 #include "stl/Algorithms/StringUtils.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -35,4 +35,4 @@ namespace FGC
 	};
 
 
-}	// FGC
+}	// AE::STL

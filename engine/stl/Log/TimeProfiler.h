@@ -6,7 +6,7 @@
 #include <chrono>
 #include <atomic>
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -53,20 +53,20 @@ namespace FGC
 			_message << "; TIME: " << ToString( Clock_t::now() - _startTime, 3 );
 
 			if ( _file ) {
-				FG_PRIVATE_LOGI( _message, _file, _line );
+				AE_PRIVATE_LOGI( _message, _file, _line );
 			}else{
-				FG_LOGI( _message );
+				AE_LOGI( _message );
 			}
 		}
 	};
 
 
-#	define FG_TIMEPROFILER( ... ) \
-		::FGC::TimeProfiler	FG_PRIVATE_UNITE_RAW( __timeProf, __COUNTER__ ) ( \
-								FG_PRIVATE_GETRAW( FG_PRIVATE_GETARG_0( "" __VA_ARGS__, "no name" ) ), \
-								FG_FUNCTION_NAME, \
+#	define AE_TIMEPROFILER( ... ) \
+		::AE::STL::TimeProfiler	AE_PRIVATE_UNITE_RAW( __timeProf, __COUNTER__ ) ( \
+								AE_PRIVATE_GETRAW( AE_PRIVATE_GETARG_0( "" __VA_ARGS__, "no name" ) ), \
+								AE_FUNCTION_NAME, \
 								__FILE__, \
 								__LINE__ ) \
 
 
-}	// FGC
+}	// AE::STL

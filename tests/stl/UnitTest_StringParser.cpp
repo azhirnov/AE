@@ -120,5 +120,5 @@ extern void UnitTest_StringParser ()
 	StringParser_CalculateNumberOfLines();
 	StringParser_MoveToLine();
 	
-	FG_LOGI( "UnitTest_StringParser - passed" );
+	AE_LOGI( "UnitTest_StringParser - passed" );
 }

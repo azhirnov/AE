@@ -5,7 +5,7 @@
 #include "stl/Defines.h"
 #include "stl/Containers/StringView.h"
 
-namespace FGC
+namespace AE::STL
 {
 	
 
@@ -22,24 +22,24 @@ namespace FGC
 		};
 		
 		static EResult  Info (const char *msg, const char *func, const char *file, int line);
-		static EResult  Info (const StringView &msg, const StringView &func, const StringView &file, int line);
+		static EResult  Info (std::string_view msg, std::string_view func, std::string_view file, int line);
 
 		static EResult  Error (const char *msg, const char *func, const char *file, int line);
-		static EResult  Error (const StringView &msg, const StringView &func, const StringView &file, int line);
+		static EResult  Error (std::string_view msg, std::string_view func, std::string_view file, int line);
 	};
 
-}	// FGC
+}	// AE::STL
 
 
-#define FG_PRIVATE_LOGX( _level_, _msg_, _file_, _line_ ) \
+#define AE_PRIVATE_LOGX( _level_, _msg_, _file_, _line_ ) \
 	BEGIN_ENUM_CHECKS() \
-	{switch ( ::FGC::Logger::_level_( (_msg_), (FG_FUNCTION_NAME), (_file_), (_line_) ) ) \
+	{switch ( ::AE::STL::Logger::_level_( (_msg_), (AE_FUNCTION_NAME), (_file_), (_line_) ) ) \
 	{ \
-		case ::FGC::Logger::EResult::Continue :	break; \
-		case ::FGC::Logger::EResult::Break :	FG_PRIVATE_BREAK_POINT();	break; \
-		case ::FGC::Logger::EResult::Abort :	FG_PRIVATE_EXIT();			break; \
+		case ::AE::STL::Logger::EResult::Continue :	break; \
+		case ::AE::STL::Logger::EResult::Break :	AE_PRIVATE_BREAK_POINT();	break; \
+		case ::AE::STL::Logger::EResult::Abort :	AE_PRIVATE_EXIT();			break; \
 	}} \
 	END_ENUM_CHECKS()
 
-#define FG_PRIVATE_LOGI( _msg_, _file_, _line_ )	FG_PRIVATE_LOGX( Info, (_msg_), (_file_), (_line_) )
-#define FG_PRIVATE_LOGE( _msg_, _file_, _line_ )	FG_PRIVATE_LOGX( Error, (_msg_), (_file_), (_line_) )
+#define AE_PRIVATE_LOGI( _msg_, _file_, _line_ )	AE_PRIVATE_LOGX( Info, (_msg_), (_file_), (_line_) )
+#define AE_PRIVATE_LOGE( _msg_, _file_, _line_ )	AE_PRIVATE_LOGX( Error, (_msg_), (_file_), (_line_) )

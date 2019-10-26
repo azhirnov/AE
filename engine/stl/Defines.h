@@ -4,9 +4,9 @@
 
 
 #if defined(DEBUG) || defined(_DEBUG)
-#	define FG_DEBUG
+#	define AE_DEBUG
 #else
-#	define FG_RELEASE
+#	define AE_RELEASE
 #endif
 
 #include "stl/Config.h"
@@ -66,7 +66,7 @@
 
 // force inline
 #ifndef forceinline
-# ifdef FG_DEBUG
+# ifdef AE_DEBUG
 #	define forceinline		inline
 
 # elif defined(COMPILER_MSVC)
@@ -83,62 +83,62 @@
 
 
 // macro for unused variables
-#ifndef FG_UNUSED
+#ifndef AE_UNUSED
 # if 0 // TODO: C++17
-#	define FG_UNUSED( ... )		[[maybe_unused]]( __VA_ARGS__ )
+#	define AE_UNUSED( ... )		[[maybe_unused]]( __VA_ARGS__ )
 # else
-#	define FG_UNUSED( ... )		(void)( __VA_ARGS__ )
+#	define AE_UNUSED( ... )		(void)( __VA_ARGS__ )
 # endif
 #endif
 
 
 // debug break
-#ifndef FG_PRIVATE_BREAK_POINT
-# if defined(COMPILER_MSVC) and defined(FG_DEBUG)
-#	define FG_PRIVATE_BREAK_POINT()		__debugbreak()
+#ifndef AE_PRIVATE_BREAK_POINT
+# if defined(COMPILER_MSVC) and defined(AE_DEBUG)
+#	define AE_PRIVATE_BREAK_POINT()		__debugbreak()
 
-# elif defined(PLATFORM_ANDROID) and defined(FG_DEBUG)
+# elif defined(PLATFORM_ANDROID) and defined(AE_DEBUG)
 #	include <csignal>
-#	define FG_PRIVATE_BREAK_POINT()		std::raise( SIGINT )
+#	define AE_PRIVATE_BREAK_POINT()		std::raise( SIGINT )
 
-# elif (defined(COMPILER_CLANG) or defined(COMPILER_GCC)) and defined(FG_DEBUG)
+# elif (defined(COMPILER_CLANG) or defined(COMPILER_GCC)) and defined(AE_DEBUG)
 #  if 1
 #	include <exception>
-#	define FG_PRIVATE_BREAK_POINT() 	throw std::runtime_error("breakpoint")
+#	define AE_PRIVATE_BREAK_POINT() 	throw std::runtime_error("breakpoint")
 #  else
 #	include <csignal>
-#	define FG_PRIVATE_BREAK_POINT()		std::raise(SIGINT)
+#	define AE_PRIVATE_BREAK_POINT()		std::raise(SIGINT)
 #  endif
 
 # else
-#	define FG_PRIVATE_BREAK_POINT()		{}
+#	define AE_PRIVATE_BREAK_POINT()		{}
 # endif
 #endif
 
 
 // exit
-#ifndef FG_PRIVATE_EXIT
+#ifndef AE_PRIVATE_EXIT
 # if defined(PLATFORM_ANDROID)
-#	define FG_PRIVATE_EXIT()	std::terminate()
+#	define AE_PRIVATE_EXIT()	std::terminate()
 # else
-#	define FG_PRIVATE_EXIT()	::exit( EXIT_FAILURE )
+#	define AE_PRIVATE_EXIT()	::exit( EXIT_FAILURE )
 # endif
 #endif
 
 
 // helper macro
-#define FG_PRIVATE_GETARG_0( _0_, ... )				_0_
-#define FG_PRIVATE_GETARG_1( _0_, _1_, ... )		_1_
-#define FG_PRIVATE_GETARG_2( _0_, _1_, _2_, ... )	_2_
-#define FG_PRIVATE_GETRAW( _value_ )				_value_
-#define FG_PRIVATE_TOSTRING( ... )					#__VA_ARGS__
-#define FG_PRIVATE_UNITE_RAW( _arg0_, _arg1_ )		FG_PRIVATE_UNITE( _arg0_, _arg1_ )
-#define FG_PRIVATE_UNITE( _arg0_, _arg1_ )			_arg0_ ## _arg1_
+#define AE_PRIVATE_GETARG_0( _0_, ... )				_0_
+#define AE_PRIVATE_GETARG_1( _0_, _1_, ... )		_1_
+#define AE_PRIVATE_GETARG_2( _0_, _1_, _2_, ... )	_2_
+#define AE_PRIVATE_GETRAW( _value_ )				_value_
+#define AE_PRIVATE_TOSTRING( ... )					#__VA_ARGS__
+#define AE_PRIVATE_UNITE_RAW( _arg0_, _arg1_ )		AE_PRIVATE_UNITE( _arg0_, _arg1_ )
+#define AE_PRIVATE_UNITE( _arg0_, _arg1_ )			_arg0_ ## _arg1_
 
 
 // debug only check
 #ifndef ASSERT
-# ifdef FG_DEBUG
+# ifdef AE_DEBUG
 #	define ASSERT				CHECK
 # else
 #	define ASSERT( ... )		{}
@@ -148,13 +148,13 @@
 
 // function name
 #ifdef COMPILER_MSVC
-#	define FG_FUNCTION_NAME			__FUNCTION__
+#	define AE_FUNCTION_NAME			__FUNCTION__
 
 #elif defined(COMPILER_CLANG) or defined(COMPILER_GCC)
-#	define FG_FUNCTION_NAME			__func__
+#	define AE_FUNCTION_NAME			__func__
 
 #else
-#	define FG_FUNCTION_NAME			"unknown function"
+#	define AE_FUNCTION_NAME			"unknown function"
 #endif
 
 
@@ -175,7 +175,7 @@
 
 // debug only scope
 #ifndef DEBUG_ONLY
-# ifdef FG_DEBUG
+# ifdef AE_DEBUG
 #	define DEBUG_ONLY( ... )		__VA_ARGS__
 # else
 #	define DEBUG_ONLY( ... )
@@ -185,53 +185,53 @@
 
 // log
 // (text, file, line)
-#ifndef FG_LOGD
-# ifdef FG_DEBUG
-#	define FG_LOGD	FG_LOGI
+#ifndef AE_LOGD
+# ifdef AE_DEBUG
+#	define AE_LOGD	AE_LOGI
 # else
-#	define FG_LOGD( ... )
+#	define AE_LOGD( ... )
 # endif
 #endif
 
-#ifndef FG_LOGI
-#	define FG_LOGI( ... ) \
-			FG_PRIVATE_LOGI(FG_PRIVATE_GETARG_0( __VA_ARGS__, "" ), \
-							FG_PRIVATE_GETARG_1( __VA_ARGS__, __FILE__ ), \
-							FG_PRIVATE_GETARG_2( __VA_ARGS__, __FILE__, __LINE__ ))
+#ifndef AE_LOGI
+#	define AE_LOGI( ... ) \
+			AE_PRIVATE_LOGI(AE_PRIVATE_GETARG_0( __VA_ARGS__, "" ), \
+							AE_PRIVATE_GETARG_1( __VA_ARGS__, __FILE__ ), \
+							AE_PRIVATE_GETARG_2( __VA_ARGS__, __FILE__, __LINE__ ))
 #endif
 
-#ifndef FG_LOGE
-#	define FG_LOGE( ... ) \
-			FG_PRIVATE_LOGE(FG_PRIVATE_GETARG_0( __VA_ARGS__, "" ), \
-							FG_PRIVATE_GETARG_1( __VA_ARGS__, __FILE__ ), \
-							FG_PRIVATE_GETARG_2( __VA_ARGS__, __FILE__, __LINE__ ))
+#ifndef AE_LOGE
+#	define AE_LOGE( ... ) \
+			AE_PRIVATE_LOGE(AE_PRIVATE_GETARG_0( __VA_ARGS__, "" ), \
+							AE_PRIVATE_GETARG_1( __VA_ARGS__, __FILE__ ), \
+							AE_PRIVATE_GETARG_2( __VA_ARGS__, __FILE__, __LINE__ ))
 #endif
 
 
 // check function return value
 #ifndef CHECK
-#	define FG_PRIVATE_CHECK( _expr_, _text_ ) \
+#	define AE_PRIVATE_CHECK( _expr_, _text_ ) \
 		{if_likely (( _expr_ )) {} \
 		 else { \
-			FG_LOGE( _text_ ); \
+			AE_LOGE( _text_ ); \
 		}}
 
 #   define CHECK( _func_ ) \
-		FG_PRIVATE_CHECK( (_func_), FG_PRIVATE_TOSTRING( _func_ ) )
+		AE_PRIVATE_CHECK( (_func_), AE_PRIVATE_TOSTRING( _func_ ) )
 #endif
 
 
 // check function return value and return error code
 #ifndef CHECK_ERR
-#	define FG_PRIVATE_CHECK_ERR( _expr_, _ret_ ) \
+#	define AE_PRIVATE_CHECK_ERR( _expr_, _ret_ ) \
 		{if_likely (( _expr_ )) {}\
 		  else { \
-			FG_LOGE( FG_PRIVATE_TOSTRING( _expr_ ) ); \
+			AE_LOGE( AE_PRIVATE_TOSTRING( _expr_ ) ); \
 			return (_ret_); \
 		}}
 
 #	define CHECK_ERR( ... ) \
-		FG_PRIVATE_CHECK_ERR( FG_PRIVATE_GETARG_0( __VA_ARGS__ ), FG_PRIVATE_GETARG_1( __VA_ARGS__, ::FGC::Default ) )
+		AE_PRIVATE_CHECK_ERR( AE_PRIVATE_GETARG_0( __VA_ARGS__ ), AE_PRIVATE_GETARG_1( __VA_ARGS__, ::AE::STL::Default ) )
 #endif
 
 
@@ -240,40 +240,40 @@
 #	define CHECK_FATAL( _expr_ ) \
 		{if_likely (( _expr_ )) {}\
 		  else { \
-			FG_LOGE( FG_PRIVATE_TOSTRING( _expr_ ) ); \
-			FG_PRIVATE_EXIT(); \
+			AE_LOGE( AE_PRIVATE_TOSTRING( _expr_ ) ); \
+			AE_PRIVATE_EXIT(); \
 		}}
 #endif
 
 
 // return error code
 #ifndef RETURN_ERR
-#	define FG_PRIVATE_RETURN_ERR( _text_, _ret_ ) \
-		{ FG_LOGE( _text_ );  return (_ret_); }
+#	define AE_PRIVATE_RETURN_ERR( _text_, _ret_ ) \
+		{ AE_LOGE( _text_ );  return (_ret_); }
 
 #	define RETURN_ERR( ... ) \
-		FG_PRIVATE_RETURN_ERR( FG_PRIVATE_GETARG_0( __VA_ARGS__ ), FG_PRIVATE_GETARG_1( __VA_ARGS__, ::FGC::Default ) )
+		AE_PRIVATE_RETURN_ERR( AE_PRIVATE_GETARG_0( __VA_ARGS__ ), AE_PRIVATE_GETARG_1( __VA_ARGS__, ::AE::STL::Default ) )
 #endif
 
 
 // compile time assert
 #ifndef STATIC_ASSERT
 #	define STATIC_ASSERT( ... ) \
-		static_assert(	FG_PRIVATE_GETRAW( FG_PRIVATE_GETARG_0( __VA_ARGS__ ) ), \
-						FG_PRIVATE_GETRAW( FG_PRIVATE_GETARG_1( __VA_ARGS__, FG_PRIVATE_TOSTRING(__VA_ARGS__) ) ) )
+		static_assert(	AE_PRIVATE_GETRAW( AE_PRIVATE_GETARG_0( __VA_ARGS__ ) ), \
+						AE_PRIVATE_GETRAW( AE_PRIVATE_GETARG_1( __VA_ARGS__, AE_PRIVATE_TOSTRING(__VA_ARGS__) ) ) )
 #endif
 
 
 // bit operators
-#define FG_BIT_OPERATORS( _type_ ) \
-	ND_ constexpr _type_  operator |  (_type_ lhs, _type_ rhs)	{ return _type_( FGC::EnumToUInt(lhs) | FGC::EnumToUInt(rhs) ); } \
-	ND_ constexpr _type_  operator &  (_type_ lhs, _type_ rhs)	{ return _type_( FGC::EnumToUInt(lhs) & FGC::EnumToUInt(rhs) ); } \
+#define AE_BIT_OPERATORS( _type_ ) \
+	ND_ constexpr _type_  operator |  (_type_ lhs, _type_ rhs)	{ return _type_( AE::STL::EnumToUInt(lhs) | AE::STL::EnumToUInt(rhs) ); } \
+	ND_ constexpr _type_  operator &  (_type_ lhs, _type_ rhs)	{ return _type_( AE::STL::EnumToUInt(lhs) & AE::STL::EnumToUInt(rhs) ); } \
 	\
-	constexpr _type_&  operator |= (_type_ &lhs, _type_ rhs)	{ return lhs = _type_( FGC::EnumToUInt(lhs) | FGC::EnumToUInt(rhs) ); } \
-	constexpr _type_&  operator &= (_type_ &lhs, _type_ rhs)	{ return lhs = _type_( FGC::EnumToUInt(lhs) & FGC::EnumToUInt(rhs) ); } \
+	constexpr _type_&  operator |= (_type_ &lhs, _type_ rhs)	{ return lhs = _type_( AE::STL::EnumToUInt(lhs) | AE::STL::EnumToUInt(rhs) ); } \
+	constexpr _type_&  operator &= (_type_ &lhs, _type_ rhs)	{ return lhs = _type_( AE::STL::EnumToUInt(lhs) & AE::STL::EnumToUInt(rhs) ); } \
 	\
-	ND_ constexpr _type_  operator ~ (_type_ lhs)				{ return _type_(~FGC::EnumToUInt(lhs)); } \
-	ND_ constexpr bool   operator ! (_type_ lhs)				{ return not FGC::EnumToUInt(lhs); } \
+	ND_ constexpr _type_  operator ~ (_type_ lhs)				{ return _type_(~AE::STL::EnumToUInt(lhs)); } \
+	ND_ constexpr bool   operator ! (_type_ lhs)				{ return not AE::STL::EnumToUInt(lhs); } \
 	
 
 // enable/disable checks for enums
@@ -300,33 +300,33 @@
 
 // allocator
 #ifdef COMPILER_MSVC
-#	define FG_ALLOCATOR		__declspec( allocator )
+#	define AE_ALLOCATOR		__declspec( allocator )
 #else
-#	define FG_ALLOCATOR
+#	define AE_ALLOCATOR
 #endif
 
 
 // exclusive lock
 #ifndef EXLOCK
 #	define EXLOCK( _syncObj_ ) \
-		std::unique_lock	FG_PRIVATE_UNITE_RAW( __scopeLock, __COUNTER__ ) { _syncObj_ }
+		std::unique_lock	AE_PRIVATE_UNITE_RAW( __scopeLock, __COUNTER__ ) { _syncObj_ }
 #endif
 
 // shared lock
 #ifndef SHAREDLOCK
 #	define SHAREDLOCK( _syncObj_ ) \
-		std::shared_lock	FG_PRIVATE_UNITE_RAW( __sharedLock, __COUNTER__ ) { _syncObj_ }
+		std::shared_lock	AE_PRIVATE_UNITE_RAW( __sharedLock, __COUNTER__ ) { _syncObj_ }
 #endif
 
 
 // thiscall, cdecl
 #ifdef COMPILER_MSVC
-#	define FG_CDECL		__cdecl
-#	define FG_THISCALL	__thiscall
+#	define AE_CDECL		__cdecl
+#	define AE_THISCALL	__thiscall
 
 #elif defined(COMPILER_CLANG) or defined(COMPILER_GCC)
-#	define FG_CDECL		__attribute__((cdecl))
-#	define FG_THISCALL	__attribute__((thiscall))
+#	define AE_CDECL		__attribute__((cdecl))
+#	define AE_THISCALL	__attribute__((thiscall))
 #endif
 
 
@@ -337,52 +337,52 @@
 
 
 // compile time messages
-#ifndef FG_COMPILATION_MESSAGE
+#ifndef AE_COMPILATION_MESSAGE
 #	if defined(COMPILER_CLANG)
-#		define FG_PRIVATE_MESSAGE_TOSTR(x)	#x
-#		define FG_COMPILATION_MESSAGE( _message_ )	_Pragma(FG_PRIVATE_MESSAGE_TOSTR( GCC warning ("" _message_) ))
+#		define AE_PRIVATE_MESSAGE_TOSTR(x)	#x
+#		define AE_COMPILATION_MESSAGE( _message_ )	_Pragma(AE_PRIVATE_MESSAGE_TOSTR( GCC warning ("" _message_) ))
 
 #	elif defined(COMPILER_MSVC)
-#		define FG_COMPILATION_MESSAGE( _message_ )	__pragma(message( _message_ ))
+#		define AE_COMPILATION_MESSAGE( _message_ )	__pragma(message( _message_ ))
 
 #	else
-#		define FG_COMPILATION_MESSAGE( _message_ )	// not supported
+#		define AE_COMPILATION_MESSAGE( _message_ )	// not supported
 #	endif
 #endif
 
 
 // setup for build on CI
-#ifdef FG_CI_BUILD
+#ifdef AE_CI_BUILD
 
-#	undef  FG_PRIVATE_BREAK_POINT
-#	define FG_PRIVATE_BREAK_POINT()	{}
+#	undef  AE_PRIVATE_BREAK_POINT
+#	define AE_PRIVATE_BREAK_POINT()	{}
 
-#	undef  FG_PRIVATE_CHECK
-#	define FG_PRIVATE_CHECK( _expr_, _text_ ) \
+#	undef  AE_PRIVATE_CHECK
+#	define AE_PRIVATE_CHECK( _expr_, _text_ ) \
 		{if ( !(_expr_) ) { \
-			FG_LOGI( _text_ ); \
-			FG_PRIVATE_EXIT(); \
+			AE_LOGI( _text_ ); \
+			AE_PRIVATE_EXIT(); \
 		}}
 
-#	undef  FG_PRIVATE_CHECK_ERR
-#	define FG_PRIVATE_CHECK_ERR( _expr_, _ret_ ) \
+#	undef  AE_PRIVATE_CHECK_ERR
+#	define AE_PRIVATE_CHECK_ERR( _expr_, _ret_ ) \
 		{if ( !(_expr_) ) { \
-			FG_LOGI( FG_PRIVATE_TOSTRING( _expr_ )); \
-			FG_PRIVATE_EXIT(); \
+			AE_LOGI( AE_PRIVATE_TOSTRING( _expr_ )); \
+			AE_PRIVATE_EXIT(); \
 			return (_ret_); \
 		}}
 
 #	undef  CHECK_FATAL
 #	define CHECK_FATAL( _expr_ ) \
 		{if ( !(_expr_) ) { \
-			FG_LOGI( FG_PRIVATE_TOSTRING( _expr_ ) ); \
-			FG_PRIVATE_EXIT(); \
+			AE_LOGI( AE_PRIVATE_TOSTRING( _expr_ ) ); \
+			AE_PRIVATE_EXIT(); \
 		}}
 
-#	undef  FG_PRIVATE_RETURN_ERR
-#	define FG_PRIVATE_RETURN_ERR( _text_, _ret_ ) \
-		{FG_LOGI( _text_ ); \
-		 FG_PRIVATE_EXIT(); \
+#	undef  AE_PRIVATE_RETURN_ERR
+#	define AE_PRIVATE_RETURN_ERR( _text_, _ret_ ) \
+		{AE_LOGI( _text_ ); \
+		 AE_PRIVATE_EXIT(); \
 		 return (_ret_); \
 		}
 
@@ -392,64 +392,46 @@
 // check definitions
 #if defined (COMPILER_MSVC) or defined (COMPILER_CLANG)
 
-#  ifdef FG_OPTIMAL_MEMORY_ORDER
-#	pragma detect_mismatch( "FG_OPTIMAL_MEMORY_ORDER", "1" )
+#  ifdef AE_OPTIMAL_MEMORY_ORDER
+#	pragma detect_mismatch( "AE_OPTIMAL_MEMORY_ORDER", "1" )
 #  else
-#	pragma detect_mismatch( "FG_OPTIMAL_MEMORY_ORDER", "0" )
+#	pragma detect_mismatch( "AE_OPTIMAL_MEMORY_ORDER", "0" )
 #  endif
 
-#  ifdef FG_DEBUG
-#	pragma detect_mismatch( "FG_DEBUG", "1" )
+#  ifdef AE_DEBUG
+#	pragma detect_mismatch( "AE_DEBUG", "1" )
 #  else
-#	pragma detect_mismatch( "FG_DEBUG", "0" )
+#	pragma detect_mismatch( "AE_DEBUG", "0" )
 #  endif
 
-#  if defined(FG_FAST_HASH) && FG_FAST_HASH
-#	pragma detect_mismatch( "FG_FAST_HASH", "1" )
+#  if defined(AE_FAST_HASH) && AE_FAST_HASH
+#	pragma detect_mismatch( "AE_FAST_HASH", "1" )
 #  else
-#	pragma detect_mismatch( "FG_FAST_HASH", "0" )
+#	pragma detect_mismatch( "AE_FAST_HASH", "0" )
 #  endif
 
-#  ifdef FG_ENABLE_DATA_RACE_CHECK
-#	pragma detect_mismatch( "FG_ENABLE_DATA_RACE_CHECK", "1" )
+#  ifdef AE_ENABLE_DATA_RACE_CHECK
+#	pragma detect_mismatch( "AE_ENABLE_DATA_RACE_CHECK", "1" )
 #  else
-#	pragma detect_mismatch( "FG_ENABLE_DATA_RACE_CHECK", "0" )
+#	pragma detect_mismatch( "AE_ENABLE_DATA_RACE_CHECK", "0" )
 #  endif
 
-#  ifdef FG_STD_STRINGVIEW
-#	pragma detect_mismatch( "FG_STD_STRINGVIEW", "1" )
+#  ifdef AE_STD_FILESYSTEM
+#	pragma detect_mismatch( "AE_STD_FILESYSTEM", "1" )
 #  else
-#	pragma detect_mismatch( "FG_STD_STRINGVIEW", "0" )
+#	pragma detect_mismatch( "AE_STD_FILESYSTEM", "0" )
 #  endif
 
-#  ifdef FG_STD_OPTIONAL
-#	pragma detect_mismatch( "FG_STD_OPTIONAL", "1" )
+#  ifdef AE_STD_BARRIER
+#	pragma detect_mismatch( "AE_STD_BARRIER", "1" )
 #  else
-#	pragma detect_mismatch( "FG_STD_OPTIONAL", "0" )
+#	pragma detect_mismatch( "AE_STD_BARRIER", "0" )
 #  endif
 
-#  ifdef FG_STD_VARIANT
-#	pragma detect_mismatch( "FG_STD_VARIANT", "1" )
+#  ifdef AE_CI_BUILD
+#	pragma detect_mismatch( "AE_CI_BUILD", "1" )
 #  else
-#	pragma detect_mismatch( "FG_STD_VARIANT", "0" )
-#  endif
-
-#  ifdef FG_STD_FILESYSTEM
-#	pragma detect_mismatch( "FG_STD_FILESYSTEM", "1" )
-#  else
-#	pragma detect_mismatch( "FG_STD_FILESYSTEM", "0" )
-#  endif
-
-#  ifdef FG_STD_BARRIER
-#	pragma detect_mismatch( "FG_STD_BARRIER", "1" )
-#  else
-#	pragma detect_mismatch( "FG_STD_BARRIER", "0" )
-#  endif
-
-#  ifdef FG_CI_BUILD
-#	pragma detect_mismatch( "FG_CI_BUILD", "1" )
-#  else
-#	pragma detect_mismatch( "FG_CI_BUILD", "0" )
+#	pragma detect_mismatch( "AE_CI_BUILD", "0" )
 #  endif
 
 #endif	// COMPILER_MSVC or COMPILER_CLANG

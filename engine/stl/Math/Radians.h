@@ -4,7 +4,7 @@
 
 #include "stl/Math/Math.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -309,4 +309,4 @@ namespace FGC
 	}
 	
 
-}	// FGC
+}	// AE::STL

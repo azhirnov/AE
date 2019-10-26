@@ -7,7 +7,7 @@
 #include <mutex>
 #include <thread>
 
-namespace FGC
+namespace AE::STL
 {
 
 	//
@@ -18,7 +18,7 @@ namespace FGC
 	{
 	// variables
 	private:
-		alignas(FG_CACHE_LINE) std::atomic<uint>	_flag { 0 };
+		alignas(AE_CACHE_LINE) std::atomic<uint>	_flag { 0 };
 
 
 	// methods
@@ -55,4 +55,4 @@ namespace FGC
 	};
 
 
-}	// FGC
+}	// AE::STL

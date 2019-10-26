@@ -6,7 +6,7 @@
 #include "scriptstdstring.h"
 #include "scriptarray.h"
 
-namespace FGScript
+namespace AE::Script
 {
 
 /*
@@ -37,15 +37,15 @@ namespace FGScript
 	struct LogFunc
 	{
 		static void Err (const String &msg) {
-			FG_LOGE( msg );
+			AE_LOGE( msg );
 		}
 
 		static void Info (const String &msg) {
-			FG_LOGI( msg );
+			AE_LOGI( msg );
 		}
 
 		static void Dbg (const String &msg) {
-			FG_LOGD( msg );
+			AE_LOGD( msg );
 		}
 	};
 	
@@ -61,4 +61,4 @@ namespace FGScript
 		se->AddFunction( &LogFunc::Dbg,		"LogDebug" );
 	}
 
-}	// FGScript
+}	// AE::Script

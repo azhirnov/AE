@@ -119,5 +119,5 @@ extern void UnitTest_String ()
 	ScriptString_Test5( se );
 	ScriptString_Test6( se );
 
-	FG_LOGI( "UnitTest_String - passed" );
+	AE_LOGI( "UnitTest_String - passed" );
 }

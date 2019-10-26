@@ -2,9 +2,9 @@
 
 #include "script_binding/Impl/ClassBinder.h"
 
-namespace FGScript
+namespace AE::Script
 {
-namespace _fgscript_hidden_
+namespace _ae_script_hidden_
 {
 /*
 =================================================
@@ -97,6 +97,6 @@ namespace _fgscript_hidden_
 		RETURN_ERR( "unknown binary operator!" );
 	}
 
-}	// _fgscript_hidden_
+}	// _ae_script_hidden_
 
-}	// FGScript
+}	// AE::Script

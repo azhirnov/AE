@@ -30,5 +30,5 @@ extern void UnitTest_Rectangle ()
 	Rectangle_Test1();
 	Rectangle_Test2();
 
-	FG_LOGI( "UnitTest_Rectangle - passed" );
+	AE_LOGI( "UnitTest_Rectangle - passed" );
 }

@@ -13,7 +13,7 @@
 #include <chrono>
 #include <sstream>
 
-namespace FGC
+namespace AE::STL
 {
 	using namespace std::string_literals;
 
@@ -418,4 +418,4 @@ namespace FGC
 	}
 
 
-}	// FGC
+}	// AE::STL

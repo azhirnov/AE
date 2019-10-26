@@ -8,8 +8,8 @@ endif ()
 
 message( STATUS "Run compiler tests with flags: ${CMAKE_REQUIRED_FLAGS}" )
 
-set( FG_COMPILER_DEFINITIONS "" )
-set( FG_LINK_LIBRARIES "" )
+set( AE_COMPILER_DEFINITIONS "" )
+set( AE_LINK_LIBRARIES "" )
 
 #------------------------------------------------------------------------------
 check_cxx_source_compiles(
@@ -21,7 +21,6 @@ check_cxx_source_compiles(
 	STD_STRINGVIEW_SUPPORTED )
 
 if (STD_STRINGVIEW_SUPPORTED)
-	set( FG_COMPILER_DEFINITIONS "${FG_COMPILER_DEFINITIONS}" "FG_STD_STRINGVIEW" )
 	set( STD_STRINGVIEW_SUPPORTED ON CACHE INTERNAL "" FORCE )
 else()
 	set( STD_STRINGVIEW_SUPPORTED OFF CACHE INTERNAL "" FORCE )
@@ -37,7 +36,6 @@ check_cxx_source_compiles(
 	STD_OPTIONAL_SUPPORTED )
 
 if (STD_OPTIONAL_SUPPORTED)
-	set( FG_COMPILER_DEFINITIONS "${FG_COMPILER_DEFINITIONS}" "FG_STD_OPTIONAL" )
 	set( STD_OPTIONAL_SUPPORTED ON CACHE INTERNAL "" FORCE )
 else()
 	set( STD_OPTIONAL_SUPPORTED OFF CACHE INTERNAL "" FORCE )
@@ -54,7 +52,6 @@ check_cxx_source_compiles(
 	STD_VARIANT_SUPPORTED )
 
 if (STD_VARIANT_SUPPORTED)
-	set( FG_COMPILER_DEFINITIONS "${FG_COMPILER_DEFINITIONS}" "FG_STD_VARIANT" )
 	set( STD_VARIANT_SUPPORTED ON CACHE INTERNAL "" FORCE )
 else()
 	set( STD_VARIANT_SUPPORTED OFF CACHE INTERNAL "" FORCE )
@@ -70,10 +67,10 @@ check_cxx_source_compiles(
 	STD_FILESYSTEM_SUPPORTED )
 
 if (STD_FILESYSTEM_SUPPORTED)
-	set( FG_COMPILER_DEFINITIONS "${FG_COMPILER_DEFINITIONS}" "FG_STD_FILESYSTEM" )
+	set( AE_COMPILER_DEFINITIONS "${AE_COMPILER_DEFINITIONS}" "AE_STD_FILESYSTEM" )
 
 	if (${COMPILER_CLANG} OR ${COMPILER_CLANG_APPLE} OR ${COMPILER_CLANG_ANDROID} OR ${COMPILER_GCC})
-		set( FG_LINK_LIBRARIES "${FG_LINK_LIBRARIES}" "stdc++fs" )
+		set( AE_LINK_LIBRARIES "${AE_LINK_LIBRARIES}" "stdc++fs" )
 	endif()
 	set( STD_FILESYSTEM_SUPPORTED ON CACHE INTERNAL "" FORCE )
 else()
@@ -90,9 +87,9 @@ check_cxx_source_compiles(
 	STD_CACHELINESIZE_SUPPORTED )
 
 if (STD_CACHELINESIZE_SUPPORTED)
-	set( FG_COMPILER_DEFINITIONS "${FG_COMPILER_DEFINITIONS}" "FG_CACHE_LINE=std::hardware_destructive_interference_size" )
+	set( AE_COMPILER_DEFINITIONS "${AE_COMPILER_DEFINITIONS}" "AE_CACHE_LINE=std::hardware_destructive_interference_size" )
 else ()
-	set( FG_COMPILER_DEFINITIONS "${FG_COMPILER_DEFINITIONS}" "FG_CACHE_LINE=64" ) # TODO
+	set( AE_COMPILER_DEFINITIONS "${AE_COMPILER_DEFINITIONS}" "AE_CACHE_LINE=64" ) # TODO
 endif ()
 
 #------------------------------------------------------------------------------
@@ -105,7 +102,7 @@ check_cxx_source_compiles(
 	STD_BARRIER_SUPPORTED )
 
 if (STD_BARRIER_SUPPORTED)
-	set( FG_COMPILER_DEFINITIONS "${FG_COMPILER_DEFINITIONS}" "FG_STD_BARRIER" )
+	set( AE_COMPILER_DEFINITIONS "${AE_COMPILER_DEFINITIONS}" "AE_STD_BARRIER" )
 endif ()
 
 #------------------------------------------------------------------------------
@@ -119,7 +116,7 @@ check_cxx_source_compiles(
 	HAS_HASHFN_HashArrayRepresentation )
 
 if (HAS_HASHFN_HashArrayRepresentation)
-	set( FG_COMPILER_DEFINITIONS "${FG_COMPILER_DEFINITIONS}" "FG_HAS_HASHFN_HashArrayRepresentation" )
+	set( AE_COMPILER_DEFINITIONS "${AE_COMPILER_DEFINITIONS}" "AE_HAS_HASHFN_HashArrayRepresentation" )
 endif ()
 
 #------------------------------------------------------------------------------
@@ -133,7 +130,7 @@ check_cxx_source_compiles(
 	HAS_HASHFN_Murmur2OrCityhash )
 
 if (HAS_HASHFN_Murmur2OrCityhash)
-	set( FG_COMPILER_DEFINITIONS "${FG_COMPILER_DEFINITIONS}" "FG_HAS_HASHFN_Murmur2OrCityhash" )
+	set( AE_COMPILER_DEFINITIONS "${AE_COMPILER_DEFINITIONS}" "AE_HAS_HASHFN_Murmur2OrCityhash" )
 endif ()
 
 #------------------------------------------------------------------------------
@@ -147,14 +144,14 @@ check_cxx_source_compiles(
 	HAS_HASHFN_HashBytes )
 
 if (HAS_HASHFN_HashBytes)
-	set( FG_COMPILER_DEFINITIONS "${FG_COMPILER_DEFINITIONS}" "FG_HAS_HASHFN_HashBytes" )
+	set( AE_COMPILER_DEFINITIONS "${AE_COMPILER_DEFINITIONS}" "AE_HAS_HASHFN_HashBytes" )
 endif ()
 
 #------------------------------------------------------------------------------
 
 set( CMAKE_REQUIRED_FLAGS "" )
-set( FG_COMPILER_DEFINITIONS "${FG_COMPILER_DEFINITIONS}" CACHE INTERNAL "" FORCE )
-set( FG_LINK_LIBRARIES "${FG_LINK_LIBRARIES}" CACHE INTERNAL "" FORCE )
+set( AE_COMPILER_DEFINITIONS "${AE_COMPILER_DEFINITIONS}" CACHE INTERNAL "" FORCE )
+set( AE_LINK_LIBRARIES "${AE_LINK_LIBRARIES}" CACHE INTERNAL "" FORCE )
 
 #message( STATUS "Supported features = ${CMAKE_CXX_COMPILE_FEATURES}" )
 

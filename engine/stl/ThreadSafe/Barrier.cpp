@@ -3,11 +3,11 @@
 #include "stl/ThreadSafe/Barrier.h"
 #include "stl/Memory/MemUtils.h"
 
-#if (FG_BARRIER_MODE == 0)
+#if (AE_BARRIER_MODE == 0)
 
 # include "stl/Platforms/WindowsHeader.h"
 
-namespace FGC
+namespace AE::STL
 {
 
 /*
@@ -42,5 +42,5 @@ namespace FGC
 		EnterSynchronizationBarrier( BitCast<SYNCHRONIZATION_BARRIER *>( &_data[0] ), SYNCHRONIZATION_BARRIER_FLAGS_NO_DELETE );
 	}
 	
-}	// FGC
-#endif	// FG_BARRIER_MODE == 0
+}	// AE::STL
+#endif	// AE_BARRIER_MODE == 0

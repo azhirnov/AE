@@ -4,7 +4,7 @@
 
 #include "stl/Algorithms/StringUtils.h"
 
-using namespace FGC;
+using namespace AE::STL;
 
 #define TEST	CHECK_FATAL
 
@@ -97,7 +97,7 @@ struct DebugInstanceCounter
 			<< "\nMove ctors:  " << ToString( _moveCtorCnt )
 			<< "\nDtors:       " << ToString( _dtorCnt );
 
-		FG_LOGI( str );
+		AE_LOGI( str );
 		return _counter == 0;
 	}
 

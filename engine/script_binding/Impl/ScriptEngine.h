@@ -9,7 +9,6 @@
 
 #include "stl/Containers/Ptr.h"
 #include "stl/Containers/ArrayView.h"
-#include "stl/Containers/StringView.h"
 #include "stl/Containers/NtStringView.h"
 #include "stl/CompileTime/TypeList.h"
 #include "stl/CompileTime/FunctionInfo.h"
@@ -18,9 +17,9 @@
 #define AS_USE_NAMESPACE
 #include "angelscript.h"
 
-namespace FGScript
+namespace AE::Script
 {
-	using namespace FGC;
+	using namespace AE::STL;
 
 	using ScriptModulePtr = SharedPtr< class ScriptModule >;
 	using ScriptEnginePtr = SharedPtr< class ScriptEngine >;
@@ -127,15 +126,15 @@ namespace FGScript
 #	define AS_CALL( ... ) \
 	{ \
 		int __as_result = ( __VA_ARGS__ ); \
-		::FGScript::ScriptEngine::_CheckError( __as_result, FG_PRIVATE_TOSTRING( __VA_ARGS__ ), FG_FUNCTION_NAME, __FILE__, __LINE__ ); \
+		::AE::Script::ScriptEngine::_CheckError( __as_result, AE_PRIVATE_TOSTRING( __VA_ARGS__ ), AE_FUNCTION_NAME, __FILE__, __LINE__ ); \
 	}
 	
 #	define AS_CALL_R( ... ) \
 	{ \
 		int __as_result = ( __VA_ARGS__ ); \
-		if ( not ::FGScript::ScriptEngine::_CheckError( __as_result, FG_PRIVATE_TOSTRING( __VA_ARGS__ ), FG_FUNCTION_NAME, __FILE__, __LINE__ ) ) \
+		if ( not ::AE::Script::ScriptEngine::_CheckError( __as_result, AE_PRIVATE_TOSTRING( __VA_ARGS__ ), AE_FUNCTION_NAME, __FILE__, __LINE__ ) ) \
 			return false; \
 	}
 	
 
-}	// FGScript
+}	// AE::Script

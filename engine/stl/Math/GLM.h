@@ -17,7 +17,7 @@
 #define GLM_FORCE_CTOR_INIT
 #define GLM_FORCE_INLINE
 
-#ifdef FG_RELEASE
+#ifdef AE_RELEASE
 #	define GLM_FORCE_INTRINSICS
 #endif
 
@@ -153,3 +153,15 @@
 #ifdef COMPILER_MSVC
 #	pragma warning (pop)
 #endif
+
+
+namespace AE::STL
+{
+	template <typename T>	using Quat = glm::qua<T>;
+							using QuatF = Quat<float>;
+	
+	template <typename T>	using Matrix2x2 = glm::tmat2x2<T>;
+	template <typename T>	using Matrix3x3 = glm::tmat3x3<T>;
+	template <typename T>	using Matrix4x4 = glm::tmat4x4<T>;
+
+}	// AE::STL
