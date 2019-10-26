@@ -1,0 +1,22 @@
+
+stage 1
+- engine
+	- ecs
+	- vulkan
+	- windows only
+	- prebuild externals
+- simple city generator
+- simple AI
+===========================================================
+
+
+stage 2
+- engine
+	- ui
+	- android
+===========================================================
+
+
+stage 3
+- improve city generator
+===========================================================

@@ -1,0 +1,174 @@
+
+Game object
+Render object
+Visibility object
+
+Render pipeline
+Physics pipeline
+Logic (AI) pipeline
+Visibility pipeline
+
+
+=======================================
+Render cache
+contains set of cached render passes (depth, shadow, opaque, ...)
+
+render pass cache:
+	- set of entities (without sorting)
+	- vulkan render pass object + subpass index
+	- {}
+
+entity components:
+	- draw call
+	- mesh (VB / VB+IB / SSBO for mesh shader / TLAS for ray tracing)
+	- pipeline (material + render pass)
+	- material descriptor set
+	- {object descriptor set (single or double buffering)}
+	- {unifrom buffer for object descriptor set (MVP matrix, etc)}
+	- {push constants}
+
+systems:
+	- pipeline cache system
+		- compile pipelines
+	- material system
+		- update UBO for animated materials
+	- mesh system
+		- batching
+		- VB, IB memory managment
+	- buffer system
+		- UBO memory managment
+
+==========================================
+
+Renderer
+
+camera graph
+	- each camera contains render technique (set of render passes)
+	- used to sort render passes (to draw shadows and reflections before main pass)
+	
+render pass
+	- 
+	
+tasks:
+	- for each camera:
+		- build render pass graph ?
+			- merge passes if possible (into one or add as subpasses)
+		- visibility test
+			- add entity to render cache
+			- add entity to render pass
+			- sort entities
+			- use previous render pass if nothing was changed
+		- update object UB and PC for each component (matrices)
+		- build pipelines (if not in cache)
+		- create descriptor sets (if not in cache)
+		- update meshes (upload VB, IB ...)
+		- for each pass
+			- sort draw calls
+		
+==========================================
+
+Visibility
+
+build camera graph
+	- check intersections between active cameras (viewports) and optional cameras (shadow, light, reflection, ...)
+	- run visibility test for all scene object for each camera
+
+
+		
+==========================================
+
+Transformation
+
+components:
+	- parent id
+	- child ids
+	- local offset
+	- local rotation
+	- axial rotation
+	- global transformation
+	- model matrix (cached)
+	- dynamic object tag ???
+	- disable tag ??? - if hierarchy detached
+	- rigid connection - shows that node is rigidly attached to parent
+
+space transformation components:
+	- position on orbit (instead of local offset and rotation)
+	- update rate (1, 1/10, ...)
+
+ui transformation components:
+	- layouts (internal representation)
+
+update:
+	- update hierarchy depth=0
+		- for each offset + rotation: read parent global transform, add local transform, write to self global transform component
+		- for each offset without rotation: ...
+		- for each rotation without offset: ...
+		- for each position on orbit: ...
+	- update hierarchy depth=1
+		- ...
+	- ...
+	- update model matrix:
+		- for each global transform: convert to matrix, write to model matrix component
+
+ui update:
+	- in ui_layout_system update all layouts in internal representation
+	- update global transformation if position was changed
+
+events:
+	- parent changed
+		- sort nodes
+	- child added
+	- component removed / entity destroyed
+		- by default: delete all childs with rigid connection
+		
+===========================================
+		
+ECS
+
+events:
+	- entity destroyed
+	- component added/removed (archetype changed)
+	- component changed (+ tag ???)
+
+all events will be processed after task or group of task execution
+
+event listeners:
+	- callback that run task (system)
+
+===========================================
+		
+Performance
+		
+component events:
+1. tags & state components
+	- if component need to trigger event it adds message
+	- in message processing new tag/state component will be added
+	- entity archetype changed (how fast is it?)
+
+2. messages
+	- if component need to trigger event it adds message
+	- for each listener:
+		- insert copy of required components (must be read only) (must be locked for writing)
+		- insert state component (if contains data)
+		- don't insert empty components
+	- if entity doesn't contain component that required for listener ???
+	- message should be added at the end of entity processing to avoid component modification after copying to message
+		- or use delayed copy ???
+	- is it a cache friendly ???
+		
+		
+archetype searching:
+1. init time:
+	- each system contains type list with component access types (readonly, writeonly, subtrctive, ...)
+	- register system and add request to the list
+	- if new archetype was created then you need to walk through all requests and add archetype ref
+
+2. runtime:
+	- add request type on task first run
+	- may be little overhead on first call, because ecs need to walk through all archetypes
+	- if new archetype was created then you need to walk through all requests and add archetype ref
+		- but number of requests may be lesser
+		
+		
+		
+		
