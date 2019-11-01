@@ -10,8 +10,8 @@ namespace AE::Threading
 	constructor
 =================================================
 */
-	IAsyncTask::IAsyncTask (EThread type, Array<AsyncTask> &&deps) :
-		_threadType{type}, _dependsOn{std::move(deps)}
+	IAsyncTask::IAsyncTask (EThread type) :
+		_threadType{type}
 	{}
 //-----------------------------------------------------------------------------
 
@@ -124,7 +124,7 @@ namespace AE::Threading
 =================================================
 */
 	template <size_t N>
-	bool  TaskScheduler::_ProcessTask (_TaskQueue<N> &tq, uint seed)
+	bool  TaskScheduler::_ProcessTask (_TaskQueue<N> &tq, uint seed) const
 	{
 		AE_UNUSED( seed );	// TODO
 
@@ -258,15 +258,17 @@ namespace AE::Threading
 	_InsertTask
 =================================================
 */
-	AsyncTask  TaskScheduler::_InsertTask (AsyncTask &&task)
+	AsyncTask  TaskScheduler::_InsertTask (const AsyncTask &task, Array<AsyncTask> &&dependsOn)
 	{
+		task->_dependsOn = std::move(dependsOn);
+
 		BEGIN_ENUM_CHECKS();
 		switch ( task->Type() )
 		{
-			case EThread::Main :		_AddTask( _mainQueue, task );		break;
-			case EThread::Worker :		_AddTask( _workerQueue, task );		break;
-			case EThread::Renderer :	_AddTask( _renderQueue, task );		break;
-			case EThread::FileIO :		_AddTask( _fileQueue, task );		break;
+			case EThread::Main :		_AddTask( _mainQueue,    task );	break;
+			case EThread::Worker :		_AddTask( _workerQueue,  task );	break;
+			case EThread::Renderer :	_AddTask( _renderQueue,  task );	break;
+			case EThread::FileIO :		_AddTask( _fileQueue,    task );	break;
 			case EThread::Network :		_AddTask( _networkQueue, task );	break;
 			case EThread::_Count :
 			default :					RETURN_ERR( "not supported" );
@@ -281,7 +283,7 @@ namespace AE::Threading
 =================================================
 */
 	template <size_t N>
-	void  TaskScheduler::_AddTask (_TaskQueue<N> &tq, const AsyncTask &task)
+	void  TaskScheduler::_AddTask (_TaskQueue<N> &tq, const AsyncTask &task) const
 	{
 		for (;;)
 		{

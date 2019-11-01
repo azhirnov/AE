@@ -4,18 +4,24 @@
 
 #include "stl/Containers/ArrayView.h"
 #include "stl/Containers/FixedArray.h"
+#include "stl/Containers/NtStringView.h"
 #include "stl/Algorithms/Cast.h"
 #include "stl/ThreadSafe/SpinLock.h"
 
 #include <chrono>
 #include <mutex>
 
+#if 1
+#	define AE_SCHEDULER_PROFILING( ... )	__VA_ARGS__
+#else
+#	define AE_SCHEDULER_PROFILING( ... )
+#endif
+
 namespace AE::Threading
 {
 	using namespace AE::STL;
 
 	using Nanoseconds	= std::chrono::nanoseconds;
-	
 
 
 	//
@@ -60,18 +66,17 @@ namespace AE::Threading
 
 	// methods
 	public:
-		virtual void Cancel () {}
-
 		ND_ EThread  Type () const	{ return _threadType; }
 
 		ND_ EStatus  Status ()		{ return _status.load( memory_order_relaxed ); }
 
 	protected:
-		IAsyncTask (EThread type, Array<AsyncTask> &&deps);
+		IAsyncTask (EThread type);
 
 		virtual void Run () = 0;
+		virtual void Cancel () {}
 
-		virtual StringView DbgName () const	{ return ""; }
+		ND_ virtual NtStringView  DbgName () const	{ return "unknown"; }
 	};
 
 
@@ -127,7 +132,7 @@ namespace AE::Threading
 
 		using MainQueue_t		= _TaskQueue< 2 >;
 		using RenderQueue_t		= _TaskQueue< 2 >;
-		using WorkerQueue_t		= _TaskQueue< 8 >;
+		using WorkerQueue_t		= _TaskQueue< 16 >;
 		using FileQueue_t		= _TaskQueue< 2 >;
 		using NetworkQueue_t	= _TaskQueue< 3 >;
 		using ThreadPtr			= SharedPtr< IThread >;
@@ -168,13 +173,13 @@ namespace AE::Threading
 			bool  Cancel (const AsyncTask &task);
 
 	private:
-		AsyncTask  _InsertTask (AsyncTask &&task);
+		AsyncTask  _InsertTask (const AsyncTask &task, Array<AsyncTask> &&dependsOn);
 
 		template <size_t N>
-		void  _AddTask (_TaskQueue<N> &tq, const AsyncTask &task);
+		void  _AddTask (_TaskQueue<N> &tq, const AsyncTask &task) const;
 
 		template <size_t N>
-		bool  _ProcessTask (_TaskQueue<N> &tq, uint seed);
+		bool  _ProcessTask (_TaskQueue<N> &tq, uint seed) const;
 
 		
 	};
@@ -189,7 +194,7 @@ namespace AE::Threading
 	inline AsyncTask  TaskScheduler::Run (Array<AsyncTask> &&dependsOn, Args&& ...args)
 	{
 		STATIC_ASSERT( IsBaseOf< IAsyncTask, T > );
-		return _InsertTask( MakeShared<T>( std::forward<Args>(args)..., std::move(dependsOn) ));
+		return _InsertTask( MakeShared<T>( std::forward<Args>(args)... ), std::move(dependsOn) );
 	}
 
 
