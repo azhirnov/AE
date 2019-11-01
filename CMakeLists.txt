@@ -14,6 +14,7 @@ message( STATUS "host system: ${CMAKE_HOST_SYSTEM_NAME} (${CMAKE_HOST_SYSTEM_VER
 set( AE_ENABLE_TESTS ON CACHE BOOL "enable tests" )
 set( AE_ENABLE_SIMPLE_COMPILER_OPTIONS OFF CACHE BOOL "use simplified compiler settings if you have problem with it" )
 
+set( AE_ENABLE_VTUNE_API OFF CACHE BOOL "enable helper functions for Intel VTune profiling" )
 
 # External dependencies
 set( AE_ENABLE_ANGELSCRIPT ON CACHE BOOL "enable AngelScript (for scripting)" )

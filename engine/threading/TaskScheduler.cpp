@@ -50,6 +50,7 @@ namespace AE::Threading
 */
 	TaskScheduler::TaskScheduler ()
 	{
+		AE_VTUNE( _vtuneDomain = __itt_domain_create( "AE.TaskScheduler" ));
 	}
 	
 /*
@@ -70,6 +71,11 @@ namespace AE::Threading
 		_WriteProfilerStat( "render",  _renderQueue  );
 		_WriteProfilerStat( "file",    _fileQueue    );
 		_WriteProfilerStat( "network", _networkQueue );
+		
+		AE_VTUNE(
+			if ( _vtuneDomain )
+				_vtuneDomain->flags = 0;
+		)
 	}
 	
 /*
@@ -200,7 +206,9 @@ namespace AE::Threading
 					tq._stallTime += (end_time - start_time).count();
 				)
 					
+				AE_VTUNE( __itt_task_begin( _vtuneDomain, __itt_null, __itt_null, __itt_string_handle_createA( task->DbgName().c_str() )));
 				task->Run();
+				AE_VTUNE( __itt_task_end( _vtuneDomain ));
 
 				expected = EStatus::InProgress;
 				task->_status.compare_exchange_strong( INOUT expected, EStatus::Complete, memory_order_relaxed );

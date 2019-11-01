@@ -67,6 +67,11 @@ set_target_properties( "ProjectTemplate" PROPERTIES CXX_STANDARD 17 CXX_STANDARD
 if (AE_CI_BUILD)
 	target_compile_definitions( "ProjectTemplate" PUBLIC "AE_CI_BUILD" )
 endif()
+
+if (${AE_ENABLE_VTUNE_API})
+	include( "${CMAKE_FOLDER}/vtune.cmake" )
+	target_link_libraries( "ProjectTemplate" PUBLIC "VTune-lib" )
+endif ()
 	
 if (NOT ${STD_VARIANT_SUPPORTED})
 	message( FATAL_ERROR "std::variant support required" )

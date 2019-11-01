@@ -11,6 +11,13 @@
 #include <chrono>
 #include <mutex>
 
+#ifdef AE_ENABLE_VTUNE_API
+#	include <ittnotify.h>
+#	define AE_VTUNE( ... )	__VA_ARGS__
+#else
+#	define AE_VTUNE( ... )
+#endif
+
 #if 1
 #	define AE_SCHEDULER_PROFILING( ... )	__VA_ARGS__
 #else
@@ -156,7 +163,10 @@ namespace AE::Threading
 		NetworkQueue_t		_networkQueue;
 
 		Array<ThreadPtr>	_threads;
-
+		
+		AE_VTUNE(
+			__itt_domain*	_vtuneDomain	= null;
+		)
 
 	// methods
 	public:
@@ -164,6 +174,11 @@ namespace AE::Threading
 		~TaskScheduler ();
 
 			bool Setup (size_t maxWorkerThreads);
+			
+		AE_VTUNE(
+		ND_ __itt_domain*	GetVTuneDomain () const	{ return _vtuneDomain; }
+		)
+
 	// thread api
 			bool AddThread (const ThreadPtr &thread);
 
