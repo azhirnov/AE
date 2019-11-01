@@ -83,13 +83,8 @@
 
 
 // macro for unused variables
-#ifndef AE_UNUSED
-# if 0 // TODO: C++17
-#	define AE_UNUSED( ... )		[[maybe_unused]]( __VA_ARGS__ )
-# else
-#	define AE_UNUSED( ... )		(void)( __VA_ARGS__ )
-# endif
-#endif
+template <typename... Args>
+constexpr void AE_UNUSED (Args&& ...) {}
 
 
 // debug break

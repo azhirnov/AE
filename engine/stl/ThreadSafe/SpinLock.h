@@ -29,7 +29,7 @@ namespace AE::STL
 		ND_ forceinline bool try_lock ()
 		{
 			uint	exp = 0;
-			return not _flag.compare_exchange_strong( INOUT exp, 1, memory_order_acquire, memory_order_relaxed );
+			return _flag.compare_exchange_strong( INOUT exp, 1, memory_order_acquire, memory_order_relaxed );
 		}
 
 
@@ -49,8 +49,12 @@ namespace AE::STL
 
 		forceinline void unlock ()
 		{
+		#ifdef AE_DEBUG
 			uint	exp = 1;
-			_flag.compare_exchange_strong( INOUT exp, 0, memory_order_release, memory_order_relaxed );
+			ASSERT( _flag.compare_exchange_strong( INOUT exp, 0, memory_order_release, memory_order_relaxed ));
+		#else
+			_flag.store( 0, memory_order_release );
+		#endif
 		}
 	};
 

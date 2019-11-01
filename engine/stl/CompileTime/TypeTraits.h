@@ -9,46 +9,49 @@ namespace AE::STL
 {
 
 	template <typename T>
-	static constexpr bool	IsFloatPoint		= std::is_floating_point<T>::value;
+	static constexpr bool	IsFloatPoint		= std::is_floating_point_v<T>;
 
 	template <typename T>
-	static constexpr bool	IsInteger			= std::is_integral<T>::value;
+	static constexpr bool	IsInteger			= std::is_integral_v<T>;
 	
 	template <typename T>
-	static constexpr bool	IsSignedInteger		= std::is_integral<T>::value && std::is_signed<T>::value;
+	static constexpr bool	IsSignedInteger		= std::is_integral_v<T> and std::is_signed_v<T>;
 	
 	template <typename T>
-	static constexpr bool	IsUnsignedInteger	= std::is_integral<T>::value && std::is_unsigned<T>::value;
+	static constexpr bool	IsUnsignedInteger	= std::is_integral_v<T> and std::is_unsigned_v<T>;
 
 	template <typename T>
-	static constexpr bool	IsStaticArray		= std::is_array<T>::value;
+	static constexpr bool	IsStaticArray		= std::is_array_v<T>;
 
 	template <typename T>
-	static constexpr bool	IsScalar			= std::is_scalar<T>::value;
+	static constexpr bool	IsScalar			= std::is_scalar_v<T>;
 	
 	template <typename T>
-	static constexpr bool	IsEnum				= std::is_enum<T>::value;
+	static constexpr bool	IsEnum				= std::is_enum_v<T>;
 	
 	template <typename T>
-	static constexpr bool	IsScalarOrEnum		= std::is_scalar<T>::value or std::is_enum<T>::value;
+	static constexpr bool	IsScalarOrEnum		= std::is_scalar_v<T> or std::is_enum_v<T>;
 
 	template <typename T>
-	static constexpr bool	IsPOD				= std::is_pod<T>::value;
+	static constexpr bool	IsPOD				= std::is_pod_v<T>;
 
 	template <typename T>
-	static constexpr bool	IsPointer			= std::is_pointer<T>::value;
+	static constexpr bool	IsPointer			= std::is_pointer_v<T>;
 
 	template <typename T>
-	static constexpr bool	IsClass				= std::is_class<T>::value;
+	static constexpr bool	IsClass				= std::is_class_v<T>;
 
 	template <typename T>
-	static constexpr bool	IsUnion				= std::is_union<T>::value;
+	static constexpr bool	IsUnion				= std::is_union_v<T>;
 
 	template <typename T>
-	static constexpr bool	IsConst				= std::is_const<T>::value;
+	static constexpr bool	IsConst				= std::is_const_v<T>;
 
 	template <typename T1, typename T2>
-	static constexpr bool	IsSameTypes			= std::is_same<T1, T2>::value;
+	static constexpr bool	IsSameTypes			= std::is_same_v<T1, T2>;
+
+	template <typename Base, typename Derived>
+	static constexpr bool	IsBaseOf			= std::is_base_of_v< Base, Derived >;
 
 
 	template <bool Test, typename Type = void>
@@ -62,18 +65,26 @@ namespace AE::STL
 	using Conditional	= std::conditional_t< Test, IfTrue, IfFalse >;
 
 
-	template <typename T>
-	using ToUnsignedInteger	= Conditional< sizeof(T) == sizeof(uint64_t), uint64_t,
-								Conditional< sizeof(T) == sizeof(uint32_t), uint32_t,
-									Conditional< sizeof(T) == sizeof(uint16_t), uint16_t,
-										Conditional< sizeof(T) == sizeof(uint8_t), uint8_t,
+	template <size_t Bits>
+	using BitSizeToUInt		= Conditional< Bits <= sizeof(uint8_t), uint8_t,
+								Conditional< Bits <= sizeof(uint16_t), uint16_t,
+									Conditional< Bits <= sizeof(uint32_t), uint32_t,
+										Conditional< Bits <= sizeof(uint64_t), uint64_t,
 											void >>>>;
+
+	template <size_t Bits>
+	using BitSizeToInt		= Conditional< Bits <= sizeof(int8_t), int8_t,
+								Conditional< Bits <= sizeof(int16_t), int16_t,
+									Conditional< Bits <= sizeof(int32_t), int32_t,
+										Conditional< Bits <= sizeof(int64_t), int64_t,
+											void >>>>;
+
+
+	template <typename T>
+	using ToUnsignedInteger	= BitSizeToUInt< sizeof(T) >;
 	
 	template <typename T>
-	using ToSignedInteger	= Conditional< sizeof(T) == sizeof(int64_t), int64_t,
-								Conditional< sizeof(T) == sizeof(int32_t), int32_t,
-									Conditional< sizeof(T) == sizeof(int16_t), int16_t,
-										Conditional< sizeof(T) == sizeof(int8_t), int8_t,
-											void >>>>;
+	using ToSignedInteger	= BitSizeToInt< sizeof(T) >;
+
 
 }	// AE::STL
