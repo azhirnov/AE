@@ -1,5 +1,7 @@
 cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
 
+#----------------------------------------------------------
+
 set( CMAKE_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake" )
 set( DOCS_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/../../docs" )
 
@@ -11,6 +13,8 @@ endif()
 
 include( "${CMAKE_FOLDER}/compiler_tests.cmake" )
 include( "${CMAKE_FOLDER}/ci_build.cmake" )
+
+#----------------------------------------------------------
 
 file( GLOB_RECURSE SOURCES "*.*" )
 file( GLOB_RECURSE CMAKE_SOURCES "${CMAKE_FOLDER}/*.*" )
@@ -73,3 +77,7 @@ endif()
 if (NOT ${STD_OPTIONAL_SUPPORTED})
 	message( FATAL_ERROR "std::optional support required" )
 endif()
+
+if (CMAKE_VERSION VERSION_LESS 3.11.0)
+	add_dependencies( "ProjectTemplate" ExternalDependencies )
+endif ()
