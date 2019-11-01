@@ -1,6 +1,7 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "threading/TaskScheduler.h"
+#include "stl/Algorithms/StringUtils.h"
 
 namespace AE::Threading
 {
@@ -63,6 +64,12 @@ namespace AE::Threading
 			thread->Detach();
 		}
 		_threads.clear();
+
+		_WriteProfilerStat( "main",    _mainQueue    );
+		_WriteProfilerStat( "worker",  _workerQueue  );
+		_WriteProfilerStat( "render",  _renderQueue  );
+		_WriteProfilerStat( "file",    _fileQueue    );
+		_WriteProfilerStat( "network", _networkQueue );
 	}
 	
 /*
@@ -128,6 +135,10 @@ namespace AE::Threading
 	{
 		AE_UNUSED( seed );	// TODO
 
+		AE_SCHEDULER_PROFILING(
+			const auto	start_time = TimePoint_t::clock::now();
+		)
+
 		for (auto& q : tq.queues)
 		{
 			if ( not q.guard.try_lock() )
@@ -184,12 +195,20 @@ namespace AE::Threading
 			
 			if ( task->_status.compare_exchange_strong( INOUT expected, EStatus::InProgress, memory_order_relaxed ) )
 			{
+				AE_SCHEDULER_PROFILING(
+					const auto	end_time = TimePoint_t::clock::now();
+					tq._stallTime += (end_time - start_time).count();
+				)
+					
 				task->Run();
 
 				expected = EStatus::InProgress;
 				task->_status.compare_exchange_strong( INOUT expected, EStatus::Complete, memory_order_relaxed );
 				ASSERT( expected == EStatus::InProgress or expected == EStatus::Canceled );
-
+				
+				AE_SCHEDULER_PROFILING(
+					tq._workTime += (TimePoint_t::clock::now() - end_time).count();
+				)
 				return true;
 			}
 			else
@@ -198,6 +217,10 @@ namespace AE::Threading
 				task->Cancel();
 			}
 		}
+
+		AE_SCHEDULER_PROFILING(
+			tq._stallTime += (TimePoint_t::clock::now() - start_time).count();
+		)
 		return false;
 	}
 
@@ -285,6 +308,10 @@ namespace AE::Threading
 	template <size_t N>
 	void  TaskScheduler::_AddTask (_TaskQueue<N> &tq, const AsyncTask &task) const
 	{
+		AE_SCHEDULER_PROFILING(
+			const auto	start_time = TimePoint_t::clock::now();
+		)
+
 		for (;;)
 		{
 			for (auto& q : tq.queues)
@@ -293,10 +320,40 @@ namespace AE::Threading
 				{
 					q.tasks.push_back( task );
 					q.guard.unlock();
+					
+					AE_SCHEDULER_PROFILING(
+						tq._stallTime += (TimePoint_t::clock::now() - start_time).count();
+					)
 					return;
 				}
 			}
 		}
+	}
+	
+/*
+=================================================
+	_WriteProfilerStat
+=================================================
+*/
+	template <size_t N>
+	void  TaskScheduler::_WriteProfilerStat (StringView name, const _TaskQueue<N> &tq)
+	{
+		AE_SCHEDULER_PROFILING(
+			auto	work_time	= tq._workTime.load();
+			auto	stall_time	= tq._stallTime.load();
+
+			if ( work_time == 0 and stall_time == 0 )
+				return;
+
+			double	stall	= double(stall_time);
+			double	work	= double(work_time);
+			double	factor	= (work_time ? stall / (stall + work) : 1.0);
+
+			AE_LOGI( String(name)
+				<< " queue total work: " << ToString( Nanoseconds(work_time) )
+				<< ", stall: " << ToString( factor * 100.0, 2 ) << " %"
+				<< ", queue count: " << ToString( tq.queues.size() ) );
+		)
 	}
 
 

@@ -123,6 +123,11 @@ namespace AE::Threading
 		public:
 			FixedArray< _PerQueue, N >	queues;
 
+			AE_SCHEDULER_PROFILING(
+				std::atomic<uint64_t>	_stallTime	{0};	// Nanoseconds
+				std::atomic<uint64_t>	_workTime	{0};
+			)
+
 		// methods
 		public:
 			_TaskQueue ();
@@ -181,7 +186,8 @@ namespace AE::Threading
 		template <size_t N>
 		bool  _ProcessTask (_TaskQueue<N> &tq, uint seed) const;
 
-		
+		template <size_t N>
+		static void  _WriteProfilerStat (StringView name, const _TaskQueue<N> &tq);
 	};
 
 	
