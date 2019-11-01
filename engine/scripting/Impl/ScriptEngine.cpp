@@ -1,9 +1,9 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "script_binding/Impl/ScriptEngine.h"
+#include "scripting/Impl/ScriptEngine.h"
 #include "stl/Algorithms/StringUtils.h"
 
-namespace AE::Script
+namespace AE::Scripting
 {
 	
 /*
@@ -286,4 +286,4 @@ namespace AE::Script
 		return false;
 	}
 
-}	// AE::Script
+}	// AE::Scripting

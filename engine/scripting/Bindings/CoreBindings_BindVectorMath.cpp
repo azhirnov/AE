@@ -1,10 +1,10 @@
 // Copyright (c)  Zhirnov Andrey. For more information see 'LICENSE.txt'
 
-#include "script_binding/Bindings/CoreBindings.h"
-#include "script_binding/Impl/ClassBinder.h"
-#include "script_binding/Impl/ScriptEngine.inl.h"
+#include "scripting/Bindings/CoreBindings.h"
+#include "scripting/Impl/ClassBinder.h"
+#include "scripting/Impl/ScriptEngine.inl.h"
 
-namespace AE::Script
+namespace AE::Scripting
 {
 
 	template <typename T>
@@ -521,4 +521,4 @@ namespace AE::Script
 	}
 	
 
-}	// AE::Script
+}	// AE::Scripting

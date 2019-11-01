@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include "script_binding/Impl/ScriptEngine.h"
-#include "script_binding/Impl/ScriptTypes.h"
+#include "scripting/Impl/ScriptEngine.h"
+#include "scripting/Impl/ScriptTypes.h"
 
-namespace AE::Script
+namespace AE::Scripting
 {
 
 /*
@@ -75,4 +75,4 @@ namespace AE::Script
 		return ScriptFnPtr<Fn>{ new ScriptFn<Fn>{ module, ctx }};
 	}
 
-}	// AE::Script
+}	// AE::Scripting

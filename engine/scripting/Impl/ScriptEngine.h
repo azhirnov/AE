@@ -14,10 +14,9 @@
 #include "stl/CompileTime/FunctionInfo.h"
 
 // AngelScript + Addons //
-#define AS_USE_NAMESPACE
 #include "angelscript.h"
 
-namespace AE::Script
+namespace AE::Scripting
 {
 	using namespace AE::STL;
 
@@ -126,15 +125,15 @@ namespace AE::Script
 #	define AS_CALL( ... ) \
 	{ \
 		int __as_result = ( __VA_ARGS__ ); \
-		::AE::Script::ScriptEngine::_CheckError( __as_result, AE_PRIVATE_TOSTRING( __VA_ARGS__ ), AE_FUNCTION_NAME, __FILE__, __LINE__ ); \
+		::AE::Scripting::ScriptEngine::_CheckError( __as_result, AE_PRIVATE_TOSTRING( __VA_ARGS__ ), AE_FUNCTION_NAME, __FILE__, __LINE__ ); \
 	}
 	
 #	define AS_CALL_R( ... ) \
 	{ \
 		int __as_result = ( __VA_ARGS__ ); \
-		if ( not ::AE::Script::ScriptEngine::_CheckError( __as_result, AE_PRIVATE_TOSTRING( __VA_ARGS__ ), AE_FUNCTION_NAME, __FILE__, __LINE__ ) ) \
+		if ( not ::AE::Scripting::ScriptEngine::_CheckError( __as_result, AE_PRIVATE_TOSTRING( __VA_ARGS__ ), AE_FUNCTION_NAME, __FILE__, __LINE__ ) ) \
 			return false; \
 	}
 	
 
-}	// AE::Script
+}	// AE::Scripting

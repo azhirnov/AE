@@ -1,6 +1,6 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "script_binding/Bindings/CoreBindings.h"
+#include "scripting/Bindings/CoreBindings.h"
 
 extern void UnitTest_Array ();
 extern void UnitTest_Class ();

@@ -1,12 +1,12 @@
 // Copyright (c)  Zhirnov Andrey. For more information see 'LICENSE.txt'
 
-#include "script_binding/Bindings/CoreBindings.h"
-#include "script_binding/Impl/ScriptEngine.inl.h"
+#include "scripting/Bindings/CoreBindings.h"
+#include "scripting/Impl/ScriptEngine.inl.h"
 
 #include "scriptstdstring.h"
 #include "scriptarray.h"
 
-namespace AE::Script
+namespace AE::Scripting
 {
 
 /*
@@ -61,4 +61,4 @@ namespace AE::Script
 		se->AddFunction( &LogFunc::Dbg,		"LogDebug" );
 	}
 
-}	// AE::Script
+}	// AE::Scripting

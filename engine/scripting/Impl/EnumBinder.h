@@ -2,10 +2,10 @@
 
 #pragma once
 
-#include "script_binding/Impl/ClassBinder.h"
+#include "scripting/Impl/ClassBinder.h"
 #include "stl/Algorithms/StringUtils.h"
 
-namespace AE::Script
+namespace AE::Scripting
 {
 
 	//
@@ -223,4 +223,4 @@ namespace AE::Script
 		return (*this).Op_Set().Op_Reset().Op_Get().Op_Or();
 	}
 
-}	// AE::Script
+}	// AE::Scripting

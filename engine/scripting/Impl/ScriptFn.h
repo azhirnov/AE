@@ -2,11 +2,11 @@
 
 #pragma once
 
-#include "script_binding/Impl/ScriptEngine.h"
-#include "script_binding/Impl/ScriptTypes.h"
+#include "scripting/Impl/ScriptEngine.h"
+#include "scripting/Impl/ScriptTypes.h"
 #include "stl/Algorithms/StringUtils.h"
 
-namespace AE::Script
+namespace AE::Scripting
 {
 	template <typename F>
 	class ScriptFn;
@@ -49,7 +49,7 @@ namespace AE::Script
 		{
 			using namespace AngelScript;
 
-			_ae_script_hidden_::SetContextArgs<Args...>::Set( _ctx, 0, std::forward<Args>(args)... );
+			_ae_scripting_hidden_::SetContextArgs<Args...>::Set( _ctx, 0, std::forward<Args>(args)... );
 
 			const int exec_res = _ctx->Execute();
 			
@@ -63,7 +63,7 @@ namespace AE::Script
 			else
 			{
 				if ( exec_res == asEXECUTION_FINISHED ) {
-					return {_ae_script_hidden_::ContextSetterGetter<R>::Get( _ctx )};
+					return {_ae_scripting_hidden_::ContextSetterGetter<R>::Get( _ctx )};
 				}
 				_CheckError( exec_res );
 				return {};
@@ -98,4 +98,4 @@ namespace AE::Script
 		}
 	};
 
-}	// AE::Script
+}	// AE::Scripting

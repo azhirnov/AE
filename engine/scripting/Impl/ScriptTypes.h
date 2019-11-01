@@ -2,9 +2,9 @@
 
 #pragma once
 
-#include "script_binding/Impl/ScriptEngine.h"
+#include "scripting/Impl/ScriptEngine.h"
 
-namespace AE::Script
+namespace AE::Scripting
 {
 
 	//
@@ -222,7 +222,7 @@ namespace AE::Script
 		template <typename T>
 		struct SharedPtr
 		{
-			STATIC_ASSERT( std::is_base_of< SimpleRefCounter, T >::value );
+			STATIC_ASSERT( IsBaseOf< SimpleRefCounter, T > );
 
 		private:
 			T *		_ptr = null;
@@ -304,7 +304,7 @@ namespace AE::Script
 	// Script Function Descriptor
 	//
 
-	namespace _ae_script_hidden_
+	namespace _ae_scripting_hidden_
 	{
 
 		template <typename T>
@@ -466,7 +466,7 @@ namespace AE::Script
 			}
 		};
 
-	}	// _ae_script_hidden_
+	}	// _ae_scripting_hidden_
 
 	
 
@@ -475,7 +475,7 @@ namespace AE::Script
 	//
 
 	template <typename T>
-	struct GlobalFunction : _ae_script_hidden_::GlobalFunction<T>
+	struct GlobalFunction : _ae_scripting_hidden_::GlobalFunction<T>
 	{
 	};
 
@@ -485,12 +485,12 @@ namespace AE::Script
 	//
 
 	template <typename T>
-	struct MemberFunction : _ae_script_hidden_::MemberFunction<T>
+	struct MemberFunction : _ae_scripting_hidden_::MemberFunction<T>
 	{
 	};
 
 
-	namespace _ae_script_hidden_
+	namespace _ae_scripting_hidden_
 	{
 
 		//
@@ -629,6 +629,6 @@ namespace AE::Script
 			using type	= void;
 		};
 
-	}	// _ae_script_hidden_
+	}	// _ae_scripting_hidden_
 
-}	// AE::Script
+}	// AE::Scripting

@@ -4,10 +4,10 @@
 
 #include "stl/Algorithms/Cast.h"
 #include "stl/CompileTime/FunctionInfo.h"
-#include "script_binding/Impl/ScriptFn.h"
-#include "script_binding/Impl/ScriptEngine.inl.h"
+#include "scripting/Impl/ScriptFn.h"
+#include "scripting/Impl/ScriptEngine.inl.h"
 
-using namespace AE::Script;
+using namespace AE::Scripting;
 
 #define TEST	CHECK_FATAL
 

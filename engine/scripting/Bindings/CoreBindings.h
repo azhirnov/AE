@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include "script_binding/Impl/ScriptEngine.inl.h"
+#include "scripting/Impl/ScriptEngine.inl.h"
 
 #include "stl/math/Vec.h"
 #include "stl/math/Color.h"
 
-namespace AE::Script
+namespace AE::Scripting
 {
 
 	//
@@ -51,4 +51,4 @@ namespace AE::Script
 	AE_DECL_SCRIPT_TYPE( AE::STL::HSVColor,		"HSVColor" );
 
 
-}	// AE::Script
+}	// AE::Scripting
