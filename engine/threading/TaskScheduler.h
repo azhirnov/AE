@@ -89,8 +89,10 @@ namespace AE::Threading
 
 	// interface
 	public:
-		virtual bool  Attach (Ptr<TaskScheduler>) = 0;
+		virtual bool  Attach (Ptr<TaskScheduler>, uint uid) = 0;
 		virtual void  Detach () = 0;
+
+		ND_ virtual NtStringView  DbgName () const	{ return "thread"; }
 	};
 
 
@@ -151,6 +153,7 @@ namespace AE::Threading
 		TaskScheduler ();
 		~TaskScheduler ();
 
+			bool Setup (size_t maxWorkerThreads);
 	// thread api
 			bool AddThread (const ThreadPtr &thread);
 

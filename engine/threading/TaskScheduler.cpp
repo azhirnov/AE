@@ -49,11 +49,6 @@ namespace AE::Threading
 */
 	TaskScheduler::TaskScheduler ()
 	{
-		_mainQueue.Resize( 2 );
-		_workerQueue.Resize( 2 );
-		_renderQueue.Resize( 2 );
-		_fileQueue.Resize( 2 );
-		_networkQueue.Resize( 2 );
 	}
 	
 /*
@@ -63,13 +58,31 @@ namespace AE::Threading
 */
 	TaskScheduler::~TaskScheduler ()
 	{
+		// detach threads
 		for (auto& thread : _threads) {
 			thread->Detach();
 		}
-
 		_threads.clear();
 	}
 	
+/*
+=================================================
+	Setup
+=================================================
+*/
+	bool TaskScheduler::Setup (size_t maxWorkerThreads)
+	{
+		CHECK_ERR( _threads.empty() );
+
+		_mainQueue.Resize( 2 );
+		_workerQueue.Resize( (maxWorkerThreads + 2) / 3 );
+		_renderQueue.Resize( 2 );
+		_fileQueue.Resize( 2 );
+		_networkQueue.Resize( 2 );
+
+		return true;
+	}
+
 /*
 =================================================
 	AddThread
@@ -78,7 +91,7 @@ namespace AE::Threading
 	bool TaskScheduler::AddThread (const ThreadPtr &thread)
 	{
 		CHECK_ERR( thread );
-		CHECK_ERR( thread->Attach( this ));
+		CHECK_ERR( thread->Attach( this, uint(_threads.size()) ));
 		
 		_threads.push_back( thread );
 		return true;
