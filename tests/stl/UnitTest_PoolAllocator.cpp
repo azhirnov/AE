@@ -4,24 +4,26 @@
 #include "UnitTest_Common.h"
 
 
-static void LinearAllocator_Test1 ()
+namespace
 {
-	using T = DebugInstanceCounter<uint, 1>;
-	
-	LinearAllocator		pool;
-	pool.SetBlockSize( 4_Mb );
-
-
-	T::ClearStatistic();
+	void LinearAllocator_Test1 ()
 	{
-		std::vector< T, StdLinearAllocator<T> >	vec{ pool };
+		using T = DebugInstanceCounter<uint, 1>;
+	
+		LinearAllocator		pool;
+		pool.SetBlockSize( 4_Mb );
 
-		vec.resize( 100 );
-		vec.push_back( T(101) );
+
+		T::ClearStatistic();
+		{
+			std::vector< T, StdLinearAllocator<T> >	vec{ pool };
+
+			vec.resize( 100 );
+			vec.push_back( T(101) );
+		}
+		TEST( T::CheckStatistic() );
 	}
-	TEST( T::CheckStatistic() );
 }
-
 
 
 extern void UnitTest_LinearAllocator ()

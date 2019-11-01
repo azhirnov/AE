@@ -4,18 +4,21 @@
 #include "UnitTest_Common.h"
 
 
-static void NtStringView_Test1 ()
+namespace
 {
-	const auto	Func = [] (NtStringView str, const char* expected) -> bool {
-		return strcmp( str.data(), expected ) == 0;
-	};
+	void NtStringView_Test1 ()
+	{
+		const auto	Func = [] (NtStringView str, const char* expected) -> bool {
+			return strcmp( str.data(), expected ) == 0;
+		};
 
-	TEST( Func( "test", "test" ));
-	TEST( not Func( Default, "test" ));
-	TEST( Func( StringView{"test"}, "test" ));
-	TEST( Func( StringView{"test, test"}.substr(0,4), "test" ));
-	TEST( Func( String{"test"}, "test" ));
-	TEST( Func( String{"test, test"}.substr(0,4), "test" ));
+		TEST( Func( "test", "test" ));
+		TEST( not Func( Default, "test" ));
+		TEST( Func( StringView{"test"}, "test" ));
+		TEST( Func( StringView{"test, test"}.substr(0,4), "test" ));
+		TEST( Func( String{"test"}, "test" ));
+		TEST( Func( String{"test, test"}.substr(0,4), "test" ));
+	}
 }
 
 
