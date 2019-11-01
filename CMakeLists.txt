@@ -32,6 +32,7 @@ include( "cmake/external.cmake" )
 add_subdirectory( "utils/project_template" )
 add_subdirectory( "engine/stl" )
 add_subdirectory( "engine/scripting" )
+add_subdirectory( "engine/threading" )
 add_subdirectory( "engine/ecs" )
 
 #----------------------------------------------------------
@@ -41,6 +42,7 @@ if (${AE_ENABLE_TESTS})
 	enable_testing()
 	add_subdirectory( "tests/stl" )
 	add_subdirectory( "tests/scripting" )
+	add_subdirectory( "tests/threading" )
 	add_subdirectory( "tests/ecs" )
 endif()
 
