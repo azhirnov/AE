@@ -99,6 +99,17 @@ namespace AE::STL
 	
 /*
 =================================================
+	operator *
+=================================================
+*/
+	template <typename T, uint I, typename S>
+	ND_ forceinline EnableIf<IsScalar<S> and not IsSameTypes<T,S>, Vec<T,I>>  operator * (const Vec<T,I> &lhs, const S &rhs)
+	{
+		return lhs * T(rhs);
+	}
+
+/*
+=================================================
 	operator %
 =================================================
 */

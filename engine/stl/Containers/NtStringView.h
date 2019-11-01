@@ -8,6 +8,7 @@
 
 #include "stl/Memory/MemUtils.h"
 #include "stl/Memory/UntypedAllocator.h"
+#include "stl/Containers/StaticString.h"
 
 namespace AE::STL
 {
@@ -46,6 +47,7 @@ namespace AE::STL
 		NtBasicStringView (const std::basic_string<T> &str);
 		NtBasicStringView (const T* str);
 		NtBasicStringView (const T* str, size_t length);
+		template <size_t S> NtBasicStringView (const TStaticString<T,S> &str);
 		~NtBasicStringView ();
 
 		// TODO: why they ignored by compiler ?
@@ -130,6 +132,12 @@ namespace AE::STL
 	{
 		_Validate();
 	}
+	
+	template <typename T>
+	template <size_t S>
+	inline NtBasicStringView<T>::NtBasicStringView (const TStaticString<T,S> &str) :
+		_data{ str.c_str() }, _length{ str.length() }
+	{}
 
 	template <typename T>
 	inline NtBasicStringView<T>::~NtBasicStringView ()

@@ -346,28 +346,50 @@ namespace AE::STL
 	template <typename T>
 	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Ln (const T& x)
 	{
+		ASSERT( x >= T(0) );
 		return std::log( x );
 	}
 
 	template <typename T>
 	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Log2 (const T& x)
 	{
+		ASSERT( x >= T(0) );
 		return std::log2( x );
 	}
 
 	template <typename T>
 	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Log10 (const T& x)
 	{
+		ASSERT( x >= T(0) );
 		return std::log10( x );
 	}
 
 	template <auto Base, typename T>
 	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Log (const T& x)
 	{
+		ASSERT( x >= T(0) );
 		static constexpr auto log_base = std::log( Base );
 		return std::log( x ) / log_base;
 	}
 	
+/*
+=================================================
+	Pow / Exp
+=================================================
+*/
+	template <typename T>
+	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Pow (const T& base, const T& power)
+	{
+		ASSERT( base >= T(0) or power == Floor(power) );	// if 'base' < 0 and 'power' not integer then result is NaN
+		return std::pow( base, power );
+	}
+
+	template <typename T>
+	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Exp (const T& x)
+	{
+		return std::exp( x );
+	}
+
 /*
 =================================================
 	Wrap
