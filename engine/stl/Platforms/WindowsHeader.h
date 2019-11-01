@@ -4,11 +4,11 @@
 
 #ifdef PLATFORM_WINDOWS
 
-#	define NOMINMAX
-#	define NOMCX
-#	define NOIME
-#	define NOSERVICE
-#	define WIN32_LEAN_AND_MEAN
+# define NOMINMAX
+# define NOMCX
+# define NOIME
+# define NOSERVICE
+# define WIN32_LEAN_AND_MEAN
 
 # ifdef COMPILER_MSVC
 #	pragma warning (push)
@@ -21,8 +21,8 @@
 # endif
 
 
-#undef DeleteFile
-#undef CreateWindow
-#undef CreateDirectory
+# undef DeleteFile
+# undef CreateWindow
+# undef CreateDirectory
 
 #endif	// PLATFORM_WINDOWS
