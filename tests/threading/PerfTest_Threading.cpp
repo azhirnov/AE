@@ -1,8 +1,8 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "threading/TaskScheduler.h"
-#include "threading/WorkerThread.h"
-#include "threading/FunctionTask.h"
+#include "threading/TaskSystem/TaskScheduler.h"
+#include "threading/TaskSystem/WorkerThread.h"
+#include "threading/TaskSystem/FunctionTask.h"
 
 #include "stl/Math/Vec.h"
 #include "stl/Algorithms/StringUtils.h"
@@ -16,7 +16,7 @@ namespace
 {
 	static siv::PerlinNoise			noise;
 	static const uint				max_levels		= 6;
-	static std::atomic<uint64_t>	task_complete	{0};
+	static Atomic<uint64_t>			task_complete	{0};
 
 
 	class HeightMap : public std::enable_shared_from_this<HeightMap>
@@ -46,14 +46,13 @@ namespace
 	class LargeTask1 final : public IAsyncTask
 	{
 	private:
-		Ptr<TaskScheduler>	_scheduler;
-		const uint2			_cell;
-		const uint			_level;
-		HeightMap_t			_result;
+		const uint2		_cell;
+		const uint		_level;
+		HeightMap_t		_result;
 
 	public:
-		LargeTask1 (Ptr<TaskScheduler> scheduler, const uint2 &cell, uint level) :
-			IAsyncTask{ EThread::Worker }, _scheduler{ scheduler },
+		LargeTask1 (const uint2 &cell, uint level) :
+			IAsyncTask{ EThread::Worker },
 			_cell{ cell }, _level{ level }, _result{ MakeShared<HeightMap>() }
 		{}
 
@@ -72,18 +71,18 @@ namespace
 
 			if ( _level < max_levels )
 			{
-				_scheduler->Run<LargeTask1>( {}, _scheduler, _cell * 2 + uint2(0,0), _level+1 );
-				_scheduler->Run<LargeTask1>( {}, _scheduler, _cell * 2 + uint2(0,1), _level+1 );
-				_scheduler->Run<LargeTask1>( {}, _scheduler, _cell * 2 + uint2(1,0), _level+1 );
-				_scheduler->Run<LargeTask1>( {}, _scheduler, _cell * 2 + uint2(1,1), _level+1 );
+				Scheduler().Run<LargeTask1>( {}, _cell * 2 + uint2(0,0), _level+1 );
+				Scheduler().Run<LargeTask1>( {}, _cell * 2 + uint2(0,1), _level+1 );
+				Scheduler().Run<LargeTask1>( {}, _cell * 2 + uint2(1,0), _level+1 );
+				Scheduler().Run<LargeTask1>( {}, _cell * 2 + uint2(1,1), _level+1 );
 			}
 			else
 			{
-				_scheduler->Run<FinalTask>( {} );
+				Scheduler().Run<FinalTask>( {} );
 			}
 		}
 
-		void Cancel () override
+		void OnCancel () override
 		{
 			TEST(false);
 		}
@@ -95,25 +94,23 @@ namespace
 
 		task_complete.store( 0 );
 
-		TaskScheduler	scheduler;
-		const size_t	num_threads = std::thread::hardware_concurrency()-1;
-		
-		scheduler.Setup( num_threads );
+		const size_t		num_threads = std::thread::hardware_concurrency()-1;
+		LocalTaskScheduler	scheduler	{num_threads};
 
 		for (size_t i = 0; i < num_threads; ++i) {
-			scheduler.AddThread( MakeShared<WorkerThread>(
+			scheduler->AddThread( MakeShared<WorkerThread>(
 				WorkerThread::ThreadMask{}.set(uint(WorkerThread::EThread::Worker)),
-				i > 0 // only one worker thread should never sleep
+				WorkerThread::Milliseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
 			));
 		}
 
 		const auto	start_time = TimePoint_t::clock::now();
 		
-		AE_UNUSED(
-			scheduler.Run<LargeTask1>( {}, &scheduler, uint2{0,0}, 0 ),
-			scheduler.Run<LargeTask1>( {}, &scheduler, uint2{0,1}, 0 ),
-			scheduler.Run<LargeTask1>( {}, &scheduler, uint2{1,0}, 0 ),
-			scheduler.Run<LargeTask1>( {}, &scheduler, uint2{1,1}, 0 )
+		Unused(
+			scheduler->Run<LargeTask1>( {}, uint2{0,0}, 0 ),
+			scheduler->Run<LargeTask1>( {}, uint2{0,1}, 0 ),
+			scheduler->Run<LargeTask1>( {}, uint2{1,0}, 0 ),
+			scheduler->Run<LargeTask1>( {}, uint2{1,1}, 0 )
 		);
 
 		const uint64_t	required = 4 * (4ull << max_levels);
@@ -122,6 +119,8 @@ namespace
 		{
 			if ( task_complete.load( memory_order_relaxed ) >= required )
 				break;
+
+			std::this_thread::yield();
 		}
 
 		AE_LOGI( "Total time: "s << ToString( TimePoint_t::clock::now() - start_time ) << ", final jobs: " << ToString( required ) );
@@ -134,14 +133,13 @@ namespace
 	class LargeTask2 final : public IAsyncTask
 	{
 	private:
-		Ptr<TaskScheduler>	_scheduler;
-		const uint2			_cell;
-		const uint			_level;
-		HeightMap_t			_result;
+		const uint2		_cell;
+		const uint		_level;
+		HeightMap_t		_result;
 
 	public:
-		LargeTask2 (Ptr<TaskScheduler> scheduler, const uint2 &cell, uint level) :
-			IAsyncTask{ EThread::Worker }, _scheduler{ scheduler },
+		LargeTask2 (const uint2 &cell, uint level) :
+			IAsyncTask{ EThread::Worker },
 			_cell{ cell }, _level{ level }, _result{ MakeShared<HeightMap>() }
 		{}
 
@@ -160,19 +158,19 @@ namespace
 
 			if ( _level < max_levels )
 			{
-				auto	t0 = _scheduler->Run<LargeTask2>( {}, _scheduler, _cell * 2 + uint2(0,0), _level+1 );
-				auto	t1 = _scheduler->Run<LargeTask2>( {t0}, _scheduler, _cell * 2 + uint2(0,1), _level+1 );
-				auto	t2 = _scheduler->Run<LargeTask2>( {t0, t1}, _scheduler, _cell * 2 + uint2(1,0), _level+1 );
-				auto	t3 = _scheduler->Run<LargeTask2>( {t0, t1, t2}, _scheduler, _cell * 2 + uint2(1,1), _level+1 );
-				AE_UNUSED( t3 );
+				auto	t0 = Scheduler().Run<LargeTask2>( {}, _cell * 2 + uint2(0,0), _level+1 );
+				auto	t1 = Scheduler().Run<LargeTask2>( {t0}, _cell * 2 + uint2(0,1), _level+1 );
+				auto	t2 = Scheduler().Run<LargeTask2>( {t0, t1}, _cell * 2 + uint2(1,0), _level+1 );
+				auto	t3 = Scheduler().Run<LargeTask2>( {t0, t1, t2}, _cell * 2 + uint2(1,1), _level+1 );
+				Unused( t3 );
 			}
 			else
 			{
-				_scheduler->Run<FinalTask>( {} );
+				Scheduler().Run<FinalTask>( {} );
 			}
 		}
 
-		void Cancel () override
+		void OnCancel () override
 		{
 			TEST(false);
 		}
@@ -183,26 +181,24 @@ namespace
 		using TimePoint_t = std::chrono::high_resolution_clock::time_point;
 
 		task_complete.store( 0 );
-
-		TaskScheduler	scheduler;
-		const size_t	num_threads = std::thread::hardware_concurrency()-1;
-
-		scheduler.Setup( num_threads );
+		
+		const size_t		num_threads = std::thread::hardware_concurrency()-1;
+		LocalTaskScheduler	scheduler	{num_threads};
 
 		for (size_t i = 0; i < num_threads; ++i) {
-			scheduler.AddThread( MakeShared<WorkerThread>(
+			scheduler->AddThread( MakeShared<WorkerThread>(
 				WorkerThread::ThreadMask{}.set(uint(WorkerThread::EThread::Worker)),
-				i > 0 // only one worker thread should never sleep
+				WorkerThread::Milliseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
 			));
 		}
 
 		const auto	start_time = TimePoint_t::clock::now();
 		
-		AE_UNUSED(
-			scheduler.Run<LargeTask2>( {}, &scheduler, uint2{0,0}, 0 ),
-			scheduler.Run<LargeTask2>( {}, &scheduler, uint2{0,1}, 0 ),
-			scheduler.Run<LargeTask2>( {}, &scheduler, uint2{1,0}, 0 ),
-			scheduler.Run<LargeTask2>( {}, &scheduler, uint2{1,1}, 0 )
+		Unused(
+			scheduler->Run<LargeTask2>( {}, uint2{0,0}, 0 ),
+			scheduler->Run<LargeTask2>( {}, uint2{0,1}, 0 ),
+			scheduler->Run<LargeTask2>( {}, uint2{1,0}, 0 ),
+			scheduler->Run<LargeTask2>( {}, uint2{1,1}, 0 )
 		);
 
 		const uint64_t	required = 4 * (4ull << max_levels);
@@ -211,6 +207,8 @@ namespace
 		{
 			if ( task_complete.load( memory_order_relaxed ) >= required )
 				break;
+
+			std::this_thread::yield();
 		}
 
 		AE_LOGI( "Total time: "s << ToString( TimePoint_t::clock::now() - start_time ) << ", final jobs: " << ToString( required ) );

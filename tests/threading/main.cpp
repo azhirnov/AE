@@ -2,6 +2,7 @@
 
 #include "stl/Common.h"
 
+extern void UnitTest_Promise ();
 extern void UnitTest_TaskDeps ();
 extern void PerfTest_Threading ();
 
@@ -9,6 +10,7 @@ extern void PerfTest_Threading ();
 int main ()
 {
 	UnitTest_TaskDeps();
+	UnitTest_Promise();
 	PerfTest_Threading();
 
 	AE_LOGI( "Tests.Threading finished" );
