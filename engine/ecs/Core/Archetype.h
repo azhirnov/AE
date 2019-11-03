@@ -70,7 +70,7 @@ namespace AE::ECS
 	template <typename Comp, typename Ppln>
 	struct ComponentTypeInfo
 	{
-		using type	= T;
+		//using type	= T;
 		static constexpr ComponentID	id {Ppln::Counter_t::Next()};
 	};
 

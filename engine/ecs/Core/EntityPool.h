@@ -25,7 +25,7 @@ namespace AE::ECS
 		struct EntityRef
 		{
 			ArchetypeStorage*	storage		= null;
-			LocalIndex_t		index		= ~LocalIndex_t(0);
+			LocalIndex_t		index		= LocalIndex_t(~0u);
 			InstanceID_t		instance	= 0;
 		};
 
@@ -57,7 +57,7 @@ namespace AE::ECS
 			_available.pop_back();
 		} else {
 			idx = Index_t(_entities.size());
-			_entities.push_back( EntityRef{} );
+			//_entities.push_back( EntityRef{} );
 		}
 
 		return EntityID{ idx, _entities[idx].instance };
@@ -65,7 +65,7 @@ namespace AE::ECS
 	
 	inline bool  EntityPool::Unassign (EntityID id)
 	{
-		CHECK_ERR( id.Index() < _entities.size() );
+		/*CHECK_ERR( id.Index() < _entities.size() );
 		CHECK_ERR( _entities[idx].instance == id.InstanceID() );
 			
 		auto& item = _entities[ id.Index() ];
@@ -74,18 +74,18 @@ namespace AE::ECS
 		item.index   = ~LocalIndex_t(0);
 
 		++item.instance;
-		_available.push_back( id.Index() );
+		_available.push_back( id.Index() );*/
 		return true;
 	}
 	
 	inline bool  EntityPool::SetArchetype (EntityID id, ArchetypeStorage* storage, LocalIndex_t index)
 	{
-		CHECK_ERR( id.Index() < _entities.size() );
+		/*CHECK_ERR( id.Index() < _entities.size() );
 		CHECK_ERR( _entities[ id.Index() ].instance == id.InstanceID() );
 
 		auto& item   = _entities[ id.Index() ];
 		item.storage = storage;
-		item.index   = index;
+		item.index   = index;*/
 		return true;
 	}
 
