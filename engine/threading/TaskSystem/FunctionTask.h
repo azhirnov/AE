@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "threading/TaskScheduler.h"
+#include "threading/TaskSystem/TaskScheduler.h"
 
 namespace AE::Threading
 {
@@ -15,7 +15,7 @@ namespace AE::Threading
 	{
 	// types
 	public:
-		using Func_t	= std::function< void () >;
+		using Func_t	= Function< void () >;
 
 	// variables
 	private:

@@ -1,6 +1,6 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "threading/TaskScheduler.h"
+#include "threading/TaskSystem/TaskScheduler.h"
 #include "stl/Algorithms/StringUtils.h"
 
 namespace AE::Threading
@@ -14,6 +14,84 @@ namespace AE::Threading
 	IAsyncTask::IAsyncTask (EThread type) :
 		_threadType{type}
 	{}
+	
+/*
+=================================================
+	_ForceCanceledState
+=================================================
+*/
+	bool IAsyncTask::_ForceCanceledState ()
+	{
+		EStatus	old = _status.exchange( EStatus::Canceled, memory_order_relaxed );
+		return old < EStatus::_Finished;
+	}
+	
+/*
+=================================================
+	_SetCanceledState
+=================================================
+*/
+	bool IAsyncTask::_SetCanceledState ()
+	{
+		for (EStatus expected = EStatus::Pending;
+			 not _status.compare_exchange_weak( INOUT expected, EStatus::Canceled, memory_order_relaxed );)
+		{
+			// status has been changed in another thread
+			if ( expected > EStatus::_Finished )
+				return false;
+		}
+		return true;
+	}
+
+/*
+=================================================
+	_SetFailedState
+=================================================
+*/
+	bool IAsyncTask::_SetFailedState ()
+	{
+		for (EStatus expected = EStatus::Pending;
+			 not _status.compare_exchange_weak( INOUT expected, EStatus::Failed, memory_order_relaxed );)
+		{
+			// status has been changed in another thread
+			if ( expected > EStatus::_Finished )
+				return false;
+		}
+		return true;
+	}
+	
+/*
+=================================================
+	_SetCompletedState
+=================================================
+*/
+	bool IAsyncTask::_SetCompletedState ()
+	{
+		EStatus	expected = EStatus::InProgress;
+		bool	result   = _status.compare_exchange_strong( INOUT expected, EStatus::Completed, memory_order_relaxed, memory_order_relaxed );
+
+		ASSERT( expected == EStatus::InProgress or expected == EStatus::Canceled );
+		return result;
+	}
+//-----------------------------------------------------------------------------
+	
+
+/*
+=================================================
+	_RunTask
+=================================================
+*/
+	void IThread::_RunTask (const AsyncTask &task)
+	{
+		using EStatus = IAsyncTask::EStatus;
+
+		AE_VTUNE( __itt_task_begin( Scheduler().GetVTuneDomain(), __itt_null, __itt_null, __itt_string_handle_createA( task->DbgName().c_str() )));
+		task->Run();
+		AE_VTUNE( __itt_task_end( Scheduler().GetVTuneDomain() ));
+
+		task->_SetCompletedState();
+		ThreadFence( memory_order_release );
+	}
 //-----------------------------------------------------------------------------
 
 
@@ -42,6 +120,17 @@ namespace AE::Threading
 	}
 //-----------------------------------------------------------------------------
 
+	
+/*
+=================================================
+	Instance
+=================================================
+*/
+	TaskScheduler&  TaskScheduler::Instance ()
+	{
+		static TaskScheduler	scheduler;
+		return scheduler;
+	}
 
 /*
 =================================================
@@ -60,6 +149,35 @@ namespace AE::Threading
 */
 	TaskScheduler::~TaskScheduler ()
 	{
+		// call 'Release' before destroy
+		CHECK( _threads.empty() );
+	}
+	
+/*
+=================================================
+	Setup
+=================================================
+*/
+	bool TaskScheduler::Setup (size_t maxWorkerThreads)
+	{
+		CHECK_ERR( _threads.empty() );
+
+		_mainQueue.Resize( 2 );
+		_workerQueue.Resize( Max( 2u, (maxWorkerThreads + 2) / 3 ));
+		_renderQueue.Resize( 2 );
+		_fileQueue.Resize( 2 );
+		_networkQueue.Resize( 2 );
+
+		return true;
+	}
+	
+/*
+=================================================
+	Release
+=================================================
+*/
+	void TaskScheduler::Release ()
+	{
 		// detach threads
 		for (auto& thread : _threads) {
 			thread->Detach();
@@ -77,24 +195,6 @@ namespace AE::Threading
 				_vtuneDomain->flags = 0;
 		)
 	}
-	
-/*
-=================================================
-	Setup
-=================================================
-*/
-	bool TaskScheduler::Setup (size_t maxWorkerThreads)
-	{
-		CHECK_ERR( _threads.empty() );
-
-		_mainQueue.Resize( 2 );
-		_workerQueue.Resize( (maxWorkerThreads + 2) / 3 );
-		_renderQueue.Resize( 2 );
-		_fileQueue.Resize( 2 );
-		_networkQueue.Resize( 2 );
-
-		return true;
-	}
 
 /*
 =================================================
@@ -104,7 +204,7 @@ namespace AE::Threading
 	bool TaskScheduler::AddThread (const ThreadPtr &thread)
 	{
 		CHECK_ERR( thread );
-		CHECK_ERR( thread->Attach( this, uint(_threads.size()) ));
+		CHECK_ERR( thread->Attach( uint(_threads.size()) ));
 		
 		_threads.push_back( thread );
 		return true;
@@ -133,13 +233,34 @@ namespace AE::Threading
 	
 /*
 =================================================
-	_ProcessTask
+	PickUpTask
+=================================================
+*/
+	AsyncTask  TaskScheduler::PickUpTask (EThread type, uint seed)
+	{
+		BEGIN_ENUM_CHECKS();
+		switch ( type )
+		{
+			case EThread::Main :		return _PickUpTask( _mainQueue, seed );
+			case EThread::Worker :		return _PickUpTask( _workerQueue, seed );
+			case EThread::Renderer :	return _PickUpTask( _renderQueue, seed );
+			case EThread::FileIO :		return _PickUpTask( _fileQueue, seed );
+			case EThread::Network :		return _PickUpTask( _networkQueue, seed );
+			case EThread::_Count :		break;
+		}
+		END_ENUM_CHECKS();
+		RETURN_ERR( "not supported" );
+	}
+
+/*
+=================================================
+	_PickUpTask
 =================================================
 */
 	template <size_t N>
-	bool  TaskScheduler::_ProcessTask (_TaskQueue<N> &tq, uint seed) const
+	AsyncTask  TaskScheduler::_PickUpTask (_TaskQueue<N> &tq, uint seed) const
 	{
-		AE_UNUSED( seed );	// TODO
+		Unused( seed );	// TODO
 
 		AE_SCHEDULER_PROFILING(
 			const auto	start_time = TimePoint_t::clock::now();
@@ -156,7 +277,7 @@ namespace AE::Threading
 			for (auto iter = q.tasks.begin(); iter != q.tasks.end();)
 			{
 				bool	ready	= true;
-				bool	cancel	= ((*iter)->Status() == EStatus::Canceled);
+				bool	cancel	= ((*iter)->Status() > EStatus::_Interropted);
 
 				// check input dependencies
 				for (size_t i = 0, cnt = (*iter)->_dependsOn.size(); (i < cnt) & ready & (not cancel); ++i)
@@ -164,15 +285,20 @@ namespace AE::Threading
 					const auto&		dep		= (*iter)->_dependsOn[i];
 					const EStatus	status	= dep->Status();
 
-					ready	&= (status == EStatus::Complete);
-					cancel	|= (status == EStatus::Canceled);
+					ready	&= (status == EStatus::Completed);
+					cancel	|= (status >  EStatus::_Interropted);
+				}
+				
+				if ( ready or cancel ) {
+					(*iter)->_dependsOn.clear();
 				}
 
 				// cancel task if one of dependencies has been canceled
 				if ( cancel )
 				{
-					(*iter)->_status.store( EStatus::Canceled, memory_order_release );
-					(*iter)->Cancel();
+					(*iter)->_ForceCanceledState();
+					(*iter)->OnCancel();
+					ThreadFence( memory_order_release );
 
 					iter = q.tasks.erase( iter );
 					continue;
@@ -187,7 +313,7 @@ namespace AE::Threading
 
 				// remove task
 				task = *iter;
-				iter = q.tasks.erase( iter );
+				q.tasks.erase( iter );
 				break;
 			}
 
@@ -196,39 +322,56 @@ namespace AE::Threading
 			if ( not task )
 				continue;
 
-			// run
+			// try to start task
 			EStatus	expected = EStatus::Pending;
 			
 			if ( task->_status.compare_exchange_strong( INOUT expected, EStatus::InProgress, memory_order_relaxed ) )
 			{
 				AE_SCHEDULER_PROFILING(
-					const auto	end_time = TimePoint_t::clock::now();
-					tq._stallTime += (end_time - start_time).count();
+					tq._stallTime += (TimePoint_t::clock::now() - start_time).count();
 				)
-					
-				AE_VTUNE( __itt_task_begin( _vtuneDomain, __itt_null, __itt_null, __itt_string_handle_createA( task->DbgName().c_str() )));
-				task->Run();
-				AE_VTUNE( __itt_task_end( _vtuneDomain ));
-
-				expected = EStatus::InProgress;
-				task->_status.compare_exchange_strong( INOUT expected, EStatus::Complete, memory_order_relaxed );
-				ASSERT( expected == EStatus::InProgress or expected == EStatus::Canceled );
-				
-				AE_SCHEDULER_PROFILING(
-					tq._workTime += (TimePoint_t::clock::now() - end_time).count();
-				)
-				return true;
+				return task;
 			}
 			else
 			{
-				task->_status.store( EStatus::Canceled, memory_order_release );
-				task->Cancel();
+				task->_ForceCanceledState();
+				task->OnCancel();
+				ThreadFence( memory_order_release );
 			}
 		}
 
 		AE_SCHEDULER_PROFILING(
 			tq._stallTime += (TimePoint_t::clock::now() - start_time).count();
 		)
+		return null;
+	}
+	
+/*
+=================================================
+	_ProcessTask
+=================================================
+*/
+	template <size_t N>
+	bool  TaskScheduler::_ProcessTask (_TaskQueue<N> &tq, uint seed) const
+	{
+		if ( AsyncTask task = _PickUpTask( tq, seed ))
+		{
+			AE_SCHEDULER_PROFILING(
+				const auto	start_time = TimePoint_t::clock::now();
+			)
+
+			AE_VTUNE( __itt_task_begin( _vtuneDomain, __itt_null, __itt_null, __itt_string_handle_createA( task->DbgName().c_str() )));
+			task->Run();
+			AE_VTUNE( __itt_task_end( _vtuneDomain ));
+
+			task->_SetCompletedState();
+			ThreadFence( memory_order_release );
+				
+			AE_SCHEDULER_PROFILING(
+				tq._workTime += (TimePoint_t::clock::now() - start_time).count();
+			)
+			return true;
+		}
 		return false;
 	}
 
@@ -270,18 +413,7 @@ namespace AE::Threading
 		if ( not task )
 			return false;
 
-		// set new status and flush cache
-		for (EStatus expected = EStatus::Pending;
-			 not task->_status.compare_exchange_weak( INOUT expected, EStatus::Canceled, memory_order_release, memory_order_relaxed );)
-		{
-			// status has been changed in another thread
-			if ( expected > EStatus::_Finished )
-				return false;
-
-			ASSERT( expected < EStatus::_Finished );
-		}
-
-		return true;
+		return task->_SetCanceledState();
 	}
 	
 /*

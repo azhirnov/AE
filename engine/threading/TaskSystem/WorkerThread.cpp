@@ -1,6 +1,6 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "threading/WorkerThread.h"
+#include "threading/TaskSystem/WorkerThread.h"
 #include "stl/Platforms/PlatformUtils.h"
 
 namespace AE::Threading
@@ -12,11 +12,11 @@ namespace AE::Threading
 =================================================
 */
 	WorkerThread::WorkerThread () :
-		WorkerThread{ ThreadMask{}.set(uint(EThread::Worker)), true }
+		WorkerThread{ ThreadMask{}.set(uint(EThread::Worker)), Milliseconds{10} }
 	{}
 
-	WorkerThread::WorkerThread (ThreadMask mask, bool canSleep) :
-		_threadMask{mask}, _canSleep{canSleep}
+	WorkerThread::WorkerThread (ThreadMask mask, Milliseconds sleepOnIdle, StringView name) :
+		_threadMask{ mask }, _sleepOnIdle{ sleepOnIdle }, _name{ name }
 	{}
 
 /*
@@ -24,10 +24,14 @@ namespace AE::Threading
 	Attach
 =================================================
 */
-	bool  WorkerThread::Attach (Ptr<TaskScheduler> scheduler, uint uid)
+	bool  WorkerThread::Attach (uint uid)
 	{
-		_thread = std::thread{[this, scheduler, uid] ()
+		_looping.store( 1, memory_order_release );
+
+		_thread = std::thread{[this, uid] ()
 		{
+			uint	seed = uid;
+
 			PlatformUtils::SetThreadName( _name );
 			AE_VTUNE( __itt_thread_set_name( _name.c_str() ));
 
@@ -40,12 +44,12 @@ namespace AE::Threading
 					if ( not _threadMask[t] )
 						continue;
 
-					processed |= scheduler->ProcessTask( EThread(t), uid );	// TODO: dynamic seed
+					processed |= Scheduler().ProcessTask( EThread(t), ++seed );
 				}
 
-				if ( not processed and _canSleep )
+				if ( not processed and _sleepOnIdle.count() )
 				{
-					std::this_thread::sleep_for( _sleepTime );
+					std::this_thread::sleep_for( _sleepOnIdle );
 				}
 			}
 		}};

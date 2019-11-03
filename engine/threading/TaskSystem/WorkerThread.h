@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "threading/TaskScheduler.h"
+#include "threading/TaskSystem/TaskScheduler.h"
 #include "stl/Containers/StaticString.h"
 
 namespace AE::Threading
@@ -17,25 +17,24 @@ namespace AE::Threading
 	// types
 	public:
 		using ThreadMask	= BitSet< uint(EThread::_Count) >;
+		using Milliseconds	= std::chrono::duration<uint, std::milli>;
 
 
 	// variables
 	private:
 		std::thread				_thread;
-		std::atomic<uint>		_looping	{1};
+		Atomic<uint>			_looping;
 		const ThreadMask		_threadMask;
-		const bool				_canSleep;
+		const Milliseconds		_sleepOnIdle;
 		const StaticString<64>	_name;
-
-		static constexpr auto	_sleepTime	= std::chrono::milliseconds{ 10 };
 
 
 	// methods
 	public:
 		WorkerThread ();
-		WorkerThread (ThreadMask mask, bool canSleep);
+		WorkerThread (ThreadMask mask, Milliseconds sleepOnIdle, StringView name = "thread");
 
-		bool  Attach (Ptr<TaskScheduler>, uint uid) override;
+		bool  Attach (uint uid) override;
 		void  Detach () override;
 
 		NtStringView  DbgName () const override		{ return _name; }

@@ -6,10 +6,11 @@
 #include "stl/Containers/FixedArray.h"
 #include "stl/Containers/NtStringView.h"
 #include "stl/Algorithms/Cast.h"
-#include "stl/ThreadSafe/SpinLock.h"
+#include "stl/Types/Noncopyable.h"
+
+#include "threading/Primitives/SpinLock.h"
 
 #include <chrono>
-#include <mutex>
 
 #ifdef AE_ENABLE_VTUNE_API
 #	include <ittnotify.h>
@@ -26,8 +27,6 @@
 
 namespace AE::Threading
 {
-	using namespace AE::STL;
-
 	using Nanoseconds	= std::chrono::nanoseconds;
 
 
@@ -40,24 +39,28 @@ namespace AE::Threading
 	class IAsyncTask : public std::enable_shared_from_this< IAsyncTask >
 	{
 		friend class TaskScheduler;
+		friend class IThread;
 		
 	// types
 	public:
 		enum class EStatus : uint
 		{
-			Pending,
-			InProgress,
+			Pending,		// task added to queue and waiting until input dependencies complete
+			InProgress,		// task was acquired 
 
 			_Finished,
-			Complete,
-			Canceled,
+			Completed,		// successfully completed
+
+			_Interropted,
+			Canceled,		// task was externally canceled
+			Failed,			// task has internal error and has been failed
 		};
 
 		enum class EThread : uint
 		{
-			Main,			// thread with window message loop
+			Main,		// thread with window message loop
 			Worker,
-			Renderer,		// for opengl
+			Renderer,	// for opengl
 			FileIO,
 			Network,
 			_Count
@@ -66,22 +69,31 @@ namespace AE::Threading
 
 	// variables
 	private:
-		std::atomic<EStatus>	_status		{EStatus::Pending};
-		const EThread			_threadType;
-		Array<AsyncTask>		_dependsOn;
+		Atomic<EStatus>		_status		{EStatus::Pending};
+		const EThread		_threadType;
+		Array<AsyncTask>	_dependsOn;
 
 
 	// methods
 	public:
-		ND_ EThread  Type () const	{ return _threadType; }
+		ND_ EThread	Type ()		const	{ return _threadType; }
 
-		ND_ EStatus  Status ()		{ return _status.load( memory_order_relaxed ); }
+		ND_ EStatus	Status ()			{ return _status.load( memory_order_relaxed ); }
+
+		ND_ bool	IsInQueue ()		{ return Status() < EStatus::_Finished; }
+		ND_ bool	IsFinished ()		{ return Status() > EStatus::_Finished; }
+		ND_ bool	IsInterropted ()	{ return Status() > EStatus::_Interropted; }
 
 	protected:
 		IAsyncTask (EThread type);
 
 		virtual void Run () = 0;
-		virtual void Cancel () {}
+		virtual void OnCancel () {}
+
+		bool _ForceCanceledState ();
+		bool _SetCanceledState ();
+		bool _SetFailedState ();
+		bool _SetCompletedState ();
 
 		ND_ virtual NtStringView  DbgName () const	{ return "unknown"; }
 	};
@@ -101,10 +113,16 @@ namespace AE::Threading
 
 	// interface
 	public:
-		virtual bool  Attach (Ptr<TaskScheduler>, uint uid) = 0;
+		virtual bool  Attach (uint uid) = 0;
 		virtual void  Detach () = 0;
 
 		ND_ virtual NtStringView  DbgName () const	{ return "thread"; }
+
+	// helper functions
+	protected:
+		static void _RunTask (const AsyncTask &);
+		static void _SetFailedState (const AsyncTask &);
+		static void _SetCompletedState (const AsyncTask &);
 	};
 
 
@@ -113,7 +131,7 @@ namespace AE::Threading
 	// Task Scheduler
 	//
 
-	class TaskScheduler
+	class TaskScheduler final : public Noncopyable
 	{
 	// types
 	private:
@@ -131,8 +149,8 @@ namespace AE::Threading
 			FixedArray< _PerQueue, N >	queues;
 
 			AE_SCHEDULER_PROFILING(
-				std::atomic<uint64_t>	_stallTime	{0};	// Nanoseconds
-				std::atomic<uint64_t>	_workTime	{0};
+				Atomic<uint64_t>	_stallTime	{0};	// Nanoseconds
+				Atomic<uint64_t>	_workTime	{0};
 			)
 
 		// methods
@@ -170,19 +188,21 @@ namespace AE::Threading
 
 	// methods
 	public:
-		TaskScheduler ();
-		~TaskScheduler ();
+		ND_ static TaskScheduler&  Instance ();
 
 			bool Setup (size_t maxWorkerThreads);
+			void Release ();
 			
 		AE_VTUNE(
-		ND_ __itt_domain*	GetVTuneDomain () const	{ return _vtuneDomain; }
+			ND_ __itt_domain*	GetVTuneDomain () const	{ return _vtuneDomain; }
 		)
 
 	// thread api
 			bool AddThread (const ThreadPtr &thread);
 
 			bool ProcessTask (EThread type, uint seed);
+
+		ND_ AsyncTask  PickUpTask (EThread type, uint seed);
 
 	// task api
 		template <typename T, typename ...Args>
@@ -193,11 +213,17 @@ namespace AE::Threading
 			bool  Cancel (const AsyncTask &task);
 
 	private:
+		TaskScheduler ();
+		~TaskScheduler ();
+
 		AsyncTask  _InsertTask (const AsyncTask &task, Array<AsyncTask> &&dependsOn);
 
 		template <size_t N>
 		void  _AddTask (_TaskQueue<N> &tq, const AsyncTask &task) const;
 
+		template <size_t N>
+		AsyncTask  _PickUpTask (_TaskQueue<N> &tq, uint seed) const;
+		
 		template <size_t N>
 		bool  _ProcessTask (_TaskQueue<N> &tq, uint seed) const;
 
@@ -216,6 +242,16 @@ namespace AE::Threading
 	{
 		STATIC_ASSERT( IsBaseOf< IAsyncTask, T > );
 		return _InsertTask( MakeShared<T>( std::forward<Args>(args)... ), std::move(dependsOn) );
+	}
+
+/*
+=================================================
+	Scheduler
+=================================================
+*/
+	ND_ inline TaskScheduler&  Scheduler ()
+	{
+		return TaskScheduler::Instance();
 	}
 
 
