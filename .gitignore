@@ -1,0 +1,4 @@
+*.user
+*.glsl_dbg
+/build
+/external
