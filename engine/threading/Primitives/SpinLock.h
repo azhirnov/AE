@@ -2,12 +2,9 @@
 
 #pragma once
 
-#include "stl/Common.h"
-#include <atomic>
-#include <mutex>
-#include <thread>
+#include "threading/Common.h"
 
-namespace AE::STL
+namespace AE::Threading
 {
 
 	//
@@ -18,7 +15,7 @@ namespace AE::STL
 	{
 	// variables
 	private:
-		alignas(AE_CACHE_LINE) std::atomic<uint>	_flag { 0 };
+		alignas(AE_CACHE_LINE) Atomic<uint>	_flag { 0 };
 
 
 	// methods
@@ -59,4 +56,4 @@ namespace AE::STL
 	};
 
 
-}	// AE::STL
+}	// AE::Threading

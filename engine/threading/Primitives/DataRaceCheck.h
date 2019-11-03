@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "stl/Common.h"
+#include "threading/Common.h"
 
 #include <shared_mutex>
 
@@ -12,7 +12,7 @@
 #include <mutex>
 #include <thread>
 
-namespace AE::STL
+namespace AE::Threading
 {
 
 	//
@@ -23,7 +23,7 @@ namespace AE::STL
 	{
 	// variables
 	private:
-		mutable std::atomic<size_t>		_state  { 0 };
+		mutable Atomic<size_t>		_state  { 0 };
 
 
 	// methods
@@ -62,7 +62,7 @@ namespace AE::STL
 	// variables
 	private:
 		mutable std::recursive_mutex	_lockWrite;
-		mutable std::atomic<int>		_readCounter { 0 };
+		mutable Atomic<int>				_readCounter { 0 };
 
 
 	// methods
@@ -116,19 +116,19 @@ namespace AE::STL
 		}
 	};
 
-}	// AE::STL
+}	// AE::Threading
 
 namespace std
 {
 	template <>
-	struct unique_lock< AE::STL::DataRaceCheck >
+	struct unique_lock< AE::Threading::DataRaceCheck >
 	{
 	private:
-		AE::STL::DataRaceCheck &	_lock;
-		bool					_locked	= false;
+		AE::Threading::DataRaceCheck &	_lock;
+		bool							_locked	= false;
 
 	public:
-		explicit unique_lock (AE::STL::DataRaceCheck &ref) : _lock{ref}
+		explicit unique_lock (AE::Threading::DataRaceCheck &ref) : _lock{ref}
 		{
 			_locked = _lock.Lock();
 		}
@@ -144,24 +144,24 @@ namespace std
 	};
 
 	template <>
-	struct unique_lock< const AE::STL::DataRaceCheck > :
-		unique_lock< AE::STL::DataRaceCheck >
+	struct unique_lock< const AE::Threading::DataRaceCheck > :
+		unique_lock< AE::Threading::DataRaceCheck >
 	{
-		explicit unique_lock (const AE::STL::DataRaceCheck &ref) :
-			unique_lock< AE::STL::DataRaceCheck >{ const_cast<AE::STL::DataRaceCheck &>(ref) }
+		explicit unique_lock (const AE::Threading::DataRaceCheck &ref) :
+			unique_lock< AE::Threading::DataRaceCheck >{ const_cast<AE::Threading::DataRaceCheck &>(ref) }
 		{}
 	};
 
 
 	template <>
-	struct unique_lock< AE::STL::RWDataRaceCheck >
+	struct unique_lock< AE::Threading::RWDataRaceCheck >
 	{
 	private:
-		AE::STL::RWDataRaceCheck &	_lock;
-		bool					_locked	= false;
+		AE::Threading::RWDataRaceCheck &	_lock;
+		bool								_locked	= false;
 
 	public:
-		explicit unique_lock (AE::STL::RWDataRaceCheck &ref) : _lock{ref}
+		explicit unique_lock (AE::Threading::RWDataRaceCheck &ref) : _lock{ref}
 		{
 			_locked = _lock.LockExclusive();
 		}
@@ -177,24 +177,24 @@ namespace std
 	};
 
 	template <>
-	struct unique_lock< const AE::STL::RWDataRaceCheck > :
-		unique_lock< AE::STL::RWDataRaceCheck >
+	struct unique_lock< const AE::Threading::RWDataRaceCheck > :
+		unique_lock< AE::Threading::RWDataRaceCheck >
 	{
-		explicit unique_lock (const AE::STL::RWDataRaceCheck &ref) :
-			unique_lock< AE::STL::RWDataRaceCheck >{ const_cast<AE::STL::RWDataRaceCheck &>(ref) }
+		explicit unique_lock (const AE::Threading::RWDataRaceCheck &ref) :
+			unique_lock< AE::Threading::RWDataRaceCheck >{ const_cast<AE::Threading::RWDataRaceCheck &>(ref) }
 		{}
 	};
 
 
 	template <>
-	struct shared_lock< AE::STL::RWDataRaceCheck >
+	struct shared_lock< AE::Threading::RWDataRaceCheck >
 	{
 	private:
-		AE::STL::RWDataRaceCheck &	_lock;
-		bool					_locked	= false;
+		AE::Threading::RWDataRaceCheck &	_lock;
+		bool								_locked	= false;
 
 	public:
-		explicit shared_lock (AE::STL::RWDataRaceCheck &ref) : _lock{ref}
+		explicit shared_lock (AE::Threading::RWDataRaceCheck &ref) : _lock{ref}
 		{
 			_locked = _lock.LockShared();
 		}
@@ -210,17 +210,17 @@ namespace std
 	};
 
 	template <>
-	struct shared_lock< const AE::STL::RWDataRaceCheck > :
-		shared_lock< AE::STL::RWDataRaceCheck >
+	struct shared_lock< const AE::Threading::RWDataRaceCheck > :
+		shared_lock< AE::Threading::RWDataRaceCheck >
 	{
-		explicit shared_lock (const AE::STL::RWDataRaceCheck &ref) :
-			shared_lock< AE::STL::RWDataRaceCheck >{ const_cast<AE::STL::RWDataRaceCheck &>(ref) }
+		explicit shared_lock (const AE::Threading::RWDataRaceCheck &ref) :
+			shared_lock< AE::Threading::RWDataRaceCheck >{ const_cast<AE::Threading::RWDataRaceCheck &>(ref) }
 		{}
 	};
 
 }	// std
 
-namespace AE::STL
+namespace AE::Threading
 {
 
 	//
@@ -302,12 +302,12 @@ namespace AE::STL
 	};
 
 
-}	// AE::STL
+}	// AE::Threading
 
 
 #else
 
-namespace AE::STL
+namespace AE::Threading
 {
 
 	//
@@ -352,7 +352,7 @@ namespace AE::STL
 	};
 
 
-}	// AE::STL
+}	// AE::Threading
 
 #endif	// AE_ENABLE_DATA_RACE_CHECK
 

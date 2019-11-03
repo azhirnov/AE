@@ -2,10 +2,9 @@
 
 #pragma once
 
-#include "stl/Common.h"
-#include <mutex>	// for lock_guard
+#include "threading/Common.h"
 
-namespace AE::STL
+namespace AE::Threading
 {
 
 	//
@@ -34,4 +33,4 @@ namespace AE::STL
 	};
 
 
-}	// AE::STL
+}	// AE::Threading

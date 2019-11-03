@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "stl/Common.h"
+#include "threading/Common.h"
 
 #ifdef AE_STD_BARRIER
 #	define AE_BARRIER_MODE	3
@@ -22,7 +22,7 @@
 
 #if (AE_BARRIER_MODE == 0)
 
-namespace AE::STL
+namespace AE::Threading
 {
 
 	//
@@ -50,7 +50,7 @@ namespace AE::STL
 		void wait ();
 	};
 
-}	// AE::STL
+}	// AE::Threading
 
 
 #elif (AE_BARRIER_MODE == 1)
@@ -58,7 +58,7 @@ namespace AE::STL
 #include <atomic>
 #include <thread>
 
-namespace AE::STL
+namespace AE::Threading
 {
 
 	//
@@ -75,7 +75,7 @@ namespace AE::STL
 			uint	index		: 1;
 		};
 
-		using Atomic_t	= std::atomic< Bitfield >;
+		using Atomic_t	= Atomic< Bitfield >;
 
 		STATIC_ASSERT( Atomic_t::is_always_lock_free );
 
@@ -151,7 +151,7 @@ namespace AE::STL
 		}
 	};
 
-}	// AE::STL
+}	// AE::Threading
 
 
 #elif (AE_BARRIER_MODE == 2)
@@ -159,7 +159,7 @@ namespace AE::STL
 #include <mutex>
 #include <condition_variable>
 
-namespace AE::STL
+namespace AE::Threading
 {
 
 	//
@@ -212,14 +212,14 @@ namespace AE::STL
 		}
 	};
 
-}	// AE::STL
+}	// AE::Threading
 
 
 #elif (AE_BARRIER_MODE == 3)
 
 #include <barrier>
 
-namespace AE::STL
+namespace AE::Threading
 {
 
 	//
@@ -250,7 +250,7 @@ namespace AE::STL
 		}
 	};
 
-}	// AE::STL
+}	// AE::Threading
 
 #else
 #	error not supported!

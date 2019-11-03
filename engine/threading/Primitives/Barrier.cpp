@@ -1,13 +1,13 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "stl/ThreadSafe/Barrier.h"
+#include "threading/Primitives/Barrier.h"
 #include "stl/Memory/MemUtils.h"
 
 #if (AE_BARRIER_MODE == 0)
 
 # include "stl/Platforms/WindowsHeader.h"
 
-namespace AE::STL
+namespace AE::Threading
 {
 
 /*
@@ -42,5 +42,6 @@ namespace AE::STL
 		EnterSynchronizationBarrier( BitCast<SYNCHRONIZATION_BARRIER *>( &_data[0] ), SYNCHRONIZATION_BARRIER_FLAGS_NO_DELETE );
 	}
 	
-}	// AE::STL
+}	// AE::Threading
+
 #endif	// AE_BARRIER_MODE == 0
