@@ -50,6 +50,9 @@ namespace AE::STL
 	template <typename T1, typename T2>
 	static constexpr bool	IsSameTypes			= std::is_same_v<T1, T2>;
 
+	template <typename T>
+	static constexpr bool	IsVoid				= std::is_void_v<T>;
+
 	template <typename Base, typename Derived>
 	static constexpr bool	IsBaseOf			= std::is_base_of_v< Base, Derived >;
 

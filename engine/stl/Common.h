@@ -1,9 +1,10 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
-/*
-	Frame Graph Core library
-*/
 
 #pragma once
+
+// Config
+#define AE_FAST_HASH	0
+
 
 #include "stl/Defines.h"
 
@@ -18,7 +19,6 @@
 #include <cstring>
 #include <cmath>
 #include <malloc.h>
-#include <atomic>
 #include <optional>
 #include <string_view>
 
@@ -27,7 +27,6 @@
 #include "stl/CompileTime/TypeTraits.h"
 #include "stl/CompileTime/UMax.h"
 #include "stl/CompileTime/DefaultType.h"
-
 
 namespace AE::STL
 {
@@ -54,6 +53,8 @@ namespace AE::STL
 							using StringView		= std::string_view;
 	template <typename T>	using BasicStringView	= std::basic_string_view<T>;
 
+	template <typename T>	using Function		= std::function< T >;
+
 
 	template <typename T,
 			  size_t ArraySize>
@@ -62,31 +63,65 @@ namespace AE::STL
 
 	template <typename FirstT,
 			  typename SecondT>
-	using Pair = std::pair< FirstT, SecondT >;
+	using Pair			= std::pair< FirstT, SecondT >;
 	
 
 	template <typename T,
 			  typename Hasher = std::hash<T>>
-	using HashSet = std::unordered_set< T, Hasher >;
+	using HashSet		= std::unordered_set< T, Hasher >;
 
 
 	template <typename Key,
 			  typename Value,
 			  typename Hasher = std::hash<Key>>
-	using HashMap = std::unordered_map< Key, Value, Hasher >;
+	using HashMap		= std::unordered_map< Key, Value, Hasher >;
+	
+	template <typename Key,
+			  typename Value,
+			  typename Hasher = std::hash<Key>>
+	using HashMultiMap	= std::unordered_multimap< Key, Value, Hasher >;
 
+	
+	
+/*
+=================================================
+	Unused
+=================================================
+*/
+	template <typename... Args>
+	constexpr void Unused (Args&& ...) {}
+	
+/*
+=================================================
+	MakeShared
+=================================================
+*/
+	template <typename T, typename ...Types>
+	ND_ forceinline SharedPtr<T>  MakeShared (Types&&... args)
+	{
+		return std::make_shared<T>( std::forward<Types>( args )... );
+	}
 
-#	ifdef AE_OPTIMAL_MEMORY_ORDER
-	static constexpr std::memory_order	memory_order_acquire	= std::memory_order_acquire;
-	static constexpr std::memory_order	memory_order_release	= std::memory_order_release;
-	static constexpr std::memory_order	memory_order_acq_rel	= std::memory_order_acq_rel;
-	static constexpr std::memory_order	memory_order_relaxed	= std::memory_order_relaxed;
-#	else
-	static constexpr std::memory_order	memory_order_acquire	= std::memory_order_seq_cst;
-	static constexpr std::memory_order	memory_order_release	= std::memory_order_seq_cst;
-	static constexpr std::memory_order	memory_order_acq_rel	= std::memory_order_seq_cst;
-	static constexpr std::memory_order	memory_order_relaxed	= std::memory_order_seq_cst;
-#	endif	// AE_OPTIMAL_MEMORY_ORDER
-
+/*
+=================================================
+	MakeUnique
+=================================================
+*/
+	template <typename T, typename ...Types>
+	ND_ forceinline UniquePtr<T>  MakeUnique (Types&&... args)
+	{
+		return std::make_unique<T>( std::forward<Types>( args )... );
+	}
+	
+/*
+=================================================
+	MakeTuple
+=================================================
+*/
+	template <typename ...Types>
+	ND_ forceinline constexpr auto  MakeTuple (Types&& ...args)
+	{
+		return std::make_tuple( std::forward<Types>(args)... );
+	}
 
 }	// AE::STL

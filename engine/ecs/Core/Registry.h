@@ -77,10 +77,10 @@ namespace AE::ECS
 			bool Call (Fn&& fn);
 
 		// entity events
-			void OnEntityDestroyed (std::function<void (EntityID)> fn);
+			void OnEntityDestroyed (Function<void (EntityID)> fn);
 
 			template <typename Comp, typename Tag>
-			void OnComponentChanged (std::function<void (EntityID, Comp&)> fn);
+			void OnComponentChanged (Function<void (EntityID, Comp&)> fn);
 	};
 	
 

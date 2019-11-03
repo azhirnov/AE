@@ -56,7 +56,7 @@ namespace AE::STL
 		};
 		
 		template <typename Result, typename ...Args>
-		struct _FuncInfo< std::function< Result (Args...) > >
+		struct _FuncInfo< Function< Result (Args...) > >
 		{
 			using args		= AE::STL::TypeList< Args... >;
 			using result	= Result;

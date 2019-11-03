@@ -9,8 +9,6 @@
 #	define AE_RELEASE
 #endif
 
-#include "stl/Config.h"
-
 
 #ifdef COMPILER_MSVC
 #	define and		&&
@@ -82,11 +80,6 @@
 #endif
 
 
-// macro for unused variables
-template <typename... Args>
-constexpr void AE_UNUSED (Args&& ...) {}
-
-
 // debug break
 #ifndef AE_PRIVATE_BREAK_POINT
 # if defined(COMPILER_MSVC) and defined(AE_DEBUG)
@@ -143,13 +136,13 @@ constexpr void AE_UNUSED (Args&& ...) {}
 
 // function name
 #ifdef COMPILER_MSVC
-#	define AE_FUNCTION_NAME			__FUNCTION__
+#	define AE_FUNCTION_NAME		__FUNCTION__
 
 #elif defined(COMPILER_CLANG) or defined(COMPILER_GCC)
-#	define AE_FUNCTION_NAME			__func__
+#	define AE_FUNCTION_NAME		__func__
 
 #else
-#	define AE_FUNCTION_NAME			"unknown function"
+#	define AE_FUNCTION_NAME		"unknown function"
 #endif
 
 
@@ -301,19 +294,6 @@ constexpr void AE_UNUSED (Args&& ...) {}
 #endif
 
 
-// exclusive lock
-#ifndef EXLOCK
-#	define EXLOCK( _syncObj_ ) \
-		std::unique_lock	AE_PRIVATE_UNITE_RAW( __scopeLock, __COUNTER__ ) { _syncObj_ }
-#endif
-
-// shared lock
-#ifndef SHAREDLOCK
-#	define SHAREDLOCK( _syncObj_ ) \
-		std::shared_lock	AE_PRIVATE_UNITE_RAW( __sharedLock, __COUNTER__ ) { _syncObj_ }
-#endif
-
-
 // thiscall, cdecl
 #ifdef COMPILER_MSVC
 #	define AE_CDECL		__cdecl
@@ -387,12 +367,6 @@ constexpr void AE_UNUSED (Args&& ...) {}
 // check definitions
 #if defined (COMPILER_MSVC) or defined (COMPILER_CLANG)
 
-#  ifdef AE_OPTIMAL_MEMORY_ORDER
-#	pragma detect_mismatch( "AE_OPTIMAL_MEMORY_ORDER", "1" )
-#  else
-#	pragma detect_mismatch( "AE_OPTIMAL_MEMORY_ORDER", "0" )
-#  endif
-
 #  ifdef AE_DEBUG
 #	pragma detect_mismatch( "AE_DEBUG", "1" )
 #  else
@@ -405,22 +379,10 @@ constexpr void AE_UNUSED (Args&& ...) {}
 #	pragma detect_mismatch( "AE_FAST_HASH", "0" )
 #  endif
 
-#  ifdef AE_ENABLE_DATA_RACE_CHECK
-#	pragma detect_mismatch( "AE_ENABLE_DATA_RACE_CHECK", "1" )
-#  else
-#	pragma detect_mismatch( "AE_ENABLE_DATA_RACE_CHECK", "0" )
-#  endif
-
 #  ifdef AE_STD_FILESYSTEM
 #	pragma detect_mismatch( "AE_STD_FILESYSTEM", "1" )
 #  else
 #	pragma detect_mismatch( "AE_STD_FILESYSTEM", "0" )
-#  endif
-
-#  ifdef AE_STD_BARRIER
-#	pragma detect_mismatch( "AE_STD_BARRIER", "1" )
-#  else
-#	pragma detect_mismatch( "AE_STD_BARRIER", "0" )
 #  endif
 
 #  ifdef AE_CI_BUILD

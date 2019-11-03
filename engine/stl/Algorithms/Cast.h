@@ -122,28 +122,6 @@ namespace AE::STL
 
 /*
 =================================================
-	MakeShared
-=================================================
-*/
-	template <typename T, typename ...Types>
-	ND_ forceinline SharedPtr<T>  MakeShared (Types&&... args)
-	{
-		return std::make_shared<T>( std::forward<Types&&>( args )... );
-	}
-
-/*
-=================================================
-	MakeUnique
-=================================================
-*/
-	template <typename T, typename ...Types>
-	ND_ forceinline UniquePtr<T>  MakeUnique (Types&&... args)
-	{
-		return std::make_unique<T>( std::forward<Types&&>( args )... );
-	}
-	
-/*
-=================================================
 	BitCast
 =================================================
 */

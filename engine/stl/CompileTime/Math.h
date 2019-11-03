@@ -43,7 +43,7 @@ namespace _ae_stl_hidden_
 
 		if constexpr( Power == 0 )
 		{
-			AE_UNUSED( base );
+			Unused( base );
 			return 1;
 		}
 		else

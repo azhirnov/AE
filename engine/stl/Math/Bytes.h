@@ -33,6 +33,7 @@ namespace AE::STL
 		ND_ explicit constexpr operator int8_t ()	const	{ return static_cast<int8_t>( _value ); }
 		ND_ explicit constexpr operator int16_t ()	const	{ return static_cast<int16_t>( _value ); }
 		ND_ explicit constexpr operator int ()		const	{ return static_cast<int>( _value ); }
+		ND_ explicit constexpr operator long ()		const	{ return static_cast<long>( _value ); }
 		ND_ explicit constexpr operator int64_t ()	const	{ return static_cast<int64_t>( _value ); }
 
 		ND_ explicit constexpr operator uint8_t ()	const	{ return static_cast<uint8_t>( _value ); }

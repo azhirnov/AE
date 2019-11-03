@@ -66,7 +66,7 @@ namespace _ae_stl_hidden_
 				fn.template operator()<T,I>();
 				_Visit< I+1 >( std::forward<FN>(fn) );
 			}
-			AE_UNUSED( fn );
+			Unused( fn );
 		}
 	};
 
