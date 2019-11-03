@@ -1,11 +1,12 @@
-# ECS Engine Prototype
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](paypal.me/azhirnovgithub)<br/>
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](paypal.me/azhirnovgithub) 
+[![Build Status](https://travis-ci.com/azhirnov/AE.svg?branch=master)](https://travis-ci.com/azhirnov/AE)<br/>
+
+# AE
 
 ## Features
 
 ## Suported Platforms
 * Windows (with MSVC 2017)
-* Linux (with GCC 8.2)
 
 
 ## Building
