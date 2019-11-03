@@ -13,5 +13,7 @@
 - [ ] Static analyzer for shader source
 
 ## Other
-- [ ] Script binding
+- [x] Multithreading
+- [x] Script binding
+- [ ] Networking
 - [ ] Serialization / Deserialization
