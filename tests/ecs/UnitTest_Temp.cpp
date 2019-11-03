@@ -4,7 +4,7 @@
 #include "ecs/Core/MessageBuilder.h"
 #include "UnitTest_Common.h"
 
-
+/*
 struct Comp1
 {
 	struct Tag_Changed {};
@@ -19,7 +19,7 @@ class System1 : public ECS::System
 	{
 		msg.Add<Comp1::Tag_Changed>(id, a);
 	}
-};
+};*/
 
 
 extern void UnitTest_Temp ()

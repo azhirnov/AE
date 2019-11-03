@@ -1,0 +1,13 @@
+language: cpp
+matrix:
+  include:
+    
+    # Windows MSVC x64
+    - os: windows
+      script:
+        - mkdir -p build
+        - cd build
+        - cmake -G "Visual Studio 15 2017 Win64"  -DAE_CI_BUILD=ON .. 
+        - cmake --build . --config Release
+        - ctest -C Release --verbose
+      
