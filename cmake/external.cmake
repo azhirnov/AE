@@ -15,6 +15,7 @@ else ()
     message( FATAL_ERROR "unsupported target platform: ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION}" )
 endif ()
 
+
 # download
 set( EXTERNAL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external" )
 
@@ -30,6 +31,7 @@ if (CMAKE_VERSION VERSION_LESS 3.11.0)
 		EXCLUDE_FROM_ALL	1
 		LOG_DOWNLOAD		1
 		# update
+		UPDATE_COMMAND		git lfs pull
 		PATCH_COMMAND		""
 		UPDATE_DISCONNECTED	1
 		LOG_UPDATE			1
@@ -55,6 +57,8 @@ else ()
 	FetchContent_Declare( ExternalDependencies
 		GIT_REPOSITORY		"https://github.com/azhirnov/AE-External.git"
 		GIT_TAG				"${AE_EXTERNAL_TARGET}"
+		# update
+		UPDATE_COMMAND		git lfs pull
 		# configure
 		SOURCE_DIR			"${EXTERNAL_PATH}"
 		CONFIGURE_COMMAND	""
