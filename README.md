@@ -1,5 +1,5 @@
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](paypal.me/azhirnovgithub) 
-[![Build Status](https://travis-ci.com/azhirnov/AE.svg?branch=master)](https://travis-ci.com/azhirnov/AE)<br/>
+[![Build Status](https://travis-ci.com/azhirnov/AE.svg?branch=dev/travis)](https://travis-ci.com/azhirnov/AE)<br/>
 
 # AE
 
