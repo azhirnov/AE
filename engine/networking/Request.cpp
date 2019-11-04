@@ -73,23 +73,6 @@ namespace AE::Networking
 		_verifyPeer = value;
 		return std::move(*this);
 	}
-	
-/*
-=================================================
-	Timeout
-=================================================
-*/
-	RequestDesc&  RequestDesc::Timeout (Seconds value) &
-	{
-		_connectionTimeout = value;
-		return *this;
-	}
-
-	RequestDesc&& RequestDesc::Timeout (Seconds value) &&
-	{
-		_connectionTimeout = value;
-		return std::move(*this);
-	}
 
 /*
 =================================================

@@ -29,7 +29,7 @@ namespace AE::Networking
 			Delete
 		};
 
-		using Seconds	= std::chrono::duration<uint>;
+		using MilliSeconds	= std::chrono::duration<uint, std::milli>;
 
 
 	// variables
@@ -38,7 +38,6 @@ namespace AE::Networking
 		String					_url;
 		EMethod					_method				= EMethod::Get;
 		uint					_redirections		= UMax;
-		Seconds					_connectionTimeout	{0};
 		Array<String>			_headers;
 		bool					_verifyPeer			= false;
 
@@ -59,9 +58,6 @@ namespace AE::Networking
 		
 		RequestDesc&  VerifyPeer (bool value) &;
 		RequestDesc&& VerifyPeer (bool value) &&;
-		
-		RequestDesc&  Timeout (Seconds value) &;
-		RequestDesc&& Timeout (Seconds value) &&;
 
 		RequestDesc&  AddHeader (StringView name, StringView value) &;
 		RequestDesc&& AddHeader (StringView name, StringView value) &&;

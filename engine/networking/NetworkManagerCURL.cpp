@@ -34,8 +34,7 @@ namespace AE::Networking
 {
 	using TimePoint_t	= std::chrono::high_resolution_clock::time_point;
 	using Duration_t	= TimePoint_t::clock::duration;
-
-	constexpr auto	ResponseTimeout = std::chrono::duration_cast<Duration_t>( std::chrono::seconds{60} );
+	using Settings_t	= NetworkManager::Settings;
 
 
 	//
@@ -63,8 +62,8 @@ namespace AE::Networking
 
 	// methods
 	public:
-		CurlRequestTask (const RequestDesc &desc);
-		CurlRequestTask (RequestDesc &&desc);
+		CurlRequestTask (const RequestDesc &desc, const Settings_t &settings);
+		CurlRequestTask (RequestDesc &&desc, const Settings_t &settings);
 		~CurlRequestTask ();
 
 			void Run () override;
@@ -72,10 +71,10 @@ namespace AE::Networking
 
 			void Enque (CURLM* curlm, CURLSH* shared);
 			void Complete (CURLM* curlm, CURLcode code);
-		ND_ bool IsComplete ();
+		ND_ bool IsComplete (Duration_t responseTimeout);
 
 	private:
-		bool  _Setup (const RequestDesc &desc);
+		bool  _Setup (const RequestDesc &desc, const Settings_t &settings);
 
 		static size_t _DownloadCallback (char *ptr, size_t size, size_t nmemb, void *userdata);
 		static size_t _UploadCallback (char *buffer, size_t size, size_t nitems, void *userdata);
@@ -87,17 +86,17 @@ namespace AE::Networking
 	constructor
 =================================================
 */
-	CurlRequestTask::CurlRequestTask (const RequestDesc &desc)
+	CurlRequestTask::CurlRequestTask (const RequestDesc &desc, const Settings_t &settings)
 	{
 		EXLOCK( _drCheck );
-		_Setup( desc );
+		_Setup( desc, settings );
 	}
 
-	CurlRequestTask::CurlRequestTask (RequestDesc &&desc) :
+	CurlRequestTask::CurlRequestTask (RequestDesc &&desc, const Settings_t &settings) :
 		_content{ std::move(desc._content) }
 	{
 		EXLOCK( _drCheck );
-		_Setup( desc );
+		_Setup( desc, settings );
 	}
 	
 /*
@@ -105,7 +104,7 @@ namespace AE::Networking
 	_Setup
 =================================================
 */
-	bool  CurlRequestTask::_Setup (const RequestDesc &desc)
+	bool  CurlRequestTask::_Setup (const RequestDesc &desc, const Settings_t &settings)
 	{
 		using EMethod = RequestDesc::EMethod;
 
@@ -118,24 +117,19 @@ namespace AE::Networking
 		// for multithreading
 		CURL_CALL( curl_easy_setopt( _curl, CURLOPT_NOSIGNAL, 1L ));
 		
-		 CURL_CALL( curl_easy_setopt( _curl, CURLOPT_NOPROGRESS, 0L ));
-
 		// debugging
-		if ( false ) {
-			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_DEBUGDATA, this ));
-			//CURL_CALL( curl_easy_setopt( _curl, CURLOPT_DEBUGFUNCTION, &debug_callback ));
-			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_VERBOSE, 1L ));
-		}
-
 		#ifdef AE_DEBUG
 			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_ERRORBUFFER, _errorBuffer ));
+			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_VERBOSE, 0L ));
+			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_NOPROGRESS, 1L ));
+		#else
+			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_NOPROGRESS, 1L ));
+			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_VERBOSE, 0L ));
 		#endif
 
 		if ( false ) {
 			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_INTERFACE, "TODO: local address" ));
 		}
-
-		//CURL_CALL( curl_easy_setopt( _curl, CURLOPT_NOPROGRESS, 1 ));
 
 		// redirections
 		if ( desc._redirections ) {
@@ -212,13 +206,16 @@ namespace AE::Networking
 		CURL_CALL( curl_easy_setopt( _curl, CURLOPT_HEADERFUNCTION, &_HeaderCallback ));
 
 		// write function
-		CURL_CALL( curl_easy_setopt( _curl, CURLOPT_BUFFERSIZE, 64*1024L ));
+		CURL_CALL( curl_easy_setopt( _curl, CURLOPT_BUFFERSIZE, long(settings.downloadBufferSize) ));
 		CURL_CALL( curl_easy_setopt( _curl, CURLOPT_WRITEDATA, this ));
 		CURL_CALL( curl_easy_setopt( _curl, CURLOPT_WRITEFUNCTION, &_DownloadCallback ));
 
-		// connection timeout
-		if ( desc._connectionTimeout.count() ) {
-			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_CONNECTTIMEOUT, long(desc._connectionTimeout.count()) ));
+		// timeout
+		if ( settings.connectionTimeout.count() ) {
+			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_CONNECTTIMEOUT_MS, long(settings.connectionTimeout.count()) ));
+		}
+		if ( settings.transferTimout.count() ) {
+			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_TIMEOUT_MS, long(settings.transferTimout.count()) ));
 		}
 
 		// add headers
@@ -410,7 +407,7 @@ namespace AE::Networking
 
 		if ( curlm and _addToCurlmResult == CURLM_OK )
 		{
-            curl_multi_remove_handle( curlm, _curl );
+			curl_multi_remove_handle( curlm, _curl );
 		}
 
 		_completionResult = code;
@@ -427,10 +424,10 @@ namespace AE::Networking
 				break;
 		}
 
-        long	response_code = 0;
-        if ( curl_easy_getinfo( _curl, CURLINFO_RESPONSE_CODE, OUT &response_code ) == CURLE_OK and response_code != 0 ) {
-            _response->code = ECode(response_code);
-        }
+		long	response_code = 0;
+		if ( curl_easy_getinfo( _curl, CURLINFO_RESPONSE_CODE, OUT &response_code ) == CURLE_OK and response_code != 0 ) {
+			_response->code = ECode(response_code);
+		}
 
 		_complete = true;
 
@@ -450,21 +447,21 @@ namespace AE::Networking
 	IsComplete
 =================================================
 */
-	bool CurlRequestTask::IsComplete ()
+	bool CurlRequestTask::IsComplete (Duration_t responseTimeout)
 	{
 		EXLOCK( _drCheck );
 
 		if ( _complete or Status() > EStatus::_Finished )
 			return true;
 
-        if ( _addToCurlmResult != CURLM_OK )
-            return true;
-        
-        if ( _completionResult != CURLE_OK )
-            return true;
-        
-        auto	dt = (TimePoint_t::clock::now() - _lastResponseTime);
-        if ( dt > ResponseTimeout )
+		if ( _addToCurlmResult != CURLM_OK )
+			return true;
+		
+		if ( _completionResult != CURLE_OK )
+			return true;
+		
+		auto	dt = (TimePoint_t::clock::now() - _lastResponseTime);
+		if ( dt > responseTimeout )
 		{
 			_response->code = ECode::TimeoutAfterLastResponse;
 			AE_LOGI( "http request timed out" );
@@ -508,6 +505,8 @@ namespace AE::Networking
 		using Request		= SharedPtr< CurlRequestTask >;
 		using Requests_t	= Array< Request >;
 
+		using MilliSeconds	= RequestDesc::MilliSeconds;
+
 
 	// variables
 	private:
@@ -516,13 +515,14 @@ namespace AE::Networking
 		Requests_t				_activeRequests;
 		CURLM*					_curlm			= null;
 		CURLSH*					_curlShared		= null;
-
-		static constexpr auto	_minFrameTime	= Nanoseconds{10'000'000};
+		TimePoint_t				_lastTick;
+		Settings_t const&		_settings;
 
 
 	// methods
 	public:
-		CurlThread (CURLM* curlm, CURLSH* shared) : _curlm{curlm}, _curlShared{shared} {}
+		CurlThread (CURLM* curlm, CURLSH* shared, const Settings_t &set) :
+			_curlm{curlm}, _curlShared{shared}, _settings{set} {}
 
 		bool  Attach (uint uid) override;
 		void  Detach () override;
@@ -570,8 +570,8 @@ namespace AE::Networking
 
 				const auto	dt = (TimePoint_t::clock::now() - start_time);
 
-				if ( dt < _minFrameTime )
-					std::this_thread::sleep_for( _minFrameTime - dt );
+				if ( dt < _settings.minFrameTime )
+					std::this_thread::sleep_for( _settings.minFrameTime - dt );
 			}
 		}};
 		return true;
@@ -586,44 +586,54 @@ namespace AE::Networking
 	{
 		int	running_handles = -1;
 		CURLM_CALL( curl_multi_perform( _curlm, OUT &running_handles ));
-
-		if ( running_handles != 0 and running_handles == int(_activeRequests.size()) )
-			return;
 		
+		const bool	changed	= running_handles != int(_activeRequests.size());
+
 		// mark completed requests
-		for (;;)
+		if ( running_handles == 0 or changed )
 		{
-			int			msgs_in_queue	= 0;
-			CURLMsg*	msg				= curl_multi_info_read( _curlm, &msgs_in_queue );
-			
-			if ( not msg )
-				break;
-			
-			if ( msg->msg != CURLMSG_DONE )
-				continue;
-			
-			void*	ptr = null;
-			CURL_CALL( curl_easy_getinfo( msg->easy_handle, CURLINFO_PRIVATE, OUT &ptr ));
-
-			if ( not ptr )
+			for (;;)
 			{
-				ASSERT( ptr );
-				continue;
-			}
+				int			msgs_in_queue	= 0;
+				CURLMsg*	msg				= curl_multi_info_read( _curlm, &msgs_in_queue );
+			
+				if ( not msg )
+					break;
+			
+				if ( msg->msg != CURLMSG_DONE )
+					continue;
+			
+				void*	ptr = null;
+				CURL_CALL( curl_easy_getinfo( msg->easy_handle, CURLINFO_PRIVATE, OUT &ptr ));
 
-			Cast<CurlRequestTask>( ptr )->Complete( _curlm, msg->data.result );
+				if ( not ptr )
+				{
+					ASSERT( ptr );
+					continue;
+				}
+
+				Cast<CurlRequestTask>( ptr )->Complete( _curlm, msg->data.result );
+			}
 		}
 		
 		// remove completed requests
-		for (auto iter = _activeRequests.begin(); iter != _activeRequests.end();)
+		const auto	time		= TimePoint_t::clock::now();
+		const auto	max_delay	= _settings.responseDelay;
+
+		if ( changed or (time - _lastTick > MilliSeconds(4)) )
 		{
-			if ( (*iter)->IsComplete() )
+			_lastTick = time;
+
+			for (auto iter = _activeRequests.begin(); iter != _activeRequests.end();)
 			{
-				_SetCompletedState( *iter );
-				iter = _activeRequests.erase( iter );
+				if ( (*iter)->IsComplete( max_delay ))
+				{
+					_SetCompletedState( *iter );
+					iter = _activeRequests.erase( iter );
+				}
+				else
+					++iter;
 			}
-			else
-				++iter;
 		}
 	}
 
@@ -659,11 +669,17 @@ namespace AE::Networking
 
 	// variables
 	public:
-		CURLM*		curlm		= null;
-		CURLSH*		curlShared	= null;
-		bool		hasSSL		= false;
+		CURLM*			curlm		= null;
+		CURLSH*			curlShared	= null;
+		bool			hasSSL		= false;
 
-		Threads_t	threads;
+		const Settings	settings;
+
+		Threads_t		threads;
+
+	// methods
+	public:
+		_InternalImpl (const Settings &settings) : settings{settings} {}
 	};
 	
 /*
@@ -701,10 +717,10 @@ namespace AE::Networking
 	Setup
 =================================================
 */
-	bool NetworkManager::Setup ()
+	bool NetworkManager::Setup (const Settings &settings)
 	{
 		CHECK_ERR( not _impl );
-		_impl.reset( new _InternalImpl{} );
+		_impl.reset( new _InternalImpl{ settings });
 
 		if ( curl_version_info_data* info = curl_version_info( CURLVERSION_NOW ))
 		{
@@ -753,7 +769,7 @@ namespace AE::Networking
 
 
 		// start thread
-		auto	ct = MakeShared<CurlThread>( _impl->curlm, _impl->curlShared );
+		auto	ct = MakeShared<CurlThread>( _impl->curlm, _impl->curlShared, _impl->settings );
 
 		_impl->threads.push_back( ct );
 		Scheduler().AddThread( ct );
@@ -810,17 +826,60 @@ namespace AE::Networking
 	Send
 =================================================
 */
-	Request  NetworkManager::Send (RequestDesc &&desc, Array<AsyncTask> &&dependsOn)
+	Request  NetworkManager::Send (RequestDesc &&desc, StrongDeps &&dependsOn)
 	{
 		CHECK_ERR( _impl );
-		return Cast<Request::element_type>( Scheduler().Run<CurlRequestTask>( std::move(dependsOn), std::move(desc) ));
+		return Cast<Request::element_type>( Scheduler().Run<CurlRequestTask>( std::move(dependsOn), std::move(desc), _impl->settings ));
 	}
 	
-	Request  NetworkManager::Send (const RequestDesc &desc, Array<AsyncTask> &&dependsOn)
+	Request  NetworkManager::Send (const RequestDesc &desc, StrongDeps &&dependsOn)
 	{
 		CHECK_ERR( _impl );
 		CHECK_ERR( not desc._content );	// can't move const value
-		return Cast<Request::element_type>( Scheduler().Run<CurlRequestTask>( std::move(dependsOn), desc ));
+		return Cast<Request::element_type>( Scheduler().Run<CurlRequestTask>( std::move(dependsOn), desc, _impl->settings ));
+	}
+
+/*
+=================================================
+	Send
+=================================================
+*/
+	Request  NetworkManager::Send (RequestDesc &&desc, WeakDeps &&dependsOn)
+	{
+		CHECK_ERR( _impl );
+		return Cast<Request::element_type>( Scheduler().Run<CurlRequestTask>( std::move(dependsOn), std::move(desc), _impl->settings ));
+	}
+	
+	Request  NetworkManager::Send (const RequestDesc &desc, WeakDeps &&dependsOn)
+	{
+		CHECK_ERR( _impl );
+		CHECK_ERR( not desc._content );	// can't move const value
+		return Cast<Request::element_type>( Scheduler().Run<CurlRequestTask>( std::move(dependsOn), desc, _impl->settings ));
+	}
+
+/*
+=================================================
+	Download
+=================================================
+*/
+	Promise<Array<uint8_t>>  NetworkManager::Download (String url)
+	{
+		CHECK( _impl );
+		Request	req = Send( RequestDesc{ std::move(url) }.Method( RequestDesc::EMethod::Get ));
+
+		return MakePromise(	[req] () -> PromiseResult<Array<uint8_t>>
+							{
+								auto	resp = req->Response();
+
+								if ( resp->code == RequestTask::ECode::OK )
+								{
+									return std::move(resp->content);
+								}
+								return PromiseNullResult();
+							},
+							StrongDeps{req}
+							//IAsyncTask::EThread::Network
+						);
 	}
 
 

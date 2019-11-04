@@ -12,10 +12,10 @@ using namespace AE::Networking;
 
 struct LocalNetwork
 {
-	LocalNetwork ()
+	LocalNetwork (const NetworkManager::Settings &settings = Default)
 	{
 		Scheduler().Setup( 1 );
-		NetworkManager::Instance().Setup();
+		NetworkManager::Instance().Setup( settings );
 	}
 
 	~LocalNetwork ()
