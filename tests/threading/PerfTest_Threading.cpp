@@ -71,14 +71,14 @@ namespace
 
 			if ( _level < max_levels )
 			{
-				Scheduler().Run<LargeTask1>( {}, _cell * 2 + uint2(0,0), _level+1 );
-				Scheduler().Run<LargeTask1>( {}, _cell * 2 + uint2(0,1), _level+1 );
-				Scheduler().Run<LargeTask1>( {}, _cell * 2 + uint2(1,0), _level+1 );
-				Scheduler().Run<LargeTask1>( {}, _cell * 2 + uint2(1,1), _level+1 );
+				Scheduler().Run<LargeTask1>( _cell * 2 + uint2(0,0), _level+1 );
+				Scheduler().Run<LargeTask1>( _cell * 2 + uint2(0,1), _level+1 );
+				Scheduler().Run<LargeTask1>( _cell * 2 + uint2(1,0), _level+1 );
+				Scheduler().Run<LargeTask1>( _cell * 2 + uint2(1,1), _level+1 );
 			}
 			else
 			{
-				Scheduler().Run<FinalTask>( {} );
+				Scheduler().Run<FinalTask>();
 			}
 		}
 
@@ -107,10 +107,10 @@ namespace
 		const auto	start_time = TimePoint_t::clock::now();
 		
 		Unused(
-			scheduler->Run<LargeTask1>( {}, uint2{0,0}, 0 ),
-			scheduler->Run<LargeTask1>( {}, uint2{0,1}, 0 ),
-			scheduler->Run<LargeTask1>( {}, uint2{1,0}, 0 ),
-			scheduler->Run<LargeTask1>( {}, uint2{1,1}, 0 )
+			scheduler->Run<LargeTask1>( uint2{0,0}, 0 ),
+			scheduler->Run<LargeTask1>( uint2{0,1}, 0 ),
+			scheduler->Run<LargeTask1>( uint2{1,0}, 0 ),
+			scheduler->Run<LargeTask1>( uint2{1,1}, 0 )
 		);
 
 		const uint64_t	required = 4 * (4ull << max_levels);
@@ -158,15 +158,15 @@ namespace
 
 			if ( _level < max_levels )
 			{
-				auto	t0 = Scheduler().Run<LargeTask2>( {}, _cell * 2 + uint2(0,0), _level+1 );
-				auto	t1 = Scheduler().Run<LargeTask2>( {t0}, _cell * 2 + uint2(0,1), _level+1 );
-				auto	t2 = Scheduler().Run<LargeTask2>( {t0, t1}, _cell * 2 + uint2(1,0), _level+1 );
-				auto	t3 = Scheduler().Run<LargeTask2>( {t0, t1, t2}, _cell * 2 + uint2(1,1), _level+1 );
+				auto	t0 = Scheduler().Run<LargeTask2>( _cell * 2 + uint2(0,0), _level+1 );
+				auto	t1 = Scheduler().Run<LargeTask2>( StrongDeps{t0}, _cell * 2 + uint2(0,1), _level+1 );
+				auto	t2 = Scheduler().Run<LargeTask2>( StrongDeps{t0, t1}, _cell * 2 + uint2(1,0), _level+1 );
+				auto	t3 = Scheduler().Run<LargeTask2>( StrongDeps{t0, t1, t2}, _cell * 2 + uint2(1,1), _level+1 );
 				Unused( t3 );
 			}
 			else
 			{
-				Scheduler().Run<FinalTask>( {} );
+				Scheduler().Run<FinalTask>();
 			}
 		}
 
@@ -195,10 +195,10 @@ namespace
 		const auto	start_time = TimePoint_t::clock::now();
 		
 		Unused(
-			scheduler->Run<LargeTask2>( {}, uint2{0,0}, 0 ),
-			scheduler->Run<LargeTask2>( {}, uint2{0,1}, 0 ),
-			scheduler->Run<LargeTask2>( {}, uint2{1,0}, 0 ),
-			scheduler->Run<LargeTask2>( {}, uint2{1,1}, 0 )
+			scheduler->Run<LargeTask2>( uint2{0,0}, 0 ),
+			scheduler->Run<LargeTask2>( uint2{0,1}, 0 ),
+			scheduler->Run<LargeTask2>( uint2{1,0}, 0 ),
+			scheduler->Run<LargeTask2>( uint2{1,1}, 0 )
 		);
 
 		const uint64_t	required = 4 * (4ull << max_levels);

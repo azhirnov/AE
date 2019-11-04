@@ -28,14 +28,32 @@
 namespace AE::Threading
 {
 	using Nanoseconds	= std::chrono::nanoseconds;
+	using AsyncTask		= SharedPtr< class IAsyncTask >;
+
+	struct WeakDeps
+	{
+		Array<AsyncTask>	deps;
+
+		WeakDeps () {}
+		WeakDeps (Array<AsyncTask> &&deps) : deps{std::move(deps)} {}
+		WeakDeps (std::initializer_list<AsyncTask> deps) : deps{deps} {}
+	};
+	
+	struct StrongDeps
+	{
+		Array<AsyncTask>	deps;
+
+		StrongDeps () {}
+		StrongDeps (Array<AsyncTask> &&deps) : deps{std::move(deps)} {}
+		StrongDeps (std::initializer_list<AsyncTask> deps) : deps{deps} {}
+	};
+
 
 
 	//
 	// Async Task interface
 	//
 	
-	using AsyncTask = SharedPtr< class IAsyncTask >;
-
 	class IAsyncTask : public std::enable_shared_from_this< IAsyncTask >
 	{
 		friend class TaskScheduler;
@@ -69,20 +87,21 @@ namespace AE::Threading
 
 	// variables
 	private:
-		Atomic<EStatus>		_status		{EStatus::Pending};
+		Atomic<EStatus>		_status					{EStatus::Pending};
+		bool				_canBeCanceledByDeps	{true};
 		const EThread		_threadType;
 		Array<AsyncTask>	_dependsOn;
 
 
 	// methods
 	public:
-		ND_ EThread	Type ()		const	{ return _threadType; }
+		ND_ EThread	Type ()			 const	{ return _threadType; }
 
-		ND_ EStatus	Status ()			{ return _status.load( memory_order_relaxed ); }
+		ND_ EStatus	Status ()		 const	{ return _status.load( memory_order_relaxed ); }
 
-		ND_ bool	IsInQueue ()		{ return Status() < EStatus::_Finished; }
-		ND_ bool	IsFinished ()		{ return Status() > EStatus::_Finished; }
-		ND_ bool	IsInterropted ()	{ return Status() > EStatus::_Interropted; }
+		ND_ bool	IsInQueue ()	 const	{ return Status() < EStatus::_Finished; }
+		ND_ bool	IsFinished ()	 const	{ return Status() > EStatus::_Finished; }
+		ND_ bool	IsInterropted () const	{ return Status() > EStatus::_Interropted; }
 
 	protected:
 		IAsyncTask (EThread type);
@@ -206,7 +225,13 @@ namespace AE::Threading
 
 	// task api
 		template <typename T, typename ...Args>
-		ND_ AsyncTask  Run (Array<AsyncTask> &&dependsOn, Args&& ...args);
+		ND_ AsyncTask  Run (Args&& ...args);
+		
+		template <typename T, typename ...Args>
+		ND_ AsyncTask  Run (WeakDeps &&dependsOn, Args&& ...args);
+		
+		template <typename T, typename ...Args>
+		ND_ AsyncTask  Run (StrongDeps &&dependsOn, Args&& ...args);
 
 		ND_ bool  Wait (ArrayView<AsyncTask> tasks, Nanoseconds timeout = Nanoseconds{30'000'000'000});
 
@@ -216,7 +241,7 @@ namespace AE::Threading
 		TaskScheduler ();
 		~TaskScheduler ();
 
-		AsyncTask  _InsertTask (const AsyncTask &task, Array<AsyncTask> &&dependsOn);
+		AsyncTask  _InsertTask (const AsyncTask &task, Array<AsyncTask> &&dependsOn, bool canBeCanceledByDeps);
 
 		template <size_t N>
 		void  _AddTask (_TaskQueue<N> &tq, const AsyncTask &task) const;
@@ -238,10 +263,24 @@ namespace AE::Threading
 =================================================
 */
 	template <typename T, typename ...Args>
-	inline AsyncTask  TaskScheduler::Run (Array<AsyncTask> &&dependsOn, Args&& ...args)
+	inline AsyncTask  TaskScheduler::Run (Args&& ...args)
 	{
 		STATIC_ASSERT( IsBaseOf< IAsyncTask, T > );
-		return _InsertTask( MakeShared<T>( std::forward<Args>(args)... ), std::move(dependsOn) );
+		return _InsertTask( MakeShared<T>( std::forward<Args>(args)... ), {}, true );
+	}
+	
+	template <typename T, typename ...Args>
+	inline AsyncTask  TaskScheduler::Run (WeakDeps &&dependsOn, Args&& ...args)
+	{
+		STATIC_ASSERT( IsBaseOf< IAsyncTask, T > );
+		return _InsertTask( MakeShared<T>( std::forward<Args>(args)... ), std::move(dependsOn.deps), false );
+	}
+	
+	template <typename T, typename ...Args>
+	inline AsyncTask  TaskScheduler::Run (StrongDeps &&dependsOn, Args&& ...args)
+	{
+		STATIC_ASSERT( IsBaseOf< IAsyncTask, T > );
+		return _InsertTask( MakeShared<T>( std::forward<Args>(args)... ), std::move(dependsOn.deps), true );
 	}
 
 /*

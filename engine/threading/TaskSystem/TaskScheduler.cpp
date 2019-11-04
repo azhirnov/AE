@@ -70,7 +70,9 @@ namespace AE::Threading
 		EStatus	expected = EStatus::InProgress;
 		bool	result   = _status.compare_exchange_strong( INOUT expected, EStatus::Completed, memory_order_relaxed, memory_order_relaxed );
 
-		ASSERT( expected == EStatus::InProgress or expected == EStatus::Canceled );
+		ASSERT( expected == EStatus::InProgress	or
+			    expected == EStatus::Canceled	or
+			    expected == EStatus::Failed );
 		return result;
 	}
 //-----------------------------------------------------------------------------
@@ -95,7 +97,7 @@ namespace AE::Threading
 	
 /*
 =================================================
-	_RunTask
+	_SetFailedState
 =================================================
 */
 	void IThread::_SetFailedState (const AsyncTask &task)
@@ -106,7 +108,7 @@ namespace AE::Threading
 	
 /*
 =================================================
-	_RunTask
+	_SetCompletedState
 =================================================
 */
 	void IThread::_SetCompletedState (const AsyncTask &task)
@@ -210,7 +212,7 @@ namespace AE::Threading
 		_WriteProfilerStat( "worker",  _workerQueue  );
 		_WriteProfilerStat( "render",  _renderQueue  );
 		_WriteProfilerStat( "file",    _fileQueue    );
-		_WriteProfilerStat( "network", _networkQueue );
+		//_WriteProfilerStat( "network", _networkQueue );
 		
 		AE_VTUNE(
 			if ( _vtuneDomain )
@@ -282,14 +284,14 @@ namespace AE::Threading
 	template <size_t N>
 	AsyncTask  TaskScheduler::_PullTask (_TaskQueue<N> &tq, uint seed) const
 	{
-		Unused( seed );	// TODO
-
 		AE_SCHEDULER_PROFILING(
 			const auto	start_time = TimePoint_t::clock::now();
 		)
 
-		for (auto& q : tq.queues)
+		for (size_t j = 0; j < tq.queues.size(); ++j)
 		{
+			auto&	q = tq.queues[ (j + seed) % tq.queues.size() ];
+
 			if ( not q.guard.try_lock() )
 				continue;
 
@@ -307,11 +309,13 @@ namespace AE::Threading
 					const auto&		dep		= (*iter)->_dependsOn[i];
 					const EStatus	status	= dep->Status();
 
-					ready	&= (status == EStatus::Completed);
-					cancel	|= (status >  EStatus::_Interropted);
+					ready	&= (status > EStatus::_Finished);
+					cancel	|= (status > EStatus::_Interropted);
 				}
 				
-				if ( ready or cancel ) {
+				cancel &= (*iter)->_canBeCanceledByDeps;
+
+				if ( ready | cancel ) {
 					(*iter)->_dependsOn.clear();
 				}
 
@@ -347,7 +351,7 @@ namespace AE::Threading
 			// try to start task
 			EStatus	expected = EStatus::Pending;
 			
-			if ( task->_status.compare_exchange_strong( INOUT expected, EStatus::InProgress, memory_order_relaxed ) )
+			if ( task->_status.compare_exchange_strong( INOUT expected, EStatus::InProgress, memory_order_relaxed ))
 			{
 				AE_SCHEDULER_PROFILING(
 					tq._stallTime += (TimePoint_t::clock::now() - start_time).count();
@@ -443,9 +447,10 @@ namespace AE::Threading
 	_InsertTask
 =================================================
 */
-	AsyncTask  TaskScheduler::_InsertTask (const AsyncTask &task, Array<AsyncTask> &&dependsOn)
+	AsyncTask  TaskScheduler::_InsertTask (const AsyncTask &task, Array<AsyncTask> &&dependsOn, bool canBeCanceledByDeps)
 	{
-		task->_dependsOn = std::move(dependsOn);
+		task->_canBeCanceledByDeps	= canBeCanceledByDeps;
+		task->_dependsOn			= std::move(dependsOn);
 
 		BEGIN_ENUM_CHECKS();
 		switch ( task->Type() )
@@ -474,10 +479,14 @@ namespace AE::Threading
 			const auto	start_time = TimePoint_t::clock::now();
 		)
 
+		const size_t	seed = size_t(HashOf( std::this_thread::get_id() ));
+
 		for (;;)
 		{
-			for (auto& q : tq.queues)
+			for (size_t j = 0; j < tq.queues.size(); ++j)
 			{
+				auto&	q = tq.queues[ (j + seed) % tq.queues.size() ];
+			
 				if ( q.guard.try_lock() )
 				{
 					q.tasks.push_back( task );
