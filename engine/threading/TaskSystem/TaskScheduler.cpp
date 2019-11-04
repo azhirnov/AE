@@ -92,6 +92,28 @@ namespace AE::Threading
 		task->_SetCompletedState();
 		ThreadFence( memory_order_release );
 	}
+	
+/*
+=================================================
+	_RunTask
+=================================================
+*/
+	void IThread::_SetFailedState (const AsyncTask &task)
+	{
+		task->_SetFailedState();
+		ThreadFence( memory_order_release );
+	}
+	
+/*
+=================================================
+	_RunTask
+=================================================
+*/
+	void IThread::_SetCompletedState (const AsyncTask &task)
+	{
+		task->_SetCompletedState();
+		ThreadFence( memory_order_release );
+	}
 //-----------------------------------------------------------------------------
 
 
@@ -233,19 +255,19 @@ namespace AE::Threading
 	
 /*
 =================================================
-	PickUpTask
+	PullTask
 =================================================
 */
-	AsyncTask  TaskScheduler::PickUpTask (EThread type, uint seed)
+	AsyncTask  TaskScheduler::PullTask (EThread type, uint seed)
 	{
 		BEGIN_ENUM_CHECKS();
 		switch ( type )
 		{
-			case EThread::Main :		return _PickUpTask( _mainQueue, seed );
-			case EThread::Worker :		return _PickUpTask( _workerQueue, seed );
-			case EThread::Renderer :	return _PickUpTask( _renderQueue, seed );
-			case EThread::FileIO :		return _PickUpTask( _fileQueue, seed );
-			case EThread::Network :		return _PickUpTask( _networkQueue, seed );
+			case EThread::Main :		return _PullTask( _mainQueue, seed );
+			case EThread::Worker :		return _PullTask( _workerQueue, seed );
+			case EThread::Renderer :	return _PullTask( _renderQueue, seed );
+			case EThread::FileIO :		return _PullTask( _fileQueue, seed );
+			case EThread::Network :		return _PullTask( _networkQueue, seed );
 			case EThread::_Count :		break;
 		}
 		END_ENUM_CHECKS();
@@ -254,11 +276,11 @@ namespace AE::Threading
 
 /*
 =================================================
-	_PickUpTask
+	_PullTask
 =================================================
 */
 	template <size_t N>
-	AsyncTask  TaskScheduler::_PickUpTask (_TaskQueue<N> &tq, uint seed) const
+	AsyncTask  TaskScheduler::_PullTask (_TaskQueue<N> &tq, uint seed) const
 	{
 		Unused( seed );	// TODO
 
@@ -354,7 +376,7 @@ namespace AE::Threading
 	template <size_t N>
 	bool  TaskScheduler::_ProcessTask (_TaskQueue<N> &tq, uint seed) const
 	{
-		if ( AsyncTask task = _PickUpTask( tq, seed ))
+		if ( AsyncTask task = _PullTask( tq, seed ))
 		{
 			AE_SCHEDULER_PROFILING(
 				const auto	start_time = TimePoint_t::clock::now();

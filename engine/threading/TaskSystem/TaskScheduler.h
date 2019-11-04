@@ -202,7 +202,7 @@ namespace AE::Threading
 
 			bool ProcessTask (EThread type, uint seed);
 
-		ND_ AsyncTask  PickUpTask (EThread type, uint seed);
+		ND_ AsyncTask  PullTask (EThread type, uint seed);
 
 	// task api
 		template <typename T, typename ...Args>
@@ -222,7 +222,7 @@ namespace AE::Threading
 		void  _AddTask (_TaskQueue<N> &tq, const AsyncTask &task) const;
 
 		template <size_t N>
-		AsyncTask  _PickUpTask (_TaskQueue<N> &tq, uint seed) const;
+		AsyncTask  _PullTask (_TaskQueue<N> &tq, uint seed) const;
 		
 		template <size_t N>
 		bool  _ProcessTask (_TaskQueue<N> &tq, uint seed) const;

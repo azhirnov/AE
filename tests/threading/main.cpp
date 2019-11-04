@@ -11,7 +11,10 @@ int main ()
 {
 	UnitTest_TaskDeps();
 	UnitTest_Promise();
+
+#ifndef AE_CI_BUILD
 	PerfTest_Threading();
+#endif
 
 	AE_LOGI( "Tests.Threading finished" );
 	return 0;

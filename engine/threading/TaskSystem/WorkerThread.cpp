@@ -26,15 +26,14 @@ namespace AE::Threading
 */
 	bool  WorkerThread::Attach (uint uid)
 	{
-		_looping.store( 1, memory_order_release );
-
 		_thread = std::thread{[this, uid] ()
 		{
 			uint	seed = uid;
 
 			PlatformUtils::SetThreadName( _name );
 			AE_VTUNE( __itt_thread_set_name( _name.c_str() ));
-
+			
+			_looping.store( 1, memory_order_relaxed );
 			for (; _looping.load( memory_order_relaxed );)
 			{
 				bool	processed = false;
@@ -63,8 +62,10 @@ namespace AE::Threading
 */
 	void  WorkerThread::Detach ()
 	{
-		_looping.store( 0, memory_order_relaxed );
-		_thread.join();
+		if ( _looping.exchange( 0, memory_order_relaxed ))
+		{
+			_thread.join();
+		}
 	}
 
 }	// AE::Threading
