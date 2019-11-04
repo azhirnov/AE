@@ -12,7 +12,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 	endif ()
 	set( AE_EXTERNAL_TARGET "win64-msvc-v141" )
 else ()
-    message( FATAL_ERROR "unsupported target platform: ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION}" )
+	message( FATAL_ERROR "unsupported target platform: ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION}" )
 endif ()
 
 

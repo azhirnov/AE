@@ -65,58 +65,58 @@ namespace AE::STL
 		template <typename B>		friend B*& operator -= (B* &lhs, const Bytes<T> &rhs)	{ return (lhs = lhs + rhs); }
 
 
-		ND_ constexpr Bytes<T>	operator ~ () const                         { return Bytes<T>( ~_value ); }
+		ND_ constexpr Bytes<T>	operator ~ () const							{ return Bytes<T>( ~_value ); }
 
 			Bytes<T>&			operator += (const Bytes<T> &rhs)			{ _value += rhs._value;  return *this; }
-		ND_ constexpr Bytes<T>  operator +  (const Bytes<T> &rhs) const     { return Bytes<T>( _value + rhs._value ); }
+		ND_ constexpr Bytes<T>  operator +  (const Bytes<T> &rhs) const		{ return Bytes<T>( _value + rhs._value ); }
 		
 			Bytes<T>&			operator -= (const Bytes<T> &rhs)			{ _value -= rhs._value;  return *this; }
-		ND_ constexpr Bytes<T>  operator -  (const Bytes<T> &rhs) const     { return Bytes<T>( _value - rhs._value ); }
+		ND_ constexpr Bytes<T>  operator -  (const Bytes<T> &rhs) const		{ return Bytes<T>( _value - rhs._value ); }
 
 			Bytes<T>&			operator *= (const Bytes<T> &rhs)			{ _value *= rhs._value;  return *this; }
-		ND_ constexpr Bytes<T>  operator *  (const Bytes<T> &rhs) const     { return Bytes<T>( _value * rhs._value ); }
+		ND_ constexpr Bytes<T>  operator *  (const Bytes<T> &rhs) const		{ return Bytes<T>( _value * rhs._value ); }
 		
 			Bytes<T>&			operator /= (const Bytes<T> &rhs)			{ _value /= rhs._value;  return *this; }
-		ND_ constexpr Bytes<T>  operator /  (const Bytes<T> &rhs) const     { return Bytes<T>( _value / rhs._value ); }
+		ND_ constexpr Bytes<T>  operator /  (const Bytes<T> &rhs) const		{ return Bytes<T>( _value / rhs._value ); }
 		
 			Bytes<T>&			operator %= (const Bytes<T> &rhs)			{ _value %= rhs._value;  return *this; }
-		ND_ constexpr Bytes<T>  operator %  (const Bytes<T> &rhs) const     { return Bytes<T>( _value % rhs._value ); }
+		ND_ constexpr Bytes<T>  operator %  (const Bytes<T> &rhs) const		{ return Bytes<T>( _value % rhs._value ); }
 		
 
 			Bytes<T>&			operator += (const T rhs)					{ _value += rhs;  return *this; }
-		ND_ constexpr Bytes<T>  operator +  (const T rhs) const             { return Bytes<T>( _value + rhs ); }
+		ND_ constexpr Bytes<T>  operator +  (const T rhs) const				{ return Bytes<T>( _value + rhs ); }
 		ND_ friend Bytes<T>		operator +  (T lhs, const Bytes<T> &rhs)	{ return Bytes<T>( lhs + rhs._value ); }
 		
 			Bytes<T>&			operator -= (const T rhs)					{ _value -= rhs;  return *this; }
-		ND_ constexpr Bytes<T>  operator -  (const T rhs) const             { return Bytes<T>( _value - rhs ); }
+		ND_ constexpr Bytes<T>  operator -  (const T rhs) const				{ return Bytes<T>( _value - rhs ); }
 		ND_ friend Bytes<T>		operator -  (T lhs, const Bytes<T> &rhs)	{ return Bytes<T>( lhs - rhs._value ); }
 
 			Bytes<T>&			operator *= (const T rhs)					{ _value *= rhs;  return *this; }
-		ND_ constexpr Bytes<T>  operator *  (const T rhs) const             { return Bytes<T>( _value * rhs ); }
+		ND_ constexpr Bytes<T>  operator *  (const T rhs) const				{ return Bytes<T>( _value * rhs ); }
 		ND_ friend Bytes<T>		operator *  (T lhs, const Bytes<T> &rhs)	{ return Bytes<T>( lhs * rhs._value ); }
 		
 			Bytes<T>&			operator /= (const T rhs)					{ _value /= rhs;  return *this; }
-		ND_ constexpr Bytes<T>  operator /  (const T rhs) const             { return Bytes<T>( _value / rhs ); }
+		ND_ constexpr Bytes<T>  operator /  (const T rhs) const				{ return Bytes<T>( _value / rhs ); }
 		ND_ friend Bytes<T>		operator /  (T lhs, const Bytes<T> &rhs)	{ return Bytes<T>( lhs / rhs._value ); }
 		
 			Bytes<T>&			operator %= (const T rhs)					{ _value %= rhs;  return *this; }
-		ND_ constexpr Bytes<T>  operator %  (const T rhs) const             { return Bytes<T>( _value % rhs ); }
+		ND_ constexpr Bytes<T>  operator %  (const T rhs) const				{ return Bytes<T>( _value % rhs ); }
 		ND_ friend Bytes<T>		operator %  (T lhs, const Bytes<T> &rhs)	{ return Bytes<T>( lhs % rhs._value ); }
 
 
-		ND_ constexpr bool		operator == (const Bytes<T> &rhs) const     { return _value == rhs._value; }
-		ND_ constexpr bool		operator != (const Bytes<T> &rhs) const     { return _value != rhs._value; }
-		ND_ constexpr bool		operator >  (const Bytes<T> &rhs) const     { return _value >  rhs._value; }
-		ND_ constexpr bool		operator <  (const Bytes<T> &rhs) const     { return _value <  rhs._value; }
-		ND_ constexpr bool		operator >= (const Bytes<T> &rhs) const     { return _value >= rhs._value; }
+		ND_ constexpr bool		operator == (const Bytes<T> &rhs) const		{ return _value == rhs._value; }
+		ND_ constexpr bool		operator != (const Bytes<T> &rhs) const		{ return _value != rhs._value; }
+		ND_ constexpr bool		operator >  (const Bytes<T> &rhs) const		{ return _value >  rhs._value; }
+		ND_ constexpr bool		operator <  (const Bytes<T> &rhs) const		{ return _value <  rhs._value; }
+		ND_ constexpr bool		operator >= (const Bytes<T> &rhs) const		{ return _value >= rhs._value; }
 		ND_ constexpr bool		operator <= (const Bytes<T> &rhs) const 	{ return _value <= rhs._value; }
 		
-		ND_ constexpr bool		operator == (const T rhs) const             { return _value == rhs; }
-		ND_ constexpr bool		operator != (const T rhs) const             { return _value != rhs; }
-		ND_ constexpr bool		operator >  (const T rhs) const             { return _value >  rhs; }
-		ND_ constexpr bool		operator <  (const T rhs) const             { return _value <  rhs; }
-		ND_ constexpr bool		operator >= (const T rhs) const             { return _value >= rhs; }
-		ND_ constexpr bool		operator <= (const T rhs) const             { return _value <= rhs; }
+		ND_ constexpr bool		operator == (const T rhs) const				{ return _value == rhs; }
+		ND_ constexpr bool		operator != (const T rhs) const				{ return _value != rhs; }
+		ND_ constexpr bool		operator >  (const T rhs) const				{ return _value >  rhs; }
+		ND_ constexpr bool		operator <  (const T rhs) const				{ return _value <  rhs; }
+		ND_ constexpr bool		operator >= (const T rhs) const				{ return _value >= rhs; }
+		ND_ constexpr bool		operator <= (const T rhs) const				{ return _value <= rhs; }
 
 		ND_ friend bool			operator == (T lhs, Bytes<T> rhs)			{ return lhs == rhs._value; }
 		ND_ friend bool			operator != (T lhs, Bytes<T> rhs)			{ return lhs != rhs._value; }

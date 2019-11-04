@@ -109,7 +109,7 @@ namespace AE::STL
 		struct _FuncInfo2 {
 			using type = _FuncInfo<T>;
 		};
-    
+	
 		template < typename T >
 		struct _FuncInfo2<T, true> {
 			using type = _FuncInfo< decltype(&T::operator()) >;

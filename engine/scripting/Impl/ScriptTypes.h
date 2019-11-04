@@ -499,11 +499,11 @@ namespace AE::Scripting
 		template <typename T, bool IsObject>
 		struct ContextSetterGetter_Var
 		{
-			static T    Get (AngelScript::asIScriptContext *ctx)					{
+			static T	Get (AngelScript::asIScriptContext *ctx)					{
 				T* obj = static_cast<T *>(ctx->GetReturnObject());
 				return *obj;
 			}
-			static int  Set (AngelScript::asIScriptContext *ctx, int arg, T& value)	{ return ctx->SetArgObject( arg, reinterpret_cast<void *>(&value) ); }
+			static int	Set (AngelScript::asIScriptContext *ctx, int arg, T& value)	{ return ctx->SetArgObject( arg, reinterpret_cast<void *>(&value) ); }
 		};
 
 		template <typename T>
