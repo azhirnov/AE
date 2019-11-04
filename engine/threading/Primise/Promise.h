@@ -87,6 +87,7 @@ namespace AE::Threading
 	public:
 		using Value_t	= T;
 		using Self		= Promise< T >;
+		using EThread	= IAsyncTask::EThread;
 		
 		class _InternalImpl;
 		using _InternalImplPtr = SharedPtr< _InternalImpl >;
@@ -108,10 +109,10 @@ namespace AE::Threading
 		Self& operator = (const Self &) = default;
 
 		template <typename Fn>
-		auto  Then (Fn &&fn);
+		auto  Then (Fn &&fn, EThread thread = EThread::Worker);
 
 		template <typename Fn>
-		auto  Except (Fn &&fn);
+		auto  Except (Fn &&fn, EThread thread = EThread::Worker);
 
 		bool  Cancel ();
 
@@ -119,16 +120,16 @@ namespace AE::Threading
 		
 	private:
 		template <typename Fn, typename Deps>
-		auto  _Then (Fn &&fn, Deps &&dependsOn);
+		auto  _Then (Fn &&fn, Deps &&dependsOn, EThread thread);
 
 		template <typename Fn, typename Deps>
-		Promise (Fn &&fn, bool except, Deps &&dependsOn);
+		Promise (Fn &&fn, bool except, Deps &&dependsOn, EThread thread);
 
 		template <typename Fn, typename Deps>
-		friend auto  MakePromise (Fn &&fn, Deps &&dependsOn);
+		friend auto  MakePromise (Fn &&fn, Deps &&dependsOn, IAsyncTask::EThread thread);
 
 		template <typename ...Types>
-		friend auto  MakePromiseFromTuple (const Tuple<Types...> &t);
+		friend auto  MakePromiseFromTuple (const Tuple<Types...> &t, IAsyncTask::EThread thread);
 		
 		template <typename B>
 		friend class Promise;
@@ -158,7 +159,7 @@ namespace AE::Threading
 	// methods
 	public:
 		template <typename Fn>
-		_InternalImpl (Fn &&fn, bool except);
+		_InternalImpl (Fn &&fn, bool except, EThread thread);
 
 		ND_ auto  Result () const
 		{
@@ -270,8 +271,8 @@ namespace _ae_threading_hidden_
 */
 	template <typename T>
 	template <typename Fn, typename Deps>
-	inline Promise<T>::Promise (Fn &&fn, bool except, Deps &&dependsOn) :
-		_impl{ Cast<_InternalImpl>( Scheduler().Run<_InternalImpl>( std::move(dependsOn), std::forward<Fn>(fn), except ))}
+	inline Promise<T>::Promise (Fn &&fn, bool except, Deps &&dependsOn, EThread thread) :
+		_impl{ Cast<_InternalImpl>( Scheduler().Run<_InternalImpl>( std::move(dependsOn), std::forward<Fn>(fn), except, thread ))}
 	{}
 
 /*
@@ -281,12 +282,12 @@ namespace _ae_threading_hidden_
 */
 	template <typename T>
 	template <typename Fn>
-	inline auto  Promise<T>::Then (Fn &&fn)
+	inline auto  Promise<T>::Then (Fn &&fn, EThread thread)
 	{
 		if ( _impl->IsExcept() )
-			return _Then( std::forward<Fn>(fn), WeakDeps{_impl} );
+			return _Then( std::forward<Fn>(fn), WeakDeps{_impl}, thread );
 		else
-			return _Then( std::forward<Fn>(fn), StrongDeps{_impl} );
+			return _Then( std::forward<Fn>(fn), StrongDeps{_impl}, thread );
 	}
 	
 /*
@@ -296,7 +297,7 @@ namespace _ae_threading_hidden_
 */
 	template <typename T>
 	template <typename Fn, typename Deps>
-	inline auto  Promise<T>::_Then (Fn &&fn, Deps &&dependsOn)
+	inline auto  Promise<T>::_Then (Fn &&fn, Deps &&dependsOn, EThread thread)
 	{
 		using FI		= FunctionInfo< Fn >;
 		using Result	= typename _ae_threading_hidden_::ResultToPromise< typename FI::result >::type;
@@ -310,14 +311,15 @@ namespace _ae_threading_hidden_
 								return PromiseResult<void>{};
 							},
 							false,
-							std::move(dependsOn) };
+							std::move(dependsOn),
+							thread };
 		}
 		else
 		if constexpr( IsVoid<T> )
 		{
 			STATIC_ASSERT( FI::args::Count == 0 );
 		
-			return Result{ std::forward<Fn>(fn), false, std::move(dependsOn) };
+			return Result{ std::forward<Fn>(fn), false, std::move(dependsOn), thread };
 		}
 		else
 		if constexpr( IsVoid< typename FI::result > )
@@ -330,7 +332,8 @@ namespace _ae_threading_hidden_
 								return PromiseResult<void>{};
 							},
 							false,
-							std::move(dependsOn) };
+							std::move(dependsOn),
+							thread };
 		}
 		else
 		{
@@ -341,7 +344,8 @@ namespace _ae_threading_hidden_
 								return fn( in->Result() );
 							},
 							false,
-							std::move(dependsOn) };
+							std::move(dependsOn),
+							thread };
 		}
 	}
 
@@ -352,7 +356,7 @@ namespace _ae_threading_hidden_
 */
 	template <typename T>
 	template <typename Fn>
-	inline auto  Promise<T>::Except (Fn &&fn)
+	inline auto  Promise<T>::Except (Fn &&fn, EThread thread)
 	{
 		using FI		= FunctionInfo< Fn >;
 		using Result	= typename _ae_threading_hidden_::ResultToPromise< typename FI::result >::type;
@@ -366,7 +370,8 @@ namespace _ae_threading_hidden_
 								return PromiseResult<void>{};
 							},
 							true,
-							StrongDeps{_impl} };
+							StrongDeps{_impl},
+							thread };
 		}
 		else
 		{
@@ -394,8 +399,8 @@ namespace _ae_threading_hidden_
 */
 	template <typename T>
 	template <typename Fn>
-	inline Promise<T>::_InternalImpl::_InternalImpl (Fn &&fn, bool except) :
-		IAsyncTask{ EThread::Worker },
+	inline Promise<T>::_InternalImpl::_InternalImpl (Fn &&fn, bool except, EThread thread) :
+		IAsyncTask{ thread },
 		_func{ std::forward<Fn>(fn) },
 		_result{ PromiseNullResult{} },
 		_isExept{ except }
@@ -447,7 +452,7 @@ namespace _ae_threading_hidden_
 =================================================
 */
 	template <typename Fn, typename Deps = StrongDeps>
-	forceinline auto  MakePromise (Fn &&fn, Deps &&dependsOn = Default)
+	forceinline auto  MakePromise (Fn &&fn, Deps &&dependsOn = Default, IAsyncTask::EThread thread = IAsyncTask::EThread::Worker)
 	{
 		STATIC_ASSERT( std::is_invocable_v<Fn> );
 
@@ -461,11 +466,12 @@ namespace _ae_threading_hidden_
 								return PromiseResult<void>{};
 							},
 							false,
-							std::move(dependsOn) };
+							std::move(dependsOn),
+							thread };
 		}
 		else
 		{
-			return Result{ std::forward<Fn>(fn), false, std::move(dependsOn) };
+			return Result{ std::forward<Fn>(fn), false, std::move(dependsOn), thread };
 		}
 	}
 	
@@ -475,7 +481,7 @@ namespace _ae_threading_hidden_
 =================================================
 */
 	template <typename ...Types>
-	forceinline auto  MakePromiseFromTuple (const Tuple<Types...> &t)
+	forceinline auto  MakePromiseFromTuple (const Tuple<Types...> &t, IAsyncTask::EThread thread = IAsyncTask::EThread::Worker)
 	{
 		return MakePromise(
 			[t] () {
@@ -485,7 +491,8 @@ namespace _ae_threading_hidden_
 			},
 			std::apply( [] (auto&& ...args) {
 				return StrongDeps{ AsyncTask{std::forward<decltype(args)>( args )}... };
-			}, t )
+			}, t ),
+			thread
 		);
 	}
 
