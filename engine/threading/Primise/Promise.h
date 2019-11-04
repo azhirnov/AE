@@ -7,6 +7,72 @@
 
 namespace AE::Threading
 {
+	struct PromiseNullResult {};
+
+
+	//
+	// Promise Result
+	//
+
+	template <typename T>
+	struct PromiseResult
+	{
+		STATIC_ASSERT( not IsSameTypes< PromiseNullResult, T >);
+
+	// variables
+	private:
+		union {
+			T			_value;
+			uint8_t		_data [ sizeof(T) ];	// don't use it!
+		};
+		bool			_hasValue	= false;
+
+
+	// methods
+	public:
+		PromiseResult () = delete;
+
+		PromiseResult (T &&value) : _value{std::move(value)}, _hasValue{true} {}
+		PromiseResult (const T &value) : _value{value}, _hasValue{true} {}
+		PromiseResult (const PromiseNullResult &) {}
+
+		PromiseResult (const PromiseResult<T> &other);
+		PromiseResult (PromiseResult<T> &&other);
+
+		PromiseResult<T>&  operator = (const PromiseResult<T> &rhs);
+		PromiseResult<T>&  operator = (PromiseResult<T> &&rhs);
+
+		~PromiseResult ()					{ if ( _hasValue ) _value.~T(); }
+
+		ND_ bool		HasValue ()	const	{ return _hasValue; }
+		ND_ T const&	Value ()	const	{ ASSERT( _hasValue );  return _value; }
+		ND_ T &			Value ()			{ ASSERT( _hasValue );  return _value; }
+	};
+
+	
+	template <>
+	struct PromiseResult< void >
+	{
+	// variables
+	private:
+		bool		_hasValue	= false;
+
+	// methods
+	public:
+		PromiseResult () : _hasValue{true} {}
+
+		PromiseResult (const PromiseNullResult &) {}
+
+		PromiseResult (const PromiseResult<void> &) = default;
+		PromiseResult (PromiseResult<void> &&) = default;
+		
+		PromiseResult<void>&  operator = (const PromiseResult<void> &) = default;
+		PromiseResult<void>&  operator = (PromiseResult<void> &&) = default;
+
+		ND_ bool	HasValue ()	const	{ return _hasValue; }
+	};
+
+
 
 	//
 	// Promise
@@ -15,6 +81,8 @@ namespace AE::Threading
 	template <typename T>
 	class Promise final
 	{
+		STATIC_ASSERT( not IsSameTypes< PromiseNullResult, T >);
+
 	// types
 	public:
 		using Value_t	= T;
@@ -50,11 +118,14 @@ namespace AE::Threading
 		explicit operator AsyncTask () const	{ return _impl; }
 		
 	private:
-		template <typename Fn>
-		Promise (Fn &&fn, bool except, Array<AsyncTask> &&dependsOn);
+		template <typename Fn, typename Deps>
+		auto  _Then (Fn &&fn, Deps &&dependsOn);
 
-		template <typename Fn>
-		friend auto  MakePromise (Fn &&fn, Array<AsyncTask> &&dependsOn);
+		template <typename Fn, typename Deps>
+		Promise (Fn &&fn, bool except, Deps &&dependsOn);
+
+		template <typename Fn, typename Deps>
+		friend auto  MakePromise (Fn &&fn, Deps &&dependsOn);
 
 		template <typename ...Types>
 		friend auto  MakePromiseFromTuple (const Tuple<Types...> &t);
@@ -73,13 +144,15 @@ namespace AE::Threading
 	{
 	// types
 	private:
-		using Result_t = Conditional< IsVoid<T>, bool, Optional<T> >;
+		using Result_t	= PromiseResult< T >;
+		using Func_t	= Function< PromiseResult<T> () >;
+
 
 	// variables
 	private:
-		Function< T () >	_func;
-		Result_t			_result;
-		const bool			_isExept;
+		Func_t			_func;
+		Result_t		_result;
+		const bool		_isExept;
 
 
 	// methods
@@ -89,11 +162,14 @@ namespace AE::Threading
 
 		ND_ auto  Result () const
 		{
+			ASSERT( Status() == EStatus::Completed );
 			ThreadFence( memory_order_acquire );
 
 			if constexpr( not IsVoid<T> )
-				return *_result;
+				return _result.Value();
 		}
+
+		ND_ bool  IsExcept () const	{ return _isExept; }
 
 	private:
 		void Run () override;
@@ -109,8 +185,92 @@ namespace AE::Threading
 =================================================
 */
 	template <typename T>
-	template <typename Fn>
-	inline Promise<T>::Promise (Fn &&fn, bool except, Array<AsyncTask> &&dependsOn) :
+	inline PromiseResult<T>::PromiseResult (const PromiseResult<T> &other) :
+		_hasValue{ other._hasValue }
+	{
+		if ( _hasValue )
+			PlacementNew<T>( &_value, other._value );
+	}
+
+	template <typename T>
+	inline PromiseResult<T>::PromiseResult (PromiseResult<T> &&other) :
+		_hasValue{ other._hasValue }
+	{
+		if ( _hasValue )
+			PlacementNew<T>( &_value, std::move(other._value) );
+	}
+
+/*
+=================================================
+	operator =
+=================================================
+*/
+	template <typename T>
+	inline PromiseResult<T>&  PromiseResult<T>::operator = (const PromiseResult<T> &rhs)
+	{
+		if ( _hasValue )
+			_value.~T();
+
+		_hasValue = rhs._hasValue;
+
+		if ( _hasValue )
+			PlacementNew<T>( &_value, rhs._value );
+
+		return *this;
+	}
+	
+	template <typename T>
+	inline PromiseResult<T>&  PromiseResult<T>::operator = (PromiseResult<T> &&rhs)
+	{
+		if ( _hasValue )
+			_value.~T();
+
+		_hasValue = rhs._hasValue;
+
+		if ( _hasValue )
+		{
+			PlacementNew<T>( &_value, std::move(rhs._value) );
+			rhs._hasValue = false;
+		}
+		return *this;
+	}
+//-----------------------------------------------------------------------------
+	
+
+/*
+=================================================
+	ResultToPromise
+=================================================
+*/
+namespace _ae_threading_hidden_
+{
+	template <typename T>
+	struct ResultToPromise {
+		using type = Promise< T >;
+	};
+
+	template <typename T>
+	struct ResultToPromise< PromiseResult<T> > {
+		using type = Promise< T >;
+	};
+
+	template <>
+	struct ResultToPromise< PromiseNullResult > {
+		using type = Promise< void >;
+	};
+
+}	// _ae_threading_hidden_
+//-----------------------------------------------------------------------------
+
+
+/*
+=================================================
+	constructor
+=================================================
+*/
+	template <typename T>
+	template <typename Fn, typename Deps>
+	inline Promise<T>::Promise (Fn &&fn, bool except, Deps &&dependsOn) :
 		_impl{ Cast<_InternalImpl>( Scheduler().Run<_InternalImpl>( std::move(dependsOn), std::forward<Fn>(fn), except ))}
 	{}
 
@@ -123,14 +283,54 @@ namespace AE::Threading
 	template <typename Fn>
 	inline auto  Promise<T>::Then (Fn &&fn)
 	{
+		if ( _impl->IsExcept() )
+			return _Then( std::forward<Fn>(fn), WeakDeps{_impl} );
+		else
+			return _Then( std::forward<Fn>(fn), StrongDeps{_impl} );
+	}
+	
+/*
+=================================================
+	_Then
+=================================================
+*/
+	template <typename T>
+	template <typename Fn, typename Deps>
+	inline auto  Promise<T>::_Then (Fn &&fn, Deps &&dependsOn)
+	{
 		using FI		= FunctionInfo< Fn >;
-		using Result	= Promise< typename FI::result >;
+		using Result	= typename _ae_threading_hidden_::ResultToPromise< typename FI::result >::type;
 
+		if constexpr( IsVoid<T> and IsVoid< typename FI::result > )
+		{
+			STATIC_ASSERT( FI::args::Count == 0 );
+		
+			return Result{	[fn = std::forward<Fn>(fn)] () {
+								fn();
+								return PromiseResult<void>{};
+							},
+							false,
+							std::move(dependsOn) };
+		}
+		else
 		if constexpr( IsVoid<T> )
 		{
 			STATIC_ASSERT( FI::args::Count == 0 );
 		
-			return Result{ fn, false, Array<AsyncTask>{_impl} };
+			return Result{ std::forward<Fn>(fn), false, std::move(dependsOn) };
+		}
+		else
+		if constexpr( IsVoid< typename FI::result > )
+		{
+			STATIC_ASSERT( FI::args::Count == 1 );
+			STATIC_ASSERT( IsSameTypes< FI::args::Get<0>, const T& >);
+
+			return Result{	[fn = std::forward<Fn>(fn), in = _impl] () {
+								fn( in->Result() );
+								return PromiseResult<void>{};
+							},
+							false,
+							std::move(dependsOn) };
 		}
 		else
 		{
@@ -141,10 +341,10 @@ namespace AE::Threading
 								return fn( in->Result() );
 							},
 							false,
-							Array<AsyncTask>{_impl} };
+							std::move(dependsOn) };
 		}
 	}
-	
+
 /*
 =================================================
 	Except
@@ -155,24 +355,22 @@ namespace AE::Threading
 	inline auto  Promise<T>::Except (Fn &&fn)
 	{
 		using FI		= FunctionInfo< Fn >;
-		using Result	= Promise< typename FI::result >;
+		using Result	= typename _ae_threading_hidden_::ResultToPromise< typename FI::result >::type;
 		
-		if constexpr( IsVoid<T> )
+		STATIC_ASSERT( FI::args::Count == 0 );
+		
+		if constexpr( IsVoid< typename FI::result > )
 		{
-			STATIC_ASSERT( FI::args::Count == 0 );
-		
-			return Result{ fn, true, Array<AsyncTask>{_impl} };
+			return Result{	[fn = std::forward<Fn>(fn)] () {
+								fn();
+								return PromiseResult<void>{};
+							},
+							true,
+							StrongDeps{_impl} };
 		}
 		else
 		{
-			STATIC_ASSERT( FI::args::Count == 1 );
-			STATIC_ASSERT( IsSameTypes< FI::args::Get<0>, const T& >);
-
-			return Result{	[fn = std::forward<Fn>(fn), in = _impl] () {
-								return fn( in->Result() );
-							},
-							true,
-							Array<AsyncTask>{_impl} };
+			return Result{ std::forward<Fn>(fn), true, StrongDeps{_impl} };
 		}
 	}
 	
@@ -199,6 +397,7 @@ namespace AE::Threading
 	inline Promise<T>::_InternalImpl::_InternalImpl (Fn &&fn, bool except) :
 		IAsyncTask{ EThread::Worker },
 		_func{ std::forward<Fn>(fn) },
+		_result{ PromiseNullResult{} },
 		_isExept{ except }
 	{
 		ASSERT( _func );
@@ -214,12 +413,14 @@ namespace AE::Threading
 	{
 		if ( not _isExept and _func )
 		{
-			if constexpr( IsVoid<T> )
-				_func();
-			else
-				_result	= _func();
+			_result	= _func();
+			_func	= null;
 
-			_func = null;
+			// set failed state
+			if ( not _result.HasValue() )
+			{
+				_SetFailedState();
+			}
 		}
 	}
 	
@@ -233,29 +434,39 @@ namespace AE::Threading
 	{
 		if ( _isExept and _func )
 		{
-			if constexpr( IsVoid<T> )
-				_func();
-			else
-				_result	= _func();
-
-			_func = null;
+			_result	= _func();
+			_func	= null;
 		}
 	}
 //-----------------------------------------------------------------------------
 
-	
+
 /*
 =================================================
 	MakePromise
 =================================================
 */
-	template <typename Fn>
-	forceinline auto  MakePromise (Fn &&fn, Array<AsyncTask> &&dependsOn = {})
+	template <typename Fn, typename Deps = StrongDeps>
+	forceinline auto  MakePromise (Fn &&fn, Deps &&dependsOn = Default)
 	{
 		STATIC_ASSERT( std::is_invocable_v<Fn> );
 
-		using Result = Promise< typename FunctionInfo<Fn>::result >;
-		return Result{ std::forward<Fn>(fn), false, std::move(dependsOn) };
+		using Value_t	= typename FunctionInfo< Fn >::result;
+		using Result	= typename _ae_threading_hidden_::ResultToPromise< Value_t >::type;
+
+		if constexpr( IsVoid< Value_t > )
+		{
+			return Result{	[fn = std::forward<Fn>(fn)] () {
+								fn();
+								return PromiseResult<void>{};
+							},
+							false,
+							std::move(dependsOn) };
+		}
+		else
+		{
+			return Result{ std::forward<Fn>(fn), false, std::move(dependsOn) };
+		}
 	}
 	
 /*
@@ -272,7 +483,9 @@ namespace AE::Threading
 						return std::make_tuple( args._impl->Result() ... );
 					}, t );
 			},
-			std::apply( [] (auto&& ...args) { return Array<AsyncTask>{ AsyncTask{std::forward<decltype(args)>( args )}... };}, t )
+			std::apply( [] (auto&& ...args) {
+				return StrongDeps{ AsyncTask{std::forward<decltype(args)>( args )}... };
+			}, t )
 		);
 	}
 
