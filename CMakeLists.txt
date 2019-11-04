@@ -18,6 +18,7 @@ set( AE_ENABLE_VTUNE_API OFF CACHE BOOL "enable helper functions for Intel VTune
 
 # External dependencies
 set( AE_ENABLE_ANGELSCRIPT ON CACHE BOOL "enable AngelScript (for scripting)" )
+set( AE_ENABLE_CURL ON CACHE BOOL "enable cURL (for networking)" )
 
 #----------------------------------------------------------
 
@@ -34,6 +35,7 @@ add_subdirectory( "utils/project_template" )
 add_subdirectory( "engine/stl" )
 add_subdirectory( "engine/scripting" )
 add_subdirectory( "engine/threading" )
+add_subdirectory( "engine/networking" )
 add_subdirectory( "engine/ecs" )
 
 #----------------------------------------------------------
@@ -44,6 +46,7 @@ if (${AE_ENABLE_TESTS})
 	add_subdirectory( "tests/stl" )
 	add_subdirectory( "tests/scripting" )
 	add_subdirectory( "tests/threading" )
+	add_subdirectory( "tests/networking" )
 	add_subdirectory( "tests/ecs" )
 endif()
 
