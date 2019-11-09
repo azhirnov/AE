@@ -17,27 +17,16 @@ namespace AE::Threading
 	
 /*
 =================================================
-	_ForceCanceledState
+	_SetCancellationState
 =================================================
 */
-	bool IAsyncTask::_ForceCanceledState ()
-	{
-		EStatus	old = _status.exchange( EStatus::Canceled, memory_order_relaxed );
-		return old < EStatus::_Finished;
-	}
-	
-/*
-=================================================
-	_SetCanceledState
-=================================================
-*/
-	bool IAsyncTask::_SetCanceledState ()
+	bool IAsyncTask::_SetCancellationState ()
 	{
 		for (EStatus expected = EStatus::Pending;
-			 not _status.compare_exchange_weak( INOUT expected, EStatus::Canceled, memory_order_relaxed );)
+			 not _status.compare_exchange_weak( INOUT expected, EStatus::Cancellation, memory_order_relaxed );)
 		{
 			// status has been changed in another thread
-			if ( expected > EStatus::_Finished )
+			if ( (expected == EStatus::Cancellation) | (expected > EStatus::_Finished) )
 				return false;
 		}
 		return true;
@@ -45,35 +34,66 @@ namespace AE::Threading
 
 /*
 =================================================
-	_SetFailedState
+	OnFailure
 =================================================
 */
-	bool IAsyncTask::_SetFailedState ()
+	bool IAsyncTask::OnFailure ()
 	{
-		for (EStatus expected = EStatus::Pending;
+		for (EStatus expected = EStatus::InProgress;
 			 not _status.compare_exchange_weak( INOUT expected, EStatus::Failed, memory_order_relaxed );)
 		{
 			// status has been changed in another thread
 			if ( expected > EStatus::_Finished )
 				return false;
+
+			ASSERT( expected != EStatus::Cancellation );	// TODO: Failed or Canceled ?
 		}
 		return true;
+	}
+
+/*
+=================================================
+	_OnFinish
+=================================================
+*/
+	void IAsyncTask::_OnFinish ()
+	{
+		EStatus	expected = EStatus::InProgress;
+	
+		// try to set completed state	
+		if ( _status.compare_exchange_strong( INOUT expected, EStatus::Completed, memory_order_relaxed ) or expected == EStatus::Failed )
+		{
+			// flush cache
+			ThreadFence( memory_order_release );
+			return;
+		}
+
+		if ( expected == EStatus::Cancellation )
+		{
+			OnCancel();
+
+			// set canceled state and flush cache
+			_status.compare_exchange_strong( INOUT expected, EStatus::Canceled, memory_order_release, memory_order_relaxed );
+			return;
+		}
+
+		ASSERT(!"unknown state");
 	}
 	
 /*
 =================================================
-	_SetCompletedState
+	_Cancel
 =================================================
 */
-	bool IAsyncTask::_SetCompletedState ()
+	void IAsyncTask::_Cancel ()
 	{
-		EStatus	expected = EStatus::InProgress;
-		bool	result   = _status.compare_exchange_strong( INOUT expected, EStatus::Completed, memory_order_relaxed, memory_order_relaxed );
+		// Pending/InProgress -> Cancellation
+		_SetCancellationState();
 
-		ASSERT( expected == EStatus::InProgress	or
-			    expected == EStatus::Canceled	or
-			    expected == EStatus::Failed );
-		return result;
+		OnCancel();
+
+		// set canceled state and flush cache
+		CHECK( _status.exchange( EStatus::Canceled, memory_order_release ) == EStatus::Cancellation );
 	}
 //-----------------------------------------------------------------------------
 	
@@ -89,32 +109,18 @@ namespace AE::Threading
 
 		AE_VTUNE( __itt_task_begin( Scheduler().GetVTuneDomain(), __itt_null, __itt_null, __itt_string_handle_createA( task->DbgName().c_str() )));
 		task->Run();
+		task->_OnFinish();
 		AE_VTUNE( __itt_task_end( Scheduler().GetVTuneDomain() ));
-
-		task->_SetCompletedState();
-		ThreadFence( memory_order_release );
 	}
 	
 /*
 =================================================
-	_SetFailedState
+	_OnTaskFinish
 =================================================
 */
-	void IThread::_SetFailedState (const AsyncTask &task)
+	void IThread::_OnTaskFinish (const AsyncTask &task)
 	{
-		task->_SetFailedState();
-		ThreadFence( memory_order_release );
-	}
-	
-/*
-=================================================
-	_SetCompletedState
-=================================================
-*/
-	void IThread::_SetCompletedState (const AsyncTask &task)
-	{
-		task->_SetCompletedState();
-		ThreadFence( memory_order_release );
+		task->_OnFinish();
 	}
 //-----------------------------------------------------------------------------
 
@@ -174,6 +180,7 @@ namespace AE::Threading
 	TaskScheduler::~TaskScheduler ()
 	{
 		// call 'Release' before destroy
+		EXLOCK( _threadGuard );
 		CHECK( _threads.empty() );
 	}
 	
@@ -184,7 +191,10 @@ namespace AE::Threading
 */
 	bool TaskScheduler::Setup (size_t maxWorkerThreads)
 	{
-		CHECK_ERR( _threads.empty() );
+		{
+			EXLOCK( _threadGuard );
+			CHECK_ERR( _threads.empty() );
+		}
 
 		_mainQueue.Resize( 2 );
 		_workerQueue.Resize( Max( 2u, (maxWorkerThreads + 2) / 3 ));
@@ -203,10 +213,14 @@ namespace AE::Threading
 	void TaskScheduler::Release ()
 	{
 		// detach threads
-		for (auto& thread : _threads) {
-			thread->Detach();
+		{
+			EXLOCK( _threadGuard );
+
+			for (auto& thread : _threads) {
+				thread->Detach();
+			}
+			_threads.clear();
 		}
-		_threads.clear();
 
 		_WriteProfilerStat( "main",    _mainQueue    );
 		_WriteProfilerStat( "worker",  _workerQueue  );
@@ -227,6 +241,8 @@ namespace AE::Threading
 */
 	bool TaskScheduler::AddThread (const ThreadPtr &thread)
 	{
+		EXLOCK( _threadGuard );
+
 		CHECK_ERR( thread );
 		CHECK_ERR( thread->Attach( uint(_threads.size()) ));
 		
@@ -301,13 +317,17 @@ namespace AE::Threading
 			for (auto iter = q.tasks.begin(); iter != q.tasks.end();)
 			{
 				bool	ready	= true;
-				bool	cancel	= ((*iter)->Status() > EStatus::_Interropted);
+				bool	cancel	= ((*iter)->Status() == EStatus::Cancellation);
 
 				// check input dependencies
 				for (size_t i = 0, cnt = (*iter)->_dependsOn.size(); (i < cnt) & ready & (not cancel); ++i)
 				{
-					const auto&		dep		= (*iter)->_dependsOn[i];
-					const EStatus	status	= dep->Status();
+					const auto&	dep = (*iter)->_dependsOn[i];
+					
+					if ( not dep )
+						continue;
+
+					const EStatus	status = dep->Status();
 
 					ready	&= (status > EStatus::_Finished);
 					cancel	|= (status > EStatus::_Interropted);
@@ -322,10 +342,7 @@ namespace AE::Threading
 				// cancel task if one of dependencies has been canceled
 				if ( cancel )
 				{
-					(*iter)->_ForceCanceledState();
-					(*iter)->OnCancel();
-					ThreadFence( memory_order_release );
-
+					(*iter)->_Cancel();
 					iter = q.tasks.erase( iter );
 					continue;
 				}
@@ -343,6 +360,8 @@ namespace AE::Threading
 				break;
 			}
 
+			// additionaly this operation flushes and invalidates cache,
+			// so you don't need to invalidate cache in 'IAsyncTask::Run()' method
 			q.guard.unlock();
 
 			if ( not task )
@@ -360,9 +379,8 @@ namespace AE::Threading
 			}
 			else
 			{
-				task->_ForceCanceledState();
-				task->OnCancel();
-				ThreadFence( memory_order_release );
+				ASSERT( expected == EStatus::Cancellation );
+				task->_Cancel();
 			}
 		}
 
@@ -388,10 +406,8 @@ namespace AE::Threading
 
 			AE_VTUNE( __itt_task_begin( _vtuneDomain, __itt_null, __itt_null, __itt_string_handle_createA( task->DbgName().c_str() )));
 			task->Run();
+			task->_OnFinish();
 			AE_VTUNE( __itt_task_end( _vtuneDomain ));
-
-			task->_SetCompletedState();
-			ThreadFence( memory_order_release );
 				
 			AE_SCHEDULER_PROFILING(
 				tq._workTime += (TimePoint_t::clock::now() - start_time).count();
@@ -404,6 +420,9 @@ namespace AE::Threading
 /*
 =================================================
 	Wait
+----
+	Warning: deadlock may occur if wait() called in all threads,
+	use it only for debugging and testing
 =================================================
 */
 	bool  TaskScheduler::Wait (ArrayView<AsyncTask> tasks, Nanoseconds timeout)
@@ -439,7 +458,7 @@ namespace AE::Threading
 		if ( not task )
 			return false;
 
-		return task->_SetCanceledState();
+		return task->_SetCancellationState();
 	}
 	
 /*
@@ -493,7 +512,7 @@ namespace AE::Threading
 					q.guard.unlock();
 					
 					AE_SCHEDULER_PROFILING(
-						tq._stallTime += (TimePoint_t::clock::now() - start_time).count();
+						tq._insertionTime += (TimePoint_t::clock::now() - start_time).count();
 					)
 					return;
 				}
@@ -512,11 +531,12 @@ namespace AE::Threading
 		AE_SCHEDULER_PROFILING(
 			auto	work_time	= tq._workTime.load();
 			auto	stall_time	= tq._stallTime.load();
+			auto	insert_time	= tq._insertionTime.load();
 
 			if ( work_time == 0 and stall_time == 0 )
 				return;
 
-			double	stall	= double(stall_time);
+			double	stall	= double(stall_time) + double(insert_time);
 			double	work	= double(work_time);
 			double	factor	= (work_time ? stall / (stall + work) : 1.0);
 

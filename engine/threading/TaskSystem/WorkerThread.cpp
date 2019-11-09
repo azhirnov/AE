@@ -12,7 +12,7 @@ namespace AE::Threading
 =================================================
 */
 	WorkerThread::WorkerThread () :
-		WorkerThread{ ThreadMask{}.set(uint(EThread::Worker)), Milliseconds{10} }
+		WorkerThread{ ThreadMask{}.set(uint(EThread::Worker)), Milliseconds{4} }
 	{}
 
 	WorkerThread::WorkerThread (ThreadMask mask, Milliseconds sleepOnIdle, StringView name) :
@@ -28,7 +28,8 @@ namespace AE::Threading
 	{
 		_thread = std::thread{[this, uid] ()
 		{
-			uint	seed = uid;
+			uint	seed			= uid;
+			uint	idle_counter	= 0;
 
 			PlatformUtils::SetThreadName( _name );
 			AE_VTUNE( __itt_thread_set_name( _name.c_str() ));
@@ -48,8 +49,11 @@ namespace AE::Threading
 
 				if ( not processed and _sleepOnIdle.count() )
 				{
-					std::this_thread::sleep_for( _sleepOnIdle );
+					idle_counter = Max( 4u, idle_counter+1 );
+					std::this_thread::sleep_for( _sleepOnIdle * idle_counter );
 				}
+				else
+					idle_counter = 0;
 			}
 		}};
 		return true;

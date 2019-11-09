@@ -53,24 +53,26 @@ namespace AE::Threading
 =================================================
 	ThreadFence
 ----
-	for non-atomic and relaxed atomic accesses
+	for non-atomic and relaxed atomic accesses.
+	ThreadFence( memory_order_acquire ) - invalidate cache
+	ThreadFence( memory_order_release ) - flush cache
 =================================================
 */
-	forceinline void ThreadFence (std::memory_order mem_order)
+	forceinline void ThreadFence (std::memory_order order)
 	{
-		return std::atomic_thread_fence( mem_order );
+		return std::atomic_thread_fence( order );
 	}
 	
 /*
 =================================================
-	CompilerBarrier
+	CompilerFence
 ----
 	take effect only for compiler and CPU instruction reordering
 =================================================
 */
-	forceinline void CompilerBarrier (std::memory_order mem_order)
+	forceinline void CompilerFence (std::memory_order order)
 	{
-		return std::atomic_signal_fence( mem_order );
+		return std::atomic_signal_fence( order );
 	}
 
 }	// AE::Threading

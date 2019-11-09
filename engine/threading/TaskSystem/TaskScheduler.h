@@ -1,4 +1,35 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+/*
+	Async task states:
+		TaskScheduler::Run() {
+			pending state
+		}
+		TaskScheduler::ProcessTask() {
+			if cancellation or one of input dependencies was canceled {
+				OnCancel()
+				set canceled state
+			}
+			if pending state and all input dependencies are complete {
+				set in_progress state
+				Run() {
+					if cancellation
+						return
+					if something goes wrong
+						set failed state and return
+				}
+				if seccessfully completed
+					set completed state and return
+				if cancellation
+					OnCancel()
+					set canceled state and return
+				if canceled or failed
+					return
+			}
+		}
+
+	Order guaranties:
+		AsyncTask::Run() will be called after all input dependencies Run() or OnCancel() methods have completed
+*/
 
 #pragma once
 
@@ -57,14 +88,15 @@ namespace AE::Threading
 	class IAsyncTask : public std::enable_shared_from_this< IAsyncTask >
 	{
 		friend class TaskScheduler;
-		friend class IThread;
+		friend class IThread;		// can change task status
 		
 	// types
 	public:
 		enum class EStatus : uint
 		{
-			Pending,		// task added to queue and waiting until input dependencies complete
-			InProgress,		// task was acquired 
+			Pending,		// task has been added to the queue and is waiting until input dependencies complete
+			InProgress,		// task was acquired by thread
+			Cancellation,	// task required to be canceled
 
 			_Finished,
 			Completed,		// successfully completed
@@ -106,15 +138,19 @@ namespace AE::Threading
 	protected:
 		IAsyncTask (EThread type);
 
-		virtual void Run () = 0;
-		virtual void OnCancel () {}
+			virtual void			Run () = 0;
+			virtual void			OnCancel ()			{}
+		ND_ virtual NtStringView	DbgName ()	const	{ return "unknown"; }
 
-		bool _ForceCanceledState ();
-		bool _SetCanceledState ();
-		bool _SetFailedState ();
-		bool _SetCompletedState ();
+			// call this only inside 'Run()' method
+			bool OnFailure ();
 
-		ND_ virtual NtStringView  DbgName () const	{ return "unknown"; }
+	private:
+		// call this methods only after 'Run()' method
+		void _OnFinish ();
+		void _Cancel ();
+
+		bool _SetCancellationState ();
 	};
 
 
@@ -140,8 +176,7 @@ namespace AE::Threading
 	// helper functions
 	protected:
 		static void _RunTask (const AsyncTask &);
-		static void _SetFailedState (const AsyncTask &);
-		static void _SetCompletedState (const AsyncTask &);
+		static void _OnTaskFinish (const AsyncTask &);
 	};
 
 
@@ -168,8 +203,9 @@ namespace AE::Threading
 			FixedArray< _PerQueue, N >	queues;
 
 			AE_SCHEDULER_PROFILING(
-				Atomic<uint64_t>	_stallTime	{0};	// Nanoseconds
-				Atomic<uint64_t>	_workTime	{0};
+				Atomic<uint64_t>	_stallTime		{0};	// Nanoseconds
+				Atomic<uint64_t>	_workTime		{0};
+				Atomic<uint64_t>	_insertionTime	{0};
 			)
 
 		// methods
@@ -199,6 +235,7 @@ namespace AE::Threading
 		FileQueue_t			_fileQueue;
 		NetworkQueue_t		_networkQueue;
 
+		std::mutex			_threadGuard;
 		Array<ThreadPtr>	_threads;
 		
 		AE_VTUNE(

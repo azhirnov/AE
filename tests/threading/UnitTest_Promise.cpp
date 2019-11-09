@@ -1,6 +1,6 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "threading/Primise/Promise.h"
+#include "threading/TaskSystem/Promise.h"
 #include "threading/TaskSystem/WorkerThread.h"
 #include "stl/Algorithms/StringUtils.h"
 #include "UnitTest_Common.h"
@@ -56,7 +56,7 @@ namespace
 		scheduler->AddThread( MakeShared<WorkerThread>() );
 		
 		auto p0 = MakePromise( [] () { return PromiseResult<String>{ "a"s }; });
-		auto p1 = MakePromise( [] () -> PromiseResult<String> { return PromiseNullResult(); });	// canceled promise
+		auto p1 = MakePromise( [] () -> PromiseResult<String> { return CancelPromise; });	// canceled promise
 		
 		Atomic<bool>	p2_ok = false;
 		Atomic<bool>	p3_ok = false;

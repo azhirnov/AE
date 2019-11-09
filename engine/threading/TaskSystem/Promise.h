@@ -7,7 +7,12 @@
 
 namespace AE::Threading
 {
-	struct PromiseNullResult {};
+	struct PromiseNullResult {
+		constexpr PromiseNullResult () {}
+	};
+
+	static constexpr PromiseNullResult  CancelPromise = {};
+
 
 
 	//
@@ -402,7 +407,7 @@ namespace _ae_threading_hidden_
 	inline Promise<T>::_InternalImpl::_InternalImpl (Fn &&fn, bool except, EThread thread) :
 		IAsyncTask{ thread },
 		_func{ std::forward<Fn>(fn) },
-		_result{ PromiseNullResult{} },
+		_result{ CancelPromise },
 		_isExept{ except }
 	{
 		ASSERT( _func );
@@ -424,7 +429,7 @@ namespace _ae_threading_hidden_
 			// set failed state
 			if ( not _result.HasValue() )
 			{
-				_SetFailedState();
+				OnFailure();
 			}
 		}
 	}
