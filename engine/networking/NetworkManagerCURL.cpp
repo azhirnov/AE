@@ -47,16 +47,15 @@ namespace AE::Networking
 	private:
 		CURL*					_curl				= null;
 		curl_slist*				_slist				= null;
-		CURLMcode				_addToCurlmResult	= CURLM_OK;
+		CURLMcode				_addToCurlmResult	= CURLM_LAST;
 		CURLcode				_completionResult	= CURLE_OK;
 		UniquePtr<RStream>		_content;
 		TimePoint_t				_lastResponseTime;
 		bool					_complete			= false;
 
-		#ifdef AE_DEBUG
+		DEBUG_ONLY(
 			char				_errorBuffer [CURL_ERROR_SIZE] = {};
-		#endif
-
+		)
 		DataRaceCheck			_drCheck;
 
 
@@ -71,10 +70,11 @@ namespace AE::Networking
 
 			void Enque (CURLM* curlm, CURLSH* shared);
 			void Complete (CURLM* curlm, CURLcode code);
-		ND_ bool IsComplete (Duration_t responseTimeout);
+		ND_ bool IsComplete (CURLM* curlm, Duration_t responseTimeout);
 
 	private:
 		bool  _Setup (const RequestDesc &desc, const Settings_t &settings);
+		void  _Release ();
 
 		static size_t _DownloadCallback (char *ptr, size_t size, size_t nmemb, void *userdata);
 		static size_t _UploadCallback (char *buffer, size_t size, size_t nitems, void *userdata);
@@ -97,6 +97,16 @@ namespace AE::Networking
 	{
 		EXLOCK( _drCheck );
 		_Setup( desc, settings );
+	}
+
+/*
+=================================================
+	destructor
+=================================================
+*/
+	CurlRequestTask::~CurlRequestTask ()
+	{
+		_Release();
 	}
 	
 /*
@@ -259,21 +269,27 @@ namespace AE::Networking
 	
 /*
 =================================================
-	destructor
+	_Release
 =================================================
 */
-	CurlRequestTask::~CurlRequestTask ()
+	void  CurlRequestTask::_Release ()
 	{
 		EXLOCK( _drCheck );
 
-		if ( _curl ) {
+		if ( _curl )
+		{
 			curl_easy_setopt( _curl, CURLOPT_DEBUGDATA, null );
 			curl_easy_cleanup( _curl );
+			_curl = null;
 		}
 
-		if ( _slist ) {
+		if ( _slist )
+		{
 			curl_slist_free_all( _slist );
+			_slist = null;
 		}
+
+		_complete = true;
 	}
 	
 /*
@@ -407,7 +423,7 @@ namespace AE::Networking
 
 		if ( curlm and _addToCurlmResult == CURLM_OK )
 		{
-			curl_multi_remove_handle( curlm, _curl );
+			CURLM_CALL( curl_multi_remove_handle( curlm, _curl ));
 		}
 
 		_completionResult = code;
@@ -438,8 +454,11 @@ namespace AE::Networking
 
 			AE_LOGI( "http request code: "s << ToString(uint(_response->code))
 				<< (url ? (", url: "s << url) : "")
-				<< ", msg: " << _errorBuffer );
+				DEBUG_ONLY( << ", msg: " << _errorBuffer )
+			);
 		}
+
+		_Release();
 	}
 	
 /*
@@ -447,21 +466,32 @@ namespace AE::Networking
 	IsComplete
 =================================================
 */
-	bool CurlRequestTask::IsComplete (Duration_t responseTimeout)
+	bool CurlRequestTask::IsComplete (CURLM* curlm, Duration_t responseTimeout)
 	{
 		EXLOCK( _drCheck );
 
-		if ( _complete or Status() > EStatus::_Finished )
+		if ( _complete						or
+			 _addToCurlmResult != CURLM_OK	or
+			 _completionResult != CURLE_OK )
+		{
 			return true;
+		}
 
-		if ( _addToCurlmResult != CURLM_OK )
+		EStatus	status = Status();
+
+		if ( (_curl != null) & (curlm != null) & (status == EStatus::Cancellation) )
+		{
+			_addToCurlmResult	= CURLM_LAST;
+			_response->code		= ECode::RequestCanceled;
+
+			CURLM_CALL( curl_multi_remove_handle( curlm, _curl ));
+			return true;
+		}
+
+		if ( status > EStatus::_Finished )
 			return true;
 		
-		if ( _completionResult != CURLE_OK )
-			return true;
-		
-		auto	dt = (TimePoint_t::clock::now() - _lastResponseTime);
-		if ( dt > responseTimeout )
+		if ( auto dt = (TimePoint_t::clock::now() - _lastResponseTime); dt > responseTimeout )
 		{
 			_response->code = ECode::TimeoutAfterLastResponse;
 			AE_LOGI( "http request timed out" );
@@ -479,8 +509,10 @@ namespace AE::Networking
 	void CurlRequestTask::OnCancel ()
 	{
 		EXLOCK( _drCheck );
+		
+		ASSERT( _addToCurlmResult == CURLM_LAST );
 
-		// TODO
+		_Release();
 	}
 
 }	// AE::Networking
@@ -626,9 +658,9 @@ namespace AE::Networking
 
 			for (auto iter = _activeRequests.begin(); iter != _activeRequests.end();)
 			{
-				if ( (*iter)->IsComplete( max_delay ))
+				if ( (*iter)->IsComplete( _curlm, max_delay ))
 				{
-					_SetCompletedState( *iter );
+					_OnTaskFinish( *iter );
 					iter = _activeRequests.erase( iter );
 				}
 				else

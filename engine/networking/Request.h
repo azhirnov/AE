@@ -94,6 +94,7 @@ namespace AE::Networking
 			OperationTimeout			= 1 << 16,
 			ConnectionError				= 2 << 16,
 			TimeoutAfterLastResponse	= 3 << 16,
+			RequestCanceled				= 4 << 16,
 			// http codes
 			OK							= 200,
 			NoContent					= 204,

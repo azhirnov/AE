@@ -3,7 +3,7 @@
 #pragma once
 
 #include "networking/Request.h"
-#include "threading/Primise/Promise.h"
+#include "threading/TaskSystem/Promise.h"
 
 namespace AE::Networking
 {
