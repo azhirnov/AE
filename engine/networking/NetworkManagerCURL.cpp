@@ -144,7 +144,7 @@ namespace AE::Networking
 		// redirections
 		if ( desc._redirections ) {
 			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_FOLLOWLOCATION, 1L ));
-			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_MAXREDIRS, long(desc._redirections) ));
+			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_MAXREDIRS, int(desc._redirections) ));
 		} else {
 			// disable redirections
 			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_FOLLOWLOCATION, 0L ));
@@ -162,7 +162,7 @@ namespace AE::Networking
 		}
 		
 		bool		use_read_fn		= false;
-		const long	content_size	= _content ? long(_content->RemainingSize()) : 0;
+		const long	content_size	= _content ? int(_content->RemainingSize()) : 0;
 
 		BEGIN_ENUM_CHECKS();
 		switch ( desc._method )
@@ -192,7 +192,7 @@ namespace AE::Networking
 				break;
 			}
 			case EMethod::Head : {
-				CURL_CALL( curl_easy_setopt( _curl, CURLOPT_NOBODY, 1 ));
+				CURL_CALL( curl_easy_setopt( _curl, CURLOPT_NOBODY, 1L ));
 				break;
 			}
 			case EMethod::Delete : {
@@ -216,16 +216,16 @@ namespace AE::Networking
 		CURL_CALL( curl_easy_setopt( _curl, CURLOPT_HEADERFUNCTION, &_HeaderCallback ));
 
 		// write function
-		CURL_CALL( curl_easy_setopt( _curl, CURLOPT_BUFFERSIZE, long(settings.downloadBufferSize) ));
+		CURL_CALL( curl_easy_setopt( _curl, CURLOPT_BUFFERSIZE, int(settings.downloadBufferSize) ));
 		CURL_CALL( curl_easy_setopt( _curl, CURLOPT_WRITEDATA, this ));
 		CURL_CALL( curl_easy_setopt( _curl, CURLOPT_WRITEFUNCTION, &_DownloadCallback ));
 
 		// timeout
 		if ( settings.connectionTimeout.count() ) {
-			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_CONNECTTIMEOUT_MS, long(settings.connectionTimeout.count()) ));
+			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_CONNECTTIMEOUT_MS, int(settings.connectionTimeout.count()) ));
 		}
 		if ( settings.transferTimout.count() ) {
-			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_TIMEOUT_MS, long(settings.transferTimout.count()) ));
+			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_TIMEOUT_MS, int(settings.transferTimout.count()) ));
 		}
 
 		// add headers

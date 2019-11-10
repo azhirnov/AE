@@ -82,7 +82,3 @@ endif()
 if (NOT ${STD_OPTIONAL_SUPPORTED})
 	message( FATAL_ERROR "std::optional support required" )
 endif()
-
-if (CMAKE_VERSION VERSION_LESS 3.11.0)
-	add_dependencies( "ProjectTemplate" ExternalDependencies )
-endif ()

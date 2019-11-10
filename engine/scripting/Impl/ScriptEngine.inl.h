@@ -34,7 +34,7 @@ namespace AE::Scripting
 	{
 		String	signature;
 		ScriptTypeInfo<T>::Name( OUT signature );
-		signature << ' ' << name;
+		(signature += ' ') += name;
 
 		AS_CALL( _engine->RegisterGlobalProperty( signature.c_str(), Cast<void *>(&var) ) );
 	}
@@ -49,7 +49,7 @@ namespace AE::Scripting
 	{
 		String	signature( "const " );
 		ScriptTypeInfo<T>::Name( OUT signature );
-		signature << ' ' << name;
+		(signature += ' ') += name;
 
 		AS_CALL( _engine->RegisterGlobalProperty( signature.c_str(), Cast<void *>(const_cast<T*>(&var)) ) );
 	}

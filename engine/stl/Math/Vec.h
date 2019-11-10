@@ -9,7 +9,7 @@
 namespace AE::STL
 {
 
-	template <typename T, uint I>
+	template <typename T, int I>
 	using Vec = glm::vec< I, T >;
 	
 
@@ -53,7 +53,7 @@ namespace AE::STL
 			static constexpr bool	value = false;
 		};
 
-		template <typename T, uint I>
+		template <typename T, int I>
 		struct _IsVec< Vec<T,I> > {
 			static constexpr bool	value = true;
 		};
@@ -73,7 +73,7 @@ namespace AE::STL
 		struct _VecSize {
 		};
 
-		template <typename T, uint I>
+		template <typename T, int I>
 		struct _VecSize< Vec<T,I> > {
 			static constexpr uint	value = I;
 		};
@@ -87,7 +87,7 @@ namespace AE::STL
 	operator !
 =================================================
 */
-	template <typename T, uint I>
+	template <typename T, int I>
 	ND_ forceinline Vec<T,I>  operator ! (const Vec<T,I> &value)
 	{
 		Vec<T,I>	res;
@@ -102,7 +102,7 @@ namespace AE::STL
 	operator *
 =================================================
 */
-	template <typename T, uint I, typename S>
+	template <typename T, int I, typename S>
 	ND_ forceinline EnableIf<IsScalar<S> and not IsSameTypes<T,S>, Vec<T,I>>  operator * (const Vec<T,I> &lhs, const S &rhs)
 	{
 		return lhs * T(rhs);
@@ -113,13 +113,13 @@ namespace AE::STL
 	operator %
 =================================================
 */
-	/*template <typename T, uint I>
+	/*template <typename T, int I>
 	ND_ forceinline EnableIf<IsFloatPoint<T>, Vec<T,I>>  operator % (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
 	{
 		return glm::mod( lhs, rhs );
 	}*/
 	
-	template <typename T, uint I>
+	template <typename T, int I>
 	ND_ forceinline EnableIf<IsFloatPoint<T>, Vec<T,I>&>  operator %= (Vec<T,I> &lhs, const Vec<T,I> &rhs)
 	{
 		return (lhs = glm::mod( lhs, rhs ));
@@ -169,7 +169,7 @@ namespace AE::STL
 	Abs
 =================================================
 */
-	template <typename T, uint I>
+	template <typename T, int I>
 	ND_ forceinline Vec<T,I>  Abs (const Vec<T,I> &value)
 	{
 		return glm::abs( value );
@@ -177,32 +177,22 @@ namespace AE::STL
 
 /*
 =================================================
-	Floor
+	Floor/Ceil/Fract
 =================================================
 */
-	template <typename T, uint I>
+	template <typename T, int I>
 	ND_ forceinline EnableIf<IsFloatPoint<T>, Vec<T,I>>  Floor (const Vec<T,I> &value)
 	{
 		return glm::floor( value );
 	}
 
-/*
-=================================================
-	Ceil
-=================================================
-*/
-	template <typename T, uint I>
+	template <typename T, int I>
 	ND_ forceinline EnableIf<IsFloatPoint<T>, Vec<T,I>>  Ceil (const Vec<T,I> &value)
 	{
 		return glm::ceil( value );
 	}
 
-/*
-=================================================
-	Fract
-=================================================
-*/
-	template <typename T, uint I>
+	template <typename T, int I>
 	ND_ forceinline EnableIf<IsFloatPoint<T>, Vec<T,I>>  Fract (const Vec<T,I> &value)
 	{
 		return glm::fract( value );
@@ -213,7 +203,7 @@ namespace AE::STL
 	Lerp
 =================================================
 */
-	template <typename T, uint I>
+	template <typename T, int I>
 	ND_ forceinline Vec<T,I>  Lerp (const Vec<T,I> &lhs, const Vec<T,I> &rhs, const T factor)
 	{
 		return glm::mix( lhs, rhs, factor );
@@ -224,7 +214,7 @@ namespace AE::STL
 	Dot
 =================================================
 */
-	template <typename T, uint I>
+	template <typename T, int I>
 	ND_ forceinline T  Dot (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
 	{
 		return glm::dot( lhs, rhs );
@@ -246,7 +236,7 @@ namespace AE::STL
 	Equals
 =================================================
 */
-	template <typename T, uint I>
+	template <typename T, int I>
 	ND_ forceinline Vec<bool,I>  Equals (const Vec<T,I> &lhs, const Vec<T,I> &rhs, const T &err = std::numeric_limits<T>::epsilon())
 	{
 		Vec<bool,I>	res;
@@ -261,7 +251,7 @@ namespace AE::STL
 	Wrap
 =================================================
 */
-	template <typename T, uint I>
+	template <typename T, int I>
 	ND_ forceinline EnableIf<IsFloatPoint<T>, Vec<T,I>>  Wrap (const Vec<T,I>& v, const T& minValue, const T& maxValue)
 	{
 		Vec<T,I>	res;
@@ -276,7 +266,7 @@ namespace AE::STL
 	Round / RoundToInt / RoundToUint
 =================================================
 */
-	template <typename T, uint I>
+	template <typename T, int I>
 	ND_ forceinline constexpr EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Round (const Vec<T,I>& v)
 	{
 		Vec<T,I>	res;
@@ -286,7 +276,7 @@ namespace AE::STL
 		return res;
 	}
 	
-	template <typename T, uint I>
+	template <typename T, int I>
 	ND_ forceinline constexpr auto  RoundToInt (const Vec<T,I>& v)
 	{
 		using R = decltype(RoundToInt(T()));
@@ -298,7 +288,7 @@ namespace AE::STL
 		return res;
 	}
 	
-	template <typename T, uint I>
+	template <typename T, int I>
 	ND_ forceinline constexpr auto  RoundToUint (const Vec<T,I>& v)
 	{
 		using R = decltype(RoundToUint(T()));
@@ -316,7 +306,7 @@ namespace AE::STL
 namespace std
 {
 #if AE_FAST_HASH
-	template <typename T, uint I>
+	template <typename T, int I>
 	struct hash< AE::STL::Vec<T,I> > {
 		ND_ size_t  operator () (const AE::STL::Vec<T,I> &value) const {
 			return size_t(AE::STL::HashOf( value.data(), value.size() * sizeof(T) ));

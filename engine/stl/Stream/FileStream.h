@@ -83,7 +83,7 @@ namespace AE::STL
 
 
 // check definitions
-#if defined (COMPILER_MSVC) or defined (COMPILER_CLANG)
+#ifdef AE_CPP_DETECT_MISSMATCH
 
 # ifdef _FILE_OFFSET_BITS
 #  if _FILE_OFFSET_BITS == 64
@@ -99,4 +99,4 @@ namespace AE::STL
 #	pragma detect_mismatch( "AE_STD_FILESYSTEM", "0" )
 #  endif
 
-#endif	// COMPILER_MSVC or COMPILER_CLANG
+#endif	// AE_CPP_DETECT_MISSMATCH

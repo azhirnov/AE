@@ -14,6 +14,8 @@ namespace AE::STL
 	template <typename T>
 	struct RadiansTempl
 	{
+		STATIC_ASSERT( IsScalar<T> and IsFloatPoint<T> );
+		
 	// types
 	public:
 		using Self		= RadiansTempl<T>;
@@ -126,7 +128,6 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ASin (const T& x)
 	{
-		STATIC_ASSERT( IsScalarOrEnum<T> );
 		ASSERT( x >= T(-1) and x <= T(1) );
 
 		return RadiansTempl<T>{::asin( x )};
@@ -140,7 +141,6 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ACos (const T& x)
 	{
-		STATIC_ASSERT( IsScalarOrEnum<T> );
 		ASSERT( x >= T(-1) and x <= T(1) );
 
 		return RadiansTempl<T>{::acos( x )};
@@ -176,8 +176,6 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ASinH (const T& x)
 	{
-		STATIC_ASSERT( CompileTime::IsScalarOrEnum<T> );
-
 		return RadiansTempl<T>( SignOrZero( x ) * Ln( x + Sqrt( (x*x) + T(1) ) ) );
 	}
 	
@@ -189,8 +187,6 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ACosH (const T& x)
 	{
-		STATIC_ASSERT( CompileTime::IsScalarOrEnum<T> );
-
 		ASSERT( x >= T(1) );
 		return RadiansTempl<T>{Ln( x + Sqrt( (x*x) - T(1) ) )};
 	}
@@ -247,8 +243,6 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ATan (const T& y_over_x)
 	{
-		STATIC_ASSERT( IsScalarOrEnum<T> );
-
 		return RadiansTempl<T>{::atan( y_over_x )};
 	}
 	
@@ -260,8 +254,6 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ATan (const T& y, const T& x)
 	{
-		STATIC_ASSERT( IsScalarOrEnum<T> );
-
 		return RadiansTempl<T>{::atan2( y, x )};
 	}
 	
@@ -273,8 +265,6 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ACoTan (const T& x)
 	{
-		STATIC_ASSERT( IsScalarOrEnum<T> );
-
 		return RadiansTempl<T>{SafeDiv( T(1), ATan( x ), T(0) )};
 	}
 	
@@ -286,8 +276,6 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline Radians<T>  ATanH (const T& x)
 	{
-		STATIC_ASSERT( CompileTime::IsScalarOrEnum<T> );
-
 		ASSERT( x > T(-1) and x < T(1) );
 
 		if ( Abs(x) == T(1) )	return Infinity<T>();	else
@@ -303,8 +291,6 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ACoTanH (const T& x)
 	{
-		STATIC_ASSERT( IsScalarOrEnum<T> );
-
 		return RadiansTempl<T>{SafeDiv( T(1), ATanH( x ), T(0) )};
 	}
 	

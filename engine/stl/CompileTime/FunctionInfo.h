@@ -76,32 +76,36 @@ namespace AE::STL
 				using type		= Result (Class::*) (Args...) _cv_qual_; \
 				using clazz		= Class; \
 				\
-				static constexpr bool	is_const	= std::is_const_v< _cv_qual_ int >; \
-				static constexpr bool	is_volatile	= std::is_volatile_v< _cv_qual_ int >; \
+				static constexpr bool	is_const	= std::is_const_v< int _cv_qual_ >; \
+				static constexpr bool	is_volatile	= std::is_volatile_v< int _cv_qual_ >; \
 			};
 		_DECL_FUNC_INFO( const );
 		_DECL_FUNC_INFO( volatile );
 		_DECL_FUNC_INFO( const volatile );
-		_DECL_FUNC_INFO( noexcept );
-		_DECL_FUNC_INFO( const noexcept );
-		_DECL_FUNC_INFO( volatile noexcept );
-		_DECL_FUNC_INFO( const volatile noexcept );
 		_DECL_FUNC_INFO( & );
 		_DECL_FUNC_INFO( const & );
 		_DECL_FUNC_INFO( volatile & );
 		_DECL_FUNC_INFO( const volatile & );
-		_DECL_FUNC_INFO( & noexcept );
-		_DECL_FUNC_INFO( const & noexcept );
-		_DECL_FUNC_INFO( volatile & noexcept );
-		_DECL_FUNC_INFO( const volatile & noexcept );
 		_DECL_FUNC_INFO( && );
 		_DECL_FUNC_INFO( const && );
 		_DECL_FUNC_INFO( volatile && );
 		_DECL_FUNC_INFO( const volatile && );
+		
+	#ifdef AE_HAS_EXCEPTIONS
+		_DECL_FUNC_INFO( noexcept );
+		_DECL_FUNC_INFO( const noexcept );
+		_DECL_FUNC_INFO( volatile noexcept );
+		_DECL_FUNC_INFO( const volatile noexcept );
+		_DECL_FUNC_INFO( & noexcept );
+		_DECL_FUNC_INFO( const & noexcept );
+		_DECL_FUNC_INFO( volatile & noexcept );
+		_DECL_FUNC_INFO( const volatile & noexcept );
 		_DECL_FUNC_INFO( && noexcept );
 		_DECL_FUNC_INFO( const && noexcept );
 		_DECL_FUNC_INFO( volatile && noexcept );
 		_DECL_FUNC_INFO( const volatile && noexcept );
+	#endif
+		
 		#undef _DECL_FUNC_INFO
 
 		

@@ -10,13 +10,13 @@ namespace
 	{
 		using T = DebugInstanceCounter<uint, 1>;
 	
-		LinearAllocator		pool;
-		pool.SetBlockSize( 4_Mb );
+		LinearAllocator<>	allocator;
+		allocator.SetBlockSize( 4_Mb );
 
 
 		T::ClearStatistic();
 		{
-			std::vector< T, StdLinearAllocator<T> >	vec{ pool };
+			std::vector< T, StdLinearAllocator<T> >	vec{ allocator };
 
 			vec.resize( 100 );
 			vec.push_back( T(101) );

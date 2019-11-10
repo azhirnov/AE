@@ -10,6 +10,11 @@
 #endif
 
 
+#ifndef PLATFORM_ANDROID
+#	define AE_HAS_EXCEPTIONS
+#endif
+
+
 #ifdef COMPILER_MSVC
 #	define and		&&
 #	define or		||
@@ -300,8 +305,8 @@
 #	define AE_THISCALL	__thiscall
 
 #elif defined(COMPILER_CLANG) or defined(COMPILER_GCC)
-#	define AE_CDECL		__attribute__((cdecl))
-#	define AE_THISCALL	__attribute__((thiscall))
+#	define AE_CDECL		//__attribute__((cdecl))
+#	define AE_THISCALL	//__attribute__((thiscall))
 #endif
 
 
@@ -365,7 +370,7 @@
 
 
 // check definitions
-#if defined (COMPILER_MSVC) or defined (COMPILER_CLANG)
+#ifdef AE_CPP_DETECT_MISSMATCH
 
 #  ifdef AE_DEBUG
 #	pragma detect_mismatch( "AE_DEBUG", "1" )
@@ -391,4 +396,4 @@
 #	pragma detect_mismatch( "AE_CI_BUILD", "0" )
 #  endif
 
-#endif	// COMPILER_MSVC or COMPILER_CLANG
+#endif	// AE_CPP_DETECT_MISSMATCH

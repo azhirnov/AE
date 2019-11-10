@@ -330,7 +330,7 @@ namespace _ae_threading_hidden_
 		if constexpr( IsVoid< typename FI::result > )
 		{
 			STATIC_ASSERT( FI::args::Count == 1 );
-			STATIC_ASSERT( IsSameTypes< FI::args::Get<0>, const T& >);
+			STATIC_ASSERT( IsSameTypes< typename FI::args::template Get<0>, const T& >);
 
 			return Result{	[fn = std::forward<Fn>(fn), in = _impl] () {
 								fn( in->Result() );
@@ -343,7 +343,7 @@ namespace _ae_threading_hidden_
 		else
 		{
 			STATIC_ASSERT( FI::args::Count == 1 );
-			STATIC_ASSERT( IsSameTypes< FI::args::Get<0>, const T& >);
+			STATIC_ASSERT( IsSameTypes< typename FI::args::template Get<0>, const T& >);
 
 			return Result{	[fn = std::forward<Fn>(fn), in = _impl] () {
 								return fn( in->Result() );

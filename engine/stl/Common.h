@@ -30,7 +30,9 @@
 
 namespace AE::STL
 {
-	using uint = uint32_t;
+	using uint 		= uint32_t;
+	//using usize	= size_t;
+	//using isize	= ptrdiff_t;
 
 							using String		= std::string;
 	template <typename T>	using BasicString	= std::basic_string< T >;
