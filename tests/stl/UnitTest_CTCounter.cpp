@@ -1,11 +1,11 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
-
+/*
 #include "stl/CompileTime/Counter.h"
 #include "UnitTest_Common.h"
-
+*/
 
 extern void UnitTest_CT_Counter ()
-{
+{/*
 	STATIC_ASSERT( CT_UniqueValue::value<> != CT_UniqueValue::value<> );
 	STATIC_ASSERT( CT_UniqueValue::value<> != CT_UniqueValue::value<> );
 	STATIC_ASSERT( CT_UniqueValue::value<> != CT_UniqueValue::value<> );
@@ -23,5 +23,5 @@ extern void UnitTest_CT_Counter ()
 	STATIC_ASSERT( counter2::Value() == 1 );
 	STATIC_ASSERT( counter2::Next() == 2 );
 
-	AE_LOGI( "UnitTest_CT_Counter - passed" );
+	AE_LOGI( "UnitTest_CT_Counter - passed" );*/
 }

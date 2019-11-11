@@ -1,9 +1,9 @@
-language: cpp
 matrix:
   include:
     
     # Windows MSVC x64
     - os: windows
+      language: cpp
       script:
         - mkdir -p build
         - cd build
@@ -11,3 +11,34 @@ matrix:
         - cmake --build . --config Release
         - ctest -C Release --verbose
       
+    # Android
+    # from https://github.com/android/ndk-samples/blob/master/.travis.yml
+    - os: android
+      language: android
+      sudo: true
+      android:
+        components:
+            - tools
+            - platform-tools
+            - extra-google-m2repository
+            - extra-android-m2repository
+      addons:
+        apt_packages:
+            - pandoc
+        
+      before_install:
+        - sudo apt-get install ant
+
+      install:
+        - echo y | sdkmanager "ndk-bundle"
+        - echo y | sdkmanager "cmake;3.6.4111459"
+        - echo y | sdkmanager --channel=3 --channel=1 "cmake;3.10.2.4988404"
+        - echo y | sdkmanager "lldb;3.1"
+      
+      before_script:
+        - export ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle
+
+      script:
+        - cd ./android
+        - chmod +x gradlew
+        - ./gradlew build

@@ -36,19 +36,18 @@ file( MAKE_DIRECTORY "${EXTERNAL_PATH}" )
 if (EXISTS "${EXTERNAL_PATH}/CMakeLists.txt")
 	execute_process(
 		COMMAND git checkout "${AE_EXTERNAL_TARGET}"
-		COMMAND git lfs pull
 		WORKING_DIRECTORY "${EXTERNAL_PATH}"
-		RESULT_VARIABLE CHECKOUT_RESULT
 	)
-	#message( STATUS "${CHECKOUT_RESULT}" )
 else ()
 	execute_process(
 		COMMAND git clone "${EXTERNAL_REPOSITORY}" "external/${AE_EXTERNAL_TARGET}" --branch "${AE_EXTERNAL_TARGET}"
-		COMMAND git lfs pull
 		WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-		RESULT_VARIABLE CLONE_RESULT
 	)
-	#message( STATUS "${CLONE_RESULT}" )
 endif ()
+
+execute_process(
+	COMMAND git lfs pull
+	WORKING_DIRECTORY "${EXTERNAL_PATH}"
+)
 
 add_subdirectory( "${EXTERNAL_PATH}" "external" )

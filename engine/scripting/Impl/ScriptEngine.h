@@ -113,7 +113,7 @@ namespace AE::Scripting
 		void SetNamespace (NtStringView name);
 		void SetDefaultNamespace ();
 
-		ND_ static bool _CheckError (int err, StringView asFunc, StringView func, StringView file, int line);
+		static bool _CheckError (int err, StringView asFunc, StringView func, StringView file, int line);
 
 	private:
 		bool _CreateContext (const String &signature, const ScriptModulePtr &module, AngelScript::asIScriptContext* &ctx);
