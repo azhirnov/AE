@@ -3,11 +3,16 @@
 #pragma once
 
 #include "stl/Platforms/WindowsUtils.h"
+#include "stl/Platforms/AndroidUtils.h"
 
 namespace AE::STL
 {
-	#ifdef PLATFORM_WINDOWS
+	#if defined(PLATFORM_WINDOWS)
 		using PlatformUtils = WindowsUtils;
+	
+	#elif defined(PLATFORM_ANDROID)
+		using PlatformUtils = AndroidUtils;
+		
 	#endif
-
+	
 }	// AE::STL

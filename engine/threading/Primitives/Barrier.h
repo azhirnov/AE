@@ -259,7 +259,7 @@ namespace AE::Threading
 
 
 // check definitions
-#if defined (COMPILER_MSVC) or defined (COMPILER_CLANG)
+#ifdef AE_CPP_DETECT_MISSMATCH
 
 #  if AE_BARRIER_MODE == 0
 #	pragma detect_mismatch( "AE_BARRIER_MODE", "0" )
@@ -273,4 +273,4 @@ namespace AE::Threading
 #	error fix me!
 #  endif
 
-#endif	// COMPILER_MSVC or COMPILER_CLANG
+#endif	// AE_CPP_DETECT_MISSMATCH

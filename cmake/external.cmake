@@ -11,70 +11,43 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 		message( FATAL_ERROR "64-bit Windows platform is required" )
 	endif ()
 	set( AE_EXTERNAL_TARGET "win64-msvc-v141" )
+	
+elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Android")
+	set( AE_EXTERNAL_TARGET "android" )
+
 else ()
 	message( FATAL_ERROR "unsupported target platform: ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION}" )
 endif ()
 
+set( EXTERNAL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/${AE_EXTERNAL_TARGET}" )
+set( EXTERNAL_REPOSITORY "https://github.com/azhirnov/AE-External.git" )
+
+file( MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/external" )
+
 
 # download
-set( EXTERNAL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external" )
-
-if (CMAKE_VERSION VERSION_LESS 3.11.0)
-
-	include( ExternalProject )
+find_package( Git )
+if (NOT Git_FOUND)
+	message( FATAL_ERROR "Git not found" )
+endif ()
 	
-	ExternalProject_Add( ExternalDependencies
-		# download
-		GIT_REPOSITORY		"https://github.com/azhirnov/AE-External.git"
-		GIT_TAG				${AE_EXTERNAL_TARGET}
-		GIT_PROGRESS		1
-		EXCLUDE_FROM_ALL	1
-		LOG_DOWNLOAD		1
-		# update
-		UPDATE_COMMAND		git lfs pull
-		PATCH_COMMAND		""
-		UPDATE_DISCONNECTED	1
-		LOG_UPDATE			1
-		# configure
-		SOURCE_DIR			"${EXTERNAL_PATH}"
-		CONFIGURE_COMMAND	""
-		# build
-		BINARY_DIR			""
-		BUILD_COMMAND		""
-		INSTALL_COMMAND		""
-		TEST_COMMAND		""
+file( MAKE_DIRECTORY "${EXTERNAL_PATH}" )
+	
+if (EXISTS "${EXTERNAL_PATH}/CMakeLists.txt")
+	execute_process(
+		COMMAND git checkout "${AE_EXTERNAL_TARGET}"
+		WORKING_DIRECTORY "${EXTERNAL_PATH}"
 	)
-
 else ()
-
-	include( FetchContent )
-
-	#set( FETCHCONTENT_FULLY_DISCONNECTED ON CACHE BOOL "don't download externals" )
-	set( FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "don't update externals" )
-	mark_as_advanced( FETCHCONTENT_BASE_DIR FETCHCONTENT_FULLY_DISCONNECTED )
-	mark_as_advanced( FETCHCONTENT_QUIET FETCHCONTENT_UPDATES_DISCONNECTED )
-
-	FetchContent_Declare( ExternalDependencies
-		GIT_REPOSITORY		"https://github.com/azhirnov/AE-External.git"
-		GIT_TAG				"${AE_EXTERNAL_TARGET}"
-		# update
-		UPDATE_COMMAND		git lfs pull
-		# configure
-		SOURCE_DIR			"${EXTERNAL_PATH}"
-		CONFIGURE_COMMAND	""
-		# build
-		BINARY_DIR			""
-		BUILD_COMMAND		""
-		INSTALL_COMMAND		""
-		TEST_COMMAND		""
+	execute_process(
+		COMMAND git clone "${EXTERNAL_REPOSITORY}" "external/${AE_EXTERNAL_TARGET}" --branch "${AE_EXTERNAL_TARGET}"
+		WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
 	)
-	
-	FetchContent_GetProperties( ExternalDependencies )
-	if (NOT ExternalDependencies_POPULATED)
-		message( STATUS "downloading external dependencies" )
-		FetchContent_Populate( ExternalDependencies )
-	endif ()
-
 endif ()
 
-add_subdirectory( ${EXTERNAL_PATH} "external" )
+execute_process(
+	COMMAND git lfs pull
+	WORKING_DIRECTORY "${EXTERNAL_PATH}"
+)
+
+add_subdirectory( "${EXTERNAL_PATH}" "external" )

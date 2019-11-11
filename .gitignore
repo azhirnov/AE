@@ -2,3 +2,4 @@
 *.glsl_dbg
 /build
 /external
+*.cxx

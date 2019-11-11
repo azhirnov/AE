@@ -4,8 +4,8 @@
 
 #include "scripting/Impl/ScriptEngine.inl.h"
 
-#include "stl/math/Vec.h"
-#include "stl/math/Color.h"
+#include "stl/Math/Vec.h"
+#include "stl/Math/Color.h"
 
 namespace AE::Scripting
 {

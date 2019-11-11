@@ -246,33 +246,33 @@ namespace AE::Threading
 	public:
 		ND_ static TaskScheduler&  Instance ();
 
-			bool Setup (size_t maxWorkerThreads);
-			void Release ();
+		bool Setup (size_t maxWorkerThreads);
+		void Release ();
 			
 		AE_VTUNE(
-			ND_ __itt_domain*	GetVTuneDomain () const	{ return _vtuneDomain; }
+		 ND_ __itt_domain*	GetVTuneDomain () const	{ return _vtuneDomain; }
 		)
 
 	// thread api
-			bool AddThread (const ThreadPtr &thread);
+		bool AddThread (const ThreadPtr &thread);
 
-			bool ProcessTask (EThread type, uint seed);
+		bool ProcessTask (EThread type, uint seed);
 
 		ND_ AsyncTask  PullTask (EThread type, uint seed);
 
 	// task api
 		template <typename T, typename ...Args>
-		ND_ AsyncTask  Run (Args&& ...args);
+		AsyncTask  Run (Args&& ...args);
 		
 		template <typename T, typename ...Args>
-		ND_ AsyncTask  Run (WeakDeps &&dependsOn, Args&& ...args);
+		AsyncTask  Run (WeakDeps &&dependsOn, Args&& ...args);
 		
 		template <typename T, typename ...Args>
-		ND_ AsyncTask  Run (StrongDeps &&dependsOn, Args&& ...args);
+		AsyncTask  Run (StrongDeps &&dependsOn, Args&& ...args);
 
 		ND_ bool  Wait (ArrayView<AsyncTask> tasks, Nanoseconds timeout = Nanoseconds{30'000'000'000});
 
-			bool  Cancel (const AsyncTask &task);
+		bool  Cancel (const AsyncTask &task);
 
 	private:
 		TaskScheduler ();

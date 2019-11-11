@@ -10,5 +10,7 @@ if (${AE_ENABLE_SCRIPTING})
 	source_group( TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} )
 	set_property( TARGET "Tests.Scripting" PROPERTY FOLDER "EngineTests" )
 	target_link_libraries( "Tests.Scripting" "Scripting" )
+	set_target_properties( "Tests.Scripting" PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
+	
 	add_test( NAME "Tests.Scripting" COMMAND "Tests.Scripting" )
 endif ()

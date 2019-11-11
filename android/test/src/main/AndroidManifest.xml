@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="AE.test">
+  <uses-feature android:glEsVersion="0x00020000" android:required="true"/>
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+  <application
+      android:allowBackup="false"
+      android:fullBackupContent="false"
+      android:icon="@mipmap/ic_launcher"
+      android:label="AE"
+      android:hardwareAccelerated="true"
+      android:isGame="true">
+    <activity
+        android:name=".TestActivity"
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+        android:launchMode="singleTask"
+        android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"
+        android:resizeableActivity="false"
+        android:screenOrientation="userLandscape"
+        android:windowSoftInputMode="adjustPan">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>

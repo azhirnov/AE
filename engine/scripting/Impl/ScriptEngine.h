@@ -113,7 +113,7 @@ namespace AE::Scripting
 		void SetNamespace (NtStringView name);
 		void SetDefaultNamespace ();
 
-		ND_ static bool _CheckError (int err, StringView asFunc, StringView func, StringView file, int line);
+		static bool _CheckError (int err, StringView asFunc, StringView func, StringView file, int line);
 
 	private:
 		bool _CreateContext (const String &signature, const ScriptModulePtr &module, AngelScript::asIScriptContext* &ctx);
@@ -132,7 +132,7 @@ namespace AE::Scripting
 	{ \
 		int __as_result = ( __VA_ARGS__ ); \
 		if ( not ::AE::Scripting::ScriptEngine::_CheckError( __as_result, AE_PRIVATE_TOSTRING( __VA_ARGS__ ), AE_FUNCTION_NAME, __FILE__, __LINE__ ) ) \
-			return false; \
+			return Default; \
 	}
 	
 

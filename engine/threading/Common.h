@@ -79,7 +79,7 @@ namespace AE::Threading
 
 
 // check definitions
-#if defined (COMPILER_MSVC) or defined (COMPILER_CLANG)
+#ifdef AE_CPP_DETECT_MISSMATCH
 
 #  ifdef AE_OPTIMAL_MEMORY_ORDER
 #	pragma detect_mismatch( "AE_OPTIMAL_MEMORY_ORDER", "1" )
@@ -99,4 +99,4 @@ namespace AE::Threading
 #	pragma detect_mismatch( "AE_STD_BARRIER", "0" )
 #  endif
 
-#endif	// COMPILER_MSVC or COMPILER_CLANG
+#endif	// AE_CPP_DETECT_MISSMATCH

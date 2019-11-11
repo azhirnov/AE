@@ -1,0 +1,22 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 28
+
+    defaultConfig {
+        applicationId 'AE.Test'
+        minSdkVersion 24 // for vulkan
+        targetSdkVersion 28
+    }
+    buildTypes {
+        release {
+            //debuggable true // to enable logcat in release
+            minifyEnabled = false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    implementation project(path: ':engine')
+}

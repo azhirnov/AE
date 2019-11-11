@@ -3,7 +3,7 @@ include( CheckCXXSourceCompiles )
 if ( ${COMPILER_MSVC} )
 	set( CMAKE_REQUIRED_FLAGS "/std:c++latest" )
 else()
-	set( CMAKE_REQUIRED_FLAGS "-std=c++17" )
+	set( CMAKE_REQUIRED_FLAGS "-std=c++17 -Werror=unknown-pragmas" )
 endif ()
 
 message( STATUS "Run compiler tests with flags: ${CMAKE_REQUIRED_FLAGS}" )
@@ -69,7 +69,7 @@ check_cxx_source_compiles(
 if (STD_FILESYSTEM_SUPPORTED)
 	set( AE_COMPILER_DEFINITIONS "${AE_COMPILER_DEFINITIONS}" "AE_STD_FILESYSTEM" )
 
-	if (${COMPILER_CLANG} OR ${COMPILER_CLANG_APPLE} OR ${COMPILER_CLANG_ANDROID} OR ${COMPILER_GCC})
+	if (${COMPILER_CLANG} OR ${COMPILER_CLANG_APPLE} OR ${COMPILER_GCC})
 		set( AE_LINK_LIBRARIES "${AE_LINK_LIBRARIES}" "stdc++fs" )
 	endif()
 	set( STD_FILESYSTEM_SUPPORTED ON CACHE INTERNAL "" FORCE )
@@ -103,6 +103,18 @@ check_cxx_source_compiles(
 
 if (STD_BARRIER_SUPPORTED)
 	set( AE_COMPILER_DEFINITIONS "${AE_COMPILER_DEFINITIONS}" "AE_STD_BARRIER" )
+endif ()
+
+#------------------------------------------------------------------------------
+check_cxx_source_compiles(
+	"#pragma detect_mismatch( \"AE_DEBUG\", \"1\" )
+	int main () {
+		return 0;
+	}"
+	CPP_DETECT_MISSMATCH_SUPPORTED )
+
+if (CPP_DETECT_MISSMATCH_SUPPORTED)
+	set( AE_COMPILER_DEFINITIONS "${AE_COMPILER_DEFINITIONS}" "AE_CPP_DETECT_MISSMATCH" )
 endif ()
 
 #------------------------------------------------------------------------------

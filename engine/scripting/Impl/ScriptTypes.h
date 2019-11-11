@@ -258,13 +258,6 @@ namespace AE::Scripting
 
 
 		template <typename T>
-		static void Print (T *)
-		{
-			TODO("Print");
-		}
-
-
-		template <typename T>
 		static void Constructor (AngelScript::asIScriptGeneric *gen)
 		{
 			new( gen->GetObject() ) T();
@@ -364,7 +357,7 @@ namespace AE::Scripting
 		template <typename Ret, typename ...Types>
 		struct GlobalFunction < Ret (AE_CDECL *) (Types...) >
 		{
-			using TypeList_t = typename TypeList< Types... >;
+			using TypeList_t = TypeList< Types... >;
 				
 			static void GetDescriptor (OUT String &str, StringView name, uint offsetFromStart = 0, uint offsetFromEnd = 0)
 			{
@@ -382,7 +375,7 @@ namespace AE::Scripting
 		template <typename Ret>
 		struct GlobalFunction < Ret (AE_CDECL *) () >
 		{
-			using TypeList_t = typename TypeList<>;
+			using TypeList_t = TypeList<>;
 				
 			static void GetDescriptor (OUT String &str, StringView name, uint = 0, uint = 0)
 			{
@@ -403,7 +396,7 @@ namespace AE::Scripting
 		template <typename C, typename Ret, typename ...Types>
 		struct MemberFunction < Ret (AE_THISCALL C:: *) (Types...) >
 		{
-			using TypeList_t = typename TypeList< Types... >;
+			using TypeList_t = TypeList< Types... >;
 				
 			static void GetDescriptor (OUT String &str, StringView name, uint offsetFromStart = 0, uint offsetFromEnd = 0)
 			{
@@ -419,7 +412,7 @@ namespace AE::Scripting
 		template <typename C, typename Ret>
 		struct MemberFunction < Ret (AE_THISCALL C:: *) () >
 		{
-			using TypeList_t = typename TypeList<>;
+			using TypeList_t = TypeList<>;
 				
 			static void GetDescriptor (OUT String &str, StringView name, uint offsetFromStart = 0, uint offsetFromEnd = 0)
 			{
@@ -435,7 +428,7 @@ namespace AE::Scripting
 		template <typename C, typename Ret, typename ...Types>
 		struct MemberFunction < Ret (AE_THISCALL C:: *) (Types...) const >
 		{
-			using TypeList_t = typename TypeList< Types... >;
+			using TypeList_t = TypeList< Types... >;
 				
 			static void GetDescriptor (OUT String &str, StringView name, uint offsetFromStart = 0, uint offsetFromEnd = 0)
 			{
@@ -452,7 +445,7 @@ namespace AE::Scripting
 		template <typename C, typename Ret>
 		struct MemberFunction < Ret (AE_THISCALL C:: *) () const >
 		{
-			using TypeList_t = typename TypeList<>;
+			using TypeList_t = TypeList<>;
 				
 			static void GetDescriptor (OUT String &str, StringView name, uint offsetFromStart = 0, uint offsetFromEnd = 0)
 			{
@@ -589,7 +582,7 @@ namespace AE::Scripting
 			static void Set (AngelScript::asIScriptContext *ctx, int index, Arg0 arg0, Args ...args)
 			{
 				AS_CALL( ContextSetterGetter<Arg0>::Set( ctx, index, arg0 ) );
-				SetContextArgs<Args...>::Set( ctx, index+1, FW<Args>(args)... );
+				SetContextArgs<Args...>::Set( ctx, index+1, std::forward<Args>(args)... );
 			}
 		};
 
