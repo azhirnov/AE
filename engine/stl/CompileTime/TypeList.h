@@ -9,20 +9,64 @@ namespace AE::STL
 namespace _ae_stl_hidden_
 {
 
-	template <typename Type, size_t I, typename TL>
-	struct TL_GetIndex;
+	template <typename RefType, size_t I, typename TL>
+	struct TL_GetFirstIndex;
 
-	template <typename Type, size_t I>
-	struct TL_GetIndex< Type, I, std::tuple<> >
+	template <typename RefType, size_t I>
+	struct TL_GetFirstIndex< RefType, I, std::tuple<> >
 	{
 		inline static constexpr size_t	value = UMax;
 	};
 
-	template <typename Type, size_t I, typename Head, typename... Tail>
-	struct TL_GetIndex< Type, I, std::tuple<Head, Tail...> >
+	template <typename RefType, size_t I, typename Head, typename... Tail>
+	struct TL_GetFirstIndex< RefType, I, std::tuple<Head, Tail...> >
 	{
-		inline static constexpr size_t	value = Conditional< IsSameTypes<Type, Head>,
-													std::integral_constant<size_t, I>, TL_GetIndex< Type, I+1, std::tuple<Tail...> > >::value;
+		inline static constexpr size_t	value = Conditional< IsSameTypes<RefType, Head>,
+													std::integral_constant<size_t, I>,
+													TL_GetFirstIndex< RefType, I+1, std::tuple<Tail...> > >::value;
+	};
+	
+
+	template <typename RefType, size_t I, typename TL>
+	struct TL_GetLastIndex;
+	
+	template <typename RefType, size_t I>
+	struct TL_GetLastIndex< RefType, I, std::tuple<> >
+	{
+		inline static constexpr size_t	value = UMax;
+	};
+	
+	template <typename RefType, size_t I, typename Head, typename... Tail>
+	struct TL_GetLastIndex< RefType, I, std::tuple<Head, Tail...> >
+	{
+		using result = TL_GetLastIndex< RefType, I+1, std::tuple<Tail...> >;
+
+		inline static constexpr size_t	value = Conditional< result::value == UMax and IsSameTypes<RefType, Head>,
+													std::integral_constant<size_t, I>,
+													result >::value;
+	};
+
+
+	template <typename TL, typename T0, typename ...Types>
+	struct TL_PopFront {
+		using type		= typename TL_PopFront< TL, Types... >::result;
+		using result	= typename type::template PushFront< T0 >;
+	};
+
+	template <typename TL, typename T0>
+	struct TL_PopFront< TL, T0 > {
+		using type		= TL;
+		using result	= typename TL::template PushFront<T0>;
+	};
+
+	template <typename TL, typename T0, typename ...Types>
+	struct TL_PopBack {
+		using type = typename TL_PopBack< typename TL::template PushBack<T0>, Types... >::type;
+	};
+	
+	template <typename TL, typename T0>
+	struct TL_PopBack< TL, T0 > {
+		using type = TL;
 	};
 
 }	// _ae_stl_hidden_
@@ -36,22 +80,46 @@ namespace _ae_stl_hidden_
 	struct TypeList
 	{
 	public:
-		template <typename T>
-		inline static constexpr size_t	Index	= _ae_stl_hidden_::TL_GetIndex< T, 0, std::tuple<Types...> >::value;
+		using							AsTuple	= Tuple< Types... >;
 
-		inline static constexpr size_t	Count	= std::tuple_size< std::tuple<Types...> >::value;
+		template <typename T>
+		inline static constexpr size_t	FirstIndex	= _ae_stl_hidden_::TL_GetFirstIndex< T, 0, AsTuple >::value;
+		
+		template <typename T>
+		inline static constexpr size_t	LastIndex	= _ae_stl_hidden_::TL_GetLastIndex< T, 0, AsTuple >::value;
+		
+		template <typename T>
+		inline static constexpr size_t	Index	= FirstIndex<T>;
+
+		inline static constexpr size_t	Count	= std::tuple_size< AsTuple >::value;
 
 		template <typename T>
 		inline static constexpr bool	HasType	= (Index<T> != UMax);
 		
-		template <size_t I>
-		using							Get		= typename std::tuple_element<I, std::tuple<Types...>>::type;
-		
-		template <size_t I>
-		using							GetT	= std::tuple_element<I, std::tuple<Types...>>;
+		template <size_t I>		using	Get		= typename std::tuple_element<I, AsTuple>::type;
+		template <size_t I>		using	GetT	= std::tuple_element<I, AsTuple>;
 
 		struct Front { using			type	= Get<0>; };
 		struct Back  { using			type	= Get<Count-1>; };
+
+		struct Self	 { using			type	= TypeList< Types... >; };
+
+		struct PopFront	{ using			type	= typename _ae_stl_hidden_::TL_PopFront< TypeList<>, Types... >::type; };
+		struct PopBack	{ using			type	= typename _ae_stl_hidden_::TL_PopBack< TypeList<>, Types... >::type; };
+
+		template <typename T>	using	PushBack = TypeList< Types..., T >;
+		template <typename T>	using	PushFront = TypeList< T, Types... >;
+
+
+		template <template <typename> class Tmpl>
+		inline static constexpr auto	ForEach_Or	= (Tmpl<Types>::value or ...);
+		
+		template <template <typename> class Tmpl>
+		inline static constexpr auto	ForEach_And	= (Tmpl<Types>::value and ...);
+		
+		template <template <typename> class Tmpl>
+		inline static constexpr auto	ForEach_Add	= (Tmpl<Types>::value + ...);
+
 
 		template <typename FN>
 		static constexpr void Visit (FN&& fn)	{ return _Visit<0>( std::forward<FN>(fn) ); }
