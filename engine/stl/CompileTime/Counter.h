@@ -43,7 +43,7 @@ namespace AE::STL
 		};
 
 	public:
-		template <uint N = Impl::Reader(0)>
+		template <uint N = Impl::template Reader(0)>
 		static constexpr uint value = N;
 	};
 

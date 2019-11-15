@@ -21,6 +21,7 @@
 #include <malloc.h>
 #include <optional>
 #include <string_view>
+#include <typeindex>
 
 #include "stl/Log/Log.h"
 #include "stl/Algorithms/Hash.h"
@@ -39,8 +40,6 @@ namespace AE::STL
 
 	template <typename T>	using Array			= std::vector< T >;
 
-	template <typename T>	using UniquePtr		= std::unique_ptr< T >;
-
 	template <typename T>	using SharedPtr		= std::shared_ptr< T >;
 	template <typename T>	using WeakPtr		= std::weak_ptr< T >;
 
@@ -57,6 +56,10 @@ namespace AE::STL
 
 	template <typename T>	using Function		= std::function< T >;
 
+
+	template <typename T,
+			  typename Deleter = std::default_delete<T>>
+	using UniquePtr		= std::unique_ptr< T, Deleter >;
 
 	template <typename T,
 			  size_t ArraySize>

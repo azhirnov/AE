@@ -3,7 +3,7 @@
 #pragma once
 
 #include "stl/CompileTime/TypeList.h"
-# include <variant>
+#include <variant>
 
 namespace AE::STL
 {
@@ -16,8 +16,6 @@ namespace AE::STL
 
 	template <typename ...Types>	using Union			= std::variant< Types... >;
 									using NullUnion		= std::monostate;
-
-	template <typename T>	constexpr std::in_place_type_t<T> InPlaceIndex {};
 	
 	template <typename... Types>
 	struct TypeList< std::variant<Types...> > final : TypeList< Types... >

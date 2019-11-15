@@ -134,16 +134,16 @@ namespace AE::STL
 		{
 			ptrdiff_t	mid = (left + right) >> 1;
 
-			if ( arr[mid] < key )
+			if ( key > arr[mid] )
 				left = mid + 1;
 			else
-			if ( not (arr[mid] == key) )
+			if ( not (key == arr[mid]) )
 				right = mid - 1;
 			else
 				return mid;
 		}
 
-		return left < ptrdiff_t(arr.size()) and arr[left] == key ? left : -1;
+		return left < ptrdiff_t(arr.size()) and key == arr[left] ? left : -1;
 	}
 	
 	template <typename T, typename Key>
@@ -167,7 +167,7 @@ namespace AE::STL
 		size_t	right	= arr.size();
 		size_t	bound	= 1;
 
-		for (; bound < right and arr[bound] < key; bound *= 2)
+		for (; bound < right and key > arr[bound]; bound *= 2)
 		{}
 
 		left  = bound >> 1;
@@ -177,13 +177,13 @@ namespace AE::STL
 		{
 			size_t	mid = (left + right) >> 1;
 
-			if ( arr[mid] < key )
+			if ( key > arr[mid] )
 				left = mid + 1;
 			else
 				right = mid;
 		}
 
-		return left < arr.size() and arr[left] == key ? left : UMax;
+		return left < arr.size() and key == arr[left] ? left : UMax;
 	}
 	
 	template <typename T, typename Key>
@@ -197,22 +197,22 @@ namespace AE::STL
 	Reverse
 =================================================
 */
-namespace _ae_stl_hidden_
-{
-	template <typename Container>
-	class ReverseContainerView
+	namespace _ae_stl_hidden_
 	{
-	private:
-		Container &		_container;
+		template <typename Container>
+		class ReverseContainerView
+		{
+		private:
+			Container &		_container;
 
-	public:
-		explicit ReverseContainerView (Container& container) : _container{container} {}
+		public:
+			explicit ReverseContainerView (Container& container) : _container{container} {}
 
-		ND_ auto  begin ()	{ return std::rbegin( _container ); }
-		ND_ auto  end ()	{ return std::rend( _container ); }
-	};
+			ND_ auto  begin ()	{ return std::rbegin( _container ); }
+			ND_ auto  end ()	{ return std::rend( _container ); }
+		};
 
-}	// _ae_stl_hidden_
+	}	// _ae_stl_hidden_
 
 	template <typename Container>
 	ND_ auto  Reverse (Container& container)
