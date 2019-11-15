@@ -111,6 +111,7 @@ namespace AE::ECS
 =================================================
 */
 	ArchetypeStorage::ArchetypeStorage (const Archetype &archetype, size_t count) :
+		_count{ 0 },
 		_locked{ false },
 		_archetype{ archetype },
 		_capacity{ count }
