@@ -36,7 +36,6 @@ add_subdirectory( "engine/stl" )
 add_subdirectory( "engine/scripting" )
 add_subdirectory( "engine/threading" )
 add_subdirectory( "engine/networking" )
-#add_subdirectory( "engine/ecs" )
 
 #----------------------------------------------------------
 
@@ -47,7 +46,6 @@ if (${AE_ENABLE_TESTS})
 	add_subdirectory( "tests/scripting" )
 	add_subdirectory( "tests/threading" )
 	add_subdirectory( "tests/networking" )
-	#add_subdirectory( "tests/ecs" )
 endif()
 
 #----------------------------------------------------------
