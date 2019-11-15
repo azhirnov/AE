@@ -9,7 +9,7 @@ if (${AE_ENABLE_NETWORKING})
 	endif()
 	source_group( TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} )
 	set_property( TARGET "Tests.Networking" PROPERTY FOLDER "EngineTests" )
-	target_link_libraries( "Tests.Networking" "Networking" )
+	target_link_libraries( "Tests.Networking" PUBLIC "Networking" )
 	set_target_properties( "Tests.Networking" PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
 
 	add_test( NAME "Tests.Networking" COMMAND "Tests.Networking" )

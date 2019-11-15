@@ -8,7 +8,7 @@ else()
 endif()
 source_group( TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} )
 set_property( TARGET "Tests.Threading" PROPERTY FOLDER "EngineTests" )
-target_link_libraries( "Tests.Threading" "Threading" )
+target_link_libraries( "Tests.Threading" PUBLIC "Threading" )
 set_target_properties( "Tests.Threading" PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
 	
 add_test( NAME "Tests.Threading" COMMAND "Tests.Threading" )
