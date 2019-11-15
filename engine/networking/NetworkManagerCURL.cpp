@@ -144,7 +144,7 @@ namespace AE::Networking
 		// redirections
 		if ( desc._redirections ) {
 			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_FOLLOWLOCATION, 1L ));
-			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_MAXREDIRS, int(desc._redirections) ));
+			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_MAXREDIRS, CheckCast<int>(desc._redirections) ));
 		} else {
 			// disable redirections
 			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_FOLLOWLOCATION, 0L ));
@@ -222,10 +222,10 @@ namespace AE::Networking
 
 		// timeout
 		if ( settings.connectionTimeout.count() ) {
-			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_CONNECTTIMEOUT_MS, int(settings.connectionTimeout.count()) ));
+			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_CONNECTTIMEOUT_MS, CheckCast<int>(settings.connectionTimeout.count()) ));
 		}
 		if ( settings.transferTimout.count() ) {
-			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_TIMEOUT_MS, int(settings.transferTimout.count()) ));
+			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_TIMEOUT_MS, CheckCast<int>(settings.transferTimout.count()) ));
 		}
 
 		// add headers
