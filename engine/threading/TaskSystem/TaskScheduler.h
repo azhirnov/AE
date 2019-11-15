@@ -63,20 +63,24 @@ namespace AE::Threading
 
 	struct WeakDeps
 	{
-		Array<AsyncTask>	deps;
+		Array<AsyncTask>	items;
 
 		WeakDeps () {}
-		WeakDeps (Array<AsyncTask> &&deps) : deps{std::move(deps)} {}
-		WeakDeps (std::initializer_list<AsyncTask> deps) : deps{deps} {}
+		WeakDeps (Array<AsyncTask> &&deps) : items{std::move(deps)} {}
+		WeakDeps (std::initializer_list<AsyncTask> deps) : items{deps} {}
+		WeakDeps (WeakDeps &&) = default;
+		WeakDeps (const WeakDeps &) = delete;
 	};
 	
 	struct StrongDeps
 	{
-		Array<AsyncTask>	deps;
+		Array<AsyncTask>	items;
 
 		StrongDeps () {}
-		StrongDeps (Array<AsyncTask> &&deps) : deps{std::move(deps)} {}
-		StrongDeps (std::initializer_list<AsyncTask> deps) : deps{deps} {}
+		StrongDeps (Array<AsyncTask> &&deps) : items{std::move(deps)} {}
+		StrongDeps (std::initializer_list<AsyncTask> deps) : items{deps} {}
+		StrongDeps (StrongDeps &&) = default;
+		StrongDeps (const StrongDeps &) = delete;
 	};
 
 
@@ -310,14 +314,14 @@ namespace AE::Threading
 	inline AsyncTask  TaskScheduler::Run (WeakDeps &&dependsOn, Args&& ...args)
 	{
 		STATIC_ASSERT( IsBaseOf< IAsyncTask, T > );
-		return _InsertTask( MakeShared<T>( std::forward<Args>(args)... ), std::move(dependsOn.deps), false );
+		return _InsertTask( MakeShared<T>( std::forward<Args>(args)... ), std::move(dependsOn.items), false );
 	}
 	
 	template <typename T, typename ...Args>
 	inline AsyncTask  TaskScheduler::Run (StrongDeps &&dependsOn, Args&& ...args)
 	{
 		STATIC_ASSERT( IsBaseOf< IAsyncTask, T > );
-		return _InsertTask( MakeShared<T>( std::forward<Args>(args)... ), std::move(dependsOn.deps), true );
+		return _InsertTask( MakeShared<T>( std::forward<Args>(args)... ), std::move(dependsOn.items), true );
 	}
 
 /*
