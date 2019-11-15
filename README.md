@@ -1,9 +1,15 @@
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](paypal.me/azhirnovgithub) 
-[![Build Status](https://api.travis-ci.com/azhirnov/AE.svg?branch=master)](https://travis-ci.com/azhirnov/AE)<br/>
-
 # Noname Engine Prototype
+[![GitHub license](https://img.shields.io/github/license/azhirnov/AE.svg)](https://github.com/azhirnov/AE/blob/master/LICENSE)
+</br>
+[![Build Status](https://img.shields.io/travis/azhirnov/AE/master.svg?logo=travis)](https://travis-ci.com/azhirnov/AE)
+[![GitHub issues](https://img.shields.io/github/issues/azhirnov/AE.svg)](https://github.com/azhirnov/AE/issues)
+</br>
+[![Donate](https://img.shields.io/badge/donate-PayPal-orange.svg?logo=paypal)](https://paypal.me/azhirnovgithub)
+</br>
 
 ## Features
+TBD
+
 
 ## Suported Platforms
 * Windows (with MSVC 2017)
@@ -13,7 +19,6 @@
 ## Building
 Generate project with CMake and build.<br/>
 Required C++17 standard support.
-Warning: VC toolset v142 has bug with very long compilation of cmake external projects, so use v141 toolset.
 
 
 ## References

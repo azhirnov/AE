@@ -1,7 +1,10 @@
 # Roadmap
 
 ## ECS
-- [ ] Archetype
+- [ ] Core
+- [ ] Game components
+- [ ] Visibility components
+- [ ] Render components
 
 ## Renderer
 - [ ] Vulkan
