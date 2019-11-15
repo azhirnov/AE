@@ -112,17 +112,17 @@ namespace _ae_stl_hidden_
 
 
 		template <template <typename> class Tmpl>
-		inline static constexpr auto	ForEach_Or	= (Tmpl<Types>::value or ...);
+		static constexpr auto			ForEach_Or ()	{ return (... or Tmpl<Types>::value); }
 		
 		template <template <typename> class Tmpl>
-		inline static constexpr auto	ForEach_And	= (Tmpl<Types>::value and ...);
+		static constexpr auto			ForEach_And ()	{ return (... and Tmpl<Types>::value); }
 		
 		template <template <typename> class Tmpl>
-		inline static constexpr auto	ForEach_Add	= (Tmpl<Types>::value + ...);
+		static constexpr auto			ForEach_Add	()	{ return (... + Tmpl<Types>::value); }
 
 
 		template <typename FN>
-		static constexpr void Visit (FN&& fn)	{ return _Visit<0>( std::forward<FN>(fn) ); }
+		static constexpr void 			Visit (FN&& fn)	{ return _Visit<0>( std::forward<FN>(fn) ); }
 
 	private:
 		template <size_t I, typename FN>

@@ -709,7 +709,7 @@ namespace AE::ECS
 		{
 			if constexpr( I < ArgsList::Count )
 			{
-				constexpr bool is_valid = CheckForDuplicateComponents< typename ArgsList::template Get<I> >::Test< I, ArgsList >();
+				constexpr bool is_valid = CheckForDuplicateComponents< typename ArgsList::template Get<I> >::template Test< I, ArgsList >();
 				STATIC_ASSERT( is_valid );
 
 				CheckForDuplicates< ArgsList, I+1 >();
@@ -775,7 +775,7 @@ namespace AE::ECS
 		{
 			if constexpr( I < ArgsList::Count )
 			{
-				constexpr bool is_valid = SC_CheckForDuplicateComponents< typename ArgsList::template Get<I> >::Test< ArgsList, I >();
+				constexpr bool is_valid = SC_CheckForDuplicateComponents< typename ArgsList::template Get<I> >::template Test< ArgsList, I >();
 				STATIC_ASSERT( is_valid );
 
 				SC_CheckForDuplicates< ArgsList, I+1 >();
@@ -798,8 +798,6 @@ namespace AE::ECS
 		template <typename Args>
 		struct _SystemFnInfoImpl< Args, 1 >
 		{
-			STATIC_ASSERT( Args::Count == 1 );
-
 			// check components
 			using ChunkArray = typename Args::template Get<0>;
 			STATIC_ASSERT( IsSpecializationOf< ChunkArray, ArrayView >);
@@ -820,7 +818,7 @@ namespace AE::ECS
 			STATIC_ASSERT( Args::Count == 2 );
 
 			using SCTuple = typename Args::template Get<1>;
-			STATIC_ASSERT( IsSpecializationOf< SCTuple, Tuple >);
+			STATIC_ASSERT( IsSpecializationOf< SCTuple, std::tuple >);
 		};
 
 		template <typename Fn>
@@ -832,8 +830,6 @@ namespace AE::ECS
 			using Chunk		= typename _Info::Chunk;
 			using CompOnly	= typename _Info::CompOnly;
 			using SCTuple	= typename _Info::SCTuple;
-
-			static constexpr bool	valid = _Info::valid;
 		};
 
 	}	// _reg_detail_
@@ -1121,7 +1117,8 @@ namespace AE::ECS
 		}
 		else
 		{
-			STATIC_ASSERT( false );
+			// error!
+			return;
 		}
 	}
 	

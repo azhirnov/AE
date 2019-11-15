@@ -10,9 +10,7 @@
 #endif
 
 
-#ifndef PLATFORM_ANDROID
-#	define AE_HAS_EXCEPTIONS
-#endif
+//#define AE_HAS_EXCEPTIONS
 
 
 #ifdef COMPILER_MSVC

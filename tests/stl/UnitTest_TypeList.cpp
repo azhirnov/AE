@@ -1,7 +1,6 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/CompileTime/TypeList.h"
-#include "stl/CompileTime/TypeTraits.h"
 #include "UnitTest_Common.h"
 
 namespace
@@ -94,13 +93,13 @@ extern void UnitTest_TypeList ()
 	{
 		using TL = TypeList< int, float, bool, double >;
 
-		constexpr bool		val1	= TL::ForEach_Or< GreaterThen4 >;
+		constexpr bool		val1	= TL::ForEach_Or< GreaterThen4 >();
 		STATIC_ASSERT( val1 );
 		
-		constexpr bool		val2	= TL::ForEach_And< GreaterThen4 >;
+		constexpr bool		val2	= TL::ForEach_And< GreaterThen4 >();
 		STATIC_ASSERT( not val2 );
 
-		constexpr size_t	val3	= TL::ForEach_Add< TypeSize >;
+		constexpr size_t	val3	= TL::ForEach_Add< TypeSize >();
 		STATIC_ASSERT( val3 == 4+4+1+8 );
 	}
 

@@ -18,6 +18,7 @@ extern void UnitTest_StructView ();
 extern void UnitTest_StringParser ();
 extern void UnitTest_ToString ();
 extern void UnitTest_TypeList ();
+extern void UnitTest_TypeTraits ();
 
 
 int main ()
@@ -38,6 +39,7 @@ int main ()
 	UnitTest_StringParser();
 	UnitTest_ToString();
 	UnitTest_TypeList();
+	UnitTest_TypeTraits();
 
 	AE_LOGI( "Tests.STL finished" );
 	return 0;

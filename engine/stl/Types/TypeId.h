@@ -39,9 +39,9 @@ namespace AE::STL::_ae_stl_hidden_
 	template <typename T, uint UID>
 	struct StaticTypeIdOf : BaseStaticTypeIdOf<UID>
 	{
-		ND_ static constexpr StaticTypeID<UID>  Get ()
+		ND_ static StaticTypeID<UID>  Get ()
 		{
-			static size_t id = _counter++;
+			static size_t id = BaseStaticTypeIdOf<UID>::_counter++;
 			return BitCast< StaticTypeID<UID> >( id );
 		}
 	};
