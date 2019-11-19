@@ -220,91 +220,6 @@ namespace std
 
 }	// std
 
-namespace AE::Threading
-{
-
-	//
-	// Value with Data Race Check
-	//
-
-	template <typename T>
-	struct DRCValue
-	{
-	// types
-	private:
-		struct Pointer
-		{
-		private:
-			DRCValue<T> *	_ptr;
-			
-			Pointer (DRCValue<T> *ptr) : _ptr{ptr}		{}
-			void _Lock ()								{ if ( _ptr ) _ptr->_drCheck.LockExclusive(); }
-			void _Unlock ()								{ if ( _ptr ) _ptr->_drCheck.UnlockExclusive(); }
-
-		public:
-			Pointer (const Pointer &other)				{ _ptr = other._ptr;  _Lock(); }
-			Pointer (Pointer &&other)					{ _ptr = other._ptr;  other._ptr = null; }
-			~Pointer ()									{ _Unlock(); }
-
-			Pointer&  operator = (const Pointer &rhs)	{ _Unlock();  _ptr = rhs._ptr;  _Lock();  return *this; }
-			Pointer&  operator = (Pointer &&rhs)		{ _Unlock();  _ptr = rhs._ptr;  rhs._ptr = null;  return *this; }
-
-			ND_ T *	operator -> ()						{ return &_ptr->_value; }
-			ND_ T&	operator * ()						{ return _ptr->_value; }
-		};
-		
-
-		struct CPointer
-		{
-		private:
-			DRCValue<T> *	_ptr;
-			
-			CPointer (DRCValue<T> *ptr) : _ptr{ptr}		{}
-			void _Lock ()								{ if ( _ptr ) _ptr->_drCheck.LockShared(); }
-			void _Unlock ()								{ if ( _ptr ) _ptr->_drCheck.UnlockShared(); }
-
-		public:
-			CPointer (const CPointer &other)			{ _ptr = other._ptr;  _Lock(); }
-			CPointer (CPointer &&other)					{ _ptr = other._ptr;  other._ptr = null; }
-			~CPointer ()								{ _Unlock(); }
-
-			CPointer&  operator = (const CPointer &rhs)	{ _Unlock();  _ptr = rhs._ptr;  _Lock();  return *this; }
-			CPointer&  operator = (CPointer &&rhs)		{ _Unlock();  _ptr = rhs._ptr;  rhs._ptr = null;  return *this; }
-
-			ND_ T const*  operator -> ()	const		{ return &_ptr->_value; }
-			ND_ T const&  operator * ()		const		{ return _ptr->_value; }
-		};
-
-
-	// variables
-	private:
-		T					_value;
-		RWDataRaceCheck		_drCheck;
-
-
-	// methods
-	public:
-		DRCValue () {}
-		DRCValue (const T &value) : _value{value}	{}
-		DRCValue (T &&value) : _value{value}		{}
-		~DRCValue ()								{ EXLOCK( _drCheck ); }
-
-		DRCValue&  operator = (const T &rhs)		{ EXLOCK( _drCheck );  _value = rhs;  return *this; }
-		DRCValue&  operator = (T &&rhs)				{ EXLOCK( _drCheck );  _value = std::move(rhs);  return *this; }
-
-		DRCValue (const DRCValue &) = delete;
-		DRCValue (DRCValue &&) = delete;
-		DRCValue&  operator = (const DRCValue &) = delete;
-		DRCValue&  operator = (DRCValue &&) = delete;
-
-		ND_ Pointer   operator -> ()				{ return Pointer{ this }; }
-		ND_ CPointer  operator -> ()		const	{ return CPointer{ this }; }
-	};
-
-
-}	// AE::Threading
-
-
 #else
 
 namespace AE::Threading
@@ -332,26 +247,6 @@ namespace AE::Threading
 		void unlock_shared () const	{}
 	};
 	
-
-	//
-	// Value with Data Race Check
-	//
-	template <typename T>
-	struct DRCValue
-	{
-		T		_value;
-
-		DRCValue () {}
-		DRCValue (const T &val) : _value{val} {}
-		DRCValue (T &&val) : _value{std::move(val)} {}
-
-		ND_ T *			operator -> ()			{ return &_value; }
-		ND_ T &			operator *  ()			{ return _value; }
-		ND_ T const*	operator -> ()	const	{ return &_value; }
-		ND_ T &			operator *  ()	const	{ return _value; }
-	};
-
-
 }	// AE::Threading
 
 #endif	// AE_ENABLE_DATA_RACE_CHECK
