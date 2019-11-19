@@ -1,6 +1,7 @@
 #pragma once
 
 #include "stl/Algorithms/EnumUtils.h"
+#include "stl/Algorithms/Cast.h"
 
 #ifdef COMPILER_MSVC
 # include <intrin.h>
@@ -102,6 +103,92 @@ namespace AE::STL
 		else
 		if constexpr( sizeof(x) <= 4 )
 			return std::bitset<32>{ x }.count();
+	}
+	
+/*
+=================================================
+	SafeLeftBitShift
+=================================================
+*/
+	template <typename T>
+	ND_ forceinline constexpr T  SafeLeftBitShift (const T& x, size_t shift)
+	{
+		STATIC_ASSERT( IsScalarOrEnum<T> );
+		STATIC_ASSERT( IsInteger<T> );
+		
+		return x << (shift & (sizeof(shift)*8 - 1));
+	}
+	
+/*
+=================================================
+	SafeRightBitShift
+=================================================
+*/
+	template <typename T>
+	ND_ forceinline constexpr T  SafeRightBitShift (const T& x, size_t shift)
+	{
+		STATIC_ASSERT( IsScalarOrEnum<T> );
+		STATIC_ASSERT( IsInteger<T> );
+
+		return x >> (shift & (sizeof(shift)*8 - 1));
+	}
+	
+/*
+=================================================
+	BitRotateLeft
+----
+	from https://en.wikipedia.org/wiki/Circular_shift#Implementing_circular_shifts
+=================================================
+*/
+	namespace _ae_stl_hidden_
+	{
+		template <typename T>
+		forceinline constexpr T _BitRotateLeft (T value, size_t shift)
+		{
+			const size_t	mask = (sizeof(value)*8 - 1);
+
+			shift &= mask;
+			return (value << shift) | (value >> ( ~(shift-1) & mask ));
+		}
+	}	// _ae_stl_hidden_
+	
+	template <typename T>
+	ND_ forceinline constexpr T  BitRotateLeft (const T& x, size_t shift)
+	{
+		STATIC_ASSERT( IsScalarOrEnum<T> );
+		STATIC_ASSERT( IsInteger<T> );
+
+		using Unsigned_t = ToUnsignedInteger<T>;
+		return BitCast<T>( _ae_stl_hidden_::_BitRotateLeft( BitCast<Unsigned_t>(x), shift ));
+	}
+	
+/*
+=================================================
+	BitRotateRight
+----
+	from https://en.wikipedia.org/wiki/Circular_shift#Implementing_circular_shifts
+=================================================
+*/
+	namespace _ae_stl_hidden_
+	{
+		template <typename T>
+		forceinline constexpr T _BitRotateRight (T value, size_t shift)
+		{
+			const size_t	mask = (sizeof(value)*8 - 1);
+
+			shift &= mask;
+			return (value >> shift) | (value << ( ~(shift-1) & mask ));
+		}
+	}	// _ae_stl_hidden_
+
+	template <typename T>
+	ND_ forceinline constexpr T  BitRotateRight (const T& x, size_t shift)
+	{
+		STATIC_ASSERT( IsScalarOrEnum<T> );
+		STATIC_ASSERT( IsInteger<T> );
+		
+		using Unsigned_t = ToUnsignedInteger<T>;
+		return BitCast<T>( _ae_stl_hidden_::_BitRotateRight( BitCast<Unsigned_t>(x), shift ));
 	}
 
 

@@ -55,6 +55,32 @@ namespace
 		float b7 = Wrap( 2.0f, -5.0f, 0.0f );	TEST( Equals( b7, -3.0f ));
 		float b10 = Wrap( 3.99f, 0.0f, 4.0f );	TEST( Equals( b10, 3.99f ));
 	}
+	
+
+	void SafeBitShift_Test1 ()
+	{
+		uint	c0 = SafeLeftBitShift( 1u,  1 );			TEST( c0 == 0x00000002 );
+		uint	c1 = SafeLeftBitShift( 1u, 16 );			TEST( c1 == 0x00010000 );
+		uint	c2 = SafeLeftBitShift( 1u, 31 );			TEST( c2 == 0x80000000 );
+
+		uint	c3 = SafeRightBitShift( 1u << 12,  11 );	TEST( c3 == 0x00000002 );
+		uint	c4 = SafeRightBitShift( 1u << 12,  12 );	TEST( c4 == 0x00000001 );
+		uint	c5 = SafeRightBitShift( 1u << 12,  13 );	TEST( c5 == 0 );
+	}
+
+
+	void BitRotate_Test1 ()
+	{
+		uint	d0 = BitRotateLeft( 1u,			1 );		TEST( d0 == 0x00000002 );
+		uint	d1 = BitRotateLeft( 1u << 31,	1 );		TEST( d1 == 0x00000001 );
+		uint	d2 = BitRotateLeft( 1u,			31 );		TEST( d2 == 0x80000000 );
+		uint	d3 = BitRotateLeft( 1u,			32 );		TEST( d3 == 0x00000001 );
+
+		uint	d4 = BitRotateRight( 1u,		1 );		TEST( d4 == 0x80000000 );
+		uint	d5 = BitRotateRight( 1u << 31,	1 );		TEST( d5 == 0x40000000 );
+		uint	d6 = BitRotateRight( 1u,		31 );		TEST( d6 == 0x00000002 );
+		uint	d7 = BitRotateRight( 1u,		32 );		TEST( d7 == 0x00000001 );
+	}
 }
 
 
@@ -64,6 +90,8 @@ extern void UnitTest_Math ()
 	IntLog2_Test1();
 	BitScanForward_Test1();
 	Wrap_Test1();
+	SafeBitShift_Test1();
+	BitRotate_Test1();
 
 	AE_LOGI( "UnitTest_Math - passed" );
 }

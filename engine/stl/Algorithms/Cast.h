@@ -4,7 +4,6 @@
 
 #include "stl/Common.h"
 #include "stl/Containers/Ptr.h"
-#include "stl/Math/BitMath.h"
 
 namespace AE::STL
 {
@@ -41,7 +40,7 @@ namespace AE::STL
 	{
 		constexpr size_t	align = alignof(R);
 
-		STATIC_ASSERT( IsPowerOfTwo( align ), "Align must be power of 2" );
+		STATIC_ASSERT( ((align & (align - 1)) == 0), "Align must be power of 2" );
 
 		return (sizeof(R) < align) or not (size_t(ptr) & (align-1));
 	}
