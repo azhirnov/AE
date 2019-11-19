@@ -11,7 +11,6 @@ if (${AE_ENABLE_SCRIPTING})
 	set_property( TARGET "Scripting" PROPERTY FOLDER "Engine" )
 	target_link_libraries( "Scripting" PUBLIC "STL" )
 	target_compile_definitions( "Scripting" PUBLIC "AE_ENABLE_SCRIPTING" )
-	set_target_properties( "Scripting" PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
 	
 	if (${AE_ENABLE_ANGELSCRIPT})
 		target_link_libraries( "Scripting" PUBLIC "AngelScript-lib" ) # TODO: make private

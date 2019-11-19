@@ -11,7 +11,6 @@ if (${AE_ENABLE_NETWORKING})
 	set_property( TARGET "Networking" PROPERTY FOLDER "Engine" )
 	target_link_libraries( "Networking" PUBLIC "Threading" )
 	target_compile_definitions( "Networking" PUBLIC "AE_ENABLE_NETWORKING" )
-	set_target_properties( "Networking" PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
 
 	if (${AE_ENABLE_CURL})
 		target_link_libraries( "Networking" PRIVATE "CURL-lib" )
