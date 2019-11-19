@@ -28,11 +28,13 @@ namespace AE::ECS
 		};
 
 		using Components_t	= FixedArray< ComponentInfo, ECS_Config::MaxComponents >;
-		using Tags_t		= FixedArray< ComponentID, ECS_Config::MaxTagComponents >;
+		using Tags_t		= FixedArray< TagComponentID, ECS_Config::MaxTagComponents >;
+
 
 	// variables
 		Components_t	components;
 		Tags_t			tags;
+
 
 	// methods
 		ArchetypeDesc () {}
@@ -59,15 +61,17 @@ namespace AE::ECS
 	public:
 		explicit Archetype (const ArchetypeDesc &desc, bool sorted = false);
 
-		ND_ bool  operator == (const Archetype &rhs) const;
-
 		ND_ ArchetypeDesc const&	Desc ()		const	{ return _desc; }
 		ND_ HashVal					Hash ()		const	{ return _hash; }
 		ND_ BytesU					MaxAlign ()	const	{ return BytesU{_maxAlign}; }
 		ND_ size_t					Count ()	const	{ return _desc.components.size(); }
 
+		ND_ bool	operator == (const Archetype &rhs) const;
+
+		ND_ bool	Contains (const Archetype &) const;
+
 		ND_ size_t	IndexOf (ComponentID id) const;
-		ND_ bool	HasTag (ComponentID id) const;
+		ND_ bool	HasTag (TagComponentID id) const;
 
 		template <typename T>
 		ND_ bool	HasComponent () const;
@@ -100,10 +104,11 @@ namespace AE::ECS
 	private:
 		void *					_memory;
 		size_t					_count;
-		bool					_locked;
+		Atomic<int>				_locks;
+
 		Archetype const&		_archetype;
 		ComponentOffsets_t		_compOffsets;
-		const size_t			_capacity;
+		size_t					_capacity;
 		Allocator_t				_allocator;
 
 
@@ -116,9 +121,11 @@ namespace AE::ECS
 			bool  Erase (Index_t index, OUT EntityID &movedEntity);
 		ND_ bool  IsValid (EntityID id, Index_t index) const;
 			void  Clear ();
+			void  Reserve (size_t size);
 
 			void  Lock ();
 			void  Unlock ();
+		ND_ bool  IsLocked () const;
 
 		template <typename T>
 		ND_ T*					GetComponents ()				const;
@@ -141,15 +148,13 @@ namespace AE::ECS
 		align{ Bytes<uint16_t>{ AlignOf<Comp> }},
 		size{ Bytes<uint16_t>{ SizeOf<Comp> }},
 		ctor{ &ComponentTypeInfo<Comp>::Ctor }
-	{
-		STATIC_ASSERT( not IsEmpty<Comp> );
-	}
+	{}
 
 	template <typename Comp>
 	inline ArchetypeDesc&  ArchetypeDesc::Add ()
 	{
 		if constexpr( IsEmpty<Comp> )
-			tags.push_back( ComponentTypeInfo<Comp>::id );
+			tags.push_back( TagComponentTypeInfo<Comp>::id );
 		else
 			components.push_back(ComponentInfo{ InPlaceObj<Comp> });
 
@@ -170,15 +175,13 @@ namespace AE::ECS
 	template <typename T>
 	inline bool  Archetype::HasComponent () const
 	{
-		STATIC_ASSERT( not IsEmpty<T> );
 		return IndexOf( ComponentTypeInfo<T>::id ) < Count();
 	}
 
 	template <typename T>
 	inline bool  Archetype::HasTag () const
 	{
-		STATIC_ASSERT( IsEmpty<T> );
-		return HasTag( ComponentTypeInfo<T>::id );
+		return HasTag( TagComponentTypeInfo<T>::id );
 	}
 
 //-----------------------------------------------------------------------------
@@ -187,7 +190,6 @@ namespace AE::ECS
 	template <typename T>
 	inline T*  ArchetypeStorage::GetComponents () const
 	{
-		STATIC_ASSERT( not IsEmpty<T> );
 		return Cast<T>( GetComponents( ComponentTypeInfo<T>::id ));
 	}
 	
@@ -211,14 +213,17 @@ namespace AE::ECS
 	
 	inline void  ArchetypeStorage::Lock ()
 	{
-		CHECK( not _locked );
-		_locked = true;
+		_locks.fetch_add( 1 );
 	}
 
 	inline void  ArchetypeStorage::Unlock ()
 	{
-		CHECK( _locked );
-		_locked = false;
+		_locks.fetch_sub( 1 );
+	}
+	
+	inline bool  ArchetypeStorage::IsLocked () const
+	{
+		return _locks.load() > 0;
 	}
 
 }	// AE::ECS

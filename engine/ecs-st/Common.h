@@ -5,6 +5,7 @@
 #include "stl/CompileTime/FunctionInfo.h"
 
 #include "stl/Math/Bytes.h"
+#include "stl/Math/BitMath.h"
 #include "stl/Math/Vec.h"
 //#include "stl/Math/Transformation.h"
 
@@ -28,13 +29,13 @@ namespace AE::ECS
 	using namespace AE::STL;
 
 	namespace Components {}
-	namespace SingleComponent {}
+	namespace SingleComponents {}
 	namespace Systems {}
 
-	using DataRaceCheck	= Threading::DataRaceCheck;
+	using Threading::DataRaceCheck;
+	using Threading::Atomic;
 
-	using EntityID		= HandleTmpl< uint16_t, uint16_t, 0 >;
-	using ArchetypeID	= HandleTmpl< uint16_t, uint16_t, 1 >;
+	using EntityID	= HandleTmpl< uint16_t, uint16_t, 0 >;
 	
 
 	struct ECS_Config

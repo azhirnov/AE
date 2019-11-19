@@ -19,9 +19,62 @@ namespace
 
 	struct Tag1 {};
 
+	struct Event1 {};
+	struct Event2 {};
+	struct Event3 {};
 	
-	// entity test
-	void Registry_Test1 ()
+	STATIC_ASSERT( not IsEmpty<Comp1> );
+	STATIC_ASSERT( not IsEmpty<Comp2> );
+	STATIC_ASSERT( IsEmpty<Tag1> );
+
+	
+	void ComponentValidator_Test1 ()
+	{
+	#ifdef AE_ECS_VALIDATE_SYSTEM_FN
+		{
+			using Types = TypeList< WriteAccess<Comp1>, ReadAccess<Comp2> >;
+			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<0> >::Test< 0, Types >() );
+			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<1> >::Test< 1, Types >() );
+		}{
+			using Types = TypeList< WriteAccess<Comp1>, WriteAccess<Comp2>, ReadAccess<Comp2> >;
+			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<0> >::Test< 0, Types >() );
+			STATIC_ASSERT( not _reg_detail_::CheckForDuplicateComponents< Types::Get<1> >::Test< 1, Types >() );
+			STATIC_ASSERT( not _reg_detail_::CheckForDuplicateComponents< Types::Get<2> >::Test< 2, Types >() );
+		}{
+			using Types = TypeList< WriteAccess<Comp1>, OptionalReadAccess<Comp2>, ReadAccess<Comp2> >;
+			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<0> >::Test< 0, Types >() );
+			STATIC_ASSERT( not _reg_detail_::CheckForDuplicateComponents< Types::Get<1> >::Test< 1, Types >() );
+			STATIC_ASSERT( not _reg_detail_::CheckForDuplicateComponents< Types::Get<2> >::Test< 2, Types >() );
+		}{
+			using Types = TypeList< WriteAccess<Comp1>, Require<Comp2, Tag1> >;
+			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<0> >::Test< 0, Types >() );
+			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<1> >::Test< 1, Types >() );
+		}{
+			using Types = TypeList< WriteAccess<Comp1>, Require<Comp1, Comp2, Tag1> >;
+			STATIC_ASSERT( not _reg_detail_::CheckForDuplicateComponents< Types::Get<0> >::Test< 0, Types >() );
+			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<1> >::Test< 1, Types >() );
+		}{
+			using Types = TypeList< Comp1*, Comp2* >;
+			STATIC_ASSERT( _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<0> >::Test< Types, 0 >() );
+			STATIC_ASSERT( _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<1> >::Test< Types, 1 >() );
+		}{
+			using Types = TypeList< Comp1*, Comp2& >;
+			STATIC_ASSERT( _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<0> >::Test< Types, 0 >() );
+			STATIC_ASSERT( _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<1> >::Test< Types, 1 >() );
+		}{
+			using Types = TypeList< Comp1 const*, Comp2* >;
+			STATIC_ASSERT( _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<0> >::Test< Types, 0 >() );
+			STATIC_ASSERT( _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<1> >::Test< Types, 1 >() );
+		}{
+			using Types = TypeList< Comp1*, Comp1& >;
+			STATIC_ASSERT( not _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<0> >::Test< Types, 0 >() );
+			STATIC_ASSERT( not _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<1> >::Test< Types, 1 >() );
+		}
+	#endif	// AE_ECS_VALIDATE_SYSTEM_FN
+	}
+
+
+	void Entity_Test1 ()
 	{
 		Registry	reg;
 
@@ -150,8 +203,7 @@ namespace
 	}
 
 
-	// single component test
-	void Registry_Test2 ()
+	void SingleComponent_Test1 ()
 	{
 		Registry	reg;
 
@@ -176,8 +228,7 @@ namespace
 	}
 
 
-	// system test
-	void Registry_Test3 ()
+	void System_Test1 ()
 	{
 		Registry		reg;
 		const size_t	count = 100;
@@ -212,8 +263,7 @@ namespace
 	}
 	
 	
-	// system test
-	void Registry_Test4 ()
+	void System_Test2 ()
 	{
 		struct SingleComp1
 		{
@@ -231,7 +281,22 @@ namespace
 			EntityID	e3 = reg.CreateEntity<Comp2, Tag1>();
 			EntityID	e4 = reg.CreateEntity<Comp2, Comp1>();
 			EntityID	e5 = reg.CreateEntity<Comp1, Tag1>();
+
 			TEST( e1 and e2 and e3 and e4 and e5 );
+
+			TEST( reg.GetArchetype( e1 ) != reg.GetArchetype( e2 ));
+			TEST( reg.GetArchetype( e1 ) != reg.GetArchetype( e3 ));
+			TEST( reg.GetArchetype( e1 ) != reg.GetArchetype( e4 ));
+			TEST( reg.GetArchetype( e1 ) != reg.GetArchetype( e5 ));
+			
+			TEST( reg.GetArchetype( e2 ) != reg.GetArchetype( e3 ));
+			TEST( reg.GetArchetype( e2 ) != reg.GetArchetype( e4 ));
+			TEST( reg.GetArchetype( e2 ) != reg.GetArchetype( e5 ));
+			
+			TEST( reg.GetArchetype( e3 ) != reg.GetArchetype( e4 ));
+			TEST( reg.GetArchetype( e3 ) != reg.GetArchetype( e5 ));
+			
+			TEST( reg.GetArchetype( e4 ) != reg.GetArchetype( e5 ));
 		}
 
 		// init single component
@@ -241,7 +306,6 @@ namespace
 		}
 
 		size_t	cnt1 = 0;
-
 		reg.Enque(	[&cnt1] (ArrayView<Tuple< size_t, ReadAccess<Comp1>, Subtractive<Tag1> >> chunks,
 							 Tuple< SingleComp1& > single)
 					{
@@ -276,63 +340,180 @@ namespace
 		reg.DestroyAllEntities();
 		reg.DestroyAllSingleComponents();
 	}
-
-
-	// component validator test
-	void Registry_Test5 ()
+	
+	
+	void System_Test3 ()
 	{
-	#ifdef AE_ECS_VALIDATE_SYSTEM_FN
+		Registry	reg;
+
+		// create archetypes
 		{
-			using Types = TypeList< WriteAccess<Comp1>, ReadAccess<Comp2> >;
-			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<0> >::Test< 0, Types >() );
-			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<1> >::Test< 1, Types >() );
-		}{
-			using Types = TypeList< WriteAccess<Comp1>, WriteAccess<Comp2>, ReadAccess<Comp2> >;
-			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<0> >::Test< 0, Types >() );
-			STATIC_ASSERT( not _reg_detail_::CheckForDuplicateComponents< Types::Get<1> >::Test< 1, Types >() );
-			STATIC_ASSERT( not _reg_detail_::CheckForDuplicateComponents< Types::Get<2> >::Test< 2, Types >() );
-		}{
-			using Types = TypeList< WriteAccess<Comp1>, OptionalReadAccess<Comp2>, ReadAccess<Comp2> >;
-			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<0> >::Test< 0, Types >() );
-			STATIC_ASSERT( not _reg_detail_::CheckForDuplicateComponents< Types::Get<1> >::Test< 1, Types >() );
-			STATIC_ASSERT( not _reg_detail_::CheckForDuplicateComponents< Types::Get<2> >::Test< 2, Types >() );
-		}{
-			using Types = TypeList< WriteAccess<Comp1>, Require<Comp2, Tag1> >;
-			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<0> >::Test< 0, Types >() );
-			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<1> >::Test< 1, Types >() );
-		}{
-			using Types = TypeList< WriteAccess<Comp1>, Require<Comp1, Comp2, Tag1> >;
-			STATIC_ASSERT( not _reg_detail_::CheckForDuplicateComponents< Types::Get<0> >::Test< 0, Types >() );
-			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<1> >::Test< 1, Types >() );
-		}{
-			using Types = TypeList< Comp1*, Comp2* >;
-			STATIC_ASSERT( _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<0> >::Test< Types, 0 >() );
-			STATIC_ASSERT( _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<1> >::Test< Types, 1 >() );
-		}{
-			using Types = TypeList< Comp1*, Comp2& >;
-			STATIC_ASSERT( _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<0> >::Test< Types, 0 >() );
-			STATIC_ASSERT( _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<1> >::Test< Types, 1 >() );
-		}{
-			using Types = TypeList< Comp1 const*, Comp2* >;
-			STATIC_ASSERT( _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<0> >::Test< Types, 0 >() );
-			STATIC_ASSERT( _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<1> >::Test< Types, 1 >() );
-		}{
-			using Types = TypeList< Comp1*, Comp1& >;
-			STATIC_ASSERT( not _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<0> >::Test< Types, 0 >() );
-			STATIC_ASSERT( not _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<1> >::Test< Types, 1 >() );
+			EntityID	e1 = reg.CreateEntity<Comp1, Comp2, Tag1>();
+			EntityID	e2 = reg.CreateEntity<Comp1>();
+			EntityID	e3 = reg.CreateEntity<Comp2, Tag1>();
+			EntityID	e4 = reg.CreateEntity<Comp2, Comp1>();
+			EntityID	e5 = reg.CreateEntity<Comp1, Tag1>();
+			TEST( e1 and e2 and e3 and e4 and e5 );
 		}
-	#endif	// AE_ECS_VALIDATE_SYSTEM_FN
+		
+		Array<uint>	arr;
+		reg.Enque(	[&reg, &arr] (ArrayView<Tuple< size_t, ReadAccess<Comp1> >>)
+					{
+						arr.push_back( 1 );
+						
+						reg.Enque(	[&arr] (ArrayView<Tuple< size_t, WriteAccess<Comp1>, ReadAccess<Comp2> >>)
+									{
+										arr.push_back( 2 );
+									});
+					});
+
+		reg.Enque(	[&arr] (ArrayView<Tuple< size_t, ReadAccess<Comp2> >>)
+					{
+						arr.push_back( 3 );
+					});
+
+		reg.Process();
+		
+		TEST(( arr == Array<uint>{1, 2, 3} ));
+
+		reg.DestroyAllEntities();
+	}
+
+
+	void Events_Test1 ()
+	{
+		Registry	reg;
+		Array<uint>	arr;
+		
+		reg.AddEventListener<BeforeEvent<Event1>>(
+			[&arr] ()
+			{
+				arr.push_back( 1 );
+			});
+		reg.AddEventListener<Event1>(
+			[&reg, &arr] ()
+			{
+				arr.push_back( 2 );
+				reg.EnqueEvent<Event2>();
+			});
+		reg.AddEventListener<AfterEvent<Event1>>(
+			[&arr] ()
+			{
+				arr.push_back( 3 );
+			});
+		reg.AddEventListener<BeforeEvent<Event2>>(
+			[&reg, &arr] ()
+			{
+				arr.push_back( 4 );
+				reg.EnqueEvent<Event3>();
+			});
+		reg.AddEventListener<Event2>(
+			[&arr] ()
+			{
+				arr.push_back( 5 );
+			});
+		reg.AddEventListener<Event3>(
+			[&arr] ()
+			{
+				arr.push_back( 6 );
+			});
+		
+		reg.EnqueEvent<Event1>();
+		reg.Process();
+		
+		TEST(( arr == Array<uint>{1, 2, 3, 4, 5, 6} ));
+	}
+
+
+	void Messages_Test1 ()
+	{
+		Registry		reg;
+		const size_t	count = 100;
+
+		size_t	cnt1 = 0;
+		reg.AddMessageListener<Comp1, MsgTag_RemovedComponent>(
+			[&cnt1] (ArrayView<EntityID> entities, ArrayView<Comp1> components)
+			{
+				TEST( entities.size() == components.size() );
+				cnt1 += entities.size();
+			});
+
+		Array<EntityID>	entities;
+
+		for (size_t i = 0; i < count; ++i)
+		{
+			EntityID	e1 = reg.CreateEntity<Comp1>();
+			TEST( e1 );
+			entities.push_back( e1 );
+		}
+
+		reg.Process();
+		TEST( cnt1 == 0 );
+		
+		for (size_t i = 0; i < entities.size(); ++i)
+		{
+			reg.DestroyEntity( entities[i] );
+		}
+		entities.clear();
+		
+		reg.Process();
+		TEST( cnt1 == count );
+	}
+
+
+	void Messages_Test2 ()
+	{
+		Registry		reg;
+		const size_t	count = 100;
+		
+		size_t	cnt1 = 0;
+		reg.AddMessageListener<Comp1, MsgTag_ComponentChanged>(
+			[&cnt1] (ArrayView<EntityID> entities)
+			{
+				cnt1 += entities.size();
+			});
+		
+		for (size_t i = 0; i < count; ++i)
+		{
+			EntityID	e1 = reg.CreateEntity<Comp1>();
+			TEST( e1 );
+		}
+
+		reg.Enque(	[&reg] (ArrayView<Tuple< size_t, ReadAccess<Comp1>, ReadAccess<EntityID> >> chunks)
+					{
+						for (auto& chunk : chunks)
+						{
+							std::apply(
+								[&reg] (size_t count, ReadAccess<Comp1>, ReadAccess<EntityID> entities)
+								{
+									for (size_t i = 0; i < count; ++i)
+									{
+										reg.AddMessage<MsgTag_ComponentChanged>( entities[i], ComponentTypeInfo<Comp1>::id );
+									}
+								},
+								chunk );
+						}
+					});
+		reg.Process();
+
+		TEST( cnt1 == count );
+
+		reg.DestroyAllEntities();
 	}
 }
 
 
 extern void UnitTest_Registry ()
 {
-	Registry_Test1();
-	Registry_Test2();
-	Registry_Test3();
-	Registry_Test4();
-	Registry_Test5();
+	ComponentValidator_Test1();
+	Entity_Test1();
+	SingleComponent_Test1();
+	System_Test1();
+	System_Test2();
+	System_Test3();
+	Events_Test1();
+	Messages_Test1();
+	Messages_Test2();
 
 	AE_LOGI( "UnitTest_Registry - passed" );
 }

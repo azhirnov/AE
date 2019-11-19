@@ -95,36 +95,6 @@ namespace AE::ECS
 	struct BeforeEvent {};
 
 
-	//
-	// Query
-	//
-
-	enum class EntityQuery : uint
-	{};
-
-	struct EntityQueryDesc
-	{
-	};
-
-
-	//
-	// System
-	//
-
-	struct System
-	{
-		friend class Registry;
-
-	private:
-		EntityQuery		_queryId;
-		Registry &		_owner;
-
-	protected:
-		System (Registry &owner) : _owner{owner} {}
-
-		ND_ Registry&  Owner ()		{ return _owner; }
-	};
-
 
 	//
 	// Registry
@@ -160,16 +130,6 @@ namespace AE::ECS
 		using EventListeners_t		= HashMultiMap< TypeId, EventListener_t >;
 		using EventQueue_t			= Array< Function< void () >>;
 
-		struct EntityQueryData
-		{
-			EntityQueryDesc		desc;
-			Array<ArchetypeID>	archetypes;
-		};
-
-		using Queries_t			= HashMap< EntityQuery, EntityQueryData >;
-
-		using SystemMap_t		= HashMap< TypeId, UniquePtr<System> >;
-
 
 	// variables
 	private:
@@ -182,10 +142,8 @@ namespace AE::ECS
 		SingleCompMap_t		_singleComponents;
 		//SCAllocator_t		_scAllocator;		// TODO
 
-		Queries_t			_queries;
-		SystemMap_t			_systemMap;
-
 		EventListeners_t	_eventListeners;
+
 		EventQueue_t		_eventQueue;
 		EventQueue_t		_pendingEvents;
 
@@ -232,14 +190,6 @@ namespace AE::ECS
 
 
 		// system
-		ND_	EntityQuery  CreateQuery (const EntityQueryDesc &);
-		
-		template <typename Fn>
-		ND_	EntityQuery  CreateQuery ();
-
-			template <typename SystemType>
-			void  Run (SystemType &&);
-
 			template <typename Fn>
 			void  Enque (Fn &&fn);
 			
@@ -250,28 +200,27 @@ namespace AE::ECS
 			void  EnqueEvent ();
 
 			void  Process ();
-			
-			template <typename SystemType, typename Ev>
-			void  AddSystem ();
 
 			template <typename Ev, typename Fn>
 			void  AddEventListener (Fn &&fn);
 
+			template <typename Comp, typename Tag, typename Fn>
+			void  AddMessageListener (Fn &&fn);
 
-		// entity events
-			//void OnEntityDestroyed (Function<void (ArrayView<EntityID>)> fn);
-
-			template <typename Comp, typename Tag>
-			void OnComponentChanged (Function<void (EntityID, Comp&)> fn);
+			template <typename Tag>
+			void  AddMessage (EntityID id, ComponentID compId);
+		
+			template <typename Tag, typename Comp>
+			void  AddMessage (EntityID id, Comp&& comp);
 
 
 	private:
 			template <typename Ev>
 			void  _RunEvent ();
 
-			bool _RemoveEntity (EntityID id);
-			void _AddEntity (const Archetype &arch, EntityID id, OUT ArchetypeStorage* &storage, OUT Index_t &index);
-			void _AddEntity (const Archetype &arch, EntityID id);
+			bool  _RemoveEntity (EntityID id);
+			void  _AddEntity (const Archetype &arch, EntityID id, OUT ArchetypeStorage* &storage, OUT Index_t &index);
+			void  _AddEntity (const Archetype &arch, EntityID id);
 
 			template <typename ArgsList, size_t I = 0>
 		ND_ static bool  _IsArchetypeSupported (const Archetype &arch);
@@ -370,7 +319,6 @@ namespace AE::ECS
 		ArchetypeStorage*	src_storage		= null;
 		Index_t				src_index;
 		ArchetypeDesc		desc;
-		const ComponentID	comp_id		= ComponentTypeInfo<T>::id;
 
 		_entities.GetArchetype( id, OUT src_storage, OUT src_index );
 		
@@ -384,16 +332,22 @@ namespace AE::ECS
 			bool	found = false;
 			if constexpr( IsEmpty<T> )
 			{
+				const TagComponentID	tag_id = TagComponentTypeInfo<T>::id;
+
 				for (size_t i = 0; i < desc.tags.size(); ++i)
 				{
-					if ( desc.tags[i] == comp_id )
+					if ( desc.tags[i] == tag_id )
 					{
 						found = true;
 						desc.tags.fast_erase( i );
 						break;
 					}
 				}
-			}else{
+			}
+			else
+			{
+				const ComponentID	comp_id = ComponentTypeInfo<T>::id;
+
 				for (size_t i = 0; i < desc.components.size(); ++i)
 				{
 					if ( desc.components[i].id == comp_id )
@@ -425,15 +379,15 @@ namespace AE::ECS
 			if ( (src != null) & (dst != null) )
 			{
 				std::memcpy( OUT dst + BytesU{comp.size} * size_t(dst_index),
-							src + BytesU{comp.size} * size_t(src_index),
+							 src + BytesU{comp.size} * size_t(src_index),
 							 size_t(comp.size) );
 			}
 		}
 		
-		//if constexpr( IsEmpty<T> )
-		//	_messages.Add<Tag_RemovedComponent>( id, comp_id );
-		//else
-		//	_messages.Add<Tag_RemovedComponent>( id, std::move( src_storage->GetComponents<T>()[size_t(src_index)] ));
+		if constexpr( IsEmpty<T> )
+			_messages.Add<MsgTag_RemovedComponent>( id, TagComponentTypeInfo<T>::id );
+		else
+			_messages.Add<MsgTag_RemovedComponent>( id, src_storage->GetComponents<T>()[size_t(src_index)] );
 		
 		EntityID	moved;
 		src_storage->Erase( src_index, OUT moved );
@@ -863,8 +817,6 @@ namespace AE::ECS
 					_reg_detail_::SC_CheckForDuplicates< TypeList<SCTuple> >();
 				#endif
 
-				//STATIC_ASSERT( Info::valid );
-
 				Array<ArchetypeStorage*>	storages;
 				Array<Chunk>				chunks;
 				
@@ -901,6 +853,14 @@ namespace AE::ECS
 	{
 		template <typename T>
 		struct ArchetypeCompatibility;
+		
+		template <>
+		struct ArchetypeCompatibility< ReadAccess<EntityID> >
+		{
+			static bool Test (const Archetype &) {
+				return true;
+			}
+		};
 
 		template <typename T>
 		struct ArchetypeCompatibility< WriteAccess<T> >
@@ -1024,6 +984,14 @@ namespace AE::ECS
 	{
 		template <typename T>
 		struct GetStorageComponent;
+		
+		template <>
+		struct GetStorageComponent< ReadAccess<EntityID> >
+		{
+			static ReadAccess<EntityID>  Get (ArchetypeStorage* storage) {
+				return ReadAccess<EntityID>{ storage->GetEntities() };
+			}
+		};
 
 		template <typename T>
 		struct GetStorageComponent< WriteAccess<T> >
@@ -1137,54 +1105,43 @@ namespace AE::ECS
 	}
 //-----------------------------------------------------------------------------
 	
-
-	/*
-	template <typename SystemType>
-	inline void  Registry::Run (SystemType &&system)
+	
+/*
+=================================================
+	AddEventListener
+=================================================
+*/
+	template <typename Ev, typename Fn>
+	inline void  Registry::AddEventListener (Fn &&fn)
 	{
-		STATIC_ASSERT( IsBaseOf< System, SystemType >);
+		EXLOCK( _drCheck );
 
-		return Run( system._queryId,
-					[] (auto ...args) { return system( std::forward<decltype(args)>(args)... ); },
-				    std::move(deps) );
+		_eventListeners.insert({ TypeIdOf<Ev>(), EventListener_t{ std::forward<Fn>(fn) }});
 	}
 	
-	template <typename Fn>
-	inline void  Registry::Run (const EntityQuery &query, Fn &&fn)
-	{
-
-	}
-	
-	template <typename Ev>
-	inline void  Registry::ProcessEvents ()
-	{
-		CHECK( _pendingEvents.empty() );
-		CHECK( _eventQueue.empty() );
-
-		_eventQueue.push_back( [](){ _RunEvent<Ev>(); });
-
-		for (; _eventQueue.size();)
-		{
-			auto	fn = std::move( _eventQueue.back() );
-			_eventQueue.pop_back();
-
-			fn();
-
-			for (auto iter = _pendingEvents.rbegin(); iter != _pendingEvents.rend(); ++iter) {
-				_eventQueue.push_back( std::move(*iter) );
-			}
-			_pendingEvents.clear();
-		}
-	}
-
+/*
+=================================================
+	EnqueEvent
+=================================================
+*/
 	template <typename Ev>
 	inline void  Registry::EnqueEvent ()
 	{
-		_pendingEvents.push_back( [](){ _RunEvent<BeforeEvent<Ev>>(); });
-		_pendingEvents.push_back( [](){ _RunEvent<Ev>(); });
-		_pendingEvents.push_back( [](){ _RunEvent<AfterEvent<Ev>>(); });
+		EXLOCK( _drCheck );
+
+		_pendingEvents.push_back( [this]()
+		{
+			_RunEvent<BeforeEvent<Ev>>();
+			_RunEvent<Ev>();
+			_RunEvent<AfterEvent<Ev>>();
+		});
 	}
 	
+/*
+=================================================
+	_RunEvent
+=================================================
+*/
 	template <typename Ev>
 	inline void  Registry::_RunEvent ()
 	{
@@ -1196,22 +1153,35 @@ namespace AE::ECS
 			iter->second();
 		}
 	}
+//-----------------------------------------------------------------------------
 	
-	template <typename SystemType, typename Ev>
-	inline void  Registry::AddSystem ()
-	{
-		auto	sys			= new SystemType{};
-		bool	inserted	= _systemMap.insert_or_assign( TypeIdOf<SystemType>(), UniquePtr<System>{sys} ).second;
-		CHECK( inserted );
 
-		AddEventListener<Ev>( [sys](){ return (*sys)(); });
-	}
-
-	template <typename Ev, typename Fn>
-	inline void  Registry::AddEventListener (Fn &&fn)
+/*
+=================================================
+	AddMessageListener
+=================================================
+*/
+	template <typename Comp, typename Tag, typename Fn>
+	inline void  Registry::AddMessageListener (Fn &&fn)
 	{
-		_eventListeners.insert({ TypeIdOf<Ev>(), EventListener_t{ std::forward<Fn>(fn) }});
+		_messages.AddListener<Comp, Tag>( std::forward<Fn>( fn ));
 	}
-	*/
+	
+/*
+=================================================
+	AddMessage
+=================================================
+*/
+	template <typename Tag>
+	inline void  Registry::AddMessage (EntityID id, ComponentID compId)
+	{
+		return _messages.Add<Tag>( id, compId );
+	}
+		
+	template <typename Tag, typename Comp>
+	inline void  Registry::AddMessage (EntityID id, Comp&& comp)
+	{
+		return _messages.Add<Tag>( id, std::forward<Comp>(comp) );
+	}
 
 }	// AE::ECS

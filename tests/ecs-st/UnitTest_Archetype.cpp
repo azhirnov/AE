@@ -18,6 +18,7 @@ namespace
 		float	value;
 	};
 
+
 	void Archetype_Test1 ()
 	{
 		ArchetypeDesc		desc;
@@ -54,12 +55,29 @@ namespace
 		TEST( pool.Unassign( id_1 ));
 		TEST( pool.Unassign( id_2 ));
 	}
+	
+
+	void Archetype_Test2 ()
+	{
+		Archetype	arch1{ ArchetypeDesc{}.Add<Comp1>().Add<Comp2>() };
+		Archetype	arch2{ ArchetypeDesc{}.Add<Comp1>() };
+		Archetype	arch3{ ArchetypeDesc{}.Add<Comp2>() };
+
+		TEST( arch1.Contains( arch2 ));
+		TEST( not arch2.Contains( arch1 ));
+		
+		TEST( arch1.Contains( arch3 ));
+		TEST( not arch3.Contains( arch1 ));
+		
+		TEST( not arch3.Contains( arch2 ));
+	}
 }
 
 
 extern void UnitTest_Archetype ()
 {
 	Archetype_Test1();
+	Archetype_Test2();
 
 	AE_LOGI( "UnitTest_Archetype - passed" );
 }

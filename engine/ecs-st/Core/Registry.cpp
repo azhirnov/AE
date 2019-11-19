@@ -4,7 +4,7 @@
 
 namespace AE::ECS
 {
-	
+
 /*
 =================================================
 	constructor
@@ -76,8 +76,12 @@ namespace AE::ECS
 	{
 		EXLOCK( _drCheck );
 
-		for (auto& [arch, storages] : _archetypes) {
-			for (auto& st : storages) {
+		for (auto& [arch, storages] : _archetypes)
+		{
+			for (auto& st : storages)
+			{
+				// TODO: add message with MsgTag_RemovedComponent ???
+
 				st->Clear();
 			}
 		}
@@ -112,8 +116,22 @@ namespace AE::ECS
 		{
 			ASSERT( storage->IsValid( id, index ));
 
-			EntityID	moved;
+			// add messages
+			{
+				auto&	arch = storage->GetArchetype();
 
+				for (auto& comp : arch.Desc().components)
+				{
+					void*	comp_ptr = storage->GetComponents( comp.id );
+					_messages.Add<MsgTag_RemovedComponent>( id, comp.id, ArrayView<uint8_t>{ Cast<uint8_t>(comp_ptr), size_t(comp.size) });
+				}
+
+				for (auto& tag : arch.Desc().tags) {
+					_messages.Add<MsgTag_RemovedComponent>( id, tag );
+				}
+			}
+
+			EntityID	moved;
 			if ( not storage->Erase( index, OUT moved ))
 				return false;
 			
@@ -124,7 +142,7 @@ namespace AE::ECS
 			_entities.SetArchetype( id, null, Index_t(-1) );
 			
 			// remove empty storage
-			if ( storage->Empty() )
+			/*if ( storage->Empty() )
 			{
 				auto&	storages = _archetypes[ storage->GetArchetype() ];
 
@@ -134,7 +152,7 @@ namespace AE::ECS
 						break;
 					}
 				}
-			}
+			}*/
 		}
 		return true;
 	}
@@ -190,10 +208,19 @@ namespace AE::ECS
 	{
 		EXLOCK( _drCheck );
 
+		const auto	FlushEvents = [this] ()
+		{
+			for (auto iter = _pendingEvents.rbegin(); iter != _pendingEvents.rend(); ++iter) {
+				_eventQueue.push_back( std::move(*iter) );
+			}
+			_pendingEvents.clear();
+		};
+
 		//CHECK( _pendingEvents.empty() );
 		CHECK( _eventQueue.empty() );
-
-		_eventQueue = std::move(_pendingEvents);
+		
+		_messages.Process();
+		FlushEvents();
 
 		for (; _eventQueue.size();)
 		{
@@ -201,11 +228,9 @@ namespace AE::ECS
 			_eventQueue.pop_back();
 
 			fn();
-
-			for (auto iter = _pendingEvents.rbegin(); iter != _pendingEvents.rend(); ++iter) {
-				_eventQueue.push_back( std::move(*iter) );
-			}
-			_pendingEvents.clear();
+			_messages.Process();
+			
+			FlushEvents();
 		}
 	}
 

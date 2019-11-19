@@ -13,7 +13,7 @@ namespace AE::ECS
 	Archetype::Archetype (const ArchetypeDesc &desc, bool sorted) :
 		_desc{ desc }
 	{
-		ASSERT( _desc.components.size() );
+		ASSERT( _desc.components.size() or _desc.tags.size() );
 
 		if ( not sorted )
 		{
@@ -76,9 +76,9 @@ namespace AE::ECS
 	HasTag
 =================================================
 */
-	bool  Archetype::HasTag (ComponentID id) const
+	bool  Archetype::HasTag (TagComponentID id) const
 	{
-		return BinarySearch( ArrayView<ComponentID>{ _desc.tags }, id ) < _desc.tags.size();
+		return BinarySearch( ArrayView<TagComponentID>{ _desc.tags }, id ) < _desc.tags.size();
 	}
 
 /*
@@ -88,10 +88,16 @@ namespace AE::ECS
 */
 	bool  Archetype::operator == (const Archetype &rhs) const
 	{
+		if ( this == &rhs )
+			return true;
+
 		if ( _hash != rhs._hash )
 			return false;
 
 		if ( _desc.components.size() != rhs._desc.components.size() )
+			return false;
+		
+		if ( _desc.tags.size() != rhs._desc.tags.size() )
 			return false;
 
 		for (size_t i = 0; i < _desc.components.size(); ++i)
@@ -99,6 +105,77 @@ namespace AE::ECS
 			if ( not (_desc.components[i].id == rhs._desc.components[i].id) )
 				return false;
 		}
+
+		for (size_t i = 0; i < _desc.tags.size(); ++i)
+		{
+			if ( not (_desc.tags[i] == rhs._desc.tags[i]) )
+				return false;
+		}
+		return true;
+	}
+	
+/*
+=================================================
+	Contains
+=================================================
+*/
+	bool  Archetype::Contains (const Archetype &rhs) const
+	{
+		if ( this == &rhs )
+			return true;
+
+		// components
+		{
+			auto		li = this->_desc.components.begin();
+			const auto	le = this->_desc.components.end();
+			auto		ri = rhs._desc.components.begin();
+			const auto	re = rhs._desc.components.end();
+
+			for (; (li != le) & (ri != re);)
+			{
+				if ( li->id < ri->id )
+					++li;
+				else
+				if ( li->id > ri->id )
+					break;
+				else
+				if ( li->id == ri->id )
+				{
+					++li;
+					++ri;
+				}
+			}
+
+			if ( ri != re )
+				return false;
+		}
+
+		// tags
+		{
+			auto		li = this->_desc.tags.begin();
+			const auto	le = this->_desc.tags.end();
+			auto		ri = rhs._desc.tags.begin();
+			const auto	re = rhs._desc.tags.end();
+
+			for (; (li != le) & (ri != re);)
+			{
+				if ( *li < *ri )
+					++li;
+				else
+				if ( *li > *ri )
+					break;
+				else
+				if ( *li == *ri )
+				{
+					++li;
+					++ri;
+				}
+			}
+
+			if ( ri != re )
+				return false;
+		}
+
 		return true;
 	}
 //-----------------------------------------------------------------------------
@@ -112,7 +189,7 @@ namespace AE::ECS
 */
 	ArchetypeStorage::ArchetypeStorage (const Archetype &archetype, size_t count) :
 		_count{ 0 },
-		_locked{ false },
+		_locks{ 0 },
 		_archetype{ archetype },
 		_capacity{ count }
 	{
@@ -139,6 +216,8 @@ namespace AE::ECS
 */
 	ArchetypeStorage::~ArchetypeStorage ()
 	{
+		CHECK( not IsLocked() );
+
 		ASSERT( _count == 0 );
 		_allocator.Deallocate( _memory, _archetype.MaxAlign() );
 	}
@@ -150,7 +229,7 @@ namespace AE::ECS
 */
 	bool  ArchetypeStorage::Add (EntityID id, OUT Index_t &index)
 	{
-		CHECK_ERR( not _locked );
+		CHECK_ERR( not IsLocked() );
 
 		if ( _count < _capacity )
 		{
@@ -180,7 +259,7 @@ namespace AE::ECS
 */
 	bool  ArchetypeStorage::Erase (Index_t index, OUT EntityID &movedEntity)
 	{
-		CHECK_ERR( not _locked );
+		CHECK_ERR( not IsLocked() );
 
 		const size_t	idx = size_t(index);
 		CHECK_ERR( idx < _count );
@@ -228,10 +307,68 @@ namespace AE::ECS
 */
 	void  ArchetypeStorage::Clear ()
 	{
-		CHECK_ERR( not _locked, void() );
+		CHECK_ERR( not IsLocked(), void() );
 
 		_count = 0;
 	}
+	
+/*
+=================================================
+	Reserve
+=================================================
+*/
+	void  ArchetypeStorage::Reserve (size_t size)
+	{
+		CHECK_ERR( not IsLocked(), void() );
 
+		if ( size < _capacity )
+			return;
+
+		_capacity = size;
+
+		const ComponentOffsets_t	old_offsets	= _compOffsets;
+		void *						old_mem		= _memory;
+
+		// allocate
+		{
+			BytesU	offset	= SizeOf<EntityID> * _capacity;
+
+			for (size_t i = 0; i < _compOffsets.size(); ++i)
+			{
+				auto&	comp = _archetype.Desc().components[i];
+			
+				offset			= AlignToLarger( offset, BytesU{comp.align} );
+				_compOffsets[i] = offset;
+				offset			+= BytesU{comp.size} * _capacity;
+			}
+
+			_memory = _allocator.Allocate( offset, _archetype.MaxAlign() );
+
+			if ( not _memory )
+			{
+				CHECK( !"failed to allocate memory" );
+				_count = 0;
+				_allocator.Deallocate( old_mem, _archetype.MaxAlign() );
+				return;
+			}
+		}
+
+		// copy
+		if ( _count )
+		{
+			std::memcpy( OUT _memory, old_mem, size_t(SizeOf<EntityID> * _count) );
+
+			for (size_t i = 0; i < _compOffsets.size(); ++i)
+			{
+				auto&	src		= old_offsets[i];
+				auto&	dst		= _compOffsets[i];
+				auto&	comp	= _archetype.Desc().components[i];
+
+				std::memcpy( OUT _memory + dst, old_mem + src, size_t(comp.size) * _count );
+			}
+		}
+
+		_allocator.Deallocate( old_mem, _archetype.MaxAlign() );
+	}
 
 }	// AE::ECS
