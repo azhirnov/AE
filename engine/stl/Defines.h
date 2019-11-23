@@ -228,10 +228,10 @@
 
 // check function return value and exit
 #ifndef CHECK_FATAL
-#	define CHECK_FATAL( _expr_ ) \
-		{if_likely (( _expr_ )) {}\
+#	define CHECK_FATAL( ... ) \
+		{if_likely (( __VA_ARGS__ )) {}\
 		  else { \
-			AE_LOGE( AE_PRIVATE_TOSTRING( _expr_ ) ); \
+			AE_LOGE( AE_PRIVATE_TOSTRING( __VA_ARGS__ ) ); \
 			AE_PRIVATE_EXIT(); \
 		}}
 #endif
@@ -392,6 +392,44 @@
 #	pragma detect_mismatch( "AE_CI_BUILD", "1" )
 #  else
 #	pragma detect_mismatch( "AE_CI_BUILD", "0" )
+#  endif
+
+// platforms
+#  ifdef PLATFORM_WINDOWS
+#	pragma detect_mismatch( "PLATFORM_WINDOWS", "1" )
+#  else
+#	pragma detect_mismatch( "PLATFORM_WINDOWS", "0" )
+#  endif
+
+#  ifdef PLATFORM_LINUX
+#	pragma detect_mismatch( "PLATFORM_LINUX", "1" )
+#  else
+#	pragma detect_mismatch( "PLATFORM_LINUX", "0" )
+#  endif
+
+#  ifdef PLATFORM_ANDROID
+#	pragma detect_mismatch( "PLATFORM_ANDROID", "1" )
+#  else
+#	pragma detect_mismatch( "PLATFORM_ANDROID", "0" )
+#  endif
+
+// compilers
+#  ifdef COMPILER_MSVC
+#	pragma detect_mismatch( "COMPILER_MSVC", "1" )
+#  else
+#	pragma detect_mismatch( "COMPILER_MSVC", "0" )
+#  endif
+
+#  ifdef COMPILER_CLANG
+#	pragma detect_mismatch( "COMPILER_CLANG", "1" )
+#  else
+#	pragma detect_mismatch( "COMPILER_CLANG", "0" )
+#  endif
+
+#  ifdef COMPILER_GCC
+#	pragma detect_mismatch( "COMPILER_GCC", "1" )
+#  else
+#	pragma detect_mismatch( "COMPILER_GCC", "0" )
 #  endif
 
 #endif	// AE_CPP_DETECT_MISSMATCH
