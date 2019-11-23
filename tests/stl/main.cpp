@@ -5,7 +5,6 @@
 extern void UnitTest_Array ();
 extern void UnitTest_Color ();
 extern void UnitTest_CT_Counter ();
-extern void UnitTest_FixedTupleArray ();
 extern void UnitTest_FixedArray ();
 extern void UnitTest_FixedMap ();
 extern void UnitTest_LinearAllocator ();
@@ -29,7 +28,6 @@ int main ()
 	UnitTest_Array();
 	UnitTest_Color();
 	UnitTest_CT_Counter();
-	UnitTest_FixedTupleArray();
 	UnitTest_FixedArray();
 	UnitTest_FixedMap();
 	UnitTest_LinearAllocator();
