@@ -16,10 +16,6 @@ set( AE_ENABLE_SIMPLE_COMPILER_OPTIONS OFF CACHE BOOL "use simplified compiler s
 
 set( AE_ENABLE_VTUNE_API OFF CACHE BOOL "enable helper functions for Intel VTune profiling" )
 
-# External dependencies
-set( AE_ENABLE_ANGELSCRIPT ON CACHE BOOL "enable AngelScript (for scripting)" )
-set( AE_ENABLE_CURL ON CACHE BOOL "enable cURL (for networking)" )
-
 #----------------------------------------------------------
 
 set( CMAKE_DEBUG_POSTFIX "" )
@@ -37,6 +33,7 @@ add_subdirectory( "engine/stl" )
 add_subdirectory( "engine/scripting" )
 add_subdirectory( "engine/threading" )
 add_subdirectory( "engine/networking" )
+add_subdirectory( "engine/platform" )
 add_subdirectory( "engine/ecs-st" )
 
 #----------------------------------------------------------
@@ -48,6 +45,7 @@ if (${AE_ENABLE_TESTS})
 	add_subdirectory( "tests/scripting" )
 	add_subdirectory( "tests/threading" )
 	add_subdirectory( "tests/networking" )
+	add_subdirectory( "tests/platform" )
 	add_subdirectory( "tests/ecs-st" )
 endif()
 
