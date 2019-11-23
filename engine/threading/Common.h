@@ -35,6 +35,8 @@ namespace AE::Threading
 
 	template <typename T>	using Atomic	= std::atomic< T >;
 	
+	using Mutex	= std::mutex;
+
 
 #	ifdef AE_OPTIMAL_MEMORY_ORDER
 	static constexpr std::memory_order	memory_order_acquire	= std::memory_order_acquire;

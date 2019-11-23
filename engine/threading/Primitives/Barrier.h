@@ -173,7 +173,7 @@ namespace AE::Threading
 		uint					_value;
 		uint					_cycle;
 		const uint				_numThreads;
-		std::mutex				_mutex;
+		Mutex					_mutex;
 		std::condition_variable	_cv;
 
 

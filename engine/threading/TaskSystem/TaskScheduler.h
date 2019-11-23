@@ -239,7 +239,7 @@ namespace AE::Threading
 		FileQueue_t			_fileQueue;
 		NetworkQueue_t		_networkQueue;
 
-		std::mutex			_threadGuard;
+		Mutex				_threadGuard;
 		Array<ThreadPtr>	_threads;
 		
 		AE_VTUNE(
