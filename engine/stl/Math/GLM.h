@@ -12,13 +12,21 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #define GLM_FORCE_CXX14
 //#define GLM_FORCE_EXPLICIT_CTOR
-#define GLM_FORCE_XYZW_ONLY
+//#define GLM_FORCE_XYZW_ONLY
 //#define GLM_FORCE_SWIZZLE
 #define GLM_FORCE_CTOR_INIT
 #define GLM_FORCE_INLINE
 
 #ifdef AE_RELEASE
 #	define GLM_FORCE_INTRINSICS
+#endif
+
+// enable SSE
+#if defined(PLATFORM_WINDOWS) or defined(PLATFORM_LINUX)
+#	define GLM_FORCE_SSE42	// TODO: check is SSE 4.2 supported
+#endif
+#if defined(PLATFORM_ANDROID)
+#	define GLM_FORCE_NEON	// TODO: check is NEON supported
 #endif
 
 #ifdef COMPILER_MSVC
@@ -148,20 +156,61 @@
 #include "gtc/vec1.hpp"
 
 #include "gtx/matrix_decompose.hpp"
+#include "gtx/matrix_major_storage.hpp"
 #include "gtx/norm.hpp"
 
 #ifdef COMPILER_MSVC
 #	pragma warning (pop)
 #endif
 
+#if (GLM_CONFIG_ANONYMOUS_STRUCT == GLM_DISABLE) && !GLM_CONFIG_XYZW_ONLY
+#	error GLM_CONFIG_ANONYMOUS_STRUCT must be enabled!
+#endif
 
-namespace AE::STL
+#if GLM_CONFIG_SIMD == GLM_DISABLE
+#	error GLM_CONFIG_SIMD must be enabled!
+#endif
+
+
+namespace AE::Math
 {
-	template <typename T>	using Quat = glm::qua<T>;
-							using QuatF = Quat<float>;
+	template <typename T, uint I>
+	using Vec = glm::vec< I, T, glm::qualifier::aligned_highp >;
 	
-	template <typename T>	using Matrix2x2 = glm::tmat2x2<T>;
-	template <typename T>	using Matrix3x3 = glm::tmat3x3<T>;
-	template <typename T>	using Matrix4x4 = glm::tmat4x4<T>;
+	template <typename T>
+	struct Quat;
 
-}	// AE::STL
+	template <typename T, uint Columns, uint Rows>
+	struct Matrix;
+
+}	// AE::Math
+
+
+// check definitions
+#ifdef AE_CPP_DETECT_MISSMATCH
+
+#  ifdef GLM_FORCE_LEFT_HANDED
+#	pragma detect_mismatch( "GLM_FORCE_LEFT_HANDED", "1" )
+#  else
+#	pragma detect_mismatch( "GLM_FORCE_LEFT_HANDED", "0" )
+#  endif
+
+#  ifdef GLM_FORCE_DEPTH_ZERO_TO_ONE
+#	pragma detect_mismatch( "GLM_FORCE_DEPTH_ZERO_TO_ONE", "1" )
+#  else
+#	pragma detect_mismatch( "GLM_FORCE_DEPTH_ZERO_TO_ONE", "0" )
+#  endif
+
+#  ifdef GLM_FORCE_RADIANS
+#	pragma detect_mismatch( "GLM_FORCE_RADIANS", "1" )
+#  else
+#	pragma detect_mismatch( "GLM_FORCE_RADIANS", "0" )
+#  endif
+
+#  ifdef GLM_FORCE_CTOR_INIT
+#	pragma detect_mismatch( "GLM_FORCE_CTOR_INIT", "1" )
+#  else
+#	pragma detect_mismatch( "GLM_FORCE_CTOR_INIT", "0" )
+#  endif
+
+#endif	// AE_CPP_DETECT_MISSMATCH

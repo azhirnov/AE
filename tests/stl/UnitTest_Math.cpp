@@ -4,6 +4,8 @@
 #include "stl/Math/BitMath.h"
 #include "stl/CompileTime/Math.h"
 #include "stl/Math/Radians.h"
+#include "stl/Math/Vec.h"
+#include "stl/Math/Quat.h"
 #include "UnitTest_Common.h"
 
 

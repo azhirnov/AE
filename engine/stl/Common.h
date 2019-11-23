@@ -29,8 +29,21 @@
 #include "stl/CompileTime/UMax.h"
 #include "stl/CompileTime/DefaultType.h"
 
+namespace AE
+{
+	namespace STL {}
+	namespace Math {}
+}
+
+namespace AE::Math
+{
+	using namespace AE::STL;
+}
+
 namespace AE::STL
 {
+	using namespace AE::Math;
+
 	using uint 		= uint32_t;
 	//using usize	= size_t;
 	//using isize	= ptrdiff_t;

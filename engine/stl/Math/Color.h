@@ -4,7 +4,7 @@
 
 #include "stl/Math/Vec.h"
 
-namespace AE::STL
+namespace AE::Math
 {
 
 	//
@@ -296,7 +296,7 @@ namespace AE::STL
 =================================================
 */
 	template <typename T>
-	ND_ inline constexpr bool4  Equals (const RGBAColor<T> &lhs, const RGBAColor<T> &rhs, const T &err = std::numeric_limits<T>::epsilon() * T(2))
+	ND_ inline bool4  Equals (const RGBAColor<T> &lhs, const RGBAColor<T> &rhs, const T &err = Epsilon<T>())
 	{
 		return bool4{ Equals( lhs.r, rhs.r, err ), Equals( lhs.g, rhs.g, err ), Equals( lhs.b, rhs.b, err ), Equals( lhs.a, rhs.a, err ) };
 	}
@@ -456,15 +456,15 @@ namespace AE::STL
 #		undef DEF_COLOR
 	};
 
-}	// AE::STL
+}	// AE::Math
 
 
 namespace std
 {
 	template <typename T>
-	struct hash< AE::STL::RGBAColor<T> >
+	struct hash< AE::Math::RGBAColor<T> >
 	{
-		ND_ size_t  operator () (const AE::STL::RGBAColor<T> &value) const
+		ND_ size_t  operator () (const AE::Math::RGBAColor<T> &value) const
 		{
 			return	size_t(	AE::STL::HashOf( value.r ) + AE::STL::HashOf( value.g ) +
 							AE::STL::HashOf( value.b ) + AE::STL::HashOf( value.a ));
@@ -473,9 +473,9 @@ namespace std
 	
 
 	template <>
-	struct hash< AE::STL::DepthStencil >
+	struct hash< AE::Math::DepthStencil >
 	{
-		ND_ size_t  operator () (const AE::STL::DepthStencil &value) const
+		ND_ size_t  operator () (const AE::Math::DepthStencil &value) const
 		{
 			return size_t(AE::STL::HashOf( value.depth ) + AE::STL::HashOf( value.stencil ));
 		}

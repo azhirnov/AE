@@ -4,7 +4,7 @@
 
 #include "stl/Algorithms/Cast.h"
 
-namespace AE::STL
+namespace AE::Math
 {
 
 	//
@@ -158,15 +158,15 @@ namespace AE::STL
 		return BytesU( size_t(std::addressof(u.b.*member)) - size_t(std::addressof(u.b)) );
 	}
 
-}	// AE::STL
+}	// AE::Math
 
 
 namespace std
 {
 	template <typename T>
-	struct hash< AE::STL::Bytes<T> >
+	struct hash< AE::Math::Bytes<T> >
 	{
-		ND_ size_t  operator () (const AE::STL::Bytes<T> &value) const
+		ND_ size_t  operator () (const AE::Math::Bytes<T> &value) const
 		{
 			return size_t(AE::STL::HashOf( T(value) ));
 		}

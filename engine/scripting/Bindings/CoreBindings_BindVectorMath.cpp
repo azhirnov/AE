@@ -197,7 +197,7 @@ namespace AE::Scripting
 
 		template <typename V>
 		static bool Equal (const V &lhs, const V &rhs) {
-			return AE::STL::All( lhs == rhs );
+			return Math::All( lhs == rhs );
 		}
 
 		template <typename V>
@@ -275,17 +275,17 @@ namespace AE::Scripting
 		template <typename V> static V   ShiftR_v_s (const V &lhs, typename V::value_type rhs)	{ return lhs >> rhs; }
 		template <typename V> static V   ShiftR_s_v (typename V::value_type lhs, const V &rhs)	{ return lhs >> rhs; }
 
-		template <typename V> static bool All (const V &x)										{ return AE::STL::All( x ); }
-		template <typename V> static bool Any (const V &x)										{ return AE::STL::Any( x ); }
+		template <typename V> static bool All (const V &x)										{ return Math::All( x ); }
+		template <typename V> static bool Any (const V &x)										{ return Math::Any( x ); }
 
 		template <typename V>
 		static typename V::value_type Dot (const V &x, const V &y) {
-			return AE::STL::Dot( x, y );
+			return Math::Dot( x, y );
 		}
 
 		template <typename V>
 		static V Cross (const V &x, const V &y) {
-			return AE::STL::Cross( x, y );
+			return Math::Cross( x, y );
 		}
 	};
 

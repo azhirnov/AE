@@ -11,7 +11,7 @@
 # endif
 #endif
 	
-namespace AE::STL
+namespace AE::Math
 {
 
 /*
@@ -140,7 +140,7 @@ namespace AE::STL
 	from https://en.wikipedia.org/wiki/Circular_shift#Implementing_circular_shifts
 =================================================
 */
-	namespace _ae_stl_hidden_
+	namespace _ae_math_hidden_
 	{
 		template <typename T>
 		forceinline constexpr T _BitRotateLeft (T value, size_t shift)
@@ -150,7 +150,7 @@ namespace AE::STL
 			shift &= mask;
 			return (value << shift) | (value >> ( ~(shift-1) & mask ));
 		}
-	}	// _ae_stl_hidden_
+	}	// _ae_math_hidden_
 	
 	template <typename T>
 	ND_ forceinline constexpr T  BitRotateLeft (const T& x, size_t shift)
@@ -159,7 +159,7 @@ namespace AE::STL
 		STATIC_ASSERT( IsInteger<T> );
 
 		using Unsigned_t = ToUnsignedInteger<T>;
-		return BitCast<T>( _ae_stl_hidden_::_BitRotateLeft( BitCast<Unsigned_t>(x), shift ));
+		return BitCast<T>( _ae_math_hidden_::_BitRotateLeft( BitCast<Unsigned_t>(x), shift ));
 	}
 	
 /*
@@ -169,7 +169,7 @@ namespace AE::STL
 	from https://en.wikipedia.org/wiki/Circular_shift#Implementing_circular_shifts
 =================================================
 */
-	namespace _ae_stl_hidden_
+	namespace _ae_math_hidden_
 	{
 		template <typename T>
 		forceinline constexpr T _BitRotateRight (T value, size_t shift)
@@ -179,7 +179,7 @@ namespace AE::STL
 			shift &= mask;
 			return (value >> shift) | (value << ( ~(shift-1) & mask ));
 		}
-	}	// _ae_stl_hidden_
+	}	// _ae_math_hidden_
 
 	template <typename T>
 	ND_ forceinline constexpr T  BitRotateRight (const T& x, size_t shift)
@@ -188,8 +188,8 @@ namespace AE::STL
 		STATIC_ASSERT( IsInteger<T> );
 		
 		using Unsigned_t = ToUnsignedInteger<T>;
-		return BitCast<T>( _ae_stl_hidden_::_BitRotateRight( BitCast<Unsigned_t>(x), shift ));
+		return BitCast<T>( _ae_math_hidden_::_BitRotateRight( BitCast<Unsigned_t>(x), shift ));
 	}
 
 
-}	// AE::STL
+}	// AE::Math

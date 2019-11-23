@@ -28,10 +28,10 @@ namespace
 }
 
 
-extern void UnitTest_Rectangle ()
+extern void UnitTest_Math_Rectangle ()
 {
 	Rectangle_Test1();
 	Rectangle_Test2();
 
-	AE_LOGI( "UnitTest_Rectangle - passed" );
+	AE_LOGI( "UnitTest_Math_Rectangle - passed" );
 }

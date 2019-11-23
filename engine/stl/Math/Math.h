@@ -4,7 +4,7 @@
 
 #include "stl/Common.h"
 
-namespace AE::STL
+namespace AE::Math
 {
 
 /*
@@ -12,7 +12,7 @@ namespace AE::STL
 	helpers
 =================================================
 */
-	namespace _ae_stl_hidden_
+	namespace _ae_math_hidden_
 	{
 		template <typename T1, typename T2, typename Result>
 		using EnableForInt		= EnableIf< IsSignedInteger<T1> and IsSignedInteger<T2>, Result >;
@@ -20,7 +20,7 @@ namespace AE::STL
 		template <typename T1, typename T2, typename Result>
 		using EnableForUInt		= EnableIf< IsUnsignedInteger<T1> and IsUnsignedInteger<T2>, Result >;
 
-	}	// _ae_stl_hidden_
+	}	// _ae_math_hidden_
 	
 /*
 =================================================
@@ -28,7 +28,7 @@ namespace AE::STL
 =================================================
 */
 	template <typename T1, typename T2>
-	ND_ forceinline constexpr _ae_stl_hidden_::EnableForInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
+	ND_ forceinline constexpr _ae_math_hidden_::EnableForInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
 	{
 		STATIC_ASSERT( IsScalar<T1> and IsScalar<T2> );
 
@@ -50,7 +50,7 @@ namespace AE::STL
 =================================================
 */
 	template <typename T1, typename T2>
-	ND_ forceinline constexpr _ae_stl_hidden_::EnableForUInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
+	ND_ forceinline constexpr _ae_math_hidden_::EnableForUInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
 	{
 		STATIC_ASSERT( IsScalar<T1> and IsScalar<T2> );
 		
@@ -186,11 +186,22 @@ namespace AE::STL
 	
 /*
 =================================================
+	Epsilon
+=================================================
+*/
+	template <typename T>
+	ND_ forceinline constexpr  EnableIf<IsScalar<T>, T>  Epsilon ()
+	{
+		return std::numeric_limits<T>::epsilon() * T(2);
+	}
+
+/*
+=================================================
 	Equals
 =================================================
 */
 	template <typename T>
-	ND_ forceinline constexpr EnableIf<IsScalar<T>, bool>  Equals (const T &lhs, const T &rhs, const T &err = std::numeric_limits<T>::epsilon() * T(2))
+	ND_ forceinline constexpr EnableIf<IsScalar<T>, bool>  Equals (const T &lhs, const T &rhs, const T &err = Epsilon<T>())
 	{
 		if constexpr( IsUnsignedInteger<T> )
 		{
@@ -205,19 +216,19 @@ namespace AE::STL
 =================================================
 */
 	template <typename T>
-	ND_ forceinline constexpr EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Floor (const T& x)
+	ND_ forceinline EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Floor (const T& x)
 	{
 		return std::floor( x );
 	}
 	
 	template <typename T>
-	ND_ forceinline constexpr EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Ceil (const T& x)
+	ND_ forceinline EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Ceil (const T& x)
 	{
 		return std::ceil( x );
 	}
 	
 	template <typename T>
-	ND_ forceinline constexpr EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Trunc (const T& x)
+	ND_ forceinline EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Trunc (const T& x)
 	{
 #	if 1
 		return std::trunc( x );
@@ -232,13 +243,13 @@ namespace AE::STL
 =================================================
 */
 	template <typename T>
-	ND_ forceinline constexpr EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Round (const T& x)
+	ND_ forceinline EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Round (const T& x)
 	{
 		return std::round( x );
 	}
 
 	template <typename T>
-	ND_ forceinline constexpr auto  RoundToInt (const T& x)
+	ND_ forceinline auto  RoundToInt (const T& x)
 	{
 		STATIC_ASSERT( IsFloatPoint<T> );
 		
@@ -250,7 +261,7 @@ namespace AE::STL
 	}
 
 	template <typename T>
-	ND_ forceinline constexpr auto  RoundToUint (const T& x)
+	ND_ forceinline auto  RoundToUint (const T& x)
 	{
 		STATIC_ASSERT( IsFloatPoint<T> );
 		
@@ -269,7 +280,7 @@ namespace AE::STL
 =================================================
 */
 	template <typename T>
-	ND_ forceinline constexpr T  Fract (const T& x)
+	ND_ forceinline T  Fract (const T& x)
 	{
 		return x - Floor( x );
 	}
@@ -367,14 +378,19 @@ namespace AE::STL
 	template <auto Base, typename T>
 	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Log (const T& x)
 	{
-		ASSERT( x >= T(0) );
 		static constexpr auto log_base = std::log( Base );
-		return std::log( x ) / log_base;
+		return Ln( x ) / log_base;
+	}
+
+	template <typename T>
+	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Log (const T& x, const T& base)
+	{
+		return Ln( x ) / Ln( base );
 	}
 	
 /*
 =================================================
-	Pow / Exp
+	Pow / Exp / Exp2 / Exp10 / ExpMinus1
 =================================================
 */
 	template <typename T>
@@ -388,6 +404,24 @@ namespace AE::STL
 	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Exp (const T& x)
 	{
 		return std::exp( x );
+	}
+
+	template <typename T>
+	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Exp2 (const T& x)
+	{
+		return std::exp2( x );
+	}
+
+	template <typename T>
+	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Exp10 (const T& x)
+	{
+		return Pow( T(10), x );
+	}
+
+	template <typename T>
+	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  ExpMinus1 (const T& x)
+	{
+		return std::expm1( x );
 	}
 
 /*
@@ -410,4 +444,4 @@ namespace AE::STL
 		return result;
 	}
 
-}	// AE::STL
+}	// AE::Math
