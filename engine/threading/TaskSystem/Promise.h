@@ -490,13 +490,13 @@ namespace _ae_threading_hidden_
 	{
 		return MakePromise(
 			[t] () {
-				return std::apply( [] (auto&& ...args) {
-						return std::make_tuple( args._impl->Result() ... );
-					}, t );
+				return	t.Apply( [] (auto&& ...args) {
+							return MakeTuple( args._impl->Result() ... );
+						});
 			},
-			std::apply( [] (auto&& ...args) {
-				return StrongDeps{ AsyncTask{std::forward<decltype(args)>( args )}... };
-			}, t ),
+			t.Apply( [] (auto&& ...args) {
+					return StrongDeps{ AsyncTask{std::forward<decltype(args)>( args )}... };
+				}),
 			thread
 		);
 	}

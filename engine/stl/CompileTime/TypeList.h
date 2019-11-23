@@ -13,17 +13,17 @@ namespace _ae_stl_hidden_
 	struct TL_GetFirstIndex;
 
 	template <typename RefType, size_t I>
-	struct TL_GetFirstIndex< RefType, I, std::tuple<> >
+	struct TL_GetFirstIndex< RefType, I, Tuple<> >
 	{
 		inline static constexpr size_t	value = UMax;
 	};
 
 	template <typename RefType, size_t I, typename Head, typename... Tail>
-	struct TL_GetFirstIndex< RefType, I, std::tuple<Head, Tail...> >
+	struct TL_GetFirstIndex< RefType, I, Tuple<Head, Tail...> >
 	{
 		inline static constexpr size_t	value = Conditional< IsSameTypes<RefType, Head>,
 													std::integral_constant<size_t, I>,
-													TL_GetFirstIndex< RefType, I+1, std::tuple<Tail...> > >::value;
+													TL_GetFirstIndex< RefType, I+1, Tuple<Tail...> > >::value;
 	};
 	
 
@@ -31,15 +31,15 @@ namespace _ae_stl_hidden_
 	struct TL_GetLastIndex;
 	
 	template <typename RefType, size_t I>
-	struct TL_GetLastIndex< RefType, I, std::tuple<> >
+	struct TL_GetLastIndex< RefType, I, Tuple<> >
 	{
 		inline static constexpr size_t	value = UMax;
 	};
 	
 	template <typename RefType, size_t I, typename Head, typename... Tail>
-	struct TL_GetLastIndex< RefType, I, std::tuple<Head, Tail...> >
+	struct TL_GetLastIndex< RefType, I, Tuple<Head, Tail...> >
 	{
-		using result = TL_GetLastIndex< RefType, I+1, std::tuple<Tail...> >;
+		using result = TL_GetLastIndex< RefType, I+1, Tuple<Tail...> >;
 
 		inline static constexpr size_t	value = Conditional< result::value == UMax and IsSameTypes<RefType, Head>,
 													std::integral_constant<size_t, I>,

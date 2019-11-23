@@ -43,7 +43,7 @@ namespace
 		auto p3 = MakePromiseFromTuple( MakeTuple( p0, p1, p2 ));
 
 		auto p4 = p3.Then( [] (const Tuple<String, String, uint> &in) {
-				return std::get<0>(in) + std::get<1>(in) + ToString(std::get<2>(in));
+				return in.Get<0>() + in.Get<1>() + ToString( in.Get<2>() );
 			});
 
 		TestResult( p4, "ab1"s );

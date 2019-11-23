@@ -777,8 +777,9 @@ namespace AE::ECS
 			STATIC_ASSERT( IsSpecializationOf< ChunkArray, ArrayView >);
 
 			using Chunk = typename ChunkArray::value_type;
-			using ChunkTL = TypeList< Chunk >;
+			STATIC_ASSERT( IsSpecializationOf< Chunk, Tuple >);
 
+			using ChunkTL = TypeList< Chunk >;
 			STATIC_ASSERT( ChunkTL::Count > 1 );
 			STATIC_ASSERT( IsSameTypes< typename ChunkTL::template Get<0>, size_t >);
 
@@ -792,7 +793,7 @@ namespace AE::ECS
 			STATIC_ASSERT( Args::Count == 2 );
 
 			using SCTuple = typename Args::template Get<1>;
-			STATIC_ASSERT( IsSpecializationOf< SCTuple, std::tuple >);
+			STATIC_ASSERT( IsSpecializationOf< SCTuple, Tuple >);
 		};
 
 		template <typename Fn>
@@ -833,7 +834,7 @@ namespace AE::ECS
 			_pendingEvents.push_back(
 				[this, fn = std::forward<Fn>(fn)] ()
 				{
-					Execute( fn );
+					Execute( std::move(fn) );
 				});
 		}
 	}
@@ -871,7 +872,7 @@ namespace AE::ECS
 			chunks.emplace_back( _GetChunk( storage.get(), (const CompOnly *)null ));
 		}
 
-		_WithSingleComponents( std::move(fn), ArrayView<Chunk>{chunks}, (const SCTuple*)null );
+		_WithSingleComponents( std::move(fn), ArrayView<Chunk>{chunks.data(), chunks.size()}, (const SCTuple*)null );
 				
 		for (auto* st : storages)
 		{

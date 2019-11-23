@@ -244,15 +244,14 @@ namespace
 					{
 						for (auto& chunk : chunks)
 						{
-							std::apply(
+							chunk.Apply(
 								[&cnt] (size_t count, WriteAccess<Comp1> comp1, ReadAccess<Comp2> comp2)
 								{
 									for (size_t i = 0; i < count; ++i) {
 										comp1[i].value = int(comp2[i].value);
 										++cnt;
 									}
-								},
-								chunk );
+								});
 						}
 					});
 		reg.Process();
@@ -309,12 +308,12 @@ namespace
 		reg.Enque(	[&cnt1] (ArrayView<Tuple< size_t, ReadAccess<Comp1>, Subtractive<Tag1> >> chunks,
 							 Tuple< SingleComp1& > single)
 					{
-						size_t&	sum = std::get<0>( single ).sum;
+						size_t&	sum = single.Get<0>().sum;
 
 						for (auto& chunk : chunks)
 						{
-							for (size_t i = 0; i < std::get<0>(chunk); ++i) {
-								sum += std::get<1>(chunk)[i].value;
+							for (size_t i = 0; i < chunk.Get<0>(); ++i) {
+								sum += chunk.Get<1>()[i].value;
 								++cnt1;
 							}
 						}
@@ -325,8 +324,8 @@ namespace
 					{
 						for (auto& chunk : chunks)
 						{
-							for (size_t i = 0; i < std::get<0>(chunk); ++i) {
-								void( std::get<1>(chunk)[i].value );
+							for (size_t i = 0; i < chunk.Get<0>(); ++i) {
+								void( chunk.Get<1>()[i].value );
 								++cnt2;
 							}
 						}
@@ -483,15 +482,14 @@ namespace
 					{
 						for (auto& chunk : chunks)
 						{
-							std::apply(
+							chunk.Apply(
 								[&reg] (size_t count, ReadAccess<Comp1>, ReadAccess<EntityID> entities)
 								{
 									for (size_t i = 0; i < count; ++i)
 									{
 										reg.AddMessage<MsgTag_ComponentChanged>( entities[i], ComponentTypeInfo<Comp1>::id );
 									}
-								},
-								chunk );
+								});
 						}
 					});
 		reg.Process();
