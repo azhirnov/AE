@@ -10,9 +10,12 @@ extern void UnitTest_FixedArray ();
 extern void UnitTest_FixedMap ();
 extern void UnitTest_LinearAllocator ();
 extern void UnitTest_Math ();
-extern void UnitTest_Matrix ();
+extern void UnitTest_Math_Matrix ();
+extern void UnitTest_Math_Transformation ();
+extern void UnitTest_Math_Rectangle ();
+extern void UnitTest_Math_Fractional ();
+extern void UnitTest_Math_PhysicalQuantity ();
 extern void UnitTest_NtStringView ();
-extern void UnitTest_Rectangle ();
 extern void UnitTest_StaticString ();
 extern void UnitTest_StructView ();
 extern void UnitTest_StringParser ();
@@ -30,10 +33,15 @@ int main ()
 	UnitTest_FixedArray();
 	UnitTest_FixedMap();
 	UnitTest_LinearAllocator();
+	
 	UnitTest_Math();
-	UnitTest_Matrix();
+	UnitTest_Math_Matrix();
+	UnitTest_Math_Transformation();
+	UnitTest_Math_Rectangle();
+	UnitTest_Math_Fractional();
+	UnitTest_Math_PhysicalQuantity();
+
 	UnitTest_NtStringView();
-	UnitTest_Rectangle();
 	UnitTest_StaticString();
 	UnitTest_StructView();
 	UnitTest_StringParser();
