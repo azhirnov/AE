@@ -7,7 +7,9 @@ extern void Test_VulkanDevice ();
 
 int main ()
 {
-	Test_VulkanDevice();
+	#ifndef AE_CI_BUILD
+		Test_VulkanDevice();
+	#endif
 
 	AE_LOGI( "Tests.Platform finished" );
 	return 0;
