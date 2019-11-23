@@ -114,7 +114,7 @@ namespace AE::ECS
 
 	// methods
 	public:
-		explicit ArchetypeStorage (const Archetype &archetype, size_t count);
+		explicit ArchetypeStorage (const Archetype &archetype, size_t capacity);
 		~ArchetypeStorage ();
 
 			bool  Add (EntityID id, OUT Index_t &index);
@@ -126,11 +126,14 @@ namespace AE::ECS
 			void  Lock ();
 			void  Unlock ();
 		ND_ bool  IsLocked () const;
-
+		
+		template <typename T>
+		ND_ T*					GetComponent (Index_t idx)		const;
 		template <typename T>
 		ND_ T*					GetComponents ()				const;
 		ND_ void*				GetComponents (ComponentID id)	const;
 		ND_ EntityID const*		GetEntities ()					const;	// local index to EntityID
+		ND_ size_t				Capacity ()						const	{ return _capacity; }
 		ND_ size_t				Count ()						const	{ return _count; }
 		ND_ bool				Empty ()						const	{ return _count == 0; }
 		ND_ Archetype const&	GetArchetype ()					const	{ return _archetype; }
@@ -195,19 +198,35 @@ namespace AE::ECS
 	
 	inline void*  ArchetypeStorage::GetComponents (ComponentID id) const
 	{
+		ASSERT( _memory );
 		size_t	pos = _archetype.IndexOf( id );
 		return	pos < _compOffsets.size() ?
 					_memory + _compOffsets[pos] :
 					null;
 	}
+	
+	template <typename T>
+	inline T*  ArchetypeStorage::GetComponent (Index_t idx) const
+	{
+		ASSERT( size_t(idx) < Count() );
+		ASSERT( _memory );
+
+		size_t	pos = _archetype.IndexOf( ComponentTypeInfo<T>::id );
+		return	pos < _compOffsets.size() ?
+					Cast<T>( _memory + _compOffsets[pos] ) + size_t(idx) :
+					null;
+
+	}
 
 	inline EntityID const*  ArchetypeStorage::GetEntities () const
 	{
+		ASSERT( _memory );
 		return Cast<EntityID>( _memory );
 	}
 	
 	inline EntityID*  ArchetypeStorage::_GetEntities ()
 	{
+		ASSERT( _memory );
 		return Cast<EntityID>( _memory );
 	}
 	

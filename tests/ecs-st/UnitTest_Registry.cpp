@@ -82,8 +82,8 @@ namespace
 		EntityID	e1 = reg.CreateEntity<Comp1, Comp2>();
 		TEST( e1 );
 		{
-			auto*	c11 = reg.GetComponent<Comp1>( e1 );
-			auto*	c12 = reg.GetComponent<Comp2>( e1 );
+			auto	c11 = reg.GetComponent<Comp1>( e1 );
+			auto	c12 = reg.GetComponent<Comp2>( e1 );
 			TEST( c11 );
 			TEST( c12 );
 
@@ -102,8 +102,8 @@ namespace
 		EntityID	e2 = reg.CreateEntity<Comp1, Comp2>();
 		TEST( e2 );
 		{
-			auto*	c21 = reg.GetComponent<Comp1>( e2 );
-			auto*	c22 = reg.GetComponent<Comp2>( e2 );
+			auto	c21 = reg.GetComponent<Comp1>( e2 );
+			auto	c22 = reg.GetComponent<Comp2>( e2 );
 			TEST( c21 );
 			TEST( c22 );
 
@@ -135,8 +135,8 @@ namespace
 		EntityID	e5 = reg.CreateEntity<Comp1, Comp2>();
 		TEST( e5 );
 		{
-			auto*	c51 = reg.GetComponent<Comp1>( e5 );
-			auto*	c52 = reg.GetComponent<Comp2>( e5 );
+			auto	c51 = reg.GetComponent<Comp1>( e5 );
+			auto	c52 = reg.GetComponent<Comp2>( e5 );
 			TEST( c51 );
 			TEST( c52 );
 
@@ -159,35 +159,35 @@ namespace
 			TEST( reg.GetArchetype( e3 ) == reg.GetArchetype( e5 ));
 		}
 		{
-			auto*	c11 = reg.GetComponent<Comp1>( e1 );
-			auto*	c12 = reg.GetComponent<Comp2>( e1 );
+			auto	c11 = reg.GetComponent<Comp1>( e1 );
+			auto	c12 = reg.GetComponent<Comp2>( e1 );
 			TEST( c11 );
 			TEST( c12 );
 			TEST( c11->value == 0x1234 );
 			TEST( c12->value == 1.23f );
 		}
 		{
-			auto*	c21 = reg.GetComponent<Comp1>( e2 );
-			auto*	c22 = reg.GetComponent<Comp2>( e2 );
+			auto	c21 = reg.GetComponent<Comp1>( e2 );
+			auto	c22 = reg.GetComponent<Comp2>( e2 );
 			TEST( c21 );
 			TEST( c22 );
 			TEST( c21->value == 0x111 );
 			TEST( c22->value == 9.4f );
 		}
 		{
-			auto*	c31 = reg.GetComponent<Comp1>( e3 );
+			auto	c31 = reg.GetComponent<Comp1>( e3 );
 			TEST( c31 );
 			TEST( c31->value == 0x777 );
 			TEST( reg.GetComponent<Comp2>( e3 ) == null );
 		}
 		{
-			auto*	c42 = reg.GetComponent<Comp2>( e4 );
+			auto	c42 = reg.GetComponent<Comp2>( e4 );
 			TEST( c42 );
 			TEST( c42->value == 0.88f );
 			TEST( reg.GetComponent<Comp1>( e4 ) == null );
 		}
 		{
-			auto*	c51 = reg.GetComponent<Comp1>( e5 );
+			auto	c51 = reg.GetComponent<Comp1>( e5 );
 			TEST( c51 );
 			TEST( c51->value == 0x222 );
 			TEST( reg.GetComponent<Comp2>( e5 ) == null );
@@ -219,7 +219,7 @@ namespace
 		auto&	s3 = reg.AssignSingleComponent<Comp1>();
 		TEST( s3.value == 0x8899 );
 
-		auto*	s4 = reg.GetSingleComponent<Comp2>();
+		auto	s4 = reg.GetSingleComponent<Comp2>();
 		TEST( s4 );
 		TEST( s4->value == 6.32f );
 
@@ -386,34 +386,34 @@ namespace
 		Array<uint>	arr;
 		
 		reg.AddEventListener<BeforeEvent<Event1>>(
-			[&arr] ()
+			[&arr] (Registry &)
 			{
 				arr.push_back( 1 );
 			});
 		reg.AddEventListener<Event1>(
-			[&reg, &arr] ()
+			[&arr] (Registry &reg)
 			{
 				arr.push_back( 2 );
 				reg.EnqueEvent<Event2>();
 			});
 		reg.AddEventListener<AfterEvent<Event1>>(
-			[&arr] ()
+			[&arr] (Registry &)
 			{
 				arr.push_back( 3 );
 			});
 		reg.AddEventListener<BeforeEvent<Event2>>(
-			[&reg, &arr] ()
+			[&arr] (Registry &reg)
 			{
 				arr.push_back( 4 );
 				reg.EnqueEvent<Event3>();
 			});
 		reg.AddEventListener<Event2>(
-			[&arr] ()
+			[&arr] (Registry &)
 			{
 				arr.push_back( 5 );
 			});
 		reg.AddEventListener<Event3>(
-			[&arr] ()
+			[&arr] (Registry &)
 			{
 				arr.push_back( 6 );
 			});

@@ -187,26 +187,14 @@ namespace AE::ECS
 	constructor
 =================================================
 */
-	ArchetypeStorage::ArchetypeStorage (const Archetype &archetype, size_t count) :
+	ArchetypeStorage::ArchetypeStorage (const Archetype &archetype, size_t capacity) :
 		_count{ 0 },
 		_locks{ 0 },
 		_archetype{ archetype },
-		_capacity{ count }
+		_capacity{ 0 }
 	{
 		_compOffsets.resize( _archetype.Count() );
-
-		BytesU	offset	= SizeOf<EntityID> * _capacity;
-
-		for (size_t i = 0; i < _compOffsets.size(); ++i)
-		{
-			auto&	comp = _archetype.Desc().components[i];
-			
-			offset			= AlignToLarger( offset, BytesU{comp.align} );
-			_compOffsets[i] = offset;
-			offset			+= BytesU{comp.size} * _capacity;
-		}
-
-		_memory = _allocator.Allocate( offset, _archetype.MaxAlign() );
+		Reserve( capacity );
 	}
 	
 /*
@@ -276,7 +264,9 @@ namespace AE::ECS
 
 				// TODO: call component destructor ???
 
-				std::memcpy( comp_storage + comp_size * idx, comp_storage + comp_size * _count, size_t(comp_size) );
+				std::memcpy( OUT comp_storage + comp_size * idx,
+							 comp_storage + comp_size * _count,
+							 size_t(comp_size) );
 			}
 
 			auto*	ent = _GetEntities();
@@ -286,6 +276,17 @@ namespace AE::ECS
 		{
 			ASSERT( not movedEntity.IsValid() );
 		}
+		
+		DEBUG_ONLY(
+		for (size_t i = 0; i < _compOffsets.size(); ++i)
+		{
+			auto&			comp			= _archetype.Desc().components[i];
+			void*			comp_storage	= _memory + _compOffsets[i];
+			const BytesU	comp_size		{comp.size};
+
+			std::memset( OUT comp_storage + comp_size * _count, 0xCD, size_t(comp_size) );
+		})
+
 		return true;
 	}
 	
@@ -321,7 +322,7 @@ namespace AE::ECS
 	{
 		CHECK_ERR( not IsLocked(), void() );
 
-		if ( size < _capacity )
+		if ( size == _capacity or size < _count )
 			return;
 
 		_capacity = size;
@@ -347,14 +348,17 @@ namespace AE::ECS
 			if ( not _memory )
 			{
 				CHECK( !"failed to allocate memory" );
-				_count = 0;
+				_count		= 0;
+				_capacity	= 0;
 				_allocator.Deallocate( old_mem, _archetype.MaxAlign() );
 				return;
 			}
+
+			DEBUG_ONLY( std::memset( OUT _memory, 0xCD, size_t(offset) ));
 		}
 
 		// copy
-		if ( _count )
+		if ( _count and old_mem )
 		{
 			std::memcpy( OUT _memory, old_mem, size_t(SizeOf<EntityID> * _count) );
 
@@ -368,7 +372,8 @@ namespace AE::ECS
 			}
 		}
 
-		_allocator.Deallocate( old_mem, _archetype.MaxAlign() );
+		if ( old_mem )
+			_allocator.Deallocate( old_mem, _archetype.MaxAlign() );
 	}
 
 }	// AE::ECS

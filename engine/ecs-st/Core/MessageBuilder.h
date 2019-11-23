@@ -6,7 +6,7 @@
 
 namespace AE::ECS
 {
-	//struct MsgTag_AddedComponent {};
+	struct MsgTag_AddedComponent {};
 	struct MsgTag_RemovedComponent {};
 	struct MsgTag_ComponentChanged {};
 
@@ -21,7 +21,7 @@ namespace AE::ECS
 	private:
 		struct MessageKey
 		{
-			uint	_value = UMax;
+			size_t	_value = UMax;
 
 			MessageKey () {}
 			MessageKey (ComponentID compId, MsgTagID tagId);
@@ -200,7 +200,7 @@ namespace AE::ECS
 		if constexpr( FI::args::Count == 1 )
 		{
 			STATIC_ASSERT( IsSameTypes<typename FI::args::template Get<0>, ArrayView<EntityID>> );
-			STATIC_ASSERT( not IsSameTypes< Tag, MsgTag_RemovedComponent >);
+			//STATIC_ASSERT( not IsSameTypes< Tag, MsgTag_RemovedComponent >);
 			
 			msg.listeners.push_back(
 				[fn = std::forward<Fn>(fn)] (const MessageData &msg)

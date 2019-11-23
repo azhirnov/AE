@@ -116,13 +116,16 @@ namespace AE::ECS
 */
 	inline bool  EntityPool::SetArchetype (EntityID id, ArchetypeStorage* storage, LocalIndex_t index)
 	{
-		CHECK_ERR( IsValid( id ));
-		ASSERT( (storage != null) == (index != InvalidIndex) );
+		if ( IsValid( id ) )
+		{
+			ASSERT( (storage != null) == (index != InvalidIndex) );
 
-		auto& item   = _entities[ id.Index() ];
-		item.storage = storage;
-		item.index   = index;
-		return true;
+			auto& item   = _entities[ id.Index() ];
+			item.storage = storage;
+			item.index   = index;
+			return true;
+		}
+		return false;
 	}
 	
 /*
@@ -132,12 +135,14 @@ namespace AE::ECS
 */
 	inline bool  EntityPool::GetArchetype (EntityID id, OUT ArchetypeStorage* &storage, OUT LocalIndex_t &index) const
 	{
-		CHECK_ERR( IsValid( id ));
-		
-		auto& item   = _entities[ id.Index() ];
-		storage	= item.storage;
-		index	= item.index;
-		return true;
+		if ( IsValid( id ) )
+		{
+			auto& item   = _entities[ id.Index() ];
+			storage	= item.storage;
+			index	= item.index;
+			return true;
+		}
+		return false;
 	}
 	
 /*

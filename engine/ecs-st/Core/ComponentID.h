@@ -42,7 +42,7 @@ namespace AE::ECS
 	{
 		STATIC_ASSERT( not IsEmpty<Comp> );
 		STATIC_ASSERT( std::is_standard_layout_v<Comp> );
-		STATIC_ASSERT( std::is_trivially_copyable_v<Comp> );
+		//STATIC_ASSERT( std::is_trivially_copyable_v<Comp> );
 		STATIC_ASSERT( std::is_trivially_destructible_v<Comp> );
 		STATIC_ASSERT( std::is_nothrow_destructible_v<Comp> );
 
@@ -96,7 +96,7 @@ namespace std
 	{
 		ND_ size_t  operator () (const AE::ECS::_ae_ecs_hidden_::_ComponentID<UID> &id) const
 		{
-			return AE::STL::BitRotateLeft( size_t(id.value), UID*8 );
+			return AE::Math::BitRotateLeft( size_t(id.value), UID*8 );
 		}
 	};
 

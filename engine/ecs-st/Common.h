@@ -7,7 +7,6 @@
 #include "stl/Math/Bytes.h"
 #include "stl/Math/BitMath.h"
 #include "stl/Math/Vec.h"
-//#include "stl/Math/Transformation.h"
 
 #include "stl/Types/HandleTmpl.h"
 #include "stl/Types/TypeId.h"
@@ -31,6 +30,7 @@ namespace AE::ECS
 	namespace Components {}
 	namespace SingleComponents {}
 	namespace Systems {}
+	namespace Events {}
 
 	using Threading::DataRaceCheck;
 	using Threading::Atomic;
@@ -42,7 +42,9 @@ namespace AE::ECS
 	{
 		static constexpr uint	MaxComponents		= 64;
 		static constexpr uint	MaxTagComponents	= 16;
-		static constexpr uint	DefaultStorageSize	= 1024;
+		static constexpr uint	InitialtStorageSize	= 16;
 	};
+
+	class Registry;
 
 }	// AE::ECS

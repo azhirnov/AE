@@ -31,7 +31,7 @@ namespace AE::ECS
 	GetArchetype
 =================================================
 */
-	Archetype const*  Registry::GetArchetype (EntityID id)
+	Ptr<Archetype const>  Registry::GetArchetype (EntityID id)
 	{
 		ArchetypeStorage*	storage	= null;
 		Index_t				index;
@@ -76,14 +76,11 @@ namespace AE::ECS
 	{
 		EXLOCK( _drCheck );
 
-		for (auto& [arch, storages] : _archetypes)
+		for (auto& [arch, storage] : _archetypes)
 		{
-			for (auto& st : storages)
-			{
-				// TODO: add message with MsgTag_RemovedComponent ???
+			// TODO: add message with MsgTag_RemovedComponent ???
 
-				st->Clear();
-			}
+			storage->Clear();
 		}
 
 		_entities.Clear();
@@ -141,18 +138,7 @@ namespace AE::ECS
 
 			_entities.SetArchetype( id, null, Index_t(-1) );
 			
-			// remove empty storage
-			/*if ( storage->Empty() )
-			{
-				auto&	storages = _archetypes[ storage->GetArchetype() ];
-
-				for (auto iter = storages.begin(); iter != storages.end(); ++iter) {
-					if ( iter->get() == storage ) {
-						storages.erase( iter );
-						break;
-					}
-				}
-			}*/
+			_DecreaseStorageSize( storage );
 		}
 		return true;
 	}
@@ -164,32 +150,30 @@ namespace AE::ECS
 */
 	void  Registry::_AddEntity (const Archetype &arch, EntityID id, OUT ArchetypeStorage* &outStorage, OUT Index_t &index)
 	{
-		auto					[iter, inserted] = _archetypes.insert({ arch, ArchetypeStorages_t{} });
+		auto					[iter, inserted] = _archetypes.insert({ arch, ArchetypeStoragePtr{} });
 		Archetype const&		key				 = iter->first;
-		ArchetypeStorages_t&	storages		 = iter->second;
+		ArchetypeStoragePtr&	storage			 = iter->second;
 
 		if ( inserted )
 		{
+			storage.reset( new ArchetypeStorage{ key, ECS_Config::InitialtStorageSize });
+
 			// TODO: new archetype event
 		}
 
-		for (auto& storage : storages)
+		if ( storage->Add( id, OUT index ))
 		{
-			if ( storage->Add( id, OUT index ))
-			{
-				outStorage = storage.get();
-				_entities.SetArchetype( id, storage.get(), index );
-				return;
-			}
+			outStorage = storage.get();
+			_entities.SetArchetype( id, storage.get(), index );
+			return;
 		}
 
-		auto	storage = MakeUnique<ArchetypeStorage>( key, ECS_Config::DefaultStorageSize );
+		storage->Reserve( storage->Capacity()*2 );
 		
 		CHECK( storage->Add( id, OUT index ));
 		_entities.SetArchetype( id, storage.get(), index );
 		
 		outStorage = storage.get();
-		storages.push_back( std::move(storage) );
 	}
 	
 	void  Registry::_AddEntity (const Archetype &arch, EntityID id)
@@ -197,6 +181,43 @@ namespace AE::ECS
 		ArchetypeStorage*	storage = null;
 		Index_t				index;
 		return _AddEntity( arch, id, OUT storage, OUT index );
+	}
+	
+/*
+=================================================
+	_MoveEntity
+=================================================
+*/
+	void  Registry::_MoveEntity (const Archetype &arch, EntityID id, ArchetypeStorage* srcStorage, Index_t srcIndex,
+								 OUT ArchetypeStorage* &dstStorage, OUT Index_t &dstIndex)
+	{
+		_AddEntity( arch, id, OUT dstStorage, OUT dstIndex );
+
+		if ( srcStorage )
+		{
+			// copy components
+			for (auto& comp : arch.Desc().components)
+			{
+				void*	src = srcStorage->GetComponents( comp.id );
+				void*	dst = dstStorage->GetComponents( comp.id );
+
+				if ( (src != null) & (dst != null) )
+				{
+					std::memcpy( OUT dst + BytesU{comp.size} * size_t(dstIndex),
+								 src + BytesU{comp.size} * size_t(srcIndex),
+								 size_t(comp.size) );
+				}
+			}
+
+			EntityID	moved;
+			srcStorage->Erase( srcIndex, OUT moved );
+
+			// update reference to entity that was moved to new index
+			if ( moved )
+				_entities.SetArchetype( moved, srcStorage, srcIndex );
+				
+			_DecreaseStorageSize( srcStorage );
+		}
 	}
 
 /*
