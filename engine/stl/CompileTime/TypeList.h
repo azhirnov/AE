@@ -80,7 +80,7 @@ namespace _ae_stl_hidden_
 	struct TypeList
 	{
 	public:
-		using							AsTuple	= Tuple< Types... >;
+		using							AsTuple	= std::tuple< Types... >;
 
 		template <typename T>
 		inline static constexpr size_t	FirstIndex	= _ae_stl_hidden_::TL_GetFirstIndex< T, 0, AsTuple >::value;
@@ -91,7 +91,7 @@ namespace _ae_stl_hidden_
 		template <typename T>
 		inline static constexpr size_t	Index	= FirstIndex<T>;
 
-		inline static constexpr size_t	Count	= std::tuple_size< AsTuple >::value;
+		inline static constexpr size_t	Count	= std::tuple_size_v< AsTuple >;
 
 		template <typename T>
 		inline static constexpr bool	HasType	= (Index<T> != UMax);
@@ -141,6 +141,11 @@ namespace _ae_stl_hidden_
 	
 	template <typename... Types>
 	struct TypeList< std::tuple<Types...> > final : TypeList< Types... >
+	{};
+	
+
+	template <typename... Types>
+	struct TypeList< Tuple<Types...> > final : TypeList< Types... >
 	{};
 
 

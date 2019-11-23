@@ -28,6 +28,7 @@
 #include "stl/CompileTime/TypeTraits.h"
 #include "stl/CompileTime/UMax.h"
 #include "stl/CompileTime/DefaultType.h"
+#include "stl/Containers/Tuple.h"
 
 namespace AE
 {
@@ -61,8 +62,6 @@ namespace AE::STL
 	template <size_t N>		using BitSet		= std::bitset< N >;
 	
 	template <typename T>	using Optional		= std::optional< T >;
-
-	template <typename...T>	using Tuple			= std::tuple< T... >;
 	
 							using StringView		= std::string_view;
 	template <typename T>	using BasicStringView	= std::basic_string_view<T>;
@@ -129,17 +128,6 @@ namespace AE::STL
 	ND_ forceinline UniquePtr<T>  MakeUnique (Types&&... args)
 	{
 		return std::make_unique<T>( std::forward<Types>( args )... );
-	}
-	
-/*
-=================================================
-	MakeTuple
-=================================================
-*/
-	template <typename ...Types>
-	ND_ forceinline constexpr auto  MakeTuple (Types&& ...args)
-	{
-		return std::make_tuple( std::forward<Types>(args)... );
 	}
 
 }	// AE::STL

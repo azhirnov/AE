@@ -14,9 +14,8 @@ extern void UnitTest_TypeTraits ()
 		STATIC_ASSERT( not IsSpecializationOf< T2, ArrayView > );
 		STATIC_ASSERT( not IsSpecializationOf< T2, std::tuple > );
 
-		using T3 = Tuple< int >;
+		using T3 = std::tuple< int >;
 		STATIC_ASSERT( IsSpecializationOf< T3, std::tuple > );
-		STATIC_ASSERT( not IsSpecializationOf< T3, Tuple > );		// why ?
 		STATIC_ASSERT( not IsSpecializationOf< T3, ArrayView > );
 	}
 }
