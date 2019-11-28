@@ -18,7 +18,7 @@ namespace AE::STL
 	{
 		ASSERT( name.length() <= 16 );
 		int	res = prctl( PR_SET_NAME, (unsigned long) name.c_str(), 0, 0, 0 );
-		ASSERT( res );
+		ASSERT( res == 0 );
 	}
 	
 /*
@@ -30,7 +30,7 @@ namespace AE::STL
 	{
 		char	buf [16];
 		int		res = prctl( PR_GET_NAME, buf, 0, 0, 0 );
-		ASSERT( res );
+		ASSERT( res == 0 );
 		return String{buf};
 	}
 

@@ -101,6 +101,12 @@ extern void UnitTest_TypeList ()
 
 		constexpr size_t	val3	= TL::ForEach_Add< TypeSize >();
 		STATIC_ASSERT( val3 == 4+4+1+8 );
+		
+		constexpr size_t	val4	= TL::ForEach_Max< TypeSize >();
+		STATIC_ASSERT( val4 == 8 );
+		
+		constexpr size_t	val5	= TL::ForEach_Min< TypeSize >();
+		STATIC_ASSERT( val5 == 1 );
 	}
 
 	AE_LOGI( "UnitTest_TypeList - passed" );

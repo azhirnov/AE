@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "stl/Common.h"
+#include "stl/Math/Math.h"
 
 namespace AE::STL
 {
@@ -119,6 +119,12 @@ namespace _ae_stl_hidden_
 		
 		template <template <typename> class Tmpl>
 		static constexpr auto			ForEach_Add	()	{ return (... + Tmpl<Types>::value); }
+		
+		template <template <typename> class Tmpl>
+		static constexpr auto			ForEach_Max	()	{ return Math::Max( Tmpl<Types>::value... ); }
+		
+		template <template <typename> class Tmpl>
+		static constexpr auto			ForEach_Min	()	{ return Math::Min( Tmpl<Types>::value... ); }
 
 
 		template <typename FN>

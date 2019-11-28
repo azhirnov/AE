@@ -1,6 +1,7 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Algorithms/StringUtils.h"
+#include "stl/Containers/NtStringView.h"
 #include <iostream>
 
 using namespace AE::STL;
@@ -11,7 +12,8 @@ using namespace AE::STL;
 	ConsoleOutput
 =================================================
 */
-	inline void ConsoleOutput (StringView message, StringView file, int line, bool isError)
+namespace {
+	void ConsoleOutput (StringView message, StringView file, int line, bool isError)
 	{
 		const String str = String{file} << '(' << ToString( line ) << "): " << message;
 
@@ -20,7 +22,7 @@ using namespace AE::STL;
 		else
 			std::cout << str << std::endl;
 	}
-	
+}
 /*
 =================================================
 	
@@ -45,7 +47,7 @@ using namespace AE::STL;
 #	include <android/log.h>
 
 namespace {
-	static constexpr char	AE_ANDROID_TAG[] = "FrameGraph";
+	constexpr char	AE_ANDROID_TAG[] = "AE";
 }
 
 /*
@@ -55,7 +57,7 @@ namespace {
 */
 	Logger::EResult  AE::STL::Logger::Info (StringView msg, StringView func, StringView file, int line)
 	{
-		(void)__android_log_print( ANDROID_LOG_WARN, AE_ANDROID_TAG, "%s (%i): %s", file.data(), line, msg.data() );
+		(void)__android_log_write( ANDROID_LOG_WARN, AE_ANDROID_TAG, (String{} << file << " (" << ToString( line ) << "): " << msg).c_str() );
 		return EResult::Continue;
 	}
 	
@@ -66,7 +68,7 @@ namespace {
 */
 	Logger::EResult  AE::STL::Logger::Error (StringView msg, StringView func, StringView file, int line)
 	{
-		(void)__android_log_print( ANDROID_LOG_ERROR, AE_ANDROID_TAG, "%s (%i): %s", file.data(), line, msg.data() );
+		(void)__android_log_write( ANDROID_LOG_ERROR, AE_ANDROID_TAG, (String{} << file << " (" << ToString( line ) << "): " << msg).c_str() );
 		return EResult::Continue;
 	}
 //-----------------------------------------------------------------------------
@@ -88,7 +90,7 @@ namespace {
 	#ifdef COMPILER_MSVC
 		const String	str = String(file) << '(' << ToString( line ) << "): " << (isError ? "Error: " : "") << message << '\n';
 
-		::OutputDebugStringA( str.data() );
+		::OutputDebugStringA( str.c_str() );
 	#endif
 	}
 	
@@ -122,7 +124,7 @@ namespace {
 								  "\nFunction: " << func <<
 								  "\n\nMessage:\n" << msg;
 
-		int	result = ::MessageBoxExA( null, str.data(), caption.data(),
+		int	result = ::MessageBoxExA( null, NtStringView{str}.c_str(), NtStringView{caption}.c_str(),
 									  MB_ABORTRETRYIGNORE | MB_ICONERROR | MB_SETFOREGROUND | MB_TOPMOST | MB_DEFBUTTON3,
 									  MAKELANGID( LANG_ENGLISH, SUBLANG_ENGLISH_US ) );
 		switch ( result )

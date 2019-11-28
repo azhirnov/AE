@@ -268,7 +268,7 @@
 	
 
 // enable/disable checks for enums
-#ifdef COMPILER_MSVC
+#if defined(COMPILER_MSVC)
 #	define BEGIN_ENUM_CHECKS() \
 		__pragma (warning (push)) \
 		__pragma (warning (error: 4061)) /*enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label*/ \
@@ -278,9 +278,12 @@
 #	define END_ENUM_CHECKS() \
 		__pragma (warning (pop)) \
 
-#elif defined(COMPILER_CLANG) or defined(COMPILER_GCC)
-#	define BEGIN_ENUM_CHECKS()		// TODO
-#	define END_ENUM_CHECKS()	// TODO
+#elif defined(COMPILER_CLANG)
+#	define BEGIN_ENUM_CHECKS() \
+		 _Pragma( "clang diagnostic error \"-Wswitch\"" )
+
+#	define END_ENUM_CHECKS() \
+		 _Pragma( "clang diagnostic ignored \"-Wswitch\"" )
 
 #else
 #	define BEGIN_ENUM_CHECKS()

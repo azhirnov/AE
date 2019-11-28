@@ -73,7 +73,11 @@ namespace
 extern void UnitTest_StructView ()
 {
 	StructView_Test1();
+	
+#ifndef PLATFORM_ANDROID
 	StructView_Test2();
+#endif
+
 	StructView_Test3();
 
 	AE_LOGI( "UnitTest_StructView - passed" );

@@ -13,7 +13,15 @@ namespace AE::Math
 	using bool2		= Vec< bool, 2 >;
 	using bool3		= Vec< bool, 3 >;
 	using bool4		= Vec< bool, 4 >;
+
+	using byte2		= Vec< int8_t, 2 >;
+	using byte3		= Vec< int8_t, 3 >;
+	using byte4		= Vec< int8_t, 4 >;
 	
+	using ubyte2	= Vec< uint8_t, 2 >;
+	using ubyte3	= Vec< uint8_t, 3 >;
+	using ubyte4	= Vec< uint8_t, 4 >;
+
 	using short2	= Vec< int16_t, 2 >;
 	using short3	= Vec< int16_t, 3 >;
 	using short4	= Vec< int16_t, 4 >;
