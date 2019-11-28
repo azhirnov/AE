@@ -20,12 +20,16 @@ set( AE_ENABLE_VTUNE_API OFF CACHE BOOL "enable helper functions for Intel VTune
 
 set( CMAKE_DEBUG_POSTFIX "" )
 set( CMAKE_RELEASE_POSTFIX "" )
-set( CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "installation directory" )
-set( MAIN_BINARY_DIR "${CMAKE_BINARY_DIR}/bin" CACHE INTERNAL "" FORCE )
-set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${MAIN_BINARY_DIR}" CACHE INTERNAL "" FORCE )
-set( CMAKE_LIBRARY_OUTPUT_DIRECTORY "${MAIN_BINARY_DIR}" CACHE INTERNAL "" FORCE )
-set( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${MAIN_BINARY_DIR}" CACHE INTERNAL "" FORCE )
 set( MAIN_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "" FORCE )
+set( MAIN_BINARY_DIR "${CMAKE_BINARY_DIR}/bin" CACHE INTERNAL "" FORCE )
+
+# this settings breaks native debugger on android
+if (NOT DEFINED ANDROID)
+	set( CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "installation directory" )
+	set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${MAIN_BINARY_DIR}" CACHE INTERNAL "" FORCE )
+	set( CMAKE_LIBRARY_OUTPUT_DIRECTORY "${MAIN_BINARY_DIR}" CACHE INTERNAL "" FORCE )
+	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${MAIN_BINARY_DIR}" CACHE INTERNAL "" FORCE )
+endif ()
 
 include( "cmake/external.cmake" )
 add_subdirectory( "utils/project_template" )
@@ -40,13 +44,20 @@ add_subdirectory( "engine/ecs-st" )
 
 # tests
 if (${AE_ENABLE_TESTS})
-	enable_testing()
+	if (NOT DEFINED ANDROID)
+		enable_testing()
+	endif ()
+	
 	add_subdirectory( "tests/stl" )
 	add_subdirectory( "tests/scripting" )
 	add_subdirectory( "tests/threading" )
 	add_subdirectory( "tests/networking" )
 	add_subdirectory( "tests/platform" )
 	add_subdirectory( "tests/ecs-st" )
+
+	if (DEFINED ANDROID)
+		add_subdirectory( "tests/test_launcher" )
+	endif ()
 endif()
 
 #----------------------------------------------------------

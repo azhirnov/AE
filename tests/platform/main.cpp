@@ -1,16 +1,22 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "stl/Common.h"
+#include "platform/App/Public/IApplication.h"
 
-extern void Test_VulkanDevice ();
+using namespace AE::App;
+
+extern bool Test_GLFW ();
+extern bool Test_VulkanDevice ();
+extern bool Test_VulkanSwapchain (IApplication &app, IWindow &wnd);
 
 
-int main ()
+#ifdef PLATFORM_ANDROID
+extern int Test_Platform (IApplication &app, IWindow &wnd)
 {
-	#ifndef AE_CI_BUILD
-		Test_VulkanDevice();
-	#endif
+	Test_GLFW();
+	Test_VulkanDevice();
+	Test_VulkanSwapchain( app, wnd );
 
 	AE_LOGI( "Tests.Platform finished" );
 	return 0;
 }
+#endif

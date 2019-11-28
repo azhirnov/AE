@@ -8,7 +8,11 @@ extern void UnitTest_Registry ();
 extern void UnitTest_Transformation ();
 
 
+#ifdef PLATFORM_ANDROID
+extern int Test_ECSst ()
+#else
 int main ()
+#endif
 {
 	UnitTest_Archetype();
 	UnitTest_EntityPool();

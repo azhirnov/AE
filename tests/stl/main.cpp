@@ -22,8 +22,11 @@ extern void UnitTest_ToString ();
 extern void UnitTest_TypeList ();
 extern void UnitTest_TypeTraits ();
 
-
+#ifdef PLATFORM_ANDROID
+extern int Test_STL ()
+#else
 int main ()
+#endif
 {
 	UnitTest_Array();
 	UnitTest_Color();

@@ -8,7 +8,11 @@ extern void UnitTest_MathFunc ();
 extern void UnitTest_String ();
 
 
+#ifdef PLATFORM_ANDROID
+extern int Test_Scripting ()
+#else
 int main ()
+#endif
 {
 	UnitTest_Array();
 	UnitTest_Class();

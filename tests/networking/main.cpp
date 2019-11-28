@@ -5,7 +5,11 @@
 extern void UnitTest_Http ();
 
 
+#ifdef PLATFORM_ANDROID
+extern int Test_Networking ()
+#else
 int main ()
+#endif
 {
 	UnitTest_Http();
 

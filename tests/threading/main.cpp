@@ -7,12 +7,16 @@ extern void UnitTest_TaskDeps ();
 extern void PerfTest_Threading ();
 
 
+#ifdef PLATFORM_ANDROID
+extern int Test_Threading ()
+#else
 int main ()
+#endif
 {
 	UnitTest_TaskDeps();
 	UnitTest_Promise();
 
-#ifndef AE_CI_BUILD
+#if (not defined(AE_CI_BUILD)) and (not defined(PLATFORM_ANDROID))
 	PerfTest_Threading();
 #endif
 
