@@ -34,8 +34,8 @@ namespace AE::Threading
 			PlatformUtils::SetThreadName( _name );
 			AE_VTUNE( __itt_thread_set_name( _name.c_str() ));
 			
-			_looping.store( 1, memory_order_relaxed );
-			for (; _looping.load( memory_order_relaxed );)
+			_looping.store( 1, EMemoryOrder::Relaxed );
+			for (; _looping.load( EMemoryOrder::Relaxed );)
 			{
 				bool	processed = false;
 
@@ -66,7 +66,7 @@ namespace AE::Threading
 */
 	void  WorkerThread::Detach ()
 	{
-		if ( _looping.exchange( 0, memory_order_relaxed ))
+		if ( _looping.exchange( 0, EMemoryOrder::Relaxed ))
 		{
 			_thread.join();
 		}

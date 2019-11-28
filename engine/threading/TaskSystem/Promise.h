@@ -169,7 +169,7 @@ namespace AE::Threading
 		ND_ auto  Result () const
 		{
 			ASSERT( Status() == EStatus::Completed );
-			ThreadFence( memory_order_acquire );
+			ThreadFence( EMemoryOrder::Acquire );
 
 			if constexpr( not IsVoid<T> )
 				return _result.Value();

@@ -26,7 +26,7 @@ namespace AE::Threading
 		ND_ forceinline bool try_lock ()
 		{
 			uint	exp = 0;
-			return _flag.compare_exchange_strong( INOUT exp, 1, memory_order_acquire, memory_order_relaxed );
+			return _flag.compare_exchange_strong( INOUT exp, 1, EMemoryOrder::Acquire, EMemoryOrder::Relaxed );
 		}
 
 
@@ -34,7 +34,7 @@ namespace AE::Threading
 		forceinline void lock ()
 		{
 			uint	exp = 0;
-			for (uint i = 0; not _flag.compare_exchange_weak( INOUT exp, 1, memory_order_acquire, memory_order_relaxed ); ++i)
+			for (uint i = 0; not _flag.compare_exchange_weak( INOUT exp, 1, EMemoryOrder::Acquire, EMemoryOrder::Relaxed ); ++i)
 			{
 				if ( i > 100 ) {
 					i = 0;
@@ -48,9 +48,9 @@ namespace AE::Threading
 		{
 		#ifdef AE_DEBUG
 			uint	exp = 1;
-			ASSERT( _flag.compare_exchange_strong( INOUT exp, 0, memory_order_release, memory_order_relaxed ));
+			ASSERT( _flag.compare_exchange_strong( INOUT exp, 0, EMemoryOrder::Release, EMemoryOrder::Relaxed ));
 		#else
-			_flag.store( 0, memory_order_release );
+			_flag.store( 0, EMemoryOrder::Release );
 		#endif
 		}
 	};

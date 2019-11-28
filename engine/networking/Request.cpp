@@ -179,7 +179,7 @@ namespace AE::Networking
 */
 	BytesU  RequestTask::Sent ()
 	{
-		return BytesU{ _bytesSent.load( memory_order_relaxed )};
+		return BytesU{ _bytesSent.load( EMemoryOrder::Relaxed )};
 	}
 	
 /*
@@ -189,7 +189,7 @@ namespace AE::Networking
 */
 	BytesU  RequestTask::Received ()
 	{
-		return BytesU{ _bytesReceived.load( memory_order_relaxed )};
+		return BytesU{ _bytesReceived.load( EMemoryOrder::Relaxed )};
 	}
 
 }	// AE::Networking

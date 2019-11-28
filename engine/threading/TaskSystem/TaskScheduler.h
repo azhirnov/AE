@@ -133,7 +133,7 @@ namespace AE::Threading
 	public:
 		ND_ EThread	Type ()			 const	{ return _threadType; }
 
-		ND_ EStatus	Status ()		 const	{ return _status.load( memory_order_relaxed ); }
+		ND_ EStatus	Status ()		 const	{ return _status.load( EMemoryOrder::Relaxed ); }
 
 		ND_ bool	IsInQueue ()	 const	{ return Status() < EStatus::_Finished; }
 		ND_ bool	IsFinished ()	 const	{ return Status() > EStatus::_Finished; }

@@ -311,7 +311,7 @@ namespace AE::Networking
 		size_t	required	= size * nitems;
 		size_t	written		= size_t( self->_content->Read2( OUT buffer, BytesU{required} ));
 
-		self->_bytesSent.fetch_add( written, memory_order_relaxed );
+		self->_bytesSent.fetch_add( written, EMemoryOrder::Relaxed );
 
 		return written;
 	}
@@ -341,7 +341,7 @@ namespace AE::Networking
 		content.resize( offset + download_size );
 		std::memcpy( content.data() + offset, ptr, download_size );
 
-		self->_bytesReceived.fetch_add( download_size, memory_order_relaxed );
+		self->_bytesReceived.fetch_add( download_size, EMemoryOrder::Relaxed );
 
 		return download_size;
 	}
@@ -579,8 +579,8 @@ namespace AE::Networking
 			PlatformUtils::SetThreadName( DbgName() );
 			AE_VTUNE( __itt_thread_set_name( DbgName().c_str() ));
 
-			_looping.store( 1, memory_order_relaxed );
-			for (; _looping.load( memory_order_relaxed );)
+			_looping.store( 1, EMemoryOrder::Relaxed );
+			for (; _looping.load( EMemoryOrder::Relaxed );)
 			{
 				const auto	start_time	= TimePoint_t::clock::now();
 				AsyncTask	task		= Scheduler().PullTask( EThread::Network, ++seed );
@@ -676,7 +676,7 @@ namespace AE::Networking
 */
 	void  CurlThread::Detach ()
 	{
-		if ( _looping.exchange( 0, memory_order_relaxed ))
+		if ( _looping.exchange( 0, EMemoryOrder::Relaxed ))
 		{
 			_thread.join();
 		}

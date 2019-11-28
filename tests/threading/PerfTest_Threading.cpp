@@ -36,7 +36,7 @@ namespace
 
 		void Run () override
 		{
-			task_complete.fetch_add( 1, memory_order_relaxed );
+			task_complete.fetch_add( 1, EMemoryOrder::Relaxed );
 		}
 	};
 }
@@ -117,7 +117,7 @@ namespace
 
 		for (;;)
 		{
-			if ( task_complete.load( memory_order_relaxed ) >= required )
+			if ( task_complete.load( EMemoryOrder::Relaxed ) >= required )
 				break;
 
 			std::this_thread::yield();
@@ -205,7 +205,7 @@ namespace
 
 		for (;;)
 		{
-			if ( task_complete.load( memory_order_relaxed ) >= required )
+			if ( task_complete.load( EMemoryOrder::Relaxed ) >= required )
 				break;
 
 			std::this_thread::yield();

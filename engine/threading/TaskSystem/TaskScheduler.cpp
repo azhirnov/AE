@@ -23,7 +23,7 @@ namespace AE::Threading
 	bool IAsyncTask::_SetCancellationState ()
 	{
 		for (EStatus expected = EStatus::Pending;
-			 not _status.compare_exchange_weak( INOUT expected, EStatus::Cancellation, memory_order_relaxed );)
+			 not _status.compare_exchange_weak( INOUT expected, EStatus::Cancellation, EMemoryOrder::Relaxed );)
 		{
 			// status has been changed in another thread
 			if ( (expected == EStatus::Cancellation) | (expected > EStatus::_Finished) )
@@ -40,7 +40,7 @@ namespace AE::Threading
 	bool IAsyncTask::OnFailure ()
 	{
 		for (EStatus expected = EStatus::InProgress;
-			 not _status.compare_exchange_weak( INOUT expected, EStatus::Failed, memory_order_relaxed );)
+			 not _status.compare_exchange_weak( INOUT expected, EStatus::Failed, EMemoryOrder::Relaxed );)
 		{
 			// status has been changed in another thread
 			if ( expected > EStatus::_Finished )
@@ -61,10 +61,10 @@ namespace AE::Threading
 		EStatus	expected = EStatus::InProgress;
 	
 		// try to set completed state	
-		if ( _status.compare_exchange_strong( INOUT expected, EStatus::Completed, memory_order_relaxed ) or expected == EStatus::Failed )
+		if ( _status.compare_exchange_strong( INOUT expected, EStatus::Completed, EMemoryOrder::Relaxed ) or expected == EStatus::Failed )
 		{
 			// flush cache
-			ThreadFence( memory_order_release );
+			ThreadFence( EMemoryOrder::Release );
 			return;
 		}
 
@@ -73,7 +73,7 @@ namespace AE::Threading
 			OnCancel();
 
 			// set canceled state and flush cache
-			_status.compare_exchange_strong( INOUT expected, EStatus::Canceled, memory_order_release, memory_order_relaxed );
+			_status.compare_exchange_strong( INOUT expected, EStatus::Canceled, EMemoryOrder::Release, EMemoryOrder::Relaxed );
 			return;
 		}
 
@@ -93,7 +93,7 @@ namespace AE::Threading
 		OnCancel();
 
 		// set canceled state and flush cache
-		CHECK( _status.exchange( EStatus::Canceled, memory_order_release ) == EStatus::Cancellation );
+		CHECK( _status.exchange( EStatus::Canceled, EMemoryOrder::Release ) == EStatus::Cancellation );
 	}
 //-----------------------------------------------------------------------------
 	
@@ -370,7 +370,7 @@ namespace AE::Threading
 			// try to start task
 			EStatus	expected = EStatus::Pending;
 			
-			if ( task->_status.compare_exchange_strong( INOUT expected, EStatus::InProgress, memory_order_relaxed ))
+			if ( task->_status.compare_exchange_strong( INOUT expected, EStatus::InProgress, EMemoryOrder::Relaxed ))
 			{
 				AE_SCHEDULER_PROFILING(
 					tq._stallTime += (TimePoint_t::clock::now() - start_time).count();

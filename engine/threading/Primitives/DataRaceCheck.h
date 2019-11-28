@@ -33,13 +33,13 @@ namespace AE::Threading
 		ND_ bool  Lock () const
 		{
 			const size_t	id		= size_t(HashOf( std::this_thread::get_id() ));
-			size_t			curr	= _state.load( memory_order_acquire );
+			size_t			curr	= _state.load( EMemoryOrder::Acquire );
 			
 			if ( curr == id )
 				return true;	// recursive lock
 
 			curr	= 0;
-			bool	locked	= _state.compare_exchange_strong( INOUT curr, id, memory_order_relaxed );
+			bool	locked	= _state.compare_exchange_strong( INOUT curr, id, EMemoryOrder::Relaxed );
 			CHECK_ERR( curr == 0 );		// locked by another thread - race condition detected!
 			CHECK_ERR( locked );
 			return true;
@@ -47,7 +47,7 @@ namespace AE::Threading
 
 		void  Unlock () const
 		{
-			_state.store( 0, memory_order_relaxed );
+			_state.store( 0, EMemoryOrder::Relaxed );
 		}
 	};
 
@@ -75,17 +75,17 @@ namespace AE::Threading
 			bool	locked = _lockWrite.try_lock();
 			CHECK_ERR( locked );	// locked by another thread - race condition detected!
 
-			int		expected = _readCounter.load( memory_order_acquire );
+			int		expected = _readCounter.load( EMemoryOrder::Acquire );
 			CHECK_ERR( expected <= 0 );	// has read lock(s) - race condition detected!
 
-			_readCounter.compare_exchange_strong( INOUT expected, expected-1, memory_order_relaxed );
+			_readCounter.compare_exchange_strong( INOUT expected, expected-1, EMemoryOrder::Relaxed );
 			CHECK_ERR( expected <= 0 );	// has read lock(s) - race condition detected!
 			return true;
 		}
 
 		void  UnlockExclusive ()
 		{
-			_readCounter.fetch_add( 1, memory_order_relaxed );
+			_readCounter.fetch_add( 1, EMemoryOrder::Relaxed );
 			_lockWrite.unlock();
 		}
 
@@ -95,7 +95,7 @@ namespace AE::Threading
 			int		expected	= 0;
 			bool	locked		= false;
 			do {
-				locked = _readCounter.compare_exchange_weak( INOUT expected, expected+1, memory_order_relaxed );
+				locked = _readCounter.compare_exchange_weak( INOUT expected, expected+1, EMemoryOrder::Relaxed );
 			
 				// if has exclusive lock in current thread
 				if ( expected < 0 and _lockWrite.try_lock() )
@@ -112,7 +112,7 @@ namespace AE::Threading
 
 		void  UnlockShared () const
 		{
-			_readCounter.fetch_sub( 1, memory_order_relaxed );
+			_readCounter.fetch_sub( 1, EMemoryOrder::Relaxed );
 		}
 	};
 
