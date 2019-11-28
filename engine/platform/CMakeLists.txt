@@ -11,6 +11,10 @@ if (${AE_ENABLE_GLFW})
 	target_link_libraries( "Platform" PUBLIC "GLFW-lib" )
 endif ()
 
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Android")
+	target_link_libraries( "Platform" PUBLIC "android" )
+endif ()
+
 if (${AE_ENABLE_VULKAN})
 	target_link_libraries( "Platform" PUBLIC "Vulkan-lib" )
 endif ()

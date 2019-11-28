@@ -6,13 +6,9 @@ import android.os.Bundle;
 import android.util.Log;
 
 
-public class TestActivity
+public final class TestActivity
         extends AE.engine.BaseActivity
 {
-    static {
-        System.loadLibrary("AEngine" );
-    }
-
     @Override protected void onCreate(Bundle icicle) {
         super.onCreate(icicle);
     }
