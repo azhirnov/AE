@@ -2,7 +2,7 @@
 
 #ifdef AE_ENABLE_VULKAN
 
-# include "VulkanLoader.h"
+# include "platform/GAPI/Vulkan/VulkanLoader.h"
 # include "stl/Algorithms/StringUtils.h"
 
 # define VK_NO_PROTOTYPES

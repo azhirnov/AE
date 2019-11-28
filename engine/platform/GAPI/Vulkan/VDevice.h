@@ -4,8 +4,8 @@
 
 #ifdef AE_ENABLE_VULKAN
 
-# include "VQueue.h"
-# include "VulkanCheckError.h"
+# include "platform/GAPI/Vulkan/VQueue.h"
+# include "platform/GAPI/Vulkan/VulkanCheckError.h"
 
 namespace AE::Vulkan
 {
@@ -14,7 +14,7 @@ namespace AE::Vulkan
 	// Vulkan Device
 	//
 
-	class VDevice : public VulkanDeviceFn
+	class VDevice : public VulkanDeviceFn, public Noncopyable
 	{
 	// types
 	public:
@@ -49,11 +49,17 @@ namespace AE::Vulkan
 		VkInstance				_vkInstance;
 		InstanceVersion			_vkVersion;
 		
-		bool					_enableDebugUtils			: 1;
-		bool					_enableMeshShaderNV			: 1;
-		bool					_enableRayTracingNV			: 1;
-		bool					_samplerMirrorClamp			: 1;
-		bool					_enableShadingRateImageNV	: 1;
+		struct {
+			bool					debugUtils			: 1;
+			bool					meshShaderNV		: 1;
+			bool					rayTracingNV		: 1;
+			bool					samplerMirrorClamp	: 1;
+			bool					shadingRateImageNV	: 1;
+			bool					descriptorIndexing	: 1;
+		//	bool					pushDescriptor		: 1;
+		//	bool					inlineUniformBlock	: 1;
+		//	bool					atomicInt64			: 1;
+		}						_supported;
 
 		VulkanDeviceFnTable		_deviceFnTable;
 		
@@ -77,12 +83,12 @@ namespace AE::Vulkan
 		VDevice ();
 		~VDevice ();
 		
-
-		//ND_ bool					IsDebugUtilsEnabled ()			const	{ return _enableDebugUtils; }
-		//ND_ bool					IsMeshShaderEnabled ()			const	{ return _enableMeshShaderNV; }
-		//ND_ bool					IsRayTracingEnabled ()			const	{ return _enableRayTracingNV; }
-		//ND_ bool					IsSamplerMirrorClampEnabled ()	const	{ return _samplerMirrorClamp; }
-		//ND_ bool					IsShadingRateImageEnabled ()	const	{ return _enableShadingRateImageNV; }
+		ND_ bool					IsDebugUtilsEnabled ()			const	{ return _supported.debugUtils; }
+		ND_ bool					IsMeshShaderEnabled ()			const	{ return _supported.meshShaderNV; }
+		ND_ bool					IsRayTracingEnabled ()			const	{ return _supported.rayTracingNV; }
+		ND_ bool					IsSamplerMirrorClampEnabled ()	const	{ return _supported.samplerMirrorClamp; }
+		ND_ bool					IsShadingRateImageEnabled ()	const	{ return _supported.shadingRateImageNV; }
+		ND_ bool					IsDescriptorIndexingEnabled ()	const	{ return _supported.descriptorIndexing; }
 
 		ND_ VkDevice				GetVkDevice ()					const	{ return _vkLogicalDevice; }
 		ND_ VkPhysicalDevice		GetVkPhysicalDevice ()			const	{ return _vkPhysicalDevice; }

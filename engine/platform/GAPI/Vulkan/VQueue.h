@@ -4,9 +4,10 @@
 
 #ifdef AE_ENABLE_VULKAN
 
-# include "VulkanLoader.h"
+# include "platform/GAPI/Vulkan/VulkanLoader.h"
+# include "platform/GAPI/Public/Queue.h"
+
 # include "stl/Algorithms/Cast.h"
-# include "stl/Algorithms/EnumUtils.h"
 # include "stl/Containers/FixedArray.h"
 # include "stl/Containers/StaticString.h"
 # include "stl/Containers/Ptr.h"
@@ -15,6 +16,8 @@
 
 namespace AE::Vulkan
 {
+	using namespace AE::Graphics;
+
 	using AE::Threading::Mutex;
 
 
@@ -27,7 +30,7 @@ namespace AE::Vulkan
 		Unknown		= Ignored,
 	};
 
-
+	// TODO: remove ?
 	enum class EQueueFamilyMask : uint
 	{
 		All			= ~0u,
@@ -50,6 +53,7 @@ namespace AE::Vulkan
 	// variables
 		mutable Mutex		guard;			// use when call vkQueueSubmit, vkQueueWaitIdle, vkQueueBindSparse, vkQueuePresentKHR
 		VkQueue				handle			= VK_NULL_HANDLE;
+		EQueueType			type			= Default;
 		EQueueFamily		familyIndex		= Default;
 		VkQueueFlags		familyFlags		= {};
 		uint				queueIndex		= UMax;
@@ -61,8 +65,8 @@ namespace AE::Vulkan
 		VQueue () {}
 
 		VQueue (VQueue &&other) :
-			handle{other.handle}, familyIndex{other.familyIndex}, familyFlags{other.familyFlags}, queueIndex{other.queueIndex},
-			priority{other.priority}, minImageTransferGranularity{other.minImageTransferGranularity},
+			handle{other.handle}, type{other.type}, familyIndex{other.familyIndex}, familyFlags{other.familyFlags},
+			queueIndex{other.queueIndex}, priority{other.priority}, minImageTransferGranularity{other.minImageTransferGranularity},
 			debugName{other.debugName}
 		{}
 	};

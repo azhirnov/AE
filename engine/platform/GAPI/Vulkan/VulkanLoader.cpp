@@ -2,11 +2,10 @@
 
 #ifdef AE_ENABLE_VULKAN
 
-# include "VulkanLoader.h"
-# include "VulkanCheckError.h"
+# include "platform/GAPI/Vulkan/VulkanLoader.h"
+# include "platform/GAPI/Vulkan/VulkanCheckError.h"
 # include "stl/Algorithms/Cast.h"
 # include "stl/Algorithms/StringUtils.h"
-# include "stl/Containers/Singleton.h"
 
 
 # if defined(PLATFORM_WINDOWS) or defined(VK_USE_PLATFORM_WIN32_KHR)
@@ -49,6 +48,13 @@ namespace {
 		SharedLib_t		module;
 		VkInstance		instance	= VK_NULL_HANDLE;
 		int				refCounter	= 0;
+
+
+		ND_ static VulkanLib&  Instance ()
+		{
+			static VulkanLib	lib;
+			return lib;
+		}
 	};
 }
 /*
@@ -60,33 +66,33 @@ namespace {
 */
 	bool VulkanLoader::Initialize (NtStringView libName)
 	{
-		VulkanLib *		lib = Singleton< VulkanLib >();
+		VulkanLib&	lib = VulkanLib::Instance();
 		
-		if ( lib->module and lib->refCounter > 0 )
+		if ( lib.module and lib.refCounter > 0 )
 		{
-			++lib->refCounter;
+			++lib.refCounter;
 			return true;
 		}
 
 #	ifdef PLATFORM_WINDOWS
 		if ( not libName.empty() )
-			lib->module = ::LoadLibraryA( libName.data() );
+			lib.module = ::LoadLibraryA( libName.c_str() );
 
-		if ( lib->module == null )
-			lib->module = ::LoadLibraryA( "vulkan-1.dll" );
+		if ( lib.module == null )
+			lib.module = ::LoadLibraryA( "vulkan-1.dll" );
 		
-		if ( lib->module == null )
+		if ( lib.module == null )
 			return false;
 		
 		// write library path to log
 		{
 			char	buf[MAX_PATH] = "";
-			CHECK( ::GetModuleFileNameA( lib->module, buf, DWORD(CountOf(buf)) ) != FALSE );
+			CHECK( ::GetModuleFileNameA( lib.module, buf, DWORD(CountOf(buf)) ) != FALSE );
 
 			AE_LOGI( "Vulkan library path: \""s << buf << '"' );
 		}
 
-		const auto	Load =	[module = lib->module] (OUT auto& outResult, const char *procName, auto dummy)
+		const auto	Load =	[module = lib.module] (OUT auto& outResult, const char *procName, auto dummy)
 							{
 								using FN = decltype(dummy);
 								FN	result = BitCast<FN>( ::GetProcAddress( module, procName ));
@@ -95,28 +101,28 @@ namespace {
 
 #	else
 		if ( not libName.empty() )
-			lib->module = ::dlopen( libName.data(), RTLD_NOW | RTLD_LOCAL );
+			lib.module = ::dlopen( libName.c_str(), RTLD_NOW | RTLD_LOCAL );
 
-		if ( lib->module == null )
-			lib->module = ::dlopen( "libvulkan.so", RTLD_NOW | RTLD_LOCAL );
+		if ( lib.module == null )
+			lib.module = ::dlopen( "libvulkan.so", RTLD_NOW | RTLD_LOCAL );
 		
-		if ( lib->module == null )
-			lib->module = ::dlopen( "libvulkan.so.1", RTLD_NOW | RTLD_LOCAL );
+		if ( lib.module == null )
+			lib.module = ::dlopen( "libvulkan.so.1", RTLD_NOW | RTLD_LOCAL );
 		
-		if ( lib->module == null )
+		if ( lib.module == null )
 			return false;
 		
 		// write library path to log
 #		ifndef PLATFORM_ANDROID
 		{
 			char	buf[PATH_MAX] = "";
-			CHECK( dlinfo( lib->module, RTLD_DI_ORIGIN, buf ) == 0 );
+			CHECK( dlinfo( lib.module, RTLD_DI_ORIGIN, buf ) == 0 );
 			
 			AE_LOGI( "Vulkan library path: \""s << buf << '"' );
 		}
 #		endif
 
-		const auto	Load =	[module = lib->module] (OUT auto& outResult, const char *procName, auto dummy)
+		const auto	Load =	[module = lib.module] (OUT auto& outResult, const char *procName, auto dummy)
 							{
 								using FN = decltype(dummy);
 								FN	result = BitCast<FN>( ::dlsym( module, procName ));
@@ -124,7 +130,7 @@ namespace {
 							};
 #	endif
 
-		++lib->refCounter;
+		++lib.refCounter;
 		
 
 #		define VKLOADER_STAGE_GETADDRESS
@@ -146,16 +152,16 @@ namespace {
 */
 	void VulkanLoader::LoadInstance (VkInstance instance)
 	{
-		VulkanLib *		lib = Singleton< VulkanLib >();
+		VulkanLib&	lib = VulkanLib::Instance();
 
 		ASSERT( instance );
-		ASSERT( lib->instance == null or lib->instance == instance );
+		ASSERT( lib.instance == null or lib.instance == instance );
 		ASSERT( _var_vkGetInstanceProcAddr != &Dummy_vkGetInstanceProcAddr );
 
-		if ( lib->instance == instance )
+		if ( lib.instance == instance )
 			return;
 
-		lib->instance = instance;
+		lib.instance = instance;
 
 		const auto	Load =	[instance] (OUT auto& outResult, const char *procName, auto dummy)
 							{
@@ -217,27 +223,27 @@ namespace {
 */
 	void VulkanLoader::Unload ()
 	{
-		VulkanLib *		lib = Singleton< VulkanLib >();
+		VulkanLib&	lib = VulkanLib::Instance();
 		
-		ASSERT( lib->refCounter > 0 );
+		ASSERT( lib.refCounter > 0 );
 
-		if ( (--lib->refCounter) != 0 )
+		if ( (--lib.refCounter) != 0 )
 			return;
 		
 #	ifdef PLATFORM_WINDOWS
-		if ( lib->module != null )
+		if ( lib.module != null )
 		{
-			::FreeLibrary( lib->module );
+			::FreeLibrary( lib.module );
 		}
 #	else
-		if ( lib->module != null )
+		if ( lib.module != null )
 		{
-			::dlclose( lib->module );
+			::dlclose( lib.module );
 		}
 #	endif
 
-		lib->instance	= null;
-		lib->module		= null;
+		lib.instance	= null;
+		lib.module		= null;
 		
 		const auto	Load =	[] (OUT auto& outResult, const char *, auto dummy) {
 								outResult = dummy;

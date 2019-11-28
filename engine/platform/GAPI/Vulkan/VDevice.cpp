@@ -2,7 +2,7 @@
 
 #ifdef AE_ENABLE_VULKAN
 
-# include "VDevice.h"
+# include "platform/GAPI/Vulkan/VDevice.h"
 # include "stl/Algorithms/StringUtils.h"
 
 namespace AE::Vulkan
@@ -31,8 +31,13 @@ namespace AE::Vulkan
 	constructor
 =================================================
 */
-	VDevice::VDevice ()
+	VDevice::VDevice () :
+		_vkLogicalDevice{ VK_NULL_HANDLE },
+		_vkPhysicalDevice{ VK_NULL_HANDLE },
+		_vkInstance{ VK_NULL_HANDLE }
 	{
+		std::memset( &_supported, 0, sizeof(_supported) );
+
 		VulkanDeviceFn_Init( &_deviceFnTable );
 	}
 
@@ -77,13 +82,13 @@ namespace AE::Vulkan
 		if ( name.empty() or id == VK_NULL_HANDLE )
 			return false;
 
-		if ( _enableDebugUtils )
+		if ( _supported.debugUtils )
 		{
 			VkDebugUtilsObjectNameInfoEXT	info = {};
 			info.sType			= VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
 			info.objectType		= type;
 			info.objectHandle	= id;
-			info.pObjectName	= name.data();
+			info.pObjectName	= name.c_str();
 
 			VK_CALL( vkSetDebugUtilsObjectNameEXT( _vkLogicalDevice, &info ));
 			return true;
@@ -196,6 +201,8 @@ namespace AE::Vulkan
 		
 		_vkInstance			= VK_NULL_HANDLE;
 		_vkPhysicalDevice	= VK_NULL_HANDLE;
+		
+		AE_LOGD( "Destroyed Vulkan instance" );
 		return true;
 	}
 
@@ -325,15 +332,15 @@ namespace {
 		float				max_performance		= 0.0f;
 
 		WithPhysicalDevices( *this,
-			[&any_device, &high_perf_device, &max_performance] (VkPhysicalDevice dev, auto& prop, auto& feat, auto& mem)
+			[&any_device, &high_perf_device, &max_performance] (VkPhysicalDevice dev, auto& prop, auto& feat, auto&)
 			{
 				const bool	is_gpu		  = (prop.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU or
 											 prop.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU);
 				const bool	is_integrated = prop.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
 
-				const BytesU global_mem   = CalcTotalMemory( mem );
+				//const BytesU global_mem   = CalcTotalMemory( mem );
 																										// magic function:
-				const float	perf	=	float(global_mem.Mb()) / 1024.0f +									// commented because of bug on Intel (incorrect heap size)
+				const float	perf	=	//float(global_mem.Mb()) / 1024.0f +									// commented because of bug on Intel (incorrect heap size)
 										float(prop.limits.maxComputeSharedMemorySize >> 10) / 64.0f +		// big local cache is good
 										float(is_gpu and not is_integrated ? 4 : 1) +						// 
 										float(prop.limits.maxComputeWorkGroupInvocations) / 1024.0f +		// 
@@ -666,7 +673,8 @@ namespace {
 
 		_vkLogicalDevice = VK_NULL_HANDLE;
 		_vkQueues.clear();
-
+		
+		AE_LOGD( "Destroyed Vulkan logical device" );
 		return true;
 	}
 
@@ -687,11 +695,21 @@ namespace {
 			_vkVersion.minor = VK_VERSION_MINOR( GetDeviceProperties().apiVersion );
 		}
 		
-		_enableDebugUtils			= HasExtension( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
-		_enableMeshShaderNV			= HasDeviceExtension( VK_NV_MESH_SHADER_EXTENSION_NAME );
-		_enableRayTracingNV			= HasDeviceExtension( VK_NV_RAY_TRACING_EXTENSION_NAME );
-		_enableShadingRateImageNV	= HasDeviceExtension( VK_NV_SHADING_RATE_IMAGE_EXTENSION_NAME );
-		_samplerMirrorClamp			= HasDeviceExtension( VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME );
+		_supported.debugUtils			= HasExtension( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+		_supported.meshShaderNV			= HasDeviceExtension( VK_NV_MESH_SHADER_EXTENSION_NAME );
+		_supported.rayTracingNV			= HasDeviceExtension( VK_NV_RAY_TRACING_EXTENSION_NAME );
+		_supported.shadingRateImageNV	= HasDeviceExtension( VK_NV_SHADING_RATE_IMAGE_EXTENSION_NAME );
+		_supported.samplerMirrorClamp	= HasDeviceExtension( VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME );
+		_supported.descriptorIndexing	= HasDeviceExtension( VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME );
+
+		AE_LOGI( "Created vulkan device on GPU: "s << _deviceInfo.properties.deviceName
+			<< "\n  version:             " << ToString(_vkVersion.major) << '.' << ToString(_vkVersion.minor)
+			<< "\n  debug_utils:         " << ToString( _supported.debugUtils )
+			<< "\n  mesh_shader:         " << ToString( _supported.meshShaderNV )
+			<< "\n  ray_tracing:         " << ToString( _supported.rayTracingNV )
+			<< "\n  shading_rate_image:  " << ToString( _supported.shadingRateImageNV )
+			<< "\n  descriptor_indexing: " << ToString( _supported.descriptorIndexing )
+		);
 
 		// load extensions
 		if ( _vkVersion >= InstanceVersion{1,1} )
@@ -700,13 +718,13 @@ namespace {
 			void **						next_feat	= &feat2.pNext;
 			feat2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 			
-			if ( _enableMeshShaderNV )
+			if ( _supported.meshShaderNV )
 			{
 				*next_feat	= &_deviceInfo.meshShaderFeatures;
 				next_feat	= &_deviceInfo.meshShaderFeatures.pNext;
 				_deviceInfo.meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
 			}
-			if ( _enableShadingRateImageNV )
+			if ( _supported.shadingRateImageNV )
 			{
 				*next_feat	= &_deviceInfo.shadingRateImageFeatures;
 				next_feat	= &_deviceInfo.shadingRateImageFeatures.pNext;
@@ -714,27 +732,27 @@ namespace {
 			}
 			vkGetPhysicalDeviceFeatures2( GetVkPhysicalDevice(), &feat2 );
 
-			_enableMeshShaderNV			= (_deviceInfo.meshShaderFeatures.meshShader or _deviceInfo.meshShaderFeatures.taskShader);
-			_enableShadingRateImageNV	= _deviceInfo.shadingRateImageFeatures.shadingRateImage;
+			_supported.meshShaderNV			&= (_deviceInfo.meshShaderFeatures.meshShader or _deviceInfo.meshShaderFeatures.taskShader);
+			_supported.shadingRateImageNV	&= (_deviceInfo.shadingRateImageFeatures.shadingRateImage == VK_TRUE);
 
 
 			VkPhysicalDeviceProperties2	props2		= {};
 			void **						next_props	= &props2.pNext;
 			props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 
-			if ( _enableMeshShaderNV )
+			if ( _supported.meshShaderNV )
 			{
 				*next_props	= &_deviceInfo.meshShaderProperties;
 				next_props	= &_deviceInfo.meshShaderProperties.pNext;
 				_deviceInfo.meshShaderProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
 			}
-			if ( _enableShadingRateImageNV )
+			if ( _supported.shadingRateImageNV )
 			{
 				*next_props	= &_deviceInfo.shadingRateImageProperties;
 				next_props	= &_deviceInfo.shadingRateImageProperties.pNext;
 				_deviceInfo.shadingRateImageProperties.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_PROPERTIES_NV;
 			}
-			if ( _enableRayTracingNV )
+			if ( _supported.rayTracingNV )
 			{
 				*next_props	= &_deviceInfo.rayTracingProperties;
 				next_props	= &_deviceInfo.rayTracingProperties.pNext;
@@ -866,11 +884,15 @@ namespace {
 	void VDeviceInitializer::_ValidateInstanceVersion (INOUT uint &version) const
 	{
 		const uint	min_ver		= VK_API_VERSION_1_0;
+		const uint	old_ver		= version;
 		uint		current_ver	= 0;
 
 		VK_CALL( vkEnumerateInstanceVersion( OUT &current_ver ));
 
-		version = Min( Max( version, min_ver ), current_ver );
+		version = Min( Max( version, min_ver ), Max( current_ver, min_ver ));
+		
+		if ( old_ver != version )
+			AE_LOGI( "Vulkan instance version changed to: "s << ToString(VK_VERSION_MAJOR(version)) << '.' << ToString(VK_VERSION_MINOR(version)) );
 	}
 
 /*
@@ -1098,6 +1120,8 @@ namespace {
 	{
 		static const char *	device_extensions[] =
 		{
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+
 			#ifdef VK_KHR_get_memory_requirements2
 				VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
 			#endif
@@ -1129,6 +1153,8 @@ namespace {
 	{
 		static const char *	device_extensions[] =
 		{
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+
 			#ifdef VK_KHR_create_renderpass2
 				VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME,
 			#endif
