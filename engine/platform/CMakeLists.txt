@@ -1,6 +1,10 @@
 cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
 
 file( GLOB_RECURSE SOURCES "*.*" )
+	
+if (${AE_ENABLE_GLFW})
+	target_link_libraries( "Platform" PUBLIC "GLFW-lib" )
+endif ()
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Android")
 	file( GLOB_RECURSE ANDROID_SOURCES "${MAIN_SOURCE_DIR}/android/engine/src/*.java" )
