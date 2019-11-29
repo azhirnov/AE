@@ -119,12 +119,15 @@ namespace AE::ECS
 
 				for (auto& comp : arch.Desc().components)
 				{
-					void*	comp_ptr = storage->GetComponents( comp.id );
-					_messages.Add<MsgTag_RemovedComponent>( id, comp.id, ArrayView<uint8_t>{ Cast<uint8_t>(comp_ptr), size_t(comp.size) });
-				}
-
-				for (auto& tag : arch.Desc().tags) {
-					_messages.Add<MsgTag_RemovedComponent>( id, tag );
+					if ( comp.HasData() )
+					{
+						void*	comp_ptr = storage->GetComponents( comp.id );
+						_messages.Add<MsgTag_RemovedComponent>( id, comp.id, ArrayView<uint8_t>{ Cast<uint8_t>(comp_ptr), size_t(comp.size) });
+					}
+					else
+					{
+						_messages.Add<MsgTag_RemovedComponent>( id, comp.id );
+					}
 				}
 			}
 
@@ -158,7 +161,7 @@ namespace AE::ECS
 		{
 			storage.reset( new ArchetypeStorage{ key, ECS_Config::InitialtStorageSize });
 
-			// TODO: new archetype event
+			_OnNewArchetype( &*iter );
 		}
 
 		if ( storage->Add( id, OUT index ))
@@ -198,14 +201,17 @@ namespace AE::ECS
 			// copy components
 			for (auto& comp : arch.Desc().components)
 			{
-				void*	src = srcStorage->GetComponents( comp.id );
-				void*	dst = dstStorage->GetComponents( comp.id );
-
-				if ( (src != null) & (dst != null) )
+				if ( comp.HasData() )
 				{
-					std::memcpy( OUT dst + BytesU{comp.size} * size_t(dstIndex),
-								 src + BytesU{comp.size} * size_t(srcIndex),
-								 size_t(comp.size) );
+					void*	src = srcStorage->GetComponents( comp.id );
+					void*	dst = dstStorage->GetComponents( comp.id );
+
+					if ( (src != null) & (dst != null) )
+					{
+						std::memcpy( OUT dst + BytesU{comp.size} * size_t(dstIndex),
+									 src + BytesU{comp.size} * size_t(srcIndex),
+									 size_t(comp.size) );
+					}
 				}
 			}
 
@@ -254,5 +260,49 @@ namespace AE::ECS
 			FlushEvents();
 		}
 	}
+	
+/*
+=================================================
+	CreateQuery
+=================================================
+*/
+	QueryID  Registry::CreateQuery (const ArchetypeQueryDesc &desc)
+	{
+		EXLOCK( _drCheck );
+
+		for (size_t i = 0; i < _queries.size(); ++i)
+		{
+			if ( desc == _queries[i].desc )
+				return QueryID{ CheckCast<uint16_t>(i), 0 };
+		}
+
+		auto&	q = _queries.emplace_back();
+		q.desc	= desc;
+
+		for (auto& arch : _archetypes)
+		{
+			if ( desc.Compatible( arch.first.Bits() ))
+				q.archetypes.push_back( &arch );
+		}
+
+		return QueryID{ CheckCast<uint16_t>(_queries.size()-1), 0 };
+	}
+	
+/*
+=================================================
+	_OnNewArchetype
+=================================================
+*/
+	void  Registry::_OnNewArchetype (ArchetypePair_t *arch)
+	{
+		for (size_t i = 0; i < _queries.size(); ++i)
+		{
+			auto&	q = _queries[i];
+
+			if ( q.desc.Compatible( arch->first.Bits() ))
+				q.archetypes.push_back( arch );
+		}
+	}
+
 
 }	// AE::ECS

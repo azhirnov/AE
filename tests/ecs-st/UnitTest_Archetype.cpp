@@ -18,8 +18,27 @@ namespace
 		float	value;
 	};
 
+	struct Tag1 {};
+	struct Tag2 {};
+	
 
 	void Archetype_Test1 ()
+	{
+		Archetype	arch1{ ArchetypeDesc{}.Add<Comp1>().Add<Comp2>() };
+		Archetype	arch2{ ArchetypeDesc{}.Add<Comp1>() };
+		Archetype	arch3{ ArchetypeDesc{}.Add<Comp2>() };
+
+		TEST( arch1.Contains( arch2 ));
+		TEST( not arch2.Contains( arch1 ));
+		
+		TEST( arch1.Contains( arch3 ));
+		TEST( not arch3.Contains( arch1 ));
+		
+		TEST( not arch3.Contains( arch2 ));
+	}
+
+
+	void ArchetypeStorage_Test1 ()
 	{
 		ArchetypeDesc		desc;
 		desc.Add<Comp1>();
@@ -55,21 +74,169 @@ namespace
 		TEST( pool.Unassign( id_1 ));
 		TEST( pool.Unassign( id_2 ));
 	}
-	
 
-	void Archetype_Test2 ()
+
+	void ArchetypeBits_Test1 ()
 	{
-		Archetype	arch1{ ArchetypeDesc{}.Add<Comp1>().Add<Comp2>() };
-		Archetype	arch2{ ArchetypeDesc{}.Add<Comp1>() };
-		Archetype	arch3{ ArchetypeDesc{}.Add<Comp2>() };
+		ArchetypeBits	a1;
+		a1.Add<Comp1>();
+		a1.Add<Comp2>();
+		a1.Add<Tag1>();
 
-		TEST( arch1.Contains( arch2 ));
-		TEST( not arch2.Contains( arch1 ));
+		ArchetypeBits	a2;
+		a2.Add<Comp2>();
+		a2.Add<Tag2>();
+
+		ArchetypeBits	a3;
+		a3.Add<Tag1>();
+		a3.Add<Tag2>();
+
+		ArchetypeBits	a4;
+		a4.Add<Tag1>();
+		a4.Add<Comp1>();
+		a4.Add<Comp2>();
+		a4.Add<Tag2>();
+		a4.Add<Comp1>();
+
+		ArchetypeBits	a5;
+		a5.Add<Tag1>();
 		
-		TEST( arch1.Contains( arch3 ));
-		TEST( not arch3.Contains( arch1 ));
-		
-		TEST( not arch3.Contains( arch2 ));
+		ArchetypeBits	a6;
+
+		// a1
+		{
+			TEST( a1.Equals( a1 ));
+			TEST( not a1.Equals( a2 ));
+			TEST( not a1.Equals( a3 ));
+			TEST( not a1.Equals( a4 ));
+			TEST( not a1.Equals( a5 ));
+
+			TEST( a1.Any( a2 ));
+			TEST( a1.Any( a3 ));
+			TEST( a1.Any( a4 ));
+			TEST( a1.Any( a5 ));
+			
+			TEST( not a1.All( a2 ));
+			TEST( not a1.All( a3 ));
+			TEST( not a1.All( a4 ));
+			TEST( a1.All( a5 ));
+		}
+
+		// a2
+		{
+			TEST( not a2.Equals( a1 ));
+			TEST( a2.Equals( a2 ));
+			TEST( not a2.Equals( a3 ));
+			TEST( not a2.Equals( a4 ));
+			TEST( not a2.Equals( a5 ));
+
+			TEST( not a2.All( a3 ));
+			TEST( not a2.All( a4 ));
+			TEST( not a2.All( a5 ));
+			
+			TEST( a2.Any( a3 ));
+			TEST( a2.Any( a4 ));
+			TEST( not a2.Any( a5 ));
+		}
+
+		// a3
+		{
+			TEST( not a3.Equals( a1 ));
+			TEST( not a3.Equals( a2 ));
+			TEST( a3.Equals( a3 ));
+			TEST( not a3.Equals( a4 ));
+			TEST( not a3.Equals( a5 ));
+			
+			TEST( not a3.All( a4 ));
+			TEST( a3.All( a5 ));
+
+			TEST( a3.Any( a4 ));
+			TEST( a3.Any( a5 ));
+		}
+
+		// a4
+		{
+			TEST( not a4.Equals( a1 ));
+			TEST( not a4.Equals( a2 ));
+			TEST( not a4.Equals( a3 ));
+			TEST( a4.Equals( a4 ));
+			TEST( not a4.Equals( a5 ));
+
+			TEST( not a4.Equals( a1 ));
+			TEST( a4.All( a1 ));
+			TEST( a4.Any( a1 ));
+			TEST( a4.All( a5 ));
+
+			a4.Remove<Tag2>();
+			TEST( a4.Equals( a1 ));
+			TEST( a1.All( a4 ));
+		}
+
+		// a6
+		{
+			TEST( a6.AnyOrEmpty( a1 ));
+			TEST( a6.Empty() );
+		}
+	}
+
+
+	void ArchetypeQuery_Test1 ()
+	{
+		ArchetypeBits	a1;
+		a1.Add<Comp1>();
+		a1.Add<Comp2>();
+		a1.Add<Tag1>();
+
+		ArchetypeBits	a2;
+		a2.Add<Comp2>();
+		a2.Add<Tag2>();
+
+		ArchetypeBits	a3;
+		a3.Add<Tag1>();
+		a3.Add<Tag2>();
+
+		ArchetypeBits	a4;
+		a4.Add<Tag1>();
+		a4.Add<Comp1>();
+		a4.Add<Comp2>();
+		a4.Add<Tag2>();
+		a4.Add<Comp1>();
+
+		ArchetypeBits	a5;
+		a5.Add<Tag1>();
+
+		{
+			ArchetypeQueryDesc	q;
+			q.required.Add<Comp1>();
+			q.required.Add<Comp2>();
+
+			TEST( q.Compatible( a1 ));
+			TEST( not q.Compatible( a2 ));
+			TEST( not q.Compatible( a3 ));
+			TEST( q.Compatible( a4 ));
+			TEST( not q.Compatible( a5 ));
+		}{
+			ArchetypeQueryDesc	q;
+			q.required.Add<Comp1>();
+			q.requireAny.Add<Comp1>();
+			q.requireAny.Add<Tag2>();
+
+			TEST( q.Compatible( a1 ));
+			TEST( not q.Compatible( a2 ));
+			TEST( not q.Compatible( a3 ));
+			TEST( q.Compatible( a4 ));
+			TEST( not q.Compatible( a5 ));
+		}{
+			ArchetypeQueryDesc	q;
+			q.required.Add<Tag1>();
+			q.subtractive.Add<Comp1>();
+
+			TEST( not q.Compatible( a1 ));
+			TEST( not q.Compatible( a2 ));
+			TEST( q.Compatible( a3 ));
+			TEST( not q.Compatible( a4 ));
+			TEST( q.Compatible( a5 ));
+		}
 	}
 }
 
@@ -77,7 +244,9 @@ namespace
 extern void UnitTest_Archetype ()
 {
 	Archetype_Test1();
-	Archetype_Test2();
+	ArchetypeStorage_Test1();
+	ArchetypeBits_Test1();
+	ArchetypeQuery_Test1();
 
 	AE_LOGI( "UnitTest_Archetype - passed" );
 }

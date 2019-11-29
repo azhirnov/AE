@@ -40,14 +40,16 @@ namespace AE::ECS
 	template <typename Comp>
 	struct ComponentTypeInfo
 	{
-		STATIC_ASSERT( not IsEmpty<Comp> );
+		//STATIC_ASSERT( not IsEmpty<Comp> );
 		STATIC_ASSERT( std::is_standard_layout_v<Comp> );
 		//STATIC_ASSERT( std::is_trivially_copyable_v<Comp> );
 		STATIC_ASSERT( std::is_trivially_destructible_v<Comp> );
 		STATIC_ASSERT( std::is_nothrow_destructible_v<Comp> );
 
 		using type	= Comp;
-		static inline const ComponentID		id {CheckCast<uint16_t>( _ae_stl_hidden_::StaticTypeIdOf< Comp, 0x1000 >::Get().Get() )};
+		static inline const ComponentID		id		{ CheckCast<uint16_t>( _ae_stl_hidden_::StaticTypeIdOf< Comp, 0x1000 >::Get().Get() ) };
+		static constexpr Bytes<uint16_t>	align	{ IsEmpty<Comp> ? 0 : alignof(Comp) };
+		static constexpr Bytes<uint16_t>	size	{ IsEmpty<Comp> ? 0 : alignof(Comp) };
 
 		static void Ctor (OUT void *comp)
 		{
@@ -57,20 +59,6 @@ namespace AE::ECS
 	
 	template <typename Comp>	struct ComponentTypeInfo< Comp& >		: ComponentTypeInfo<Comp> {};
 	template <typename Comp>	struct ComponentTypeInfo< const Comp& >	: ComponentTypeInfo<Comp> {};
-
-
-	//
-	// Tag Component Type Info
-	//
-	
-	template <typename Comp>
-	struct TagComponentTypeInfo
-	{
-		STATIC_ASSERT( IsEmpty<Comp> );
-
-		using type	= Comp;
-		static inline const TagComponentID	id {CheckCast<uint16_t>( _ae_stl_hidden_::StaticTypeIdOf< Comp, 0x1001 >::Get().Get() )};
-	};
 	
 
 

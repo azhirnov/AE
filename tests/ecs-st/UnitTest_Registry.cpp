@@ -28,6 +28,31 @@ namespace
 	STATIC_ASSERT( IsEmpty<Tag1> );
 
 	
+	template <typename ...Args>
+	QueryID  CreateQuery1 (Registry &reg, TypeList<Args...> const*)
+	{
+		return reg.CreateQuery< Args... >();
+	}
+
+	template <typename ...Args>
+	QueryID  CreateQuery2 (Registry &reg, ArrayView<Tuple<Args...>> const*)
+	{
+		using A = TypeList< Args... >;
+		STATIC_ASSERT( IsSameTypes< A::Get<0>, size_t >);
+		using B = typename A::PopFront::type;
+
+		return CreateQuery1( reg, (B const*)null );
+	}
+
+	template <typename Fn>
+	void EnqueWithoutQuery (Registry &reg, Fn &&fn)
+	{
+		QueryID	q = CreateQuery2( reg, (FunctionInfo<Fn>::args::template Get<0> *)null );
+
+		reg.Enque( q, std::forward<Fn>(fn) );
+	}
+
+	
 	void ComponentValidator_Test1 ()
 	{
 	#ifdef AE_ECS_VALIDATE_SYSTEM_FN
@@ -240,20 +265,21 @@ namespace
 		}
 
 		size_t	cnt = 0;
-		reg.Enque(	[&cnt] (ArrayView<Tuple< size_t, WriteAccess<Comp1>, ReadAccess<Comp2> >> chunks)
-					{
-						for (auto& chunk : chunks)
+		EnqueWithoutQuery( reg,
+			[&cnt] (ArrayView<Tuple< size_t, WriteAccess<Comp1>, ReadAccess<Comp2> >> chunks)
+			{
+				for (auto& chunk : chunks)
+				{
+					chunk.Apply(
+						[&cnt] (size_t count, WriteAccess<Comp1> comp1, ReadAccess<Comp2> comp2)
 						{
-							chunk.Apply(
-								[&cnt] (size_t count, WriteAccess<Comp1> comp1, ReadAccess<Comp2> comp2)
-								{
-									for (size_t i = 0; i < count; ++i) {
-										comp1[i].value = int(comp2[i].value);
-										++cnt;
-									}
-								});
-						}
-					});
+							for (size_t i = 0; i < count; ++i) {
+								comp1[i].value = int(comp2[i].value);
+								++cnt;
+							}
+						});
+				}
+			});
 		reg.Process();
 
 		TEST( cnt == count );
@@ -305,31 +331,32 @@ namespace
 		}
 
 		size_t	cnt1 = 0;
-		reg.Enque(	[&cnt1] (ArrayView<Tuple< size_t, ReadAccess<Comp1>, Subtractive<Tag1> >> chunks,
-							 Tuple< SingleComp1& > single)
-					{
-						size_t&	sum = single.Get<0>().sum;
+		EnqueWithoutQuery( reg,
+			[&cnt1] (ArrayView<Tuple< size_t, ReadAccess<Comp1>, Subtractive<Tag1> >> chunks, Tuple< SingleComp1& > single)
+			{
+				size_t&	sum = single.Get<0>().sum;
 
-						for (auto& chunk : chunks)
-						{
-							for (size_t i = 0; i < chunk.Get<0>(); ++i) {
-								sum += chunk.Get<1>()[i].value;
-								++cnt1;
-							}
-						}
-					});
+				for (auto& chunk : chunks)
+				{
+					for (size_t i = 0; i < chunk.Get<0>(); ++i) {
+						sum += chunk.Get<1>()[i].value;
+						++cnt1;
+					}
+				}
+			});
 
 		size_t	cnt2 = 0;
-		reg.Enque(	[&cnt2] (ArrayView<Tuple< size_t, ReadAccess<Comp2>, Require<Tag1, Comp1> >> chunks)
-					{
-						for (auto& chunk : chunks)
-						{
-							for (size_t i = 0; i < chunk.Get<0>(); ++i) {
-								void( chunk.Get<1>()[i].value );
-								++cnt2;
-							}
-						}
-					});
+		EnqueWithoutQuery( reg,
+			[&cnt2] (ArrayView<Tuple< size_t, ReadAccess<Comp2>, Require<Tag1, Comp1> >> chunks)
+			{
+				for (auto& chunk : chunks)
+				{
+					for (size_t i = 0; i < chunk.Get<0>(); ++i) {
+						void( chunk.Get<1>()[i].value );
+						++cnt2;
+					}
+				}
+			});
 
 		reg.Process();
 		
@@ -356,20 +383,21 @@ namespace
 		}
 		
 		Array<uint>	arr;
-		reg.Enque(	[&reg, &arr] (ArrayView<Tuple< size_t, ReadAccess<Comp1> >>)
-					{
-						arr.push_back( 1 );
+		EnqueWithoutQuery( reg,
+			[&reg, &arr] (ArrayView<Tuple< size_t, ReadAccess<Comp1> >>)
+			{
+				arr.push_back( 1 );
 						
-						reg.Enque(	[&arr] (ArrayView<Tuple< size_t, WriteAccess<Comp1>, ReadAccess<Comp2> >>)
-									{
-										arr.push_back( 2 );
-									});
-					});
+				EnqueWithoutQuery( reg,	[&arr] (ArrayView<Tuple< size_t, WriteAccess<Comp1>, ReadAccess<Comp2> >>)
+										{
+											arr.push_back( 2 );
+										});
+			});
 
-		reg.Enque(	[&arr] (ArrayView<Tuple< size_t, ReadAccess<Comp2> >>)
-					{
-						arr.push_back( 3 );
-					});
+		EnqueWithoutQuery( reg,	[&arr] (ArrayView<Tuple< size_t, ReadAccess<Comp2> >>)
+								{
+									arr.push_back( 3 );
+								});
 
 		reg.Process();
 		
@@ -478,20 +506,21 @@ namespace
 			TEST( e1 );
 		}
 
-		reg.Enque(	[&reg] (ArrayView<Tuple< size_t, ReadAccess<Comp1>, ReadAccess<EntityID> >> chunks)
-					{
-						for (auto& chunk : chunks)
+		EnqueWithoutQuery( reg,
+			[&reg] (ArrayView<Tuple< size_t, ReadAccess<Comp1>, ReadAccess<EntityID> >> chunks)
+			{
+				for (auto& chunk : chunks)
+				{
+					chunk.Apply(
+						[&reg] (size_t count, ReadAccess<Comp1>, ReadAccess<EntityID> entities)
 						{
-							chunk.Apply(
-								[&reg] (size_t count, ReadAccess<Comp1>, ReadAccess<EntityID> entities)
-								{
-									for (size_t i = 0; i < count; ++i)
-									{
-										reg.AddMessage<MsgTag_ComponentChanged>( entities[i], ComponentTypeInfo<Comp1>::id );
-									}
-								});
-						}
-					});
+							for (size_t i = 0; i < count; ++i)
+							{
+								reg.AddMessage<MsgTag_ComponentChanged>( entities[i], ComponentTypeInfo<Comp1>::id );
+							}
+						});
+				}
+			});
 		reg.Process();
 
 		TEST( cnt1 == count );
@@ -512,6 +541,6 @@ extern void UnitTest_Registry ()
 	Events_Test1();
 	Messages_Test1();
 	Messages_Test2();
-
+	
 	AE_LOGI( "UnitTest_Registry - passed" );
 }

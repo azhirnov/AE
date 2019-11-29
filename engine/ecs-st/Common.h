@@ -36,13 +36,14 @@ namespace AE::ECS
 	using Threading::Atomic;
 
 	using EntityID	= HandleTmpl< uint16_t, uint16_t, 0 >;
+	using QueryID	= HandleTmpl< uint16_t, uint16_t, 1 >;
 	
 
 	struct ECS_Config
 	{
-		static constexpr uint	MaxComponents		= 64;
-		static constexpr uint	MaxTagComponents	= 16;
-		static constexpr uint	InitialtStorageSize	= 16;
+		static constexpr uint	MaxComponents				= 4 * 64;
+		static constexpr uint	MaxComponentsPerArchetype	= 64;
+		static constexpr uint	InitialtStorageSize			= 16;
 	};
 
 	class Registry;

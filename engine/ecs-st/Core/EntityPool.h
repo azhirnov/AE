@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "ecs-st/Core/Archetype.h"
+#include "ecs-st/Core/ArchetypeStorage.h"
 
 namespace AE::ECS
 {

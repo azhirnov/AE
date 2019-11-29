@@ -25,7 +25,6 @@ namespace AE::ECS
 
 			MessageKey () {}
 			MessageKey (ComponentID compId, MsgTagID tagId);
-			MessageKey (TagComponentID compId, MsgTagID tagId);
 
 			ND_ bool  operator == (const MessageKey &) const;
 		};
@@ -58,9 +57,6 @@ namespace AE::ECS
 
 		template <typename Tag>
 		void  Add (EntityID id, ComponentID compId);
-		
-		template <typename Tag>
-		void  Add (EntityID id, TagComponentID compId);
 
 		template <typename Tag>
 		void  Add (EntityID id, ComponentID compId, ArrayView<uint8_t> data);
@@ -72,20 +68,12 @@ namespace AE::ECS
 		bool  AddListener (Fn &&fn);
 
 		void  Process ();
-
-	private:
-		template <typename Tag, typename Comp>
-		void  _Add (EntityID id, Comp compId);
 	};
 
 	
 			
 	
 	inline MessageBuilder::MessageKey::MessageKey (ComponentID compId, MsgTagID tagId) :
-		_value{ (size_t(compId.value) << 16) | size_t(tagId.value) }
-	{}
-
-	inline MessageBuilder::MessageKey::MessageKey (TagComponentID compId, MsgTagID tagId) :
 		_value{ (size_t(compId.value) << 16) | size_t(tagId.value) }
 	{}
 	
@@ -105,11 +93,11 @@ namespace AE::ECS
 	
 /*
 =================================================
-	_Add
+	Add
 =================================================
 */
-	template <typename Tag, typename Comp>
-	inline void  MessageBuilder::_Add (EntityID id, Comp compId)
+	template <typename Tag>
+	inline void  MessageBuilder::Add (EntityID id, ComponentID compId)
 	{
 		MessageKey const	key  { compId, MsgTagTypeInfo<Tag>::id };
 		auto				iter = _msgTypes.find( key );
@@ -128,26 +116,6 @@ namespace AE::ECS
 		msg.entities.push_back( id );
 	}
 
-/*
-=================================================
-	Add
-=================================================
-*/
-	template <typename Tag>
-	inline void  MessageBuilder::Add (EntityID id, ComponentID compId)
-	{
-		// you must add copy of component because it will be destroyed
-		STATIC_ASSERT( not IsSameTypes< Tag, MsgTag_RemovedComponent >);
-
-		return _Add<Tag>( id, compId );
-	}
-
-	template <typename Tag>
-	inline void  MessageBuilder::Add (EntityID id, TagComponentID compId)
-	{
-		return _Add<Tag>( id, compId );
-	}
-		
 /*
 =================================================
 	Add

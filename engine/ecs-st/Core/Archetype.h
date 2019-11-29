@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "ecs-st/Core/ComponentID.h"
+#include "ecs-st/Core/ArchetypeBits.h"
 
 namespace AE::ECS
 {
@@ -25,15 +25,16 @@ namespace AE::ECS
 
 			template <typename T>
 			ComponentInfo (InPlaceType<T>);
+
+			ND_ bool	IsTag ()	const	{ return size == 0; }
+			ND_ bool	HasData ()	const	{ return size > 0; }
 		};
 
-		using Components_t	= FixedArray< ComponentInfo, ECS_Config::MaxComponents >;
-		using Tags_t		= FixedArray< TagComponentID, ECS_Config::MaxTagComponents >;
+		using Components_t	= FixedArray< ComponentInfo, ECS_Config::MaxComponentsPerArchetype >;
 
 
 	// variables
 		Components_t	components;
-		Tags_t			tags;
 
 
 	// methods
@@ -53,196 +54,51 @@ namespace AE::ECS
 	// variables
 	private:
 		HashVal				_hash;
-		ArchetypeDesc		_desc;
+		ArchetypeDesc		_desc;			// TODO: optimize search by id
 		Bytes<uint16_t>		_maxAlign;
+		ArchetypeBits		_bits;
 
 
 	// methods
 	public:
 		explicit Archetype (const ArchetypeDesc &desc, bool sorted = false);
 
-		ND_ ArchetypeDesc const&	Desc ()		const	{ return _desc; }
-		ND_ HashVal					Hash ()		const	{ return _hash; }
-		ND_ BytesU					MaxAlign ()	const	{ return BytesU{_maxAlign}; }
-		ND_ size_t					Count ()	const	{ return _desc.components.size(); }
+		ND_ ArchetypeDesc const&	Desc ()			const	{ return _desc; }
+		ND_ HashVal					Hash ()			const	{ return _hash; }
+		ND_ BytesU					MaxAlign ()		const	{ return BytesU{_maxAlign}; }
+		ND_ size_t					Count ()		const	{ return _desc.components.size(); }
+		ND_ ArchetypeBits const&	Bits ()			const	{ return _bits; }
 
-		ND_ bool	operator == (const Archetype &rhs) const;
+		ND_ bool operator == (const Archetype &rhs)	const	{ return Equals( rhs ); }
 
-		ND_ bool	Contains (const Archetype &) const;
+		ND_ bool	Equals (const Archetype &rhs)	const	{ return _bits.Equals( rhs._bits ); }
+		ND_ bool	Contains (const Archetype &rhs)	const	{ return _bits.All( rhs._bits ); }
+		ND_ bool	Exists (ComponentID id)			const	{ return _bits.Exists( id ); }
+
+		template <typename T>
+		ND_ bool	Exists () const							{ return Exists( ComponentTypeInfo<T>::id ); }
 
 		ND_ size_t	IndexOf (ComponentID id) const;
-		ND_ bool	HasTag (TagComponentID id) const;
-
-		template <typename T>
-		ND_ bool	HasComponent () const;
-
-		template <typename T>
-		ND_ bool	HasTag () const;
-
-		template <typename T>
-		ND_ bool	Has () const;
 	};
 
-
-
-	//
-	// Archetype Storage
-	//
-
-	class ArchetypeStorage final
-	{
-	// types
-	public:
-		enum class Index_t : uint {};
-		
-	private:
-		using Allocator_t			= UntypedAlignedAllocator;
-		using ComponentOffsets_t	= FixedArray< BytesU, ECS_Config::MaxComponents >;
-
-
-	// variables
-	private:
-		void *					_memory;
-		size_t					_count;
-		Atomic<int>				_locks;
-
-		Archetype const&		_archetype;
-		ComponentOffsets_t		_compOffsets;
-		size_t					_capacity;
-		Allocator_t				_allocator;
-
-
-	// methods
-	public:
-		explicit ArchetypeStorage (const Archetype &archetype, size_t capacity);
-		~ArchetypeStorage ();
-
-			bool  Add (EntityID id, OUT Index_t &index);
-			bool  Erase (Index_t index, OUT EntityID &movedEntity);
-		ND_ bool  IsValid (EntityID id, Index_t index) const;
-			void  Clear ();
-			void  Reserve (size_t size);
-
-			void  Lock ();
-			void  Unlock ();
-		ND_ bool  IsLocked () const;
-		
-		template <typename T>
-		ND_ T*					GetComponent (Index_t idx)		const;
-		template <typename T>
-		ND_ T*					GetComponents ()				const;
-		ND_ void*				GetComponents (ComponentID id)	const;
-		ND_ EntityID const*		GetEntities ()					const;	// local index to EntityID
-		ND_ size_t				Capacity ()						const	{ return _capacity; }
-		ND_ size_t				Count ()						const	{ return _count; }
-		ND_ bool				Empty ()						const	{ return _count == 0; }
-		ND_ Archetype const&	GetArchetype ()					const	{ return _archetype; }
-
-	private:
-		ND_ EntityID *		_GetEntities ();
-	};
-//-----------------------------------------------------------------------------
 	
 
 	
 	template <typename Comp>
 	inline ArchetypeDesc::ComponentInfo::ComponentInfo (InPlaceType<Comp>) :
 		id{ ComponentTypeInfo<Comp>::id },
-		align{ Bytes<uint16_t>{ AlignOf<Comp> }},
-		size{ Bytes<uint16_t>{ SizeOf<Comp> }},
+		align{ ComponentTypeInfo<Comp>::align },
+		size{ ComponentTypeInfo<Comp>::size },
 		ctor{ &ComponentTypeInfo<Comp>::Ctor }
-	{}
+	{
+		CHECK( id.value < ECS_Config::MaxComponents );
+	}
 
 	template <typename Comp>
 	inline ArchetypeDesc&  ArchetypeDesc::Add ()
 	{
-		if constexpr( IsEmpty<Comp> )
-			tags.push_back( TagComponentTypeInfo<Comp>::id );
-		else
-			components.push_back(ComponentInfo{ InPlaceObj<Comp> });
-
+		components.push_back(ComponentInfo{ InPlaceObj<Comp> });
 		return *this;
-	}
-//-----------------------------------------------------------------------------
-	
-
-	template <typename T>
-	inline bool  Archetype::Has () const
-	{
-		if constexpr( IsEmpty<T> )
-			return HasTag<T>();
-		else
-			return HasComponent<T>();
-	}
-	
-	template <typename T>
-	inline bool  Archetype::HasComponent () const
-	{
-		return IndexOf( ComponentTypeInfo<T>::id ) < Count();
-	}
-
-	template <typename T>
-	inline bool  Archetype::HasTag () const
-	{
-		return HasTag( TagComponentTypeInfo<T>::id );
-	}
-
-//-----------------------------------------------------------------------------
-
-
-	template <typename T>
-	inline T*  ArchetypeStorage::GetComponents () const
-	{
-		return Cast<T>( GetComponents( ComponentTypeInfo<T>::id ));
-	}
-	
-	inline void*  ArchetypeStorage::GetComponents (ComponentID id) const
-	{
-		ASSERT( _memory );
-		size_t	pos = _archetype.IndexOf( id );
-		return	pos < _compOffsets.size() ?
-					_memory + _compOffsets[pos] :
-					null;
-	}
-	
-	template <typename T>
-	inline T*  ArchetypeStorage::GetComponent (Index_t idx) const
-	{
-		ASSERT( size_t(idx) < Count() );
-		ASSERT( _memory );
-
-		size_t	pos = _archetype.IndexOf( ComponentTypeInfo<T>::id );
-		return	pos < _compOffsets.size() ?
-					Cast<T>( _memory + _compOffsets[pos] ) + size_t(idx) :
-					null;
-
-	}
-
-	inline EntityID const*  ArchetypeStorage::GetEntities () const
-	{
-		ASSERT( _memory );
-		return Cast<EntityID>( _memory );
-	}
-	
-	inline EntityID*  ArchetypeStorage::_GetEntities ()
-	{
-		ASSERT( _memory );
-		return Cast<EntityID>( _memory );
-	}
-	
-	inline void  ArchetypeStorage::Lock ()
-	{
-		_locks.fetch_add( 1 );
-	}
-
-	inline void  ArchetypeStorage::Unlock ()
-	{
-		_locks.fetch_sub( 1 );
-	}
-	
-	inline bool  ArchetypeStorage::IsLocked () const
-	{
-		return _locks.load() > 0;
 	}
 
 }	// AE::ECS

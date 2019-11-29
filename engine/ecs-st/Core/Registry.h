@@ -2,87 +2,13 @@
 
 #pragma once
 
-#include "ecs-st/Core/Archetype.h"
+#include "ecs-st/Core/ArchetypeStorage.h"
 #include "ecs-st/Core/EntityPool.h"
 #include "ecs-st/Core/MessageBuilder.h"
+#include "ecs-st/Core/ComponentAccessTypes.h"
 
 namespace AE::ECS
 {
-	class Registry;
-
-
-	//
-	// Component Access Type
-	//
-
-	template <typename T>
-	struct WriteAccess
-	{
-		STATIC_ASSERT( not IsEmpty<T> );
-	private:
-		T*  _elements;
-
-	public:
-		explicit WriteAccess (T* elems) : _elements{ elems } { ASSERT( _elements ); }
-
-		ND_ T&  operator [] (size_t i)	const	{ return _elements[i]; }
-	};
-
-
-	template <typename T>
-	struct ReadAccess
-	{
-		STATIC_ASSERT( not IsEmpty<T> );
-	private:
-		T const*  _elements;
-
-	public:
-		explicit ReadAccess (T const* elems) : _elements{ elems } { ASSERT( _elements ); }
-
-		ND_ T const&  operator [] (size_t i)	const	{ return _elements[i]; }
-	};
-	
-
-	template <typename T>
-	struct OptionalWriteAccess
-	{
-		STATIC_ASSERT( not IsEmpty<T> );
-	private:
-		T*  _elements;			// can be null
-
-	public:
-		explicit OptionalWriteAccess (T* elems) : _elements{ elems } {}
-
-		ND_ T&  operator [] (size_t i)	const	{ ASSERT( _elements != null ); return _elements[i]; }
-		ND_ explicit operator bool ()	const	{ return _elements != null; }
-	};
-
-
-	template <typename T>
-	struct OptionalReadAccess
-	{
-		STATIC_ASSERT( not IsEmpty<T> );
-	private:
-		T const*  _elements;	// can be null
-
-	public:
-		explicit OptionalReadAccess (T const* elems) : _elements{ elems } {}
-
-		ND_ T const&  operator [] (size_t i)	const	{ ASSERT( _elements != null ); return _elements[i]; }
-		ND_ explicit operator bool ()			const	{ return _elements != null; }
-	};
-	
-
-	template <typename ...Types>
-	struct Subtractive {};
-	
-	template <typename ...Types>
-	struct Require {};
-	
-	template <typename ...Types>
-	struct RequireAny {};
-
-
 
 	//
 	// System Event helpers
@@ -107,6 +33,7 @@ namespace AE::ECS
 		using ArchetypeStoragePtr	= UniquePtr<ArchetypeStorage>;
 		using ArchetypeMap_t		= HashMap< Archetype, ArchetypeStoragePtr >;
 		using Index_t				= ArchetypeStorage::Index_t;
+		using ArchetypePair_t		= Pair< const Archetype, ArchetypeStoragePtr >;
 
 		class SingleCompWrap final : public Noncopyable
 		{
@@ -130,6 +57,13 @@ namespace AE::ECS
 		using EventListeners_t	= HashMultiMap< TypeId, EventListener_t >;
 		using EventQueue_t		= Array< Function< void () >>;
 
+		struct Query
+		{
+			ArchetypeQueryDesc			desc;
+			Array<ArchetypePair_t *>	archetypes;
+		};
+		using Queries_t			= Array< Query >;
+
 
 	// variables
 	private:
@@ -146,6 +80,8 @@ namespace AE::ECS
 
 		EventQueue_t		_eventQueue;
 		EventQueue_t		_pendingEvents;
+
+		Queries_t			_queries;
 
 		DataRaceCheck		_drCheck;
 
@@ -177,6 +113,9 @@ namespace AE::ECS
 
 			template <typename ...Types>
 		ND_ Tuple<Ptr<Types>...>  GetComponenets (EntityID id);
+		
+			template <typename T>
+			void  RemoveComponents (QueryID query);
 
 
 		// single component
@@ -193,14 +132,18 @@ namespace AE::ECS
 
 
 		// system
-			template <typename Fn>
-			void  Execute (Fn &&fn);
+			template <typename ...Args>
+			ND_ QueryID  CreateQuery ();
+			ND_ QueryID  CreateQuery (const ArchetypeQueryDesc &desc);
 
 			template <typename Fn>
-			void  Enque (Fn &&fn);
+			void  Execute (QueryID query, Fn &&fn);
+
+			template <typename Fn>
+			void  Enque (QueryID query, Fn &&fn);
 			
 			template <typename Obj, typename Class, typename ...Args>
-			void  Enque (Obj obj, void (Class::*)(Args&&...));
+			void  Enque (QueryID query, Obj obj, void (Class::*)(Args&&...));
 
 			template <typename Ev>
 			void  EnqueEvent ();
@@ -229,6 +172,8 @@ namespace AE::ECS
 			void  _AddEntity (const Archetype &arch, EntityID id);
 			void  _MoveEntity (const Archetype &arch, EntityID id, ArchetypeStorage* srcStorage, Index_t srcIndex,
 							   OUT ArchetypeStorage* &dstStorage, OUT Index_t &dstIndex);
+
+			void  _OnNewArchetype (ArchetypePair_t *);
 
 			static void  _DecreaseStorageSize (ArchetypeStorage *);
 
@@ -270,9 +215,6 @@ namespace AE::ECS
 		for (auto& comp : desc.components) {
 			_messages.Add<MsgTag_AddedComponent>( id, comp.id );
 		}
-		for (auto& tag : desc.tags) {
-			_messages.Add<MsgTag_AddedComponent>( id, tag );
-		}
 
 		return id;
 	}
@@ -307,10 +249,7 @@ namespace AE::ECS
 			}
 		}
 		
-		if constexpr( IsEmpty<T> )
-			_messages.Add<MsgTag_AddedComponent>( id, TagComponentTypeInfo<T>::id );
-		else
-			_messages.Add<MsgTag_AddedComponent>( id, ComponentTypeInfo<T>::id );
+		_messages.Add<MsgTag_AddedComponent>( id, ComponentTypeInfo<T>::id );
 		
 		ArchetypeStorage*	dst_storage	= null;
 		Index_t				dst_index;
@@ -342,33 +281,16 @@ namespace AE::ECS
 		{
 			desc = src_storage->GetArchetype().Desc();
 
-			bool	found = false;
-			if constexpr( IsEmpty<T> )
-			{
-				const TagComponentID	tag_id = TagComponentTypeInfo<T>::id;
+			bool				found	= false;
+			const ComponentID	comp_id	= ComponentTypeInfo<T>::id;
 
-				for (size_t i = 0; i < desc.tags.size(); ++i)
-				{
-					if ( desc.tags[i] == tag_id )
-					{
-						found = true;
-						desc.tags.fast_erase( i );
-						break;
-					}
-				}
-			}
-			else
+			for (size_t i = 0; i < desc.components.size(); ++i)
 			{
-				const ComponentID	comp_id = ComponentTypeInfo<T>::id;
-
-				for (size_t i = 0; i < desc.components.size(); ++i)
+				if ( desc.components[i].id == comp_id )
 				{
-					if ( desc.components[i].id == comp_id )
-					{
-						found = true;
-						desc.components.fast_erase( i );
-						break;
-					}
+					found = true;
+					desc.components.fast_erase( i );
+					break;
 				}
 			}
 
@@ -377,7 +299,7 @@ namespace AE::ECS
 		}
 
 		if constexpr( IsEmpty<T> )
-			_messages.Add<MsgTag_RemovedComponent>( id, TagComponentTypeInfo<T>::id );
+			_messages.Add<MsgTag_RemovedComponent>( id, ComponentTypeInfo<T>::id );
 		else
 			_messages.Add<MsgTag_RemovedComponent>( id, src_storage->GetComponent<T>( src_index ));
 
@@ -815,13 +737,13 @@ namespace AE::ECS
 =================================================
 */
 	template <typename Obj, typename Class, typename ...Args>
-	inline void  Registry::Enque (Obj obj, void (Class::*fn)(Args&&...))
+	inline void  Registry::Enque (QueryID query, Obj obj, void (Class::*fn)(Args&&...))
 	{
-		return Enque( [obj, fn](Args&& ...args) { return (obj->*fn)( std::forward<Args>(args)... ); });
+		return Enque( query, [obj, fn](Args&& ...args) { return (obj->*fn)( std::forward<Args>(args)... ); });
 	}
 
 	template <typename Fn>
-	inline void  Registry::Enque (Fn &&fn)
+	inline void  Registry::Enque (QueryID query, Fn &&fn)
 	{
 		EXLOCK( _drCheck );
 
@@ -832,9 +754,9 @@ namespace AE::ECS
 		else
 		{
 			_pendingEvents.push_back(
-				[this, fn = std::forward<Fn>(fn)] ()
+				[this, query, fn = std::forward<Fn>(fn)] ()
 				{
-					Execute( std::move(fn) );
+					Execute( query, std::move(fn) );
 				});
 		}
 	}
@@ -845,7 +767,7 @@ namespace AE::ECS
 =================================================
 */
 	template <typename Fn>
-	inline void  Registry::Execute (Fn &&fn)
+	inline void  Registry::Execute (QueryID query, Fn &&fn)
 	{
 		EXLOCK( _drCheck );
 
@@ -861,11 +783,14 @@ namespace AE::ECS
 
 		Array<ArchetypeStorage*>	storages;
 		Array<Chunk>				chunks;
+		const auto&					q_data = _queries[ query.Index() ];
 				
-		for (auto& [arch, storage] : _archetypes)
+		for (auto* ptr : q_data.archetypes)
 		{
-			if ( not _IsArchetypeSupported< CompOnly >( arch ))
-				continue;
+			auto&	arch	= ptr->first;
+			auto&	storage	= ptr->second;
+
+			ASSERT( _IsArchetypeSupported< CompOnly >( arch ));
 
 			storage->Lock();
 			storages.emplace_back( storage.get() );
@@ -903,7 +828,7 @@ namespace AE::ECS
 		struct ArchetypeCompatibility< WriteAccess<T> >
 		{
 			static bool Test (const Archetype &arch) {
-				return arch.HasComponent<T>();
+				return arch.Exists<T>();
 			}
 		};
 		
@@ -911,7 +836,7 @@ namespace AE::ECS
 		struct ArchetypeCompatibility< ReadAccess<T> >
 		{
 			static bool Test (const Archetype &arch) {
-				return arch.HasComponent<T>();
+				return arch.Exists<T>();
 			}
 		};
 
@@ -944,9 +869,9 @@ namespace AE::ECS
 			static bool _Test (const Archetype &arch)
 			{
 				if constexpr( CountOf<Next...>() )
-					return not arch.Has<T>() and _Test<Next...>( arch );
+					return not arch.Exists<T>() and _Test<Next...>( arch );
 				else
-					return not arch.Has<T>();
+					return not arch.Exists<T>();
 			}
 		};
 
@@ -963,9 +888,9 @@ namespace AE::ECS
 			static bool _Test (const Archetype &arch)
 			{
 				if constexpr( CountOf<Next...>() )
-					return arch.Has<T>() and _Test<Next...>( arch );
+					return arch.Exists<T>() and _Test<Next...>( arch );
 				else
-					return arch.Has<T>();
+					return arch.Exists<T>();
 			}
 		};
 
@@ -982,9 +907,9 @@ namespace AE::ECS
 			static bool _Test (const Archetype &arch)
 			{
 				if constexpr( CountOf<Next...>() )
-					return arch.Has<T>() or _Test<Next...>( arch );
+					return arch.Exists<T>() or _Test<Next...>( arch );
 				else
-					return arch.Has<T>();
+					return arch.Exists<T>();
 			}
 		};
 
@@ -1222,5 +1147,92 @@ namespace AE::ECS
 	{
 		return _messages.Add<Tag>( id, comp );
 	}
+//-----------------------------------------------------------------------------
+
+	
+/*
+=================================================
+	BuildEntityQueryDesc
+=================================================
+*/
+	namespace _reg_detail_
+	{
+		template <typename T>
+		struct BuildEntityQueryDesc;
+		
+		template <>
+		struct BuildEntityQueryDesc< ReadAccess<EntityID> >
+		{
+			static void  Apply (ArchetypeQueryDesc &) {}
+		};
+
+		template <typename T>
+		struct BuildEntityQueryDesc< WriteAccess<T> >
+		{
+			static void  Apply (ArchetypeQueryDesc &desc) {
+				desc.required.Add<T>();
+			}
+		};
+		
+		template <typename T>
+		struct BuildEntityQueryDesc< ReadAccess<T> >
+		{
+			static void  Apply (ArchetypeQueryDesc &desc) {
+				desc.required.Add<T>();
+			}
+		};
+
+		template <typename T>
+		struct BuildEntityQueryDesc< OptionalWriteAccess<T> >
+		{
+			static void  Apply (ArchetypeQueryDesc &) {}
+		};
+		
+		template <typename T>
+		struct BuildEntityQueryDesc< OptionalReadAccess<T> >
+		{
+			static void  Apply (ArchetypeQueryDesc &) {}
+		};
+		
+		template <typename ...Types>
+		struct BuildEntityQueryDesc< Subtractive<Types...> >
+		{
+			static void  Apply (ArchetypeQueryDesc &desc) {
+				(desc.subtractive.Add<Types>(), ...);
+			}
+		};
+		
+		template <typename ...Types>
+		struct BuildEntityQueryDesc< Require<Types...> >
+		{
+			static void  Apply (ArchetypeQueryDesc &desc) {
+				(desc.required.Add<Types>(), ...);
+			}
+		};
+		
+		template <typename ...Types>
+		struct BuildEntityQueryDesc< RequireAny<Types...> >
+		{
+			static void  Apply (ArchetypeQueryDesc &desc) {
+				(desc.requireAny.Add<Types>(), ...);
+			}
+		};
+
+	}	// _reg_detail_
+
+/*
+=================================================
+	CreateQuery
+=================================================
+*/
+	template <typename ...Args>
+	inline QueryID  Registry::CreateQuery ()
+	{
+		ArchetypeQueryDesc	desc;
+		(_reg_detail_::BuildEntityQueryDesc< Args >::Apply( INOUT desc ), ...);
+
+		return CreateQuery( desc );
+	}
+
 
 }	// AE::ECS
