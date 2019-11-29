@@ -354,9 +354,9 @@
 		}}
 
 #	undef  CHECK_FATAL
-#	define CHECK_FATAL( _expr_ ) \
-		{if ( !(_expr_) ) { \
-			AE_LOGI( AE_PRIVATE_TOSTRING( _expr_ ) ); \
+#	define CHECK_FATAL( ... ) \
+		{if ( !(__VA_ARGS__) ) { \
+			AE_LOGI( AE_PRIVATE_TOSTRING( __VA_ARGS__ ) ); \
 			AE_PRIVATE_EXIT(); \
 		}}
 

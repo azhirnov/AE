@@ -117,23 +117,29 @@ namespace {
 		IDEConsoleMessage( msg, file, line, true );
 		ConsoleOutput( msg, file, line, true );
 
-		const String	caption	= "Error message";
-
-		const String	str		= "File: "s << file <<
-								  "\nLine: " << ToString( line ) <<
-								  "\nFunction: " << func <<
-								  "\n\nMessage:\n" << msg;
-
-		int	result = ::MessageBoxExA( null, NtStringView{str}.c_str(), NtStringView{caption}.c_str(),
-									  MB_ABORTRETRYIGNORE | MB_ICONERROR | MB_SETFOREGROUND | MB_TOPMOST | MB_DEFBUTTON3,
-									  MAKELANGID( LANG_ENGLISH, SUBLANG_ENGLISH_US ) );
-		switch ( result )
+		#ifndef AE_CI_BUILD
 		{
-			case IDABORT :	return Logger::EResult::Abort;
-			case IDRETRY :	return Logger::EResult::Break;
-			case IDIGNORE :	return Logger::EResult::Continue;
-			default :		return Logger::EResult(~0u);
-		};
+			const String	caption	= "Error message";
+
+			const String	str		= "File: "s << file <<
+									  "\nLine: " << ToString( line ) <<
+									  "\nFunction: " << func <<
+									  "\n\nMessage:\n" << msg;
+
+			int	result = ::MessageBoxExA( null, NtStringView{str}.c_str(), NtStringView{caption}.c_str(),
+										  MB_ABORTRETRYIGNORE | MB_ICONERROR | MB_SETFOREGROUND | MB_TOPMOST | MB_DEFBUTTON3,
+										  MAKELANGID( LANG_ENGLISH, SUBLANG_ENGLISH_US ) );
+			switch ( result )
+			{
+				case IDABORT :	return Logger::EResult::Abort;
+				case IDRETRY :	return Logger::EResult::Break;
+				case IDIGNORE :	return Logger::EResult::Continue;
+				default :		return Logger::EResult(~0u);
+			};
+		}
+		#else
+			return Logger::EResult::Continue;
+		#endif
 	}
 //-----------------------------------------------------------------------------
 

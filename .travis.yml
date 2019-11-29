@@ -3,17 +3,29 @@ matrix:
     
     # Windows MSVC x64
     - os: windows
+      name: Win64 VC2017
       language: cpp
       script:
         - mkdir -p build
         - cd build
-        - cmake -G "Visual Studio 15 2017 Win64"  -DAE_CI_BUILD=ON .. 
+        - cmake -G "Visual Studio 15 2017 Win64" -T v141 -DAE_CI_BUILD=ON .. 
         - cmake --build . --config Release
         - ctest -C Release --verbose
       
+    #- os: windows
+    #  name: Win64 VC2019
+    #  language: cpp
+    #  script:
+    #    - mkdir -p build
+    #    - cd build
+    #    - cmake -G "Visual Studio 16 2019" -A Win64 -DAE_CI_BUILD=ON .. 
+    #    - cmake --build . --config Release
+    #    - ctest -C Release --verbose
+        
     # Android
     # from https://github.com/android/ndk-samples/blob/master/.travis.yml
     - os: android
+      name: android
       language: android
       sudo: true
       android:

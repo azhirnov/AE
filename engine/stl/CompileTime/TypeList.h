@@ -80,7 +80,7 @@ namespace _ae_stl_hidden_
 	struct TypeList
 	{
 	public:
-		using							AsTuple	= std::tuple< Types... >;
+		using							AsTuple		= Tuple< Types... >;
 
 		template <typename T>
 		inline static constexpr size_t	FirstIndex	= _ae_stl_hidden_::TL_GetFirstIndex< T, 0, AsTuple >::value;

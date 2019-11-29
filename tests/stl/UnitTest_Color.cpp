@@ -24,7 +24,7 @@ namespace
 	{
 		HSVColor	hsv1{ 0.0f, 1.0f, 1.0f };
 		RGBA32f		rgba1{ hsv1 };
-		TEST(( rgba1 == RGBA32f{1.0f, 0.0f, 0.0f, 1.0f} ));
+		TEST( rgba1 == RGBA32f{1.0f, 0.0f, 0.0f, 1.0f} );
 
 		HSVColor	hsv2{ rgba1 };
 		TEST( hsv1 == hsv2 );

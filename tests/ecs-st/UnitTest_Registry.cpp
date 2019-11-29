@@ -373,7 +373,7 @@ namespace
 
 		reg.Process();
 		
-		TEST(( arr == Array<uint>{1, 2, 3} ));
+		TEST( arr == Array<uint>{1, 2, 3} );
 
 		reg.DestroyAllEntities();
 	}
@@ -420,7 +420,7 @@ namespace
 		reg.EnqueEvent<Event1>();
 		reg.Process();
 		
-		TEST(( arr == Array<uint>{1, 2, 3, 4, 5, 6} ));
+		TEST( arr == Array<uint>{1, 2, 3, 4, 5, 6} );
 	}
 
 

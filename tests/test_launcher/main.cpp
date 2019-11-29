@@ -4,9 +4,10 @@
 using namespace AE::App;
 
 extern int Test_STL ();
-extern int Test_Platform (IApplication &app, IWindow &wnd);
-extern int Test_Networking ();
 extern int Test_Scripting ();
+extern int Test_Threading ();
+extern int Test_Networking ();
+extern int Test_Platform (IApplication &app, IWindow &wnd);
 extern int Test_ECSst ();
 
 
@@ -66,11 +67,24 @@ public:
     void OnSurfaceCreated (IWindow &wnd) override
     {
         AE_LOGI( "OnSurfaceCreated" );
-        Test_STL();
-        Test_Networking();
-        Test_Scripting();
-        Test_Platform( _app, wnd );
-        Test_ECSst();
+		#ifdef AE_TEST_STL
+		    Test_STL();
+		#endif
+		#ifdef AE_TEST_SCRIPTING
+		    Test_Scripting();
+		#endif
+		#ifdef AE_TEST_THREADING
+			Test_Threading();
+		#endif
+		#ifdef AE_TEST_NETWORKING
+		    Test_Networking();
+		#endif
+		#ifdef AE_TEST_PLATFORM
+		    Test_Platform( _app, wnd );
+		#endif
+		#ifdef AE_TEST_ECS_ST
+		    Test_ECSst();
+		#endif
     }
 
     void OnSurfaceDestroyed (IWindow &) override
