@@ -1,7 +1,6 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "ecs-st/Core/Archetype.h"
-#include "ecs-st/Core/EntityPool.h"
+#include "ecs-st/Core/Registry.h"
 #include "UnitTest_Common.h"
 
 namespace
@@ -21,20 +20,36 @@ namespace
 	struct Tag1 {};
 	struct Tag2 {};
 	
-
-	void Archetype_Test1 ()
+	
+	void RegisterComponents_Test1 ()
 	{
-		Archetype	arch1{ ArchetypeDesc{}.Add<Comp1>().Add<Comp2>() };
-		Archetype	arch2{ ArchetypeDesc{}.Add<Comp1>() };
-		Archetype	arch3{ ArchetypeDesc{}.Add<Comp2>() };
+		Registry	reg;
+		reg.RegisterComponents< Comp1, Comp2, Tag1, Tag2 >();
+		
+		auto	comp1 = reg.GetComponentInfo( ComponentTypeInfo<Comp1>::id );
+		auto	comp2 = reg.GetComponentInfo( ComponentTypeInfo<Comp2>::id );
+		auto	tag1  = reg.GetComponentInfo( ComponentTypeInfo<Tag1>::id );
+		auto	tag2  = reg.GetComponentInfo( ComponentTypeInfo<Tag2>::id );
 
-		TEST( arch1.Contains( arch2 ));
-		TEST( not arch2.Contains( arch1 ));
+		TEST( comp1 );
+		TEST( comp1->size  == sizeof(Comp1) );
+		TEST( comp1->align == alignof(Comp1) );
+		TEST( comp1->ctor  != null );
 		
-		TEST( arch1.Contains( arch3 ));
-		TEST( not arch3.Contains( arch1 ));
+		TEST( comp2 );
+		TEST( comp2->size  == sizeof(Comp2) );
+		TEST( comp2->align == alignof(Comp2) );
+		TEST( comp2->ctor  != null );
 		
-		TEST( not arch3.Contains( arch2 ));
+		TEST( tag1 );
+		TEST( tag1->size  == 0 );
+		TEST( tag1->align == 0 );
+		TEST( tag1->ctor  != null );
+		
+		TEST( tag2 );
+		TEST( tag2->size  == 0 );
+		TEST( tag2->align == 0 );
+		TEST( tag2->ctor  != null );
 	}
 
 
@@ -44,14 +59,11 @@ namespace
 		desc.Add<Comp1>();
 		desc.Add<Comp2>();
 
-		TEST( desc.components[0].align == alignof(Comp1) );
-		TEST( desc.components[0].size  == sizeof(Comp1) );
-		TEST( desc.components[1].align == alignof(Comp2) );
-		TEST( desc.components[1].size  == sizeof(Comp2) );
+		Registry			reg;
+		reg.RegisterComponents< Comp1, Comp2, Tag1, Tag2 >();
 
 		Archetype			arch{ desc };
-
-		ArchetypeStorage	storage{ arch, 1024 };
+		ArchetypeStorage	storage{ reg, arch, 1024 };
 		EntityPool			pool;
 
 		EntityID	id_1, id_2;
@@ -76,32 +88,32 @@ namespace
 	}
 
 
-	void ArchetypeBits_Test1 ()
+	void ArchetypeDesc_Test1 ()
 	{
-		ArchetypeBits	a1;
+		ArchetypeDesc	a1;
 		a1.Add<Comp1>();
 		a1.Add<Comp2>();
 		a1.Add<Tag1>();
 
-		ArchetypeBits	a2;
+		ArchetypeDesc	a2;
 		a2.Add<Comp2>();
 		a2.Add<Tag2>();
 
-		ArchetypeBits	a3;
+		ArchetypeDesc	a3;
 		a3.Add<Tag1>();
 		a3.Add<Tag2>();
 
-		ArchetypeBits	a4;
+		ArchetypeDesc	a4;
 		a4.Add<Tag1>();
 		a4.Add<Comp1>();
 		a4.Add<Comp2>();
 		a4.Add<Tag2>();
 		a4.Add<Comp1>();
 
-		ArchetypeBits	a5;
+		ArchetypeDesc	a5;
 		a5.Add<Tag1>();
 		
-		ArchetypeBits	a6;
+		ArchetypeDesc	a6;
 
 		// a1
 		{
@@ -182,27 +194,27 @@ namespace
 
 	void ArchetypeQuery_Test1 ()
 	{
-		ArchetypeBits	a1;
+		ArchetypeDesc	a1;
 		a1.Add<Comp1>();
 		a1.Add<Comp2>();
 		a1.Add<Tag1>();
 
-		ArchetypeBits	a2;
+		ArchetypeDesc	a2;
 		a2.Add<Comp2>();
 		a2.Add<Tag2>();
 
-		ArchetypeBits	a3;
+		ArchetypeDesc	a3;
 		a3.Add<Tag1>();
 		a3.Add<Tag2>();
 
-		ArchetypeBits	a4;
+		ArchetypeDesc	a4;
 		a4.Add<Tag1>();
 		a4.Add<Comp1>();
 		a4.Add<Comp2>();
 		a4.Add<Tag2>();
 		a4.Add<Comp1>();
 
-		ArchetypeBits	a5;
+		ArchetypeDesc	a5;
 		a5.Add<Tag1>();
 
 		{
@@ -243,9 +255,9 @@ namespace
 
 extern void UnitTest_Archetype ()
 {
-	Archetype_Test1();
+	RegisterComponents_Test1();
 	ArchetypeStorage_Test1();
-	ArchetypeBits_Test1();
+	ArchetypeDesc_Test1();
 	ArchetypeQuery_Test1();
 
 	AE_LOGI( "UnitTest_Archetype - passed" );

@@ -52,6 +52,12 @@ namespace
 		reg.Enque( q, std::forward<Fn>(fn) );
 	}
 
+
+	void InitRegistry (Registry &reg)
+	{
+		reg.RegisterComponents< Comp1, Comp2, Tag1 >();
+	}
+
 	
 	void ComponentValidator_Test1 ()
 	{
@@ -102,6 +108,7 @@ namespace
 	void Entity_Test1 ()
 	{
 		Registry	reg;
+		InitRegistry( reg );
 
 		// create
 		EntityID	e1 = reg.CreateEntity<Comp1, Comp2>();
@@ -231,6 +238,7 @@ namespace
 	void SingleComponent_Test1 ()
 	{
 		Registry	reg;
+		InitRegistry( reg );
 
 		TEST( not reg.RemoveSingleComponent<Comp1>() );
 		TEST( reg.GetSingleComponent<Comp2>() == null );
@@ -257,6 +265,8 @@ namespace
 	{
 		Registry		reg;
 		const size_t	count = 100;
+
+		InitRegistry( reg );
 
 		for (size_t i = 0; i < count; ++i)
 		{
@@ -297,6 +307,8 @@ namespace
 
 		Registry		reg;
 		const size_t	count = 100;
+
+		InitRegistry( reg );
 
 		// create archetypes
 		for (size_t i = 0; i < count; ++i)
@@ -371,6 +383,8 @@ namespace
 	void System_Test3 ()
 	{
 		Registry	reg;
+
+		InitRegistry( reg );
 
 		// create archetypes
 		{
@@ -457,6 +471,8 @@ namespace
 		Registry		reg;
 		const size_t	count = 100;
 
+		InitRegistry( reg );
+
 		size_t	cnt1 = 0;
 		reg.AddMessageListener<Comp1, MsgTag_RemovedComponent>(
 			[&cnt1] (ArrayView<EntityID> entities, ArrayView<Comp1> components)
@@ -493,6 +509,8 @@ namespace
 		Registry		reg;
 		const size_t	count = 100;
 		
+		InitRegistry( reg );
+
 		size_t	cnt1 = 0;
 		reg.AddMessageListener<Comp1, MsgTag_ComponentChanged>(
 			[&cnt1] (ArrayView<EntityID> entities)

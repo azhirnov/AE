@@ -1,6 +1,7 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "ecs-st/Core/ArchetypeStorage.h"
+#include "ecs-st/Core/Registry.h"
 
 namespace AE::ECS
 {
@@ -10,17 +11,58 @@ namespace AE::ECS
 	constructor
 =================================================
 */
-	ArchetypeStorage::ArchetypeStorage (const Archetype &archetype, size_t capacity) :
+	ArchetypeStorage::ArchetypeStorage (const Registry &reg, const Archetype &archetype, size_t capacity) :
 		_memory{ null },
 		_count{ 0 },
 		_locks{ 0 },
 		_archetype{ archetype },
 		_capacity{ 0 }
 	{
-		_compOffsets.resize( _archetype.Count() );
+		CHECK( _InitComponents( reg ));
 		Reserve( capacity );
 	}
 	
+/*
+=================================================
+	_InitComponents
+=================================================
+*/
+	bool  ArchetypeStorage::_InitComponents (const Registry &reg)
+	{
+		_maxAlign = 0_b;
+
+		auto&	desc = _archetype.Bits().Raw();
+
+		for (size_t i = 0; i < desc.size(); ++i)
+		{
+			auto	u = desc[i];
+			int		j = BitScanForward( u );
+
+			for (; j >= 0; j = BitScanForward( u ))
+			{
+				u &= ~(1ull << j);
+
+				ComponentID	id{ CheckCast<uint16_t>( j + i*sizeof(u)*8 )};
+
+				auto	info = reg.GetComponentInfo( id );
+				CHECK_ERR( info );
+
+				size_t	idx = _components.size();
+				_components.emplace_back();
+
+				_components.at<0>( idx ) = id;
+				_components.at<1>( idx ) = info->size;
+				_components.at<2>( idx ) = info->align;
+				_components.at<3>( idx ) = null;
+				_components.at<4>( idx ) = info->ctor;
+
+				_maxAlign = Max( _maxAlign, BytesU{ info->align });
+			}
+		}
+
+		return true;
+	}
+
 /*
 =================================================
 	destructor
@@ -31,12 +73,14 @@ namespace AE::ECS
 		CHECK( not IsLocked() );
 
 		ASSERT( _count == 0 );
-		_allocator.Deallocate( _memory, _archetype.MaxAlign() );
+		_allocator.Deallocate( _memory, _maxAlign );
 	}
 	
 /*
 =================================================
 	Add
+----
+	add entity ID and initialize components
 =================================================
 */
 	bool  ArchetypeStorage::Add (EntityID id, OUT Index_t &index)
@@ -47,16 +91,18 @@ namespace AE::ECS
 		{
 			_GetEntities()[_count] = id;
 
-			for (size_t i = 0; i < _compOffsets.size(); ++i)
+			for (size_t i = 0; i < _components.size(); ++i)
 			{
-				auto&	comp = _archetype.Desc().components[i];
+				auto	comp_size	= _components.at<1>(i);
+				auto	comp_data	= _components.at<3>(i);
+				auto	comp_ctor	= _components.at<4>(i);
 
-				if ( comp.HasData() )
+				if ( comp_size > 0 )
 				{
-					void*	data = _memory + _compOffsets[i] + BytesU{comp.size} * _count;
+					void*	data = comp_data + BytesU{comp_size} * _count;
 
-					DEBUG_ONLY( std::memset( OUT data, 0xCD, size_t(comp.size) ));
-					comp.ctor( OUT data );
+					DEBUG_ONLY( std::memset( OUT data, 0xCD, size_t(comp_size) ));
+					comp_ctor( OUT data );
 				}
 			}
 			
@@ -68,6 +114,28 @@ namespace AE::ECS
 		return false;
 	}
 	
+/*
+=================================================
+	AddEntities
+----
+	add entity IDs without initializing components
+=================================================
+*/
+	bool  ArchetypeStorage::AddEntities (ArrayView<EntityID> ids, OUT Index_t &startIndex)
+	{
+		CHECK_ERR( not IsLocked() );
+
+		if ( _count + ids.size() < _capacity )
+		{
+			std::memcpy( OUT _GetEntities() + _count, ids.data(), size_t(ArraySizeOf(ids)) );
+			startIndex = Index_t(_count);
+
+			_count += ids.size();
+			return true;
+		}
+		return false;
+	}
+
 /*
 =================================================
 	Erase
@@ -84,17 +152,13 @@ namespace AE::ECS
 
 		if ( idx != _count )
 		{
-			for (size_t i = 0; i < _compOffsets.size(); ++i)
+			for (size_t i = 0; i < _components.size(); ++i)
 			{
-				auto& comp = _archetype.Desc().components[i];
+				const BytesU	comp_size{ _components.at<1>(i) };
 
-				if ( comp.HasData() )
+				if ( comp_size > 0 )
 				{
-					void*			comp_storage	= _memory + _compOffsets[i];
-					const BytesU	comp_size		{comp.size};
-
-					// TODO: call component destructor ???
-
+					void*	comp_storage = _components.at<3>(i);
 					std::memcpy( OUT comp_storage + comp_size * idx,
 								 comp_storage + comp_size * _count,
 								 size_t(comp_size) );
@@ -110,16 +174,15 @@ namespace AE::ECS
 		}
 		
 		DEBUG_ONLY(
-		for (size_t i = 0; i < _compOffsets.size(); ++i)
+		for (size_t i = 0; i < _components.size(); ++i)
 		{
-			auto& comp = _archetype.Desc().components[i];
+			const size_t	comp_size = size_t(_components.at<1>(i));
 
-			if ( comp.HasData() )
+			if ( comp_size > 0 )
 			{
-				void*			comp_storage	= _memory + _compOffsets[i];
-				const BytesU	comp_size		{comp.size};
+				void*	comp_storage = _components.at<3>(i);
 
-				std::memset( OUT comp_storage + comp_size * _count, 0xCD, size_t(comp_size) );
+				std::memset( OUT comp_storage + BytesU{comp_size} * _count, 0xCD, comp_size );
 			}
 		})
 
@@ -156,45 +219,56 @@ namespace AE::ECS
 */
 	void  ArchetypeStorage::Reserve (size_t size)
 	{
-		CHECK_ERR( not IsLocked(), void() );
+		using ComponentData_t	= FixedArray< void*, ECS_Config::MaxComponentsPerArchetype >;
 
-		if ( size == _capacity or size < _count )
+		CHECK_ERR( not IsLocked(), void() );
+		CHECK_ERR( size >= _count, void());
+
+		if ( size == _capacity )
 			return;
 
 		_capacity = size;
 
-		const ComponentOffsets_t	old_offsets	= _compOffsets;
-		void *						old_mem		= _memory;
+		const ComponentData_t	old_data	{ _components.get<3>() };
+		void *					old_mem		= _memory;
 
 		// allocate
 		{
 			BytesU	offset	= SizeOf<EntityID> * _capacity;
 
-			for (size_t i = 0; i < _compOffsets.size(); ++i)
+			for (size_t i = 0; i < _components.size(); ++i)
 			{
-				auto&	comp = _archetype.Desc().components[i];
+				auto	comp_size	= _components.at<1>(i);
+				auto	comp_align	= _components.at<2>(i);
+				auto&	comp_data	= _components.at<3>(i);
 			
-				if ( comp.HasData() )
+				if ( comp_size > 0 )
 				{
-					offset			= AlignToLarger( offset, BytesU{comp.align} );
-					_compOffsets[i] = offset;
-					offset			+= BytesU{comp.size} * _capacity;
+					offset		= AlignToLarger( offset, BytesU{comp_align} );
+					comp_data	= (void*)(offset);
+					offset		+= BytesU{comp_size} * _capacity;
 				}
 				else
 				{
-					_compOffsets[i]	= BytesU{0};	// TODO: ???
+					comp_data	= null;	// TODO: ???
 				}
 			}
 
-			_memory = _allocator.Allocate( offset, _archetype.MaxAlign() );
+			_memory = _allocator.Allocate( offset, _maxAlign );
 
 			if ( not _memory )
 			{
 				CHECK( !"failed to allocate memory" );
 				_count		= 0;
 				_capacity	= 0;
-				_allocator.Deallocate( old_mem, _archetype.MaxAlign() );
+				_allocator.Deallocate( old_mem, _maxAlign );
 				return;
+			}
+			
+			for (size_t i = 0; i < _components.size(); ++i)
+			{
+				auto&	comp_data = _components.at<3>(i);
+				comp_data = comp_data ? BitCast<void*>( size_t(comp_data) + size_t(_memory) ) : null;
 			}
 
 			DEBUG_ONLY( std::memset( OUT _memory, 0xCD, size_t(offset) ));
@@ -205,19 +279,19 @@ namespace AE::ECS
 		{
 			std::memcpy( OUT _memory, old_mem, size_t(SizeOf<EntityID> * _count) );
 
-			for (size_t i = 0; i < _compOffsets.size(); ++i)
+			for (size_t i = 0; i < _components.size(); ++i)
 			{
-				auto&	src		= old_offsets[i];
-				auto&	dst		= _compOffsets[i];
-				auto&	comp	= _archetype.Desc().components[i];
+				auto&	src			= old_data[i];
+				auto&	dst			= _components.at<3>(i);
+				auto	comp_size	= _components.at<1>(i);
 
-				if ( comp.HasData() )
-					std::memcpy( OUT _memory + dst, old_mem + src, size_t(comp.size) * _count );
+				if ( comp_size > 0 )
+					std::memcpy( OUT dst, src, size_t(comp_size) * _count );
 			}
 		}
 
 		if ( old_mem )
-			_allocator.Deallocate( old_mem, _archetype.MaxAlign() );
+			_allocator.Deallocate( old_mem, _maxAlign );
 	}
 
 

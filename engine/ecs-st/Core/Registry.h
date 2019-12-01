@@ -29,7 +29,21 @@ namespace AE::ECS
 	class Registry final : public std::enable_shared_from_this< Registry >
 	{
 	// types
+	public:
+		struct ComponentInfo
+		{
+			void (*				ctor)(void *)	= null;
+			Bytes<uint16_t>		align;
+			Bytes<uint16_t>		size;
+			bool				created			= false;
+
+			ND_ bool	IsTag ()	const	{ return size == 0; }
+			ND_ bool	HasData ()	const	{ return size > 0; }
+		};
+
 	private:
+		using ComponentMap_t		=  UniquePtr< StaticArray< ComponentInfo, ECS_Config::MaxComponents >>;
+
 		using ArchetypeStoragePtr	= UniquePtr<ArchetypeStorage>;
 		using ArchetypeMap_t		= HashMap< Archetype, ArchetypeStoragePtr >;
 		using Index_t				= ArchetypeStorage::Index_t;
@@ -61,6 +75,7 @@ namespace AE::ECS
 		{
 			ArchetypeQueryDesc			desc;
 			Array<ArchetypePair_t *>	archetypes;
+			mutable bool				locked	= true;
 		};
 		using Queries_t			= Array< Query >;
 
@@ -71,6 +86,7 @@ namespace AE::ECS
 		EntityPool			_entities;
 		ArchetypeMap_t		_archetypes;		// don't erase elements!
 		MessageBuilder		_messages;
+		ComponentMap_t		_componentInfo;
 
 		// single components
 		SingleCompMap_t		_singleComponents;
@@ -96,23 +112,32 @@ namespace AE::ECS
 			template <typename ...Components>
 			EntityID	CreateEntity ();
 		ND_ EntityID	CreateEntity ();
-			bool		DestroyEntity (EntityID id);
+			bool		DestroyEntity (EntityID entId);
 			void		DestroyAllEntities ();
 
-		ND_ Ptr<Archetype const>  GetArchetype (EntityID id);
+		ND_ Ptr<Archetype const>  GetArchetype (EntityID entId);
 
 		// component
 			template <typename T>
-			T&  AssignComponent (EntityID id);
-		
-			template <typename T>
-			bool  RemoveComponent (EntityID id);
-
-			template <typename T>
-		ND_ Ptr<T>  GetComponent (EntityID id);
+			void  RegisterComponent ();
 
 			template <typename ...Types>
-		ND_ Tuple<Ptr<Types>...>  GetComponenets (EntityID id);
+			void  RegisterComponents ();
+
+		ND_ Ptr<ComponentInfo const>  GetComponentInfo (ComponentID compId) const;
+
+			template <typename T>
+			T&  AssignComponent (EntityID entId);
+		
+			template <typename T>
+			bool  RemoveComponent (EntityID entId);
+			bool  RemoveComponent (EntityID entId, ComponentID compId);
+
+			template <typename T>
+		ND_ Ptr<T>  GetComponent (EntityID entId);
+
+			template <typename ...Types>
+		ND_ Tuple<Ptr<Types>...>  GetComponenets (EntityID entId);
 		
 			template <typename T>
 			void  RemoveComponents (QueryID query);
@@ -157,24 +182,25 @@ namespace AE::ECS
 			void  AddMessageListener (Fn &&fn);
 
 			template <typename Tag>
-			void  AddMessage (EntityID id, ComponentID compId);
+			void  AddMessage (EntityID entId, ComponentID compId);
 		
 			template <typename Tag, typename Comp>
-			void  AddMessage (EntityID id, const Comp& comp);
+			void  AddMessage (EntityID entId, const Comp& comp);
 
 
 	private:
 			template <typename Ev>
 			void  _RunEvent ();
 
-			bool  _RemoveEntity (EntityID id);
-			void  _AddEntity (const Archetype &arch, EntityID id, OUT ArchetypeStorage* &storage, OUT Index_t &index);
-			void  _AddEntity (const Archetype &arch, EntityID id);
-			void  _MoveEntity (const Archetype &arch, EntityID id, ArchetypeStorage* srcStorage, Index_t srcIndex,
+			bool  _RemoveEntity (EntityID entId);
+			void  _AddEntity (const Archetype &arch, EntityID entId, OUT ArchetypeStorage* &storage, OUT Index_t &index);
+			void  _AddEntity (const Archetype &arch, EntityID entId);
+			void  _MoveEntity (const Archetype &arch, EntityID entId, ArchetypeStorage* srcStorage, Index_t srcIndex,
 							   OUT ArchetypeStorage* &dstStorage, OUT Index_t &dstIndex);
 
 			void  _OnNewArchetype (ArchetypePair_t *);
-
+			
+			static void  _IncreaseStorageSize (ArchetypeStorage *, size_t addCount);
 			static void  _DecreaseStorageSize (ArchetypeStorage *);
 
 			template <typename ArgsList, size_t I = 0>
@@ -202,38 +228,84 @@ namespace AE::ECS
 	{
 		EXLOCK( _drCheck );
 
-		EntityID		id = CreateEntity();
+		EntityID		entId = CreateEntity();
 		ArchetypeDesc	desc;
 		( desc.Add<Components>(), ... );
 		
 		ArchetypeStorage*	storage = null;
 		Index_t				index;
 		
-		_AddEntity( Archetype{desc}, id, OUT storage, OUT index );
+		_AddEntity( Archetype{desc}, entId, OUT storage, OUT index );
 		ASSERT( storage );
 
-		for (auto& comp : desc.components) {
-			_messages.Add<MsgTag_AddedComponent>( id, comp.id );
+		for (auto& comp_id : storage->GetComponentIDs()) {
+			_messages.Add<MsgTag_AddedComponent>( entId, comp_id );
 		}
 
-		return id;
+		return entId;
 	}
 	
+/*
+=================================================
+	RegisterComponent
+=================================================
+*/
+	template <typename T>
+	inline void  Registry::RegisterComponent ()
+	{
+		EXLOCK( _drCheck );
+
+		using	Info = ComponentTypeInfo<T>;
+		CHECK_ERR( Info::id.value < _componentInfo->size(), void());
+
+		auto&	comp = _componentInfo->operator[]( Info::id.value );
+		if ( not comp.created )
+		{
+			comp.size	= Info::size;
+			comp.align	= Info::align;
+			comp.ctor	= &Info::Ctor;
+			comp.created= true;
+		}
+	}
+	
+	template <typename ...Types>
+	inline void  Registry::RegisterComponents ()
+	{
+		(RegisterComponent<Types>(), ...);
+	}
+
+/*
+=================================================
+	GetComponentInfo
+=================================================
+*/
+	inline Ptr<Registry::ComponentInfo const>  Registry::GetComponentInfo (ComponentID compId) const
+	{
+		EXLOCK( _drCheck );
+
+		if ( compId.value < _componentInfo->size() )
+		{
+			auto&	comp = _componentInfo->operator[]( compId.value );
+			return comp.created ? &comp : null;
+		}
+		return null;
+	}
+
 /*
 =================================================
 	AssignComponent
 =================================================
 */
 	template <typename T>
-	inline T&  Registry::AssignComponent (EntityID id)
+	inline T&  Registry::AssignComponent (EntityID entId)
 	{
 		EXLOCK( _drCheck );
 
 		ArchetypeStorage*	src_storage	= null;
 		Index_t				src_index;
-		ArchetypeDesc		desc;		desc.Add<T>();
+		ArchetypeDesc		desc;
 		
-		_entities.GetArchetype( id, OUT src_storage, OUT src_index );
+		_entities.GetArchetype( entId, OUT src_storage, OUT src_index );
 
 		if ( src_storage )
 		{
@@ -244,16 +316,16 @@ namespace AE::ECS
 			}
 			else
 			{
-				desc = src_storage->GetArchetype().Desc();
-				desc.Add<T>();
+				desc = src_storage->GetArchetype().Bits();
 			}
 		}
-		
-		_messages.Add<MsgTag_AddedComponent>( id, ComponentTypeInfo<T>::id );
+
+		desc.Add<T>();
+		_messages.Add<MsgTag_AddedComponent>( entId, ComponentTypeInfo<T>::id );
 		
 		ArchetypeStorage*	dst_storage	= null;
 		Index_t				dst_index;
-		_MoveEntity( Archetype{desc}, id, src_storage, src_index, OUT dst_storage, OUT dst_index );
+		_MoveEntity( Archetype{desc}, entId, src_storage, src_index, OUT dst_storage, OUT dst_index );
 		
 		return *dst_storage->GetComponent<T>( dst_index );
 	}
@@ -264,7 +336,7 @@ namespace AE::ECS
 =================================================
 */
 	template <typename T>
-	inline bool  Registry::RemoveComponent (EntityID id)
+	inline bool  Registry::RemoveComponent (EntityID entId)
 	{
 		EXLOCK( _drCheck );
 
@@ -330,14 +402,14 @@ namespace AE::ECS
 =================================================
 */
 	template <typename T>
-	inline Ptr<T>  Registry::GetComponent (EntityID id)
+	inline Ptr<T>  Registry::GetComponent (EntityID entId)
 	{
 		EXLOCK( _drCheck );
 
 		ArchetypeStorage*	storage		= null;
 		Index_t				index;
 		
-		_entities.GetArchetype( id, OUT storage, OUT index );
+		_entities.GetArchetype( entId, OUT storage, OUT index );
 
 		return storage ? storage->GetComponent< std::remove_const_t<T> >( index ) : null;
 	}
@@ -348,14 +420,14 @@ namespace AE::ECS
 =================================================
 */
 	template <typename ...Types>
-	inline Tuple<Ptr<Types>...>  Registry::GetComponenets (EntityID id)
+	inline Tuple<Ptr<Types>...>  Registry::GetComponenets (EntityID entId)
 	{
 		EXLOCK( _drCheck );
 
 		ArchetypeStorage*	storage		= null;
 		Index_t				index;
 		
-		_entities.GetArchetype( id, OUT storage, OUT index );
+		_entities.GetArchetype( entId, OUT storage, OUT index );
 		
 		if ( storage )
 		{
@@ -784,14 +856,15 @@ namespace AE::ECS
 		Array<ArchetypeStorage*>	storages;
 		Array<Chunk>				chunks;
 		const auto&					q_data = _queries[ query.Index() ];
+
+		CHECK( not q_data.locked );
+		q_data.locked = true;
 				
 		for (auto* ptr : q_data.archetypes)
 		{
-			auto&	arch	= ptr->first;
+			ASSERT( _IsArchetypeSupported< CompOnly >( ptr->first ));
+			
 			auto&	storage	= ptr->second;
-
-			ASSERT( _IsArchetypeSupported< CompOnly >( arch ));
-
 			storage->Lock();
 			storages.emplace_back( storage.get() );
 			chunks.emplace_back( _GetChunk( storage.get(), (const CompOnly *)null ));
@@ -803,6 +876,8 @@ namespace AE::ECS
 		{
 			st->Unlock();
 		}
+		
+		q_data.locked = false;
 	}
 //-----------------------------------------------------------------------------
 	
@@ -1137,15 +1212,15 @@ namespace AE::ECS
 =================================================
 */
 	template <typename Tag>
-	inline void  Registry::AddMessage (EntityID id, ComponentID compId)
+	inline void  Registry::AddMessage (EntityID entId, ComponentID compId)
 	{
-		return _messages.Add<Tag>( id, compId );
+		return _messages.Add<Tag>( entId, compId );
 	}
 		
 	template <typename Tag, typename Comp>
-	inline void  Registry::AddMessage (EntityID id, const Comp& comp)
+	inline void  Registry::AddMessage (EntityID entId, const Comp& comp)
 	{
-		return _messages.Add<Tag>( id, comp );
+		return _messages.Add<Tag>( entId, comp );
 	}
 //-----------------------------------------------------------------------------
 

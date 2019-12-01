@@ -18,6 +18,7 @@ namespace AE::ECS
 		{
 			uint16_t	value;
 
+			constexpr _ComponentID () : value{UMax} {}
 			constexpr explicit _ComponentID (uint16_t id) : value{id} {}
 
 			ND_ constexpr bool  operator <  (const _ComponentID &rhs) const	{ return value <  rhs.value; }

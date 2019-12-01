@@ -7,6 +7,13 @@
 namespace
 {
 	struct UpdateTransform {};
+	
+
+	void InitRegistry (Registry &reg)
+	{
+		using namespace ECS::Components;
+		reg.RegisterComponents< ParentID, LocalOffset, LocalRotation, LocalScale, GlobalTransformation >();
+	}
 
 
 	EntityID  CreateObj (Registry &reg, EntityID parent, const float3 &pos)
@@ -88,6 +95,8 @@ namespace
 	{
 		Registry						reg;
 		Systems::TransformationGraph	sg{ reg };
+
+		InitRegistry( reg );
 
 		reg.AddEventListener<UpdateTransform>( [&sg] (Registry &) { sg.Update(); });
 

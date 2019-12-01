@@ -10,7 +10,8 @@ namespace AE::ECS
 	constructor
 =================================================
 */
-	Registry::Registry ()
+	Registry::Registry () :
+		_componentInfo{ new ComponentMap_t::element_type{} }
 	{
 		EXLOCK( _drCheck );
 	}
@@ -104,30 +105,33 @@ namespace AE::ECS
 	_RemoveEntity
 =================================================
 */
-	bool  Registry::_RemoveEntity (EntityID id)
+	bool  Registry::_RemoveEntity (EntityID entId)
 	{
 		ArchetypeStorage*	storage = null;
 		Index_t				index;
 
-		if ( _entities.GetArchetype( id, OUT storage, OUT index ) and storage )
+		if ( _entities.GetArchetype( entId, OUT storage, OUT index ) and storage )
 		{
-			ASSERT( storage->IsValid( id, index ));
+			ASSERT( storage->IsValid( entId, index ));
 
 			// add messages
 			{
-				auto&	arch = storage->GetArchetype();
+				auto	comp_ids	= storage->GetComponentIDs();
+				auto	comp_sizes	= storage->GetComponentSizes();
+				auto	comp_aligns	= storage->GetComponentAligns();
+				auto	comp_data	= storage->GetComponentData();
 
-				for (auto& comp : arch.Desc().components)
+				for (size_t i = 0; i < comp_ids.size(); ++i)
 				{
-					if ( comp.HasData() )
+					size_t	comp_size = size_t(comp_sizes[i]);
+
+					if ( comp_size > 0 )
 					{
-						void*	comp_ptr = storage->GetComponents( comp.id );
-						_messages.Add<MsgTag_RemovedComponent>( id, comp.id, ArrayView<uint8_t>{ Cast<uint8_t>(comp_ptr), size_t(comp.size) });
+						uint8_t*	comp_ptr = Cast<uint8_t>( comp_data[i] + BytesU{comp_size} * size_t(index) );
+						_messages.Add<MsgTag_RemovedComponent>( entId, comp_ids[i], ArrayView<uint8_t>{ comp_ptr, comp_size });
 					}
 					else
-					{
-						_messages.Add<MsgTag_RemovedComponent>( id, comp.id );
-					}
+						_messages.Add<MsgTag_RemovedComponent>( entId, comp_ids[i] );
 				}
 			}
 
@@ -139,7 +143,7 @@ namespace AE::ECS
 			if ( moved )
 				_entities.SetArchetype( moved, storage, index );
 
-			_entities.SetArchetype( id, null, Index_t(-1) );
+			_entities.SetArchetype( entId, null, Index_t(-1) );
 			
 			_DecreaseStorageSize( storage );
 		}
@@ -151,7 +155,7 @@ namespace AE::ECS
 	_AddEntity
 =================================================
 */
-	void  Registry::_AddEntity (const Archetype &arch, EntityID id, OUT ArchetypeStorage* &outStorage, OUT Index_t &index)
+	void  Registry::_AddEntity (const Archetype &arch, EntityID entId, OUT ArchetypeStorage* &outStorage, OUT Index_t &index)
 	{
 		auto					[iter, inserted] = _archetypes.insert({ arch, ArchetypeStoragePtr{} });
 		Archetype const&		key				 = iter->first;
@@ -159,31 +163,31 @@ namespace AE::ECS
 
 		if ( inserted )
 		{
-			storage.reset( new ArchetypeStorage{ key, ECS_Config::InitialtStorageSize });
+			storage.reset( new ArchetypeStorage{ *this, key, ECS_Config::InitialtStorageSize });
 
 			_OnNewArchetype( &*iter );
 		}
 
-		if ( storage->Add( id, OUT index ))
+		if ( storage->Add( entId, OUT index ))
 		{
 			outStorage = storage.get();
-			_entities.SetArchetype( id, storage.get(), index );
+			_entities.SetArchetype( entId, storage.get(), index );
 			return;
 		}
 
 		storage->Reserve( storage->Capacity()*2 );
 		
-		CHECK( storage->Add( id, OUT index ));
-		_entities.SetArchetype( id, storage.get(), index );
+		CHECK( storage->Add( entId, OUT index ));
+		_entities.SetArchetype( entId, storage.get(), index );
 		
 		outStorage = storage.get();
 	}
 	
-	void  Registry::_AddEntity (const Archetype &arch, EntityID id)
+	void  Registry::_AddEntity (const Archetype &arch, EntityID entId)
 	{
 		ArchetypeStorage*	storage = null;
 		Index_t				index;
-		return _AddEntity( arch, id, OUT storage, OUT index );
+		return _AddEntity( arch, entId, OUT storage, OUT index );
 	}
 	
 /*
@@ -191,27 +195,25 @@ namespace AE::ECS
 	_MoveEntity
 =================================================
 */
-	void  Registry::_MoveEntity (const Archetype &arch, EntityID id, ArchetypeStorage* srcStorage, Index_t srcIndex,
+	void  Registry::_MoveEntity (const Archetype &arch, EntityID entId, ArchetypeStorage* srcStorage, Index_t srcIndex,
 								 OUT ArchetypeStorage* &dstStorage, OUT Index_t &dstIndex)
 	{
-		_AddEntity( arch, id, OUT dstStorage, OUT dstIndex );
+		_AddEntity( arch, entId, OUT dstStorage, OUT dstIndex );
 
 		if ( srcStorage )
 		{
-			// copy components
-			for (auto& comp : arch.Desc().components)
-			{
-				if ( comp.HasData() )
-				{
-					void*	src = srcStorage->GetComponents( comp.id );
-					void*	dst = dstStorage->GetComponents( comp.id );
+			auto	comp_ids = dstStorage->GetComponentIDs();
 
-					if ( (src != null) & (dst != null) )
-					{
-						std::memcpy( OUT dst + BytesU{comp.size} * size_t(dstIndex),
-									 src + BytesU{comp.size} * size_t(srcIndex),
-									 size_t(comp.size) );
-					}
+			// copy components
+			for (auto& comp_id : comp_ids)
+			{
+				auto	src = srcStorage->GetComponent( srcIndex, comp_id );
+				auto	dst = dstStorage->GetComponent( dstIndex, comp_id );
+
+				if ( (src.first != null) & (dst.first != null) )
+				{
+					ASSERT( src.second == dst.second );
+					std::memcpy( OUT dst.first, src.first, size_t(src.second) );
 				}
 			}
 
@@ -285,6 +287,7 @@ namespace AE::ECS
 				q.archetypes.push_back( &arch );
 		}
 
+		q.locked = false;
 		return QueryID{ CheckCast<uint16_t>(_queries.size()-1), 0 };
 	}
 	
@@ -300,7 +303,11 @@ namespace AE::ECS
 			auto&	q = _queries[i];
 
 			if ( q.desc.Compatible( arch->first.Bits() ))
+			{
+				CHECK( not q.locked );
+
 				q.archetypes.push_back( arch );
+			}
 		}
 	}
 
