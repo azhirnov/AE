@@ -234,6 +234,90 @@ namespace
 		TEST( reg.DestroyEntity( e5 ));
 	}
 
+	
+	void Entity_Test2 ()
+	{
+		Registry	reg;
+		InitRegistry( reg );
+
+		// create
+		EntityID	e1 = reg.CreateEntity<Comp1, Comp2>();
+		TEST( e1 );
+		{
+			auto	c11 = reg.GetComponent<Comp1>( e1 );
+			auto	c12 = reg.GetComponent<Comp2>( e1 );
+			TEST( c11 );
+			TEST( c12 );
+			*c11 = Comp1{ 0x1234 };
+			*c12 = Comp2{ 1.23f };
+		}
+
+		EntityID	e2 = reg.CreateEntity<Comp1, Comp2>();
+		TEST( e2 );
+		{
+			auto	c11 = reg.GetComponent<Comp1>( e2 );
+			auto	c12 = reg.GetComponent<Comp2>( e2 );
+			TEST( c11 );
+			TEST( c12 );
+			*c11 = Comp1{ 0x865 };
+			*c12 = Comp2{ 3.82f };
+		}
+
+		EntityID	e3 = reg.CreateEntity<Comp1>();
+		TEST( e3 );
+		{
+			auto	c11 = reg.GetComponent<Comp1>( e3 );
+			TEST( c11 );
+			*c11 = Comp1{ 0x44 };
+		}
+
+		EntityID	e4 = reg.CreateEntity<Comp1>();
+		TEST( e4 );
+		{
+			auto	c11 = reg.GetComponent<Comp1>( e4 );
+			TEST( c11 );
+			*c11 = Comp1{ 0x76 };
+		}
+		
+		QueryID	query = reg.CreateQuery< Require<Comp1, Comp2> >();
+
+		reg.RemoveComponents<Comp2>( query );
+
+
+		// check
+		{
+			TEST( reg.GetArchetype( e1 ) == reg.GetArchetype( e2 ));
+			TEST( reg.GetArchetype( e1 ) == reg.GetArchetype( e3 ));
+			TEST( reg.GetArchetype( e1 ) == reg.GetArchetype( e4 ));
+		}
+		{
+			auto	c11 = reg.GetComponent<Comp1>( e1 );
+			auto	c12 = reg.GetComponent<Comp2>( e1 );
+			TEST( c11 );
+			TEST( not c12 );
+			TEST( c11->value == 0x1234 );
+		}
+		{
+			auto	c21 = reg.GetComponent<Comp1>( e2 );
+			auto	c22 = reg.GetComponent<Comp2>( e2 );
+			TEST( c21 );
+			TEST( not c22 );
+			TEST( c21->value == 0x865 );
+		}
+		{
+			auto	c31 = reg.GetComponent<Comp1>( e3 );
+			TEST( c31 );
+			TEST( c31->value == 0x44 );
+		}
+		{
+			auto	c41 = reg.GetComponent<Comp1>( e4 );
+			TEST( c41 );
+			TEST( c41->value == 0x76 );
+		}
+
+		reg.DestroyAllEntities();
+	}
+
 
 	void SingleComponent_Test1 ()
 	{
@@ -552,6 +636,7 @@ extern void UnitTest_Registry ()
 {
 	ComponentValidator_Test1();
 	Entity_Test1();
+	Entity_Test2();
 	SingleComponent_Test1();
 	System_Test1();
 	System_Test2();

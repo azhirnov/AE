@@ -139,8 +139,9 @@ namespace AE::ECS
 			template <typename ...Types>
 		ND_ Tuple<Ptr<Types>...>  GetComponenets (EntityID entId);
 		
-			template <typename T>
+			template <typename ...Types>
 			void  RemoveComponents (QueryID query);
+			void  RemoveComponents (QueryID query, const ArchetypeDesc &removeComps);
 
 
 		// single component
@@ -338,49 +339,7 @@ namespace AE::ECS
 	template <typename T>
 	inline bool  Registry::RemoveComponent (EntityID entId)
 	{
-		EXLOCK( _drCheck );
-
-		ArchetypeStorage*	src_storage		= null;
-		Index_t				src_index;
-		ArchetypeDesc		desc;
-
-		_entities.GetArchetype( id, OUT src_storage, OUT src_index );
-		
-		if ( not src_storage )
-			return false;
-
-		// get new archetype
-		{
-			desc = src_storage->GetArchetype().Desc();
-
-			bool				found	= false;
-			const ComponentID	comp_id	= ComponentTypeInfo<T>::id;
-
-			for (size_t i = 0; i < desc.components.size(); ++i)
-			{
-				if ( desc.components[i].id == comp_id )
-				{
-					found = true;
-					desc.components.fast_erase( i );
-					break;
-				}
-			}
-
-			if ( not found )
-				return false;
-		}
-
-		if constexpr( IsEmpty<T> )
-			_messages.Add<MsgTag_RemovedComponent>( id, ComponentTypeInfo<T>::id );
-		else
-			_messages.Add<MsgTag_RemovedComponent>( id, src_storage->GetComponent<T>( src_index ));
-
-		// add entity to new archetype
-		ArchetypeStorage*	dst_storage		= null;
-		Index_t				dst_index;
-
-		_MoveEntity( Archetype{desc}, id, src_storage, src_index, OUT dst_storage, OUT dst_index );
-		return true;
+		return RemoveComponent( entId, ComponentTypeInfo<T>::id );
 	}
 	
 /*
@@ -393,6 +352,21 @@ namespace AE::ECS
 		if ( storage->Count()*4 < storage->Capacity() )
 		{
 			storage->Reserve( Max( ECS_Config::InitialtStorageSize, storage->Count()*2 ));
+		}
+	}
+	
+/*
+=================================================
+	_IncreaseStorageSize
+=================================================
+*/
+	inline void  Registry::_IncreaseStorageSize (ArchetypeStorage *storage, size_t addCount)
+	{
+		const size_t	new_size = storage->Count() + addCount;
+
+		if ( new_size > storage->Capacity() )
+		{
+			storage->Reserve( Min( (new_size*3 + new_size-1) / 2, storage->Capacity()*2 ));
 		}
 	}
 
@@ -435,7 +409,22 @@ namespace AE::ECS
 		}
 		return Default;
 	}
+	
+/*
+=================================================
+	RemoveComponents
+=================================================
+*/
+	template <typename ...Types>
+	inline void  Registry::RemoveComponents (QueryID query)
+	{
+		STATIC_ASSERT( CountOf<Types...>() > 0 );
 
+		ArchetypeDesc	desc;
+		(desc.Add<Types>(), ...);
+
+		return RemoveComponents( query, desc );
+	}
 //-----------------------------------------------------------------------------
 	
 /*

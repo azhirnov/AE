@@ -61,11 +61,23 @@ namespace AE::ECS
 		template <typename Tag>
 		void  Add (EntityID id, ComponentID compId, ArrayView<uint8_t> data);
 
+		template <typename Tag>
+		void  Add (EntityID id, ComponentID compId, const Pair<void*, BytesU> &data);
+
 		template <typename Tag, typename Comp>
 		void  Add (EntityID id, const Comp& comp);
+		
+		template <typename Tag>
+		void  AddMulti (ComponentID compId, ArrayView<EntityID> ids, ArrayView<uint8_t> data);
+		
+		template <typename Tag>
+		void  AddMulti (ComponentID compId, ArrayView<EntityID> ids);
 
 		template <typename Comp, typename Tag, typename Fn>
 		bool  AddListener (Fn &&fn);
+
+		template <typename Tag>
+		ND_ bool  HasListener (ComponentID compId) const;
 
 		void  Process ();
 	};
@@ -140,7 +152,6 @@ namespace AE::ECS
 
 		const size_t	size = comp.size();
 		msg.components.resize( (msg.entities.size() + 1) * size );
-
 		std::memcpy( OUT msg.components.data() + BytesU{msg.entities.size() * size}, comp.data(), size );
 
 		msg.entities.push_back( id );
@@ -152,6 +163,12 @@ namespace AE::ECS
 		return Add<Tag>( id, ComponentTypeInfo<Comp>::id, ArrayView<uint8_t>{ Cast<uint8_t>(&comp), sizeof(comp) });
 	}
 	
+	template <typename Tag>
+	inline void  MessageBuilder::Add (EntityID id, ComponentID compId, const Pair<void*, BytesU> &data)
+	{
+		return Add<Tag>( id, compId, ArrayView<uint8_t>{ Cast<uint8_t>(data.first), size_t(data.second) });
+	}
+
 /*
 =================================================
 	AddListener
@@ -193,6 +210,74 @@ namespace AE::ECS
 		}
 	}
 	
+/*
+=================================================
+	AddMulti
+=================================================
+*/
+	template <typename Tag>
+	inline void  MessageBuilder::AddMulti (ComponentID compId, ArrayView<EntityID> ids, ArrayView<uint8_t> compData)
+	{
+		MessageKey const	key  { compId, MsgTagTypeInfo<Tag>::id };
+		auto				iter = _msgTypes.find( key );
+		
+		// no listener to process this message
+		if ( iter == _msgTypes.end() )
+			return;
+
+		auto&	msg = iter->second;
+
+		if ( msg.entities.empty() )
+			_pending.push_back( &msg );
+		
+		ASSERT( msg.entities.empty() or not msg.components.empty() );
+
+		const size_t	size = compData.size();
+		msg.components.resize( (msg.entities.size() + 1) * size );
+		std::memcpy( OUT msg.components.data() + BytesU{msg.entities.size() * size}, compData.data(), size );
+
+		msg.entities.insert( msg.entities.end(), ids.begin(), ids.end() );
+	}
+	
+/*
+=================================================
+	AddMulti
+=================================================
+*/
+	template <typename Tag>
+	inline void  MessageBuilder::AddMulti (ComponentID compId, ArrayView<EntityID> ids)
+	{
+		MessageKey const	key  { compId, MsgTagTypeInfo<Tag>::id };
+		auto				iter = _msgTypes.find( key );
+		
+		// no listener to process this message
+		if ( iter == _msgTypes.end() )
+			return;
+		
+		auto&	msg = iter->second;
+
+		if ( msg.entities.empty() )
+			_pending.push_back( &msg );
+		
+		ASSERT( msg.components.empty() );
+		
+		msg.entities.insert( msg.entities.end(), ids.begin(), ids.end() );
+	}
+
+/*
+=================================================
+	HasListener
+=================================================
+*/
+	template <typename Tag>
+	inline bool  MessageBuilder::HasListener (ComponentID compId) const
+	{
+		MessageKey	key{ compId, MsgTagTypeInfo<Tag>::id };
+		auto		iter = _msgTypes.find( key );
+		
+		return iter != _msgTypes.end();
+	}
+
 /*
 =================================================
 	Process
