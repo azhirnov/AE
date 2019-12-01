@@ -21,6 +21,7 @@ extern void UnitTest_StringParser ();
 extern void UnitTest_ToString ();
 extern void UnitTest_TypeList ();
 extern void UnitTest_TypeTraits ();
+extern void UnitTest_FixedTupleArray ();
 
 #ifdef PLATFORM_ANDROID
 extern int Test_STL ()
@@ -49,6 +50,7 @@ int main ()
 	UnitTest_ToString();
 	UnitTest_TypeList();
 	UnitTest_TypeTraits();
+	UnitTest_FixedTupleArray();
 
 	AE_LOGI( "Tests.STL finished" );
 	return 0;
