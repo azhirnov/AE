@@ -57,6 +57,22 @@ namespace AE::STL
 
 		return ( EnumToUInt(lhs) & EnumToUInt(rhs) ) == EnumToUInt(rhs);
 	}
+	
+/*
+=================================================
+	EnumEq
+=================================================
+*/
+	template <typename T1, typename T2, typename T3>
+	ND_ forceinline constexpr bool  EnumEq (const T1& lhs, const T2& rhs, const T3& mask)
+	{
+		STATIC_ASSERT( IsScalarOrEnum< T1 > );
+		STATIC_ASSERT( IsScalarOrEnum< T2 > );
+		STATIC_ASSERT( IsScalarOrEnum< T3 > );
+		ASSERT( rhs != T2(0) );
+
+		return ( EnumToUInt(lhs) & EnumToUInt(mask) ) == ( EnumToUInt(rhs) & EnumToUInt(mask) );
+	}
 
 /*
 =================================================

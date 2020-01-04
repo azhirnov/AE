@@ -6,11 +6,6 @@
 #include "stl/Math/Matrix.h"
 #include "stl/Algorithms/ArrayUtils.h"
 
-#ifdef COMPILER_MSVC
-#	pragma warning (push)
-//#	pragma warning (disable: 4359)
-#endif
-
 namespace AE::Math
 {
 
@@ -79,7 +74,7 @@ namespace AE::Math
 		{
 			for (uint c = 0; c < Columns; ++c)
 			for (uint r = 0; r < Rows; ++r) {
-				(*this)[c][r] = ((c < Columns2) & (r < Rows2)) ? other[c][r] : (c == r ? T(1) : T(0));
+				_columns[c].data[r] = ((c < Columns2) & (r < Rows2)) ? other[c][r] : (c == r ? T(1) : T(0));
 			}
 		}
 		
@@ -88,7 +83,16 @@ namespace AE::Math
 		{
 			for (uint c = 0; c < Columns; ++c)
 			for (uint r = 0; r < Rows; ++r) {
-				(*this)[c][r] = ((r < Columns2) & (c < Rows2)) ? other[r][c] : (c == r ? T(1) : T(0));
+				_columns[c].data[r] = ((r < Columns2) & (c < Rows2)) ? other[r][c] : (c == r ? T(1) : T(0));
+			}
+		}
+
+		template <uint Columns2, uint Rows2>
+		explicit MatrixStorage (const Matrix< T, Columns2, Rows2 > &other)
+		{
+			for (uint c = 0; c < Columns; ++c)
+			for (uint r = 0; r < Rows; ++r) {
+				_columns[c].data[r] = ((c < Columns2) & (r < Rows2)) ? other[c][r] : (c == r ? T(1) : T(0));
 			}
 		}
 		
@@ -98,14 +102,14 @@ namespace AE::Math
 			Self			result;
 
 			for (uint i = 0; i < cnt; ++i) {
-				result[i][i] = T(1);
+				result._columns[i].data[i] = T(1);
 			}
 			return result;
 		}
 
-		ND_ GLM_CONSTEXPR Column_t  operator [] (uint index) const
+		ND_ GLM_CONSTEXPR const Column_t  operator [] (uint index) const
 		{
-			auto&	d = _columns [index].data;
+			auto&	d = _columns[index].data;
 
 			if constexpr( Rows == 2 )
 				return Column_t{ d[0], d[1] };
@@ -115,6 +119,17 @@ namespace AE::Math
 			
 			if constexpr( Rows == 4 )
 				return Column_t{ d[0], d[1], d[2], d[3] };
+		}
+		
+		template <uint Columns2, uint Rows2>
+		ND_ explicit operator Matrix< T, Columns2, Rows2 > () const
+		{
+			Matrix< T, Columns2, Rows2 >	result;
+			for (uint c = 0; c < Columns2; ++c)
+			for (uint r = 0; r < Rows2; ++r) {
+				result[c][r] = ((c < Columns) & (r < Rows)) ? (*this)[c][r] : (c == r ? T(1) : T(0));
+			}
+			return result;
 		}
 
 		ND_ static constexpr size_t		size ()							{ return Columns; }
@@ -204,7 +219,7 @@ namespace AE::Math
 		{
 			for (uint r = 0; r < Rows; ++r)
 			for (uint c = 0; c < Columns; ++c) {
-				(*this)[r][c] = ((c < Columns2) & (r < Rows2)) ? other[r][c] : (c == r ? T(1) : T(0));
+				_rows[r].data[c] = ((c < Columns2) & (r < Rows2)) ? other[r][c] : (c == r ? T(1) : T(0));
 			}
 		}
 		
@@ -213,7 +228,16 @@ namespace AE::Math
 		{
 			for (uint r = 0; r < Rows; ++r)
 			for (uint c = 0; c < Columns; ++c) {
-				(*this)[r][c] = ((r < Columns2) & (c < Rows2)) ? other[c][r] : (c == r ? T(1) : T(0));
+				_rows[r].data[c] = ((r < Columns2) & (c < Rows2)) ? other[c][r] : (c == r ? T(1) : T(0));
+			}
+		}
+		
+		template <uint Columns2, uint Rows2>
+		explicit MatrixStorage (const Matrix< T, Columns2, Rows2 > &other)
+		{
+			for (uint c = 0; c < Columns; ++c)
+			for (uint r = 0; r < Rows; ++r) {
+				_rows[r].data[c] = ((c < Columns2) & (r < Rows2)) ? other[c][r] : (c == r ? T(1) : T(0));
 			}
 		}
 
@@ -223,14 +247,14 @@ namespace AE::Math
 			Self			result;
 
 			for (uint i = 0; i < cnt; ++i) {
-				result[i][i] = T(1);
+				result._rows[i].data[i] = T(1);
 			}
 			return result;
 		}
 
-		ND_ GLM_CONSTEXPR Row_t  operator [] (uint index) const
+		ND_ GLM_CONSTEXPR const Row_t  operator [] (uint index) const
 		{
-			auto&	d = _rows [index].data;
+			auto&	d = _rows[index].data;
 		
 			if constexpr( Columns == 2 )
 				return Row_t{ d[0], d[1] };
@@ -240,6 +264,17 @@ namespace AE::Math
 			
 			if constexpr( Columns == 4 )
 				return Row_t{ d[0], d[1], d[2], d[3] };
+		}
+		
+		template <uint Columns2, uint Rows2>
+		ND_ explicit operator Matrix< T, Columns2, Rows2 > () const
+		{
+			Matrix< T, Columns2, Rows2 >	result;
+			for (uint c = 0; c < Columns2; ++c)
+			for (uint r = 0; r < Rows2; ++r) {
+				result[c][r] = ((c < Columns) & (r < Rows)) ? (*this)[r][c] : (c == r ? T(1) : T(0));
+			}
+			return result;
 		}
 
 		ND_ static constexpr size_t		size ()							{ return Rows; }
@@ -273,7 +308,3 @@ namespace AE::Math
 
 
 }	// AE::Math
-
-#ifdef COMPILER_MSVC
-#	pragma warning (pop)
-#endif

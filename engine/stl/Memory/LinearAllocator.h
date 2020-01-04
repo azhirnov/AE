@@ -5,23 +5,31 @@
 #include "stl/Math/Math.h"
 #include "stl/Math/Bytes.h"
 #include "stl/Memory/UntypedAllocator.h"
+#include "stl/Containers/FixedArray.h"
+#include "stl/CompileTime/TemplateUtils.h"
 
 namespace AE::STL
 {
-	template <typename AllocatorType>				struct LinearAllocator;
-	template <typename T, typename AllocatorType>	struct StdLinearAllocator;
-	template <typename AllocatorType>				struct UntypedLinearAllocator;
+	template <typename AllocatorType, uint MaxBlocks>					struct LinearAllocator;
+	template <typename T, typename AllocatorType, typename MaxBlocks>	struct StdLinearAllocator;
+	template <typename AllocatorType, uint MaxBlocks>					struct UntypedLinearAllocator;
 
 
 
 	//
-	// Linear Pool Allocator
+	// Linear Allocator
 	//
 
-	template <typename AllocatorType = UntypedAlignedAllocator>
+	template <typename AllocatorType = UntypedAlignedAllocator,
+			  uint MaxBlocks = 16
+			 >
 	struct LinearAllocator final
 	{
 	// types
+	public:
+		using Allocator_t	= AllocatorType;
+		using Self			= LinearAllocator< AllocatorType, MaxBlocks >;
+
 	private:
 		struct Block
 		{
@@ -29,9 +37,7 @@ namespace AE::STL
 			BytesU		size;		// used memory size
 			BytesU		capacity;	// size of block
 		};
-
-		using Allocator_t	= AllocatorType;
-		using Blocks_t		= std::vector< Block >;
+		using Blocks_t = FixedArray< Block, MaxBlocks >;
 
 
 	// variables
@@ -47,22 +53,20 @@ namespace AE::STL
 		LinearAllocator () {}
 		
 		explicit LinearAllocator (const Allocator_t &alloc) : _alloc{alloc}
-		{
-			_blocks.reserve( 16 );
-		}
+		{}
 		
-		LinearAllocator (LinearAllocator &&other) :
+		LinearAllocator (Self &&other) :
 			_blocks{ std::move(other._blocks) },
 			_blockSize{ other._blockSize },
 			_alloc{ std::move(other._alloc) }
 		{}
 
-		LinearAllocator (const LinearAllocator &) = delete;
+		LinearAllocator (const Self &) = delete;
 
-		LinearAllocator& operator = (const LinearAllocator &) = delete;
+		Self& operator = (const Self &) = delete;
 
 
-		LinearAllocator& operator = (LinearAllocator &&rhs)
+		Self& operator = (Self &&rhs)
 		{
 			Release();
 			_blocks		= std::move(rhs._blocks);
@@ -97,11 +101,27 @@ namespace AE::STL
 				}
 			}
 
+			if ( _blocks.size() == _blocks.capacity() )
+			{
+				ASSERT( !"overflow" );
+				return null;
+			}
+
 			BytesU	block_size	= _blockSize * (1 + _blocks.size()/2);
 					block_size	= size*2 < block_size ? block_size : size*2;
-			auto&	block		= _blocks.emplace_back(Block{ _alloc.Allocate( block_size, _ptrAlign ), 0_b, block_size });	// TODO: check for null
+			void*	ptr			= _alloc.Allocate( block_size, _ptrAlign );
+
+			if ( not ptr )
+			{
+				ASSERT( !"failed to allocate memory" );
+				return null;
+			}
+
+			auto&	block		= _blocks.emplace_back(Block{ ptr, 0_b, block_size });
 			BytesU	offset		= AlignToLarger( size_t(block.ptr) + block.size, align ) - size_t(block.ptr);
 
+			DEBUG_ONLY( std::memset( block.ptr, 0xCD, size_t(block.capacity) ));
+			
 			block.size = offset + size;
 			return block.ptr + offset;
 		}
@@ -110,14 +130,16 @@ namespace AE::STL
 		template <typename T>
 		ND_ AE_ALLOCATOR T*  Alloc (size_t count = 1)
 		{
-			return BitCast<T *>( Alloc( SizeOf<T> * count, AlignOf<T> ));
+			return Cast<T>( Alloc( SizeOf<T> * count, AlignOf<T> ));
 		}
 
 
 		void Discard ()
 		{
-			for (auto& block : _blocks) {
+			for (auto& block : _blocks)
+			{
 				block.size = 0_b;
+				DEBUG_ONLY( std::memset( block.ptr, 0xCD, size_t(block.capacity) ));
 			}
 		}
 
@@ -133,20 +155,22 @@ namespace AE::STL
 
 
 	//
-	// Untyped Linear Pool Allocator
+	// Untyped Linear Allocator
 	//
 	
-	template <typename AllocatorType = UntypedAlignedAllocator>
+	template <typename AllocatorType = UntypedAlignedAllocator,
+			  uint MaxBlocks = 16
+			 >
 	struct UntypedLinearAllocator final
 	{
 	// types
 	public:
-		using LinearAllocator_t	= LinearAllocator< AllocatorType >;
 		using Allocator_t		= AllocatorType;
-		using Self				= UntypedLinearAllocator< AllocatorType >;
+		using LinearAllocator_t	= LinearAllocator< AllocatorType, MaxBlocks >;
+		using Self				= UntypedLinearAllocator< AllocatorType, MaxBlocks >;
 
 		template <typename T>
-		using StdAllocator_t	= StdLinearAllocator< T, AllocatorType >;
+		using StdAllocator_t	= StdLinearAllocator< T, AllocatorType, ValueToType<MaxBlocks> >;
 
 
 	// variables
@@ -186,20 +210,24 @@ namespace AE::STL
 
 
 	//
-	// Std Linear Pool Allocator
+	// Std Linear Allocator
 	//
 
 	template <typename T,
-			  typename AllocatorType = UntypedAlignedAllocator>
+			  typename AllocatorType = UntypedAlignedAllocator,
+			  typename MaxBlocksT = ValueToType<16u>
+			 >
 	struct StdLinearAllocator
 	{
 	// types
 	public:
+		static constexpr uint	MaxBlocks = MaxBlocksT::value;
+
 		using value_type			= T;
-		using LinearAllocator_t		= LinearAllocator< AllocatorType >;
 		using Allocator_t			= AllocatorType;
-		using Self					= StdLinearAllocator< T, AllocatorType >;
-		using UntypedAllocator_t	= UntypedLinearAllocator< AllocatorType >;
+		using LinearAllocator_t		= LinearAllocator< AllocatorType, MaxBlocks >;
+		using Self					= StdLinearAllocator< T, AllocatorType, MaxBlocksT >;
+		using UntypedAllocator_t	= UntypedLinearAllocator< AllocatorType, MaxBlocks >;
 
 
 	// variables
@@ -230,7 +258,7 @@ namespace AE::STL
 		{
 		}
 
-		ND_ Self  select_on_container_copy_construction() const
+		ND_ Self  select_on_container_copy_construction () const
 		{
 			return Self{ _alloc };
 		}

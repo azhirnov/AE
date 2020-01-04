@@ -2,11 +2,18 @@
 
 #pragma once
 
+#include "stl/Defines.h"
+
 // Config
 #define AE_FAST_HASH	0
 
-
-#include "stl/Defines.h"
+#ifndef AE_OPTIMIZE_IDS
+# ifdef AE_DEBUG
+#	define AE_OPTIMIZE_IDS	0
+# else
+#	define AE_OPTIMIZE_IDS	1
+# endif
+#endif
 
 #include <vector>
 #include <string>
@@ -50,6 +57,7 @@ namespace AE::STL
 	//using isize	= ptrdiff_t;
 
 							using String		= std::string;
+							using WString		= std::wstring;
 	template <typename T>	using BasicString	= std::basic_string< T >;
 
 	template <typename T>	using Array			= std::vector< T >;

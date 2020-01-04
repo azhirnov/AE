@@ -3,7 +3,6 @@
 #pragma once
 
 #include "stl/Common.h"
-#include "stl/CompileTime/TypeTraits.h"
 
 namespace AE::STL
 {

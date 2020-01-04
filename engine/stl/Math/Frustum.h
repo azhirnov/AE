@@ -64,7 +64,7 @@ namespace AE::Math
 	public:
 		FrustumTempl () {}
 		
-		void Setup (const Matrix4x4<T> &mvp);
+		void Setup (const Matrix<T,4,4> &mvp);
 		void Setup (const CameraTempl<T> &camera);
 		void Setup (const CameraTempl<T> &camera, const Vec2_t &range);
 		
@@ -93,9 +93,6 @@ namespace AE::Math
 
 		Vec3_t _IntersectPlanes (EPlane p0, EPlane p1, EPlane p2) const;
 	};
-
-
-	using Frustum  = FrustumTempl<float>;
 	
 	
 /*
@@ -117,7 +114,7 @@ namespace AE::Math
 	}
 	
 	template <typename T>
-	inline void  FrustumTempl<T>::Setup (const Matrix4x4<T> &mat)
+	inline void  FrustumTempl<T>::Setup (const Matrix<T,4,4> &mat)
 	{
 		_SetPlane( EPlane::Top,    mat[0][3] - mat[0][1], mat[1][3] - mat[1][1], mat[2][3] - mat[2][1], -mat[3][3] + mat[3][1] );
 		_SetPlane( EPlane::Bottom, mat[0][3] + mat[0][1], mat[1][3] + mat[1][1], mat[2][3] + mat[2][1], -mat[3][3] - mat[3][1] );

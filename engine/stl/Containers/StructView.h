@@ -105,7 +105,7 @@ namespace AE::STL
 		uint			_stride		= 0;
 
 		DEBUG_ONLY(
-			_IViewer*	_dbgView	= null;	
+			UniquePtr<_IViewer>	_dbgView;	
 		)
 
 
@@ -138,9 +138,7 @@ namespace AE::STL
 		{}
 
 		~StructView ()
-		{
-			DEBUG_ONLY( delete _dbgView );
-		}
+		{}
 
 
 		ND_ size_t		size ()					const	{ return _count; }
@@ -176,18 +174,18 @@ namespace AE::STL
 
 	private:
 		template <typename Class, size_t Stride>
-		ND_ static _IViewer*  _CreateView (const void *ptr)
+		ND_ static UniquePtr<_IViewer>  _CreateView (const void *ptr)
 		{
 			STATIC_ASSERT( Stride >= sizeof(T) );
 			const size_t	padding = Stride - sizeof(T);
 
 			if constexpr ( padding == 0 )
-				return new _ViewerImpl< Class >{ ptr };
+				return MakeUnique< _ViewerImpl< Class >>( ptr );
 			else
 			if constexpr ( padding % alignof(T) == 0 )
-				return new _ViewerWithPadding< Class, padding >{ ptr };
+				return MakeUnique< _ViewerWithPadding< Class, padding >>( ptr );
 			else
-				return new _ViewerWithPaddingUnaligned< Class, padding >{ ptr };
+				return MakeUnique< _ViewerWithPaddingUnaligned< Class, padding >>( ptr );
 		}
 	};
 

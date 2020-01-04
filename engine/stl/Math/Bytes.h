@@ -40,10 +40,8 @@ namespace AE::Math
 		ND_ explicit constexpr operator uint32_t ()	const	{ return CheckCast<uint32_t>( _value ); }
 		ND_ explicit constexpr operator uint64_t ()	const	{ return CheckCast<uint64_t>( _value ); }
 
-		template <typename T>
-		ND_ explicit constexpr operator T* ()				{ return BitCast<T *>( CheckCast<size_t>( _value )); }
-		template <typename T>
-		ND_ explicit constexpr operator T const* ()	const	{ return BitCast<T const*>( CheckCast<size_t>( _value )); }
+		template <typename R>
+		ND_ explicit constexpr operator R * ()		const	{ return BitCast<R *>( CheckCast<size_t>( _value )); }
 		
 		ND_ constexpr T		Kb ()	const					{ return _value >> 10; }
 		ND_ constexpr T		Mb ()	const					{ return _value >> 20; }

@@ -32,6 +32,10 @@ namespace AE::STL
 			static bool  ReadTo (StringView str, StringView endSymbol, INOUT size_t &pos, OUT StringView &result);
 
 			static bool  ReadString (StringView str, INOUT size_t &pos, OUT StringView &result);
+			
+			static void  DivideLines (StringView str, OUT Array<StringView> &lines);
+
+			static void  Tokenize (StringView str, const char divisor, OUT Array<StringView> &tokens);
 	};
 
 

@@ -4,7 +4,6 @@
 
 #include "stl/Math/Math.h"
 #include "stl/Math/BitMath.h"
-#include "stl/CompileTime/TypeTraits.h"
 #include "stl/Math/GLM.h"
 
 namespace AE::Math
@@ -93,7 +92,7 @@ namespace AE::Math
 =================================================
 */
 	template <typename T, int I>
-	ND_ forceinline EnableIf<IsScalar<T>, Vec<T,I>>  operator ! (const Vec<T,I> &value)
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<T>, Vec<T,I>>  operator ! (const Vec<T,I> &value)
 	{
 		Vec<T,I>	res;
 		for (int i = 0; i < I; ++i) {
@@ -104,13 +103,36 @@ namespace AE::Math
 	
 /*
 =================================================
-	operator *
+	operator << , operator >>
 =================================================
 */
 	template <typename T, int I, typename S>
-	ND_ forceinline EnableIf<IsScalar<S> and not IsSameTypes<T,S>, Vec<T,I>>  operator * (const Vec<T,I> &lhs, const S &rhs)
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<S> and not IsSameTypes<T,S>, Vec<T,I>>  operator << (const Vec<T,I> &lhs, const S &rhs)
 	{
-		return lhs * T(rhs);
+		return lhs << static_cast<T>(rhs);
+	}
+
+	template <typename T, int I, typename S>
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<S> and not IsSameTypes<T,S>, Vec<T,I>>  operator >> (const Vec<T,I> &lhs, const S &rhs)
+	{
+		return lhs >> static_cast<T>(rhs);
+	}
+	
+/*
+=================================================
+	operator *, oeprator /
+=================================================
+*/
+	template <typename T, int I, typename S>
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<S> and not IsSameTypes<T,S>, Vec<T,I>>  operator * (const Vec<T,I> &lhs, const S &rhs)
+	{
+		return lhs * static_cast<T>(rhs);
+	}
+
+	template <typename T, int I, typename S>
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<S> and not IsSameTypes<T,S>, Vec<T,I>>  operator / (const Vec<T,I> &lhs, const S &rhs)
+	{
+		return lhs / static_cast<T>(rhs);
 	}
 
 /*
@@ -129,22 +151,88 @@ namespace AE::Math
 	{
 		return (lhs = glm::mod( lhs, rhs ));
 	}
+
+/*
+=================================================
+	operator <, >, ==
+=================================================
+*/
+	template <typename T, int I, typename S>
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<S>, Vec<bool,I>>  operator == (const Vec<T,I> &lhs, const S &rhs)
+	{
+		return glm::equal( lhs, Vec<T,I>{rhs} );
+	}
+	
+	template <typename T, int I, typename S>
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<S>, Vec<bool,I>>  operator != (const Vec<T,I> &lhs, const S &rhs)
+	{
+		return glm::notEqual( lhs, Vec<T,I>{rhs} );
+	}
+	
+	template <typename T, int I>
+	ND_ forceinline GLM_CONSTEXPR Vec<bool,I>  operator >= (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	{
+		return glm::greaterThanEqual( lhs, rhs );
+	}
+
+	template <typename T, int I, typename S>
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<S>, Vec<bool,I>>  operator >= (const Vec<T,I> &lhs, const S &rhs)
+	{
+		return glm::greaterThanEqual( lhs, Vec<T,I>{rhs} );
+	}
+	
+	template <typename T, int I>
+	ND_ forceinline GLM_CONSTEXPR Vec<bool,I>  operator <= (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	{
+		return glm::lessThanEqual( lhs, rhs );
+	}
+
+	template <typename T, int I, typename S>
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<S>, Vec<bool,I>>  operator <= (const Vec<T,I> &lhs, const S &rhs)
+	{
+		return glm::lessThanEqual( lhs, Vec<T,I>{rhs} );
+	}
+	
+	template <typename T, int I>
+	ND_ forceinline GLM_CONSTEXPR Vec<bool,I>  operator > (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	{
+		return glm::greaterThan( lhs, rhs );
+	}
+	
+	template <typename T, int I, typename S>
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<S>, Vec<bool,I>>  operator > (const Vec<T,I> &lhs, const S &rhs)
+	{
+		return glm::greaterThan( lhs, Vec<T,I>{rhs} );
+	}
+	
+	template <typename T, int I>
+	ND_ forceinline GLM_CONSTEXPR Vec<bool,I>  operator < (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	{
+		return glm::lessThan( lhs, rhs );
+	}
+	
+	template <typename T, int I, typename S>
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<S>, Vec<bool,I>>  operator < (const Vec<T,I> &lhs, const S &rhs)
+	{
+		return glm::lessThan( lhs, Vec<T,I>{rhs} );
+	}
+
 /*
 =================================================
 	All
 =================================================
 */
-	ND_ forceinline bool  All (const bool2 &v)
+	ND_ forceinline GLM_CONSTEXPR bool  All (const bool2 &v)
 	{
 		return v.x & v.y;
 	}
 
-	ND_ forceinline bool  All (const bool3 &v)
+	ND_ forceinline GLM_CONSTEXPR bool  All (const bool3 &v)
 	{
 		return v.x & v.y & v.z;
 	}
 
-	ND_ forceinline bool  All (const bool4 &v)
+	ND_ forceinline GLM_CONSTEXPR bool  All (const bool4 &v)
 	{
 		return v.x & v.y & v.z & v.w;
 	}
@@ -154,17 +242,17 @@ namespace AE::Math
 	Any
 =================================================
 */
-	ND_ forceinline bool  Any (const bool2 &v)
+	ND_ forceinline GLM_CONSTEXPR bool  Any (const bool2 &v)
 	{
 		return v.x | v.y;
 	}
 
-	ND_ forceinline bool  Any (const bool3 &v)
+	ND_ forceinline GLM_CONSTEXPR bool  Any (const bool3 &v)
 	{
 		return v.x | v.y | v.z;
 	}
 
-	ND_ forceinline bool  Any (const bool4 &v)
+	ND_ forceinline GLM_CONSTEXPR bool  Any (const bool4 &v)
 	{
 		return v.x | v.y | v.z | v.w;
 	}
@@ -249,6 +337,34 @@ namespace AE::Math
 			res[i] = Equals( lhs[i], rhs[i], err );
 		}
 		return res;
+	}
+	
+/*
+=================================================
+	Min / Mag
+=================================================
+*/
+	template <typename T, int I>
+	ND_ forceinline Vec<T,I>  Min (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	{
+		return glm::min( lhs, rhs );
+	}
+	
+	template <typename T, int I>
+	ND_ forceinline Vec<T,I>  Max (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	{
+		return glm::max( lhs, rhs );
+	}
+	
+/*
+=================================================
+	Clamp
+=================================================
+*/
+	template <typename T, int I>
+	ND_ forceinline Vec<T,I>  Clamp (const Vec<T,I> &value, const Vec<T,I> &minVal, const Vec<T,I> &maxVal)
+	{
+		return glm::clamp( value, minVal, maxVal );
 	}
 
 /*

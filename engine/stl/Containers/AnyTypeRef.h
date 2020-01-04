@@ -2,8 +2,7 @@
 
 #pragma once
 
-#include "stl/CompileTime/TypeTraits.h"
-#include <typeindex>
+#include "stl/Common.h"
 
 namespace AE::STL
 {

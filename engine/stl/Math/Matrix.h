@@ -127,5 +127,18 @@ namespace AE::Math
 		return res;
 	}
 	
+/*
+=================================================
+	Quat()
+=================================================
+*/
+	template <typename T>
+	inline Quat<T>::Quat (const Matrix<T,3,3> &m) : _value{glm::quat_cast(m)}
+	{}
+	
+	template <typename T>
+	inline Quat<T>::Quat (const Matrix<T,4,4> &m) : _value{glm::quat_cast(m)}
+	{}
+
 
 }	// AE::Math

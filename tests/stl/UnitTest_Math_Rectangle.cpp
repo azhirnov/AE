@@ -25,6 +25,17 @@ namespace
 		RectF	r1{ 0.0f, -1.0f, 1.1f, 0.5f };		TEST( not rect.Intersects( r1 ));
 		RectF	r2{ 0.0f, -1.0f, 1.1f, 1.5f };		TEST( rect.Intersects( r2 ));
 	}
+	
+
+	void Rectangle_Test3 ()
+	{
+		RectI	rect{ -8, -8, 8, 8 };
+
+		RectI	r0{ -16, -16, -8, -8 };		TEST( not rect.Intersects( r0 ));
+		RectI	r1{ -8, -8, 0, 0 };			TEST( rect.Intersects( r1 ));
+		RectI	r2{ 0, 0, 8, 8 };			TEST( rect.Intersects( r2 ));
+		RectI	r3{ 8, 0, 16, 8 };			TEST( not rect.Intersects( r3 ));
+	}
 }
 
 
@@ -32,6 +43,7 @@ extern void UnitTest_Math_Rectangle ()
 {
 	Rectangle_Test1();
 	Rectangle_Test2();
+	Rectangle_Test3();
 
 	AE_LOGI( "UnitTest_Math_Rectangle - passed" );
 }

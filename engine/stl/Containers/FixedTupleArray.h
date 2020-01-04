@@ -28,8 +28,8 @@ namespace AE::STL
 
 	// variables
 	private:
-		Array_t		_arrays;
 		size_t		_count	= 0;
+		Array_t		_arrays;
 
 
 	// methods

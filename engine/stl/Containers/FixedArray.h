@@ -24,11 +24,11 @@ namespace AE::STL
 
 	// variables
 	private:
+		size_t			_count	= 0;
 		union {
 			T			_array[ ArraySize ];
 			char		_data[ ArraySize * sizeof(T) ];		// don't use this field!
 		};
-		size_t			_count	= 0;
 
 
 	// methods

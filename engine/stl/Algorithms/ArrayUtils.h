@@ -104,13 +104,13 @@ namespace AE::STL
 		{
 			size_t	mid = (left + right) >> 1;
 
-			if ( arr[mid] < key )
+			if ( key > arr[mid] )
 				left = mid + 1;
 			else
 				right = mid;
 		}
 
-		return left < arr.size() and arr[left] == key ? left : UMax;
+		return left < arr.size() and key == arr[left] ? left : UMax;
 	}
 	
 	template <typename T, typename Key>

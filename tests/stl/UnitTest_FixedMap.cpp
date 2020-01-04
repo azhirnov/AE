@@ -1,7 +1,7 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Containers/FixedMap.h"
-#include "stl/Containers/StaticString.h"
+#include "stl/Containers/FixedString.h"
 #include "UnitTest_Common.h"
 
 

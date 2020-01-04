@@ -28,7 +28,7 @@ namespace AE::Math
 
 		constexpr explicit Fractional (T num, T denom = T(1))
 		{
-			//ASSERT( denom > 0 );
+			ASSERT( denom > 0 );
 			const T	gcd = _GreatestCommonDivisor( num, denom );
 			if ( gcd ) {
 				numerator	= num / gcd;
@@ -81,8 +81,8 @@ namespace AE::Math
 
 		ND_ constexpr bool  operator == (const Self &rhs) const
 		{
-			return	(numerator == T(0) and rhs.numerator == T(0))				or
-					(numerator == rhs.numerator and denominator == rhs.denominator);
+			return	((numerator == T(0)) & (rhs.numerator == T(0)))				|
+					((numerator == rhs.numerator) & (denominator == rhs.denominator));
 		}
 
 		ND_ constexpr bool  IsZero ()		const		{ return numerator == T(0); }
@@ -99,6 +99,7 @@ namespace AE::Math
 	
 
 	using FractionalI	= Fractional< int >;
+	using FractionalI16	= Fractional< int16_t >;
 
 
 }	// AE::Math

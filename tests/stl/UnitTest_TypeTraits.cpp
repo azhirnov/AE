@@ -18,4 +18,5 @@ extern void UnitTest_TypeTraits ()
 		STATIC_ASSERT( IsSpecializationOf< T3, std::tuple > );
 		STATIC_ASSERT( not IsSpecializationOf< T3, ArrayView > );
 	}
+	AE_LOGI( "UnitTest_TypeTraits - passed" );
 }

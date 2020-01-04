@@ -355,6 +355,8 @@ namespace AE::Math
 	template <typename T>
 	inline Rectangle<T>&  Rectangle<T>::Stretch (const Vec2_t &size)
 	{
+		ASSERT( not IsInteger<T> or Any(Abs(size) > Vec2_t{T(1)}) );
+
 		const Vec2_t  half_size = size / T(2);
 
 		left	-= half_size.x;
@@ -367,6 +369,8 @@ namespace AE::Math
 	template <typename T>
 	inline Rectangle<T>&  Rectangle<T>::Stretch (T size)
 	{
+		ASSERT( not IsInteger<T> or Abs(size) > T(1) ); 
+
 		const T  half_size = size / T(2);
 
 		left	-= half_size;

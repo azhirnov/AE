@@ -250,6 +250,57 @@ namespace AE::STL
 		result = str.substr( start, pos );
 		return true;
 	}
+	
+/*
+=================================================
+	DivideLines
+=================================================
+*/
+	void StringParser::DivideLines (StringView str, OUT Array<StringView> &lines)
+	{
+		lines.clear();
+
+		size_t	pos = 0;
+		size_t	prev = 0;
+
+		while ( pos < str.length() )
+		{
+			ToEndOfLine( str, INOUT pos );
+
+			if ( pos != prev ) {
+				lines.push_back( str.substr( prev, pos-prev ));
+			}
+
+			ToNextLine( str, INOUT pos );
+
+			prev = pos;
+		}
+	}
+	
+/*
+=================================================
+	Tokenize
+=================================================
+*/
+	void StringParser::Tokenize (StringView str, const char divisor, OUT Array<StringView> &tokens)
+	{
+		size_t	begin = 0;
+
+		tokens.clear();
+
+		for (size_t i = 0; i < str.length(); ++i)
+		{
+			const char	c = str[i];
+
+			if ( c == divisor )
+			{
+				tokens.push_back( StringView{ str.data() + begin, i - begin });
+				begin = i+1;
+			}
+		}
+
+		tokens.push_back( StringView{ str.data() + begin, str.length() - begin });
+	}
 
 
 }	// AE::STL

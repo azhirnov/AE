@@ -8,9 +8,11 @@ extern void UnitTest_Color ();
 extern void UnitTest_CT_Counter ();
 extern void UnitTest_FixedArray ();
 extern void UnitTest_FixedMap ();
+extern void UnitTest_FixedTupleArray ();
 extern void UnitTest_FileSystem ();
 extern void UnitTest_LinearAllocator ();
 extern void UnitTest_Math ();
+extern void UnitTest_Math_Vec ();
 extern void UnitTest_Math_Matrix ();
 extern void UnitTest_Math_Transformation ();
 extern void UnitTest_Math_Rectangle ();
@@ -37,10 +39,12 @@ int main ()
 	UnitTest_CT_Counter();
 	UnitTest_FixedArray();
 	UnitTest_FixedMap();
+	UnitTest_FixedTupleArray();
 	UnitTest_FileSystem();
 	UnitTest_LinearAllocator();
 	
 	UnitTest_Math();
+	UnitTest_Math_Vec();
 	UnitTest_Math_Matrix();
 	UnitTest_Math_Transformation();
 	UnitTest_Math_Rectangle();

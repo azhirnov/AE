@@ -87,6 +87,37 @@ namespace
 		TEST( All( m3[2] == float3(7.0f, 8.0f, 9.0f) ));
 		TEST( All( m3[3] == float3(10.0f, 11.0f, 12.0f) ));
 	}
+	
+
+	void MatrixStorage_Test5 ()
+	{
+		using cm_float3x4_t = MatrixStorage< float, 3, 4, EMatrixOrder::ColumnMajor >;
+		using rm_float3x4_t = MatrixStorage< float, 3, 4, EMatrixOrder::RowMajor >;
+
+		cm_float3x4_t	m1{ float3x4{float4{1.0f, 2.0f, 3.0f, 4.0f},
+									 float4{5.0f, 6.0f, 7.0f, 8.0f},
+									 float4{9.0f, 10.f, 11.f, 12.f}} };
+		
+		TEST( All( m1[0] == float4(1.0f, 2.0f, 3.0f, 4.0f) ));
+		TEST( All( m1[1] == float4(5.0f, 6.0f, 7.0f, 8.0f) ));
+		TEST( All( m1[2] == float4(9.0f, 10.f, 11.f, 12.f) ));
+
+		float3x3 m2 = float3x3{m1};
+		TEST( All( m2[0] == float3(1.0f, 2.0f, 3.0f) ));
+		TEST( All( m2[1] == float3(5.0f, 6.0f, 7.0f) ));
+		TEST( All( m2[2] == float3(9.0f, 10.f, 11.f) ));
+
+		rm_float3x4_t	m3{ m2 };
+		TEST( All( m3[0] == float3(1.0f, 5.0f, 9.0f) ));
+		TEST( All( m3[1] == float3(2.0f, 6.0f, 10.f) ));
+		TEST( All( m3[2] == float3(3.0f, 7.0f, 11.f) ));
+		TEST( All( m3[3] == float3(0.0f, 0.0f, 0.0f) ));
+
+		cm_float3x4_t	m4{ m3 };
+		TEST( All( m4[0] == float4(1.0f, 2.0f, 3.0f, 0.0f) ));
+		TEST( All( m4[1] == float4(5.0f, 6.0f, 7.0f, 0.0f) ));
+		TEST( All( m4[2] == float4(9.0f, 10.f, 11.f, 0.0f) ));
+	}
 }
 
 
@@ -96,6 +127,7 @@ extern void UnitTest_Math_Matrix ()
 	MatrixStorage_Test2();
 	MatrixStorage_Test3();
 	MatrixStorage_Test4();
+	MatrixStorage_Test5();
 
 	AE_LOGI( "UnitTest_Math_Matrix - passed" );
 }

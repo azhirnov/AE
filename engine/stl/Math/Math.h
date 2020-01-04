@@ -444,4 +444,27 @@ namespace AE::Math
 		return result;
 	}
 
+/*
+=================================================
+	Sign / SignOrZero
+=================================================
+*/
+	template <typename T>
+	ND_ forceinline EnableIf<IsScalar<T>, T>  Sign (const T &value)
+	{
+		if constexpr( std::is_signed_v<T> )
+			return value < T(0) ? T(-1) : T(1);
+		else
+			return T(1);
+	}
+
+	template <typename T>
+	ND_ forceinline EnableIf<IsScalar<T>, T>  SignOrZero (const T &value)
+	{
+		if constexpr( std::is_signed_v<T> )
+			return value < T(0) ? T(-1) : value > T(0) ? T(1) : T(0);
+		else
+			return value > T(0) ? T(1) : T(0);
+	}
+
 }	// AE::Math

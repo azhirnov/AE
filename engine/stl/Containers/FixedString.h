@@ -8,11 +8,11 @@ namespace AE::STL
 {
 
 	//
-	// Static String
+	// Fixed Size String
 	//
 
 	template <typename CharT, size_t StringSize>
-	struct TStaticString
+	struct TFixedString
 	{
 	// type
 	public:
@@ -20,26 +20,26 @@ namespace AE::STL
 		using iterator			= CharT *;
 		using const_iterator	= CharT const *;
 		using View_t			= BasicStringView< CharT >;
-		using Self				= TStaticString< CharT, StringSize >;
+		using Self				= TFixedString< CharT, StringSize >;
 
 
 	// variables
 	private:
-		CharT		_array [StringSize] = {};
 		size_t		_length	= 0;
+		CharT		_array [StringSize] = {};
 
 
 	// methods
 	public:
-		constexpr TStaticString ()
+		constexpr TFixedString ()
 		{
 			DEBUG_ONLY( memset( _array, 0, sizeof(_array) ));
 		}
 		
-		TStaticString (const View_t &view) : TStaticString{ view.data(), view.length() }
+		TFixedString (const View_t &view) : TFixedString{ view.data(), view.length() }
 		{}
 		
-		constexpr TStaticString (const CharT *str)
+		constexpr TFixedString (const CharT *str)
 		{
 			for (; str[_length] and _length < StringSize; ++_length) {
 				_array[_length] = str[_length];
@@ -47,7 +47,7 @@ namespace AE::STL
 			_array[_length] = CharT(0);
 		}
 
-		constexpr TStaticString (const CharT *str, size_t length)
+		constexpr TFixedString (const CharT *str, size_t length)
 		{
 			ASSERT( length < StringSize );
 			
@@ -105,7 +105,7 @@ namespace AE::STL
 
 
 	template <size_t StringSize>
-	using StaticString = TStaticString< char, StringSize >;
+	using FixedString = TFixedString< char, StringSize >;
 
 }	// AE::STL
 
@@ -114,9 +114,9 @@ namespace std
 {
 
 	template <typename CharT, size_t StringSize>
-	struct hash< AE::STL::TStaticString< CharT, StringSize > >
+	struct hash< AE::STL::TFixedString< CharT, StringSize > >
 	{
-		ND_ size_t  operator () (const AE::STL::TStaticString<CharT, StringSize> &value) const
+		ND_ size_t  operator () (const AE::STL::TFixedString<CharT, StringSize> &value) const
 		{
 			return hash< AE::STL::BasicStringView<CharT> >()( value );
 		}

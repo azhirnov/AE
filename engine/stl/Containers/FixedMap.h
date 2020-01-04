@@ -39,12 +39,12 @@ namespace AE::STL
 
 	// variables
 	private:
+		Index_t				_count		= 0;
 		mutable Index_t		_indices [ArraySize];
 		union {
 			pair_type		_array  [ArraySize];
 			char			_buffer [sizeof(pair_type) * ArraySize];	// don't use this field!
 		};
-		Index_t				_count		= 0;
 
 
 	// methods
@@ -111,8 +111,8 @@ namespace AE::STL
 	template <typename K, typename V, size_t S>
 	inline FixedMap<K,V,S>::FixedMap ()
 	{
-		DEBUG_ONLY( memset( _indices, 0, sizeof(_indices) ));
-		DEBUG_ONLY( memset( _array,   0, sizeof(_array)   ));
+		DEBUG_ONLY( memset( _indices, 0xCD, sizeof(_indices) ));
+		DEBUG_ONLY( memset( _array,   0xCD, sizeof(_array)   ));
 	}
 	
 /*
@@ -208,7 +208,7 @@ namespace AE::STL
 
 		for (size_t i = 0; i < _count; ++i)
 		{
-			if ( _array[_indices[i]] != rhs._array[rhs._indices[i]] )
+			if ( not (_array[_indices[i]] == rhs._array[rhs._indices[i]]) )
 				return false;
 		}
 		return true;

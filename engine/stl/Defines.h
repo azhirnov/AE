@@ -178,9 +178,9 @@
 // (text, file, line)
 #ifndef AE_LOGD
 # ifdef AE_DEBUG
-#	define AE_LOGD	AE_LOGI
+#	define AE_LOGD				AE_LOGI
 # else
-#	define AE_LOGD( ... )
+#	define AE_LOGD( ... )		{}
 # endif
 #endif
 
@@ -332,6 +332,27 @@
 #endif
 
 
+// DLL import/export
+#if !defined(AE_DLL_EXPORT) || !defined(AE_DLL_IMPORT)
+# if defined(COMPILER_MSVC)
+#	define AE_DLL_EXPORT			__declspec( dllexport )
+#	define AE_DLL_IMPORT			__declspec( dllimport )
+
+# elif defined(COMPILER_GCC) || defined(COMPILER_CLANG)
+#  ifdef PLATFORM_WINDOWS
+#	define AE_DLL_EXPORT			__attribute__ (dllexport)
+#	define AE_DLL_IMPORT			__attribute__ (dllimport)
+#  else
+#	define AE_DLL_EXPORT			__attribute__ (visibility("default"))
+#	define AE_DLL_IMPORT			__attribute__ (visibility("default"))
+#  endif
+
+# else
+#	error define AE_DLL_EXPORT and AE_DLL_IMPORT for you compiler
+# endif
+#endif
+
+
 // setup for build on CI
 #ifdef AE_CI_BUILD
 
@@ -367,6 +388,11 @@
 		 return (_ret_); \
 		}
 
+#	include <cassert>
+#	undef  assert
+#	define assert( _expr_ ) \
+		AE_PRIVATE_CHECK( (_expr_), AE_PRIVATE_TOSTRING( _expr_ ))
+
 #endif
 
 
@@ -383,12 +409,6 @@
 #	pragma detect_mismatch( "AE_FAST_HASH", "1" )
 #  else
 #	pragma detect_mismatch( "AE_FAST_HASH", "0" )
-#  endif
-
-#  ifdef AE_STD_FILESYSTEM
-#	pragma detect_mismatch( "AE_STD_FILESYSTEM", "1" )
-#  else
-#	pragma detect_mismatch( "AE_STD_FILESYSTEM", "0" )
 #  endif
 
 #  ifdef AE_CI_BUILD
