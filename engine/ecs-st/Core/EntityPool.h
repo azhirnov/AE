@@ -19,7 +19,7 @@ namespace AE::ECS
 		using Index_t	= EntityID::Index_t;
 
 	private:
-		using InstanceID_t	= EntityID::InstanceID_t;
+		using Generation_t	= EntityID::Generation_t;
 		using LocalIndex_t	= ArchetypeStorage::Index_t;
 
 		static constexpr auto	InvalidIndex = LocalIndex_t(-1);
@@ -28,7 +28,7 @@ namespace AE::ECS
 		{
 			ArchetypeStorage*	storage		= null;
 			LocalIndex_t		index		= InvalidIndex;
-			InstanceID_t		instance	= 0;
+			Generation_t		generation	= 0;
 		};
 
 
@@ -86,7 +86,7 @@ namespace AE::ECS
 			_entities.push_back( EntityRef{} );
 		}
 
-		id = EntityID{ idx, _entities[idx].instance };
+		id = EntityID{ idx, _entities[idx].generation };
 		return true;
 	}
 	
@@ -104,7 +104,7 @@ namespace AE::ECS
 		item.storage = null;
 		item.index   = InvalidIndex;
 
-		++item.instance;
+		++item.generation;
 		_available.push_back( id.Index() );
 		return true;
 	}
@@ -153,7 +153,7 @@ namespace AE::ECS
 	inline bool  EntityPool::IsValid (EntityID id) const
 	{
 		return	id.Index() < _entities.size() and
-				_entities[ id.Index() ].instance == id.InstanceID();
+				_entities[ id.Index() ].generation == id.Generation();
 	}
 	
 /*

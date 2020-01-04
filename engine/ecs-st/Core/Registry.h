@@ -342,8 +342,8 @@ DEBUG_ONLY(
 		class ComponentDbgView final : public Registry::IComponentDbgView
 		{
 		private:
-			ArrayView< T >		_comps;
-			std::type_info		_type;
+			ArrayView< T >			_comps;
+			std::type_info const&	_type;
 
 		public:
 			ComponentDbgView (T const* ptr, size_t count) : _comps{ptr, count}, _type{typeid(T)} {}

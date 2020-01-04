@@ -4,7 +4,7 @@
 
 using namespace AE::App;
 
-extern void UnitTest_VirtualResourceID ();
+extern void UnitTest_GfxResourceID ();
 extern void Test_VulkanDevice ();
 extern void Test_VulkanSwapchain (IApplication &app, IWindow &wnd);
 
@@ -12,7 +12,7 @@ extern void Test_VulkanSwapchain (IApplication &app, IWindow &wnd);
 #ifdef PLATFORM_ANDROID
 extern int Test_Platform (IApplication &app, IWindow &wnd)
 {
-	UnitTest_VirtualResourceID();
+	UnitTest_GfxResourceID();
 
 	Test_VulkanDevice();
 	Test_VulkanSwapchain( app, wnd );
@@ -47,7 +47,7 @@ extern int Test_Platform (IApplication &app, IWindow &wnd)
 
 		void OnSurfaceCreated (IWindow &wnd) override
 		{
-			UnitTest_VirtualResourceID();
+			UnitTest_GfxResourceID();
 
 			Test_VulkanDevice();
 			Test_VulkanSwapchain( _app, wnd );
