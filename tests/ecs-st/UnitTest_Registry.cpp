@@ -358,25 +358,37 @@ namespace
 			TEST( e1 );
 		}
 
-		size_t	cnt = 0;
-		EnqueWithoutQuery( reg,
-			[&cnt] (ArrayView<Tuple< size_t, WriteAccess<Comp1>, ReadAccess<Comp2> >> chunks)
+		QueryID	q = reg.CreateQuery< Require<Comp1, Comp2> >();
+
+		size_t	cnt1 = 0;
+		reg.Enque( q,
+			[&cnt1] (ArrayView<Tuple< size_t, WriteAccess<Comp1>, ReadAccess<Comp2> >> chunks)
 			{
 				for (auto& chunk : chunks)
 				{
 					chunk.Apply(
-						[&cnt] (size_t count, WriteAccess<Comp1> comp1, ReadAccess<Comp2> comp2)
+						[&cnt1] (size_t count, WriteAccess<Comp1> comp1, ReadAccess<Comp2> comp2)
 						{
 							for (size_t i = 0; i < count; ++i) {
 								comp1[i].value = int(comp2[i].value);
-								++cnt;
+								++cnt1;
 							}
 						});
 				}
 			});
+		
+		size_t	cnt2 = 0;
+		reg.Enque( q,
+			[&cnt2] (Comp1 &comp1, const Comp2 &comp2)
+			{
+				comp1.value = int(comp2.value);
+				++cnt2;
+			});
+
 		reg.Process();
 
-		TEST( cnt == count );
+		TEST( cnt1 == count );
+		TEST( cnt2 == count );
 
 		reg.DestroyAllEntities();
 	}

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "stl/Algorithms/StringUtils.h"
+#include "ecs-st/Common.h"
 
 using namespace AE;
 using namespace AE::ECS;

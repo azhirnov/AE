@@ -5,7 +5,7 @@
 
 namespace AE::ECS
 {
-	
+
 /*
 =================================================
 	constructor
@@ -16,9 +16,10 @@ namespace AE::ECS
 		_count{ 0 },
 		_locks{ 0 },
 		_archetype{ archetype },
-		_capacity{ 0 }
+		_capacity{ 0 },
+		_owner{ reg }
 	{
-		CHECK( _InitComponents( reg ));
+		CHECK( _InitComponents() );
 		Reserve( capacity );
 	}
 	
@@ -27,11 +28,11 @@ namespace AE::ECS
 	_InitComponents
 =================================================
 */
-	bool  ArchetypeStorage::_InitComponents (const Registry &reg)
+	bool  ArchetypeStorage::_InitComponents ()
 	{
-		_maxAlign = 0_b;
+		_maxAlign = BytesU{AE_CACHE_LINE};
 
-		auto&	desc = _archetype.Bits().Raw();
+		auto&	desc = _archetype.Desc().Raw();
 
 		for (size_t i = 0; i < desc.size(); ++i)
 		{
@@ -44,7 +45,7 @@ namespace AE::ECS
 
 				ComponentID	id{ CheckCast<uint16_t>( j + i*sizeof(u)*8 )};
 
-				auto	info = reg.GetComponentInfo( id );
+				auto	info = _owner.GetComponentInfo( id );
 				CHECK_ERR( info );
 
 				size_t	idx = _components.size();
@@ -57,6 +58,8 @@ namespace AE::ECS
 				_components.at<4>( idx ) = info->ctor;
 
 				_maxAlign = Max( _maxAlign, BytesU{ info->align });
+
+				DEBUG_ONLY( _dbgView.emplace_back() );
 			}
 		}
 
@@ -269,15 +272,21 @@ namespace AE::ECS
 			{
 				auto&	comp_data = _components.at<3>(i);
 				comp_data = comp_data ? BitCast<void*>( size_t(comp_data) + size_t(_memory) ) : null;
+
+				DEBUG_ONLY(
+				if ( comp_data ) {
+					_dbgView[i] = _owner.GetComponentInfo( _components.at<0>(i) )->dbgView( comp_data, _capacity );
+				})
 			}
 
 			DEBUG_ONLY( std::memset( OUT _memory, 0xCD, size_t(offset) ));
+			DEBUG_ONLY( _memoryEnd = _memory + offset; )
 		}
 
 		// copy
 		if ( _count and old_mem )
 		{
-			std::memcpy( OUT _memory, old_mem, size_t(SizeOf<EntityID> * _count) );
+			std::memcpy( OUT _GetEntities(), old_mem, size_t(SizeOf<EntityID> * _count) );
 
 			for (size_t i = 0; i < _components.size(); ++i)
 			{

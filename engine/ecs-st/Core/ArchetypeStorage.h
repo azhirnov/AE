@@ -17,7 +17,16 @@ namespace AE::ECS
 	// types
 	public:
 		enum class Index_t : uint {};
-		
+
+		DEBUG_ONLY(		
+			class IComponentDbgView {
+			public:
+				ND_ virtual UniquePtr<IComponentDbgView>  ElementView (size_t index) const = 0;
+			};
+
+			using CompDbgView_t	= FixedArray< UniquePtr<IComponentDbgView>, ECS_Config::MaxComponentsPerArchetype >;
+		)
+
 	private:
 		using Allocator_t	= UntypedAlignedAllocator;
 		using Components_t	= FixedTupleArray< ECS_Config::MaxComponentsPerArchetype,
@@ -40,6 +49,13 @@ namespace AE::ECS
 		BytesU				_maxAlign;
 		Allocator_t			_allocator;
 
+		Registry const&		_owner;
+
+		DEBUG_ONLY(
+			CompDbgView_t	_dbgView;
+			void *			_memoryEnd;
+		)
+
 
 	// methods
 	public:
@@ -52,6 +68,7 @@ namespace AE::ECS
 		ND_ bool  IsValid (EntityID id, Index_t index) const;
 			void  Clear ();
 			void  Reserve (size_t size);
+			void  Reorder (Index_t offset, ArrayView<Index_t> newOrder);
 
 			void  Lock ();
 			void  Unlock ();
@@ -64,6 +81,10 @@ namespace AE::ECS
 		template <typename T>
 		ND_ T*					GetComponents ()				const;
 		ND_ void*				GetComponents (ComponentID id)	const;
+		
+		template <typename T>
+		ND_ bool				HasComponent ()					const	{ return _archetype.Exists<T>(); }
+		ND_ bool				HasComponent (ComponentID id)	const	{ return _archetype.Exists( id ); }
 
 		ND_ EntityID const*		GetEntities ()					const;	// local index to EntityID
 		ND_ size_t				Capacity ()						const	{ return _capacity; }
@@ -76,13 +97,19 @@ namespace AE::ECS
 		ND_ ArrayView<Bytes<uint16_t>>	GetComponentAligns ()	const	{ return _components.get<2>(); }
 		ND_ ArrayView<void*>			GetComponentData ()				{ return _components.get<3>(); }
 
+		DEBUG_ONLY(
+		 ND_ CompDbgView_t		EntityDbgView (Index_t idx)		const;
+
+		 ND_ bool				IsInMemoryRange (const void* ptr, BytesU size) const;
+		)
+
 
 	private:
 		ND_ EntityID *	_GetEntities ();
 
 		ND_ size_t		_IndexOf (ComponentID id) const;
 
-		bool _InitComponents (const Registry &reg);
+		bool _InitComponents ();
 	};
 
 
@@ -147,7 +174,7 @@ namespace AE::ECS
 					Pair<void*, BytesU>{ _components.at<3>(pos) + BytesU{_components.at<1>(pos)} * size_t(idx), BytesU{_components.at<1>(pos)} } :
 					Pair<void*, BytesU>{ null, 0_b };
 	}
-	
+
 /*
 =================================================
 	_IndexOf
@@ -209,5 +236,33 @@ namespace AE::ECS
 	{
 		return _locks.load() > 0;
 	}
+	
+/*
+=================================================
+	EntityDbgView
+=================================================
+*/
+DEBUG_ONLY(
+	inline ArchetypeStorage::CompDbgView_t  ArchetypeStorage::EntityDbgView (Index_t idx) const
+	{
+		CompDbgView_t	result;
+		for (auto& comp : _dbgView) {
+			result.emplace_back( comp ? comp->ElementView( size_t(idx) ) : Default );
+		}
+		return result;
+	}
+)
+
+/*
+=================================================
+	IsInMemoryRange
+=================================================
+*/
+DEBUG_ONLY(
+	inline bool  ArchetypeStorage::IsInMemoryRange (const void* ptr, BytesU size) const
+	{
+		return (ptr >= _memory) and ((ptr + size) <= _memoryEnd);
+	}
+)
 
 }	// AE::ECS

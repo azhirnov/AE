@@ -149,10 +149,11 @@ namespace AE::ECS
 			_pending.push_back( &msg );
 		
 		ASSERT( msg.entities.empty() or not msg.components.empty() );
+		ASSERT( comp.size() );
 
-		const size_t	size = comp.size();
-		msg.components.resize( (msg.entities.size() + 1) * size );
-		std::memcpy( OUT msg.components.data() + BytesU{msg.entities.size() * size}, comp.data(), size );
+		const size_t	comp_size = comp.size();
+		msg.components.resize( (msg.entities.size() + 1) * comp_size );
+		std::memcpy( OUT msg.components.data() + BytesU{msg.entities.size() * comp_size}, comp.data(), comp_size );
 
 		msg.entities.push_back( id );
 	}
@@ -166,6 +167,7 @@ namespace AE::ECS
 	template <typename Tag>
 	inline void  MessageBuilder::Add (EntityID id, ComponentID compId, const Pair<void*, BytesU> &data)
 	{
+		ASSERT( data.first );
 		return Add<Tag>( id, compId, ArrayView<uint8_t>{ Cast<uint8_t>(data.first), size_t(data.second) });
 	}
 
@@ -203,8 +205,9 @@ namespace AE::ECS
 			msg.listeners.push_back(
 				[fn = std::forward<Fn>(fn)] (const MessageData &msg)
 				{
+					ASSERT( msg.components.size() );
 					fn( ArrayView<EntityID>{ msg.entities },
-					    ArrayView<Comp>{ Cast<Comp>(msg.components.data()), msg.entities.size() });
+						ArrayView<Comp>{ Cast<Comp>(msg.components.data()), msg.entities.size() });
 				});
 			return true;
 		}
@@ -231,10 +234,12 @@ namespace AE::ECS
 			_pending.push_back( &msg );
 		
 		ASSERT( msg.entities.empty() or not msg.components.empty() );
+		ASSERT( compData.size() );
+		ASSERT( ids.size() );
 
-		const size_t	size = compData.size();
-		msg.components.resize( (msg.entities.size() + 1) * size );
-		std::memcpy( OUT msg.components.data() + BytesU{msg.entities.size() * size}, compData.data(), size );
+		const size_t	comp_size = compData.size() / ids.size();
+		msg.components.resize( (msg.entities.size() + 1) * comp_size );
+		std::memcpy( OUT msg.components.data() + BytesU{msg.entities.size() * comp_size}, compData.data(), compData.size() );
 
 		msg.entities.insert( msg.entities.end(), ids.begin(), ids.end() );
 	}

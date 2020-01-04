@@ -22,6 +22,10 @@
 
 #define AE_ECS_VALIDATE_SYSTEM_FN
 
+#ifndef AE_ECS_ENABLE_DEFAULT_MESSAGES
+#	define AE_ECS_ENABLE_DEFAULT_MESSAGES	1
+#endif
+
 
 namespace AE::ECS
 {
@@ -35,8 +39,8 @@ namespace AE::ECS
 	using Threading::DataRaceCheck;
 	using Threading::Atomic;
 
-	using EntityID	= HandleTmpl< uint16_t, uint16_t, 0 >;
-	using QueryID	= HandleTmpl< uint16_t, uint16_t, 1 >;
+	using EntityID	= HandleTmpl< uint16_t, uint16_t, 1 << 10 >;
+	using QueryID	= HandleTmpl< uint16_t, uint16_t, 2 << 10 >;
 	
 
 	struct ECS_Config

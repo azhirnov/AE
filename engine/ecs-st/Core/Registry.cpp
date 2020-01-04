@@ -113,8 +113,10 @@ namespace AE::ECS
 		if ( _entities.GetArchetype( entId, OUT storage, OUT index ) and storage )
 		{
 			ASSERT( storage->IsValid( entId, index ));
+			ASSERT( not storage->IsLocked() );
 
 			// add messages
+			#if AE_ECS_ENABLE_DEFAULT_MESSAGES
 			{
 				auto	comp_ids	= storage->GetComponentIDs();
 				auto	comp_sizes	= storage->GetComponentSizes();
@@ -134,6 +136,7 @@ namespace AE::ECS
 						_messages.Add<MsgTag_RemovedComponent>( entId, comp_ids[i] );
 				}
 			}
+			#endif
 
 			EntityID	moved;
 			if ( not storage->Erase( index, OUT moved ))
@@ -167,6 +170,8 @@ namespace AE::ECS
 
 			_OnNewArchetype( &*iter );
 		}
+		
+		ASSERT( not storage->IsLocked() );
 
 		if ( storage->Add( entId, OUT index ))
 		{
@@ -202,6 +207,8 @@ namespace AE::ECS
 
 		if ( srcStorage )
 		{
+			ASSERT( not srcStorage->IsLocked() );
+
 			auto	comp_ids = dstStorage->GetComponentIDs();
 
 			// copy components
@@ -245,10 +252,10 @@ namespace AE::ECS
 		
 		if ( not src_storage )
 			return false;
-
+		
 		// get new archetype
 		{
-			desc = src_storage->GetArchetype().Bits();
+			desc = src_storage->GetArchetype().Desc();
 			
 			if ( not desc.Exists( compId ))
 				return false;
@@ -256,12 +263,16 @@ namespace AE::ECS
 			desc.Remove( compId );
 		}
 
+		ASSERT( not src_storage->IsLocked() );
+
 		auto	comp_data = src_storage->GetComponent( src_index, compId );
 
-		if ( comp_data.first != null )
-			_messages.Add<MsgTag_RemovedComponent>( entId, compId, comp_data );
-		else
-			_messages.Add<MsgTag_RemovedComponent>( entId, compId );
+		#if AE_ECS_ENABLE_DEFAULT_MESSAGES
+			if ( comp_data.first != null )
+				_messages.Add<MsgTag_RemovedComponent>( entId, compId, comp_data );
+			else
+				_messages.Add<MsgTag_RemovedComponent>( entId, compId );
+		#endif
 
 		// add entity to new archetype
 		ArchetypeStorage*	dst_storage		= null;
@@ -289,8 +300,8 @@ namespace AE::ECS
 
 		for (auto* arch : q.archetypes)
 		{
-			ArchetypeDesc		desc		= arch->first.Bits();
-			ArchetypeStorage*	src_storage	= arch->second.get();
+			ArchetypeDesc			desc			= arch->first.Desc();
+			ArchetypeStorage*		src_storage		= arch->second.get();
 
 			desc.Remove( removeComps );
 			
@@ -300,10 +311,15 @@ namespace AE::ECS
 			
 			if ( inserted )
 			{
+				// TODO: if 'removeComps' is just a tags then you can change archetype in 'src_storage' instead of copying all data
+
 				dst_storage.reset( new ArchetypeStorage{ *this, key, ECS_Config::InitialtStorageSize });
 
 				_OnNewArchetype( &*iter );
 			}
+
+			ASSERT( not src_storage->IsLocked() );
+			ASSERT( not dst_storage->IsLocked() );
 
 			// copy components
 			{
@@ -339,6 +355,7 @@ namespace AE::ECS
 			}
 
 			// add messages
+			#if AE_ECS_ENABLE_DEFAULT_MESSAGES
 			{
 				auto	comp_ids	= src_storage->GetComponentIDs();
 				auto	comp_sizes	= src_storage->GetComponentSizes();
@@ -362,6 +379,7 @@ namespace AE::ECS
 					}
 				}
 			}
+			#endif
 
 			src_storage->Clear();
 			_DecreaseStorageSize( src_storage );
@@ -369,7 +387,6 @@ namespace AE::ECS
 
 		q.locked = false;
 	}
-
 /*
 =================================================
 	Process
@@ -413,6 +430,7 @@ namespace AE::ECS
 	QueryID  Registry::CreateQuery (const ArchetypeQueryDesc &desc)
 	{
 		EXLOCK( _drCheck );
+		CHECK( desc.IsValid() );
 
 		for (size_t i = 0; i < _queries.size(); ++i)
 		{
@@ -425,7 +443,7 @@ namespace AE::ECS
 
 		for (auto& arch : _archetypes)
 		{
-			if ( desc.Compatible( arch.first.Bits() ))
+			if ( desc.Compatible( arch.first.Desc() ))
 				q.archetypes.push_back( &arch );
 		}
 
@@ -444,7 +462,7 @@ namespace AE::ECS
 		{
 			auto&	q = _queries[i];
 
-			if ( q.desc.Compatible( arch->first.Bits() ))
+			if ( q.desc.Compatible( arch->first.Desc() ))
 			{
 				CHECK( not q.locked );
 

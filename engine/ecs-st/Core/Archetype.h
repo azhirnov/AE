@@ -25,12 +25,12 @@ namespace AE::ECS
 
 	// variables
 	private:
-		CompBits_t		_bits	= {};
+		CompBits_t		_bits;		// TODO: use SSE
 
 
 	// methods
 	public:
-		ArchetypeDesc () {}
+		ArchetypeDesc ()												{ std::memset( _bits.data(), 0, _bits.size()*sizeof(_bits[0]) ); }
 
 		template <typename Comp>	ArchetypeDesc&  Add ()				{ return Add( ComponentTypeInfo<Comp>::id ); }
 		template <typename Comp>	ArchetypeDesc&  Remove ()			{ return Remove( ComponentTypeInfo<Comp>::id ); }
@@ -42,7 +42,7 @@ namespace AE::ECS
 		ArchetypeDesc&  Add (const ArchetypeDesc &other);
 		ArchetypeDesc&  Remove (const ArchetypeDesc &other);
 
-		ND_ CompBits_t const&	Raw () const				{ return _bits; }
+		ND_ CompBits_t const&	Raw () const							{ return _bits; }
 
 		ND_ ComponentIDs_t		GetIDs () const;
 
@@ -76,7 +76,7 @@ namespace AE::ECS
 		explicit Archetype (const ArchetypeDesc &desc) : _hash{desc.GetHash()}, _desc{desc} {}
 
 		ND_ HashVal					Hash ()			const	{ return _hash; }
-		ND_ ArchetypeDesc const&	Bits ()			const	{ return _desc; }
+		ND_ ArchetypeDesc const&	Desc ()			const	{ return _desc; }
 
 		ND_ bool operator == (const Archetype &rhs)	const	{ return Equals( rhs ); }
 
@@ -105,6 +105,8 @@ namespace AE::ECS
 		ND_ bool  Compatible (const ArchetypeDesc &) const;
 
 		ND_ bool  operator == (const ArchetypeQueryDesc &rhs) const;
+
+		ND_ bool  IsValid () const;
 	};
 //-----------------------------------------------------------------------------
 
@@ -329,6 +331,16 @@ namespace AE::ECS
 		return	required.Equals( rhs.required )			&
 				subtractive.Equals( rhs.subtractive )	&
 				requireAny.Equals( rhs.requireAny );
+	}
+	
+/*
+=================================================
+	IsValid
+=================================================
+*/
+	inline bool  ArchetypeQueryDesc::IsValid () const
+	{
+		return not subtractive.Any( required );
 	}
 
 }	// AE::ECS

@@ -30,16 +30,29 @@ namespace AE::ECS
 	{
 	// types
 	public:
+		DEBUG_ONLY(
+			using IComponentDbgView	= ArchetypeStorage::IComponentDbgView;
+			using CompDbgView_t		= ArchetypeStorage::CompDbgView_t;
+		)
+
 		struct ComponentInfo
 		{
-			void (*				ctor)(void *)	= null;
+			using Ctor_t = void (*) (void *);
+
+			Ctor_t				ctor		= null;
 			Bytes<uint16_t>		align;
 			Bytes<uint16_t>		size;
-			bool				created			= false;
+			bool				created		= false;
+			
+			DEBUG_ONLY(
+				using DbgView_t	= UniquePtr<IComponentDbgView> (*) (void *, size_t);
+				DbgView_t		dbgView		= null;
+			)
 
 			ND_ bool	IsTag ()	const	{ return size == 0; }
 			ND_ bool	HasData ()	const	{ return size > 0; }
 		};
+		
 
 	private:
 		using ComponentMap_t		=  UniquePtr< StaticArray< ComponentInfo, ECS_Config::MaxComponents >>;
@@ -111,6 +124,8 @@ namespace AE::ECS
 		// entity
 			template <typename ...Components>
 			EntityID	CreateEntity ();
+			template <typename ...Components>
+			EntityID	CreateEntity (Components&& ...comps);
 		ND_ EntityID	CreateEntity ();
 			bool		DestroyEntity (EntityID entId);
 			void		DestroyAllEntities ();
@@ -127,21 +142,34 @@ namespace AE::ECS
 		ND_ Ptr<ComponentInfo const>  GetComponentInfo (ComponentID compId) const;
 
 			template <typename T>
-			T&  AssignComponent (EntityID entId);
+			EnableIf< not IsEmpty<T>, T& >  AssignComponent (EntityID entId);
 		
+			template <typename T>
+			EnableIf< IsEmpty<T>, void >  AssignComponent (EntityID entId);
+
 			template <typename T>
 			bool  RemoveComponent (EntityID entId);
 			bool  RemoveComponent (EntityID entId, ComponentID compId);
 
 			template <typename T>
 		ND_ Ptr<T>  GetComponent (EntityID entId);
+		
+			template <typename T>
+		ND_ Ptr<std::add_const_t<T>>  GetComponent (EntityID entId) const;
 
 			template <typename ...Types>
 		ND_ Tuple<Ptr<Types>...>  GetComponenets (EntityID entId);
 		
 			template <typename ...Types>
+		ND_ Tuple<Ptr<std::add_const_t<Types>>...>  GetComponenets (EntityID entId) const;
+
+			template <typename ...Types>
 			void  RemoveComponents (QueryID query);
 			void  RemoveComponents (QueryID query, const ArchetypeDesc &removeComps);
+
+		DEBUG_ONLY(
+		 ND_ CompDbgView_t  EntityDbgView (EntityID entId) const;
+		)
 
 
 		// single component
@@ -215,6 +243,13 @@ namespace AE::ECS
 
 			template <typename T>
 		ND_ decltype(auto)  _GetSingleComponent ();
+
+		
+			template <typename Fn>
+			void  _Execute_v1 (QueryID query, Fn &&fn);
+
+			template <typename Fn, typename ...Args>
+			void  _Execute_v2 (QueryID query, Fn &&fn, const TypeList<Args...>*);
 	};
 	
 
@@ -229,23 +264,97 @@ namespace AE::ECS
 	{
 		EXLOCK( _drCheck );
 
-		EntityID		entId = CreateEntity();
+		EntityID		ent_id = CreateEntity();
 		ArchetypeDesc	desc;
 		( desc.Add<Components>(), ... );
 		
 		ArchetypeStorage*	storage = null;
 		Index_t				index;
 		
-		_AddEntity( Archetype{desc}, entId, OUT storage, OUT index );
+		_AddEntity( Archetype{desc}, ent_id, OUT storage, OUT index );
 		ASSERT( storage );
 
-		for (auto& comp_id : storage->GetComponentIDs()) {
-			_messages.Add<MsgTag_AddedComponent>( entId, comp_id );
-		}
+		#if AE_ECS_ENABLE_DEFAULT_MESSAGES
+			for (auto& comp_id : storage->GetComponentIDs())
+			{
+				_messages.Add<MsgTag_AddedComponent>( ent_id, comp_id );
+			}
+		#endif
 
-		return entId;
+		return ent_id;
 	}
 	
+/*
+=================================================
+	CreateEntity
+=================================================
+*/
+	namespace _reg_detail_
+	{
+		template <typename T>
+		void CopyComponent (ArchetypeStorage* storage, ArchetypeStorage::Index_t index, T&& comp)
+		{
+			if constexpr( not IsEmpty<T> )
+			{
+				auto*	ptr = storage->GetComponent<T>( index );
+				ASSERT( ptr );
+				*ptr = std::forward<T>( comp );
+			}
+		}
+	}	// _reg_detail_
+
+	template <typename ...Components>
+	inline EntityID  Registry::CreateEntity (Components&& ...comps)
+	{
+		EXLOCK( _drCheck );
+		
+		EntityID		ent_id = CreateEntity();
+		ArchetypeDesc	desc;
+		( desc.Add<std::remove_cv_t<Components>>(), ... );
+		
+		ArchetypeStorage*	storage = null;
+		Index_t				index;
+		
+		_AddEntity( Archetype{desc}, ent_id, OUT storage, OUT index );
+		ASSERT( storage );
+		
+		(_reg_detail_::CopyComponent( storage, index, std::forward<Components>(comps) ), ...);
+
+		#if AE_ECS_ENABLE_DEFAULT_MESSAGES
+			for (auto& comp_id : storage->GetComponentIDs())
+			{
+				_messages.Add<MsgTag_AddedComponent>( ent_id, comp_id );
+			}
+		#endif
+
+		return ent_id;
+	}
+
+/*
+=================================================
+	ComponentDbgView
+=================================================
+*/
+DEBUG_ONLY(
+	namespace _reg_detail_
+	{
+		template <typename T>
+		class ComponentDbgView final : public Registry::IComponentDbgView
+		{
+		private:
+			ArrayView< T >		_comps;
+			std::type_info		_type;
+
+		public:
+			ComponentDbgView (T const* ptr, size_t count) : _comps{ptr, count}, _type{typeid(T)} {}
+
+			UniquePtr<IComponentDbgView>  ElementView (size_t index) const override {
+				return MakeUnique<ComponentDbgView<T>>( _comps.section( index, 1 ).data(), 1 );
+			}
+		};
+
+	}	// _reg_detail_
+)
 /*
 =================================================
 	RegisterComponent
@@ -262,10 +371,16 @@ namespace AE::ECS
 		auto&	comp = _componentInfo->operator[]( Info::id.value );
 		if ( not comp.created )
 		{
-			comp.size	= Info::size;
-			comp.align	= Info::align;
-			comp.ctor	= &Info::Ctor;
-			comp.created= true;
+			comp.size		= Info::size;
+			comp.align		= Info::align;
+			comp.ctor		= &Info::Ctor;
+			comp.created	= true;
+
+			DEBUG_ONLY(
+			  comp.dbgView	= [] (void *ptr, size_t count) -> UniquePtr<IComponentDbgView> {
+									return MakeUnique< _reg_detail_::ComponentDbgView<T> >( Cast<T>(ptr), count );
+								};
+			)
 		}
 	}
 	
@@ -298,7 +413,7 @@ namespace AE::ECS
 =================================================
 */
 	template <typename T>
-	inline T&  Registry::AssignComponent (EntityID entId)
+	inline EnableIf< not IsEmpty<T>, T& >  Registry::AssignComponent (EntityID entId)
 	{
 		EXLOCK( _drCheck );
 
@@ -310,6 +425,8 @@ namespace AE::ECS
 
 		if ( src_storage )
 		{
+			ASSERT( not src_storage->IsLocked() );
+
 			if ( auto* comps = src_storage->GetComponents<T>(); comps )
 			{
 				// already exists
@@ -317,20 +434,68 @@ namespace AE::ECS
 			}
 			else
 			{
-				desc = src_storage->GetArchetype().Bits();
+				desc = src_storage->GetArchetype().Desc();
 			}
 		}
 
 		desc.Add<T>();
-		_messages.Add<MsgTag_AddedComponent>( entId, ComponentTypeInfo<T>::id );
-		
+
+		#if AE_ECS_ENABLE_DEFAULT_MESSAGES
+			_messages.Add<MsgTag_AddedComponent>( entId, ComponentTypeInfo<T>::id );
+		#endif
+
 		ArchetypeStorage*	dst_storage	= null;
 		Index_t				dst_index;
 		_MoveEntity( Archetype{desc}, entId, src_storage, src_index, OUT dst_storage, OUT dst_index );
 		
-		return *dst_storage->GetComponent<T>( dst_index );
+		T* result = dst_storage->GetComponent<T>( dst_index );
+
+		ASSERT( dst_storage->IsInMemoryRange( result, BytesU{sizeof(T)} ));
+		return *result;
 	}
+	
+/*
+=================================================
+	AssignComponent
+=================================================
+*/
+	template <typename T>
+	inline EnableIf< IsEmpty<T>, void >  Registry::AssignComponent (EntityID entId)
+	{
+		EXLOCK( _drCheck );
+
+		ArchetypeStorage*	src_storage	= null;
+		Index_t				src_index;
+		ArchetypeDesc		desc;
 		
+		_entities.GetArchetype( entId, OUT src_storage, OUT src_index );
+
+		if ( src_storage )
+		{
+			ASSERT( not src_storage->IsLocked() );
+
+			if ( src_storage->HasComponent<T>() )
+			{
+				// already exists
+				return;
+			}
+			else
+			{
+				desc = src_storage->GetArchetype().Desc();
+			}
+		}
+
+		desc.Add<T>();
+
+		#if AE_ECS_ENABLE_DEFAULT_MESSAGES
+			_messages.Add<MsgTag_AddedComponent>( entId, ComponentTypeInfo<T>::id );
+		#endif
+
+		ArchetypeStorage*	dst_storage	= null;
+		Index_t				dst_index;
+		_MoveEntity( Archetype{desc}, entId, src_storage, src_index, OUT dst_storage, OUT dst_index );
+	}
+
 /*
 =================================================
 	RemoveComponent
@@ -385,9 +550,23 @@ namespace AE::ECS
 		
 		_entities.GetArchetype( entId, OUT storage, OUT index );
 
-		return storage ? storage->GetComponent< std::remove_const_t<T> >( index ) : null;
+		if ( storage )
+		{
+			if constexpr( not IsConst<T> )
+			{
+				ASSERT( not storage->IsLocked() );
+			}
+			return storage->GetComponent< std::remove_const_t<T> >( index );
+		}
+		return null;
 	}
 	
+	template <typename T>
+	inline Ptr<std::add_const_t<T>>  Registry::GetComponent (EntityID entId) const
+	{
+		return const_cast<Registry*>(this)->GetComponent< std::add_const_t<T> >( entId );
+	}
+
 /*
 =================================================
 	GetComponenets
@@ -405,11 +584,21 @@ namespace AE::ECS
 		
 		if ( storage )
 		{
+			if constexpr( not TypeList<Types...>::ForEach_And<std::is_const>() )
+			{
+				ASSERT( not storage->IsLocked() );
+			}
 			return Tuple<Ptr<Types>...>{ storage->GetComponent< std::remove_const_t<Types> >( index )... };
 		}
 		return Default;
 	}
 	
+	template <typename ...Types>
+	inline Tuple<Ptr<std::add_const_t<Types>>...>  Registry::GetComponenets (EntityID entId) const
+	{
+		return const_cast<Registry*>(this)->GetComponenets< std::add_const_t<Types>... >( entId );
+	}
+
 /*
 =================================================
 	RemoveComponents
@@ -425,6 +614,24 @@ namespace AE::ECS
 
 		return RemoveComponents( query, desc );
 	}
+	
+/*
+=================================================
+	EntityDbgView
+=================================================
+*/
+DEBUG_ONLY(
+	inline Registry::CompDbgView_t  Registry::EntityDbgView (EntityID entId) const
+	{
+		EXLOCK( _drCheck );
+
+		ArchetypeStorage*	storage	= null;
+		Index_t				index;
+		_entities.GetArchetype( entId, OUT storage, OUT index );
+
+		return storage ? storage->EntityDbgView( index ) : Default;
+	}
+)
 //-----------------------------------------------------------------------------
 	
 /*
@@ -830,8 +1037,25 @@ namespace AE::ECS
 	template <typename Fn>
 	inline void  Registry::Execute (QueryID query, Fn &&fn)
 	{
+		using Args = typename FunctionInfo<Fn>::args;
+		STATIC_ASSERT( Args::Count > 0 );
+
 		EXLOCK( _drCheck );
 
+		if constexpr( IsSpecializationOf< typename Args::template Get<0>, ArrayView >)
+			return _Execute_v1( query, std::forward<Fn>(fn) );
+		else
+			return _Execute_v2( query, std::forward<Fn>(fn), (const Args*)null );
+	}
+	
+/*
+=================================================
+	_Execute_v1
+=================================================
+*/
+	template <typename Fn>
+	inline void  Registry::_Execute_v1 (QueryID query, Fn &&fn)
+	{
 		using Info		= _reg_detail_::SystemFnInfo< Fn >;
 		using Chunk		= typename Info::Chunk;
 		using CompOnly	= typename Info::CompOnly;
@@ -868,8 +1092,133 @@ namespace AE::ECS
 		
 		q_data.locked = false;
 	}
+
+/*
+=================================================
+	_Execute_v2
+=================================================
+*/
+	namespace _reg_detail_
+	{
+		template <typename T>
+		struct MapCompType2;
+		
+		template <typename T>
+		struct MapCompType2< T& > {
+			using type = WriteAccess<T>;
+		};
+		
+		template <typename T>
+		struct MapCompType2< T const& > {
+			using type = ReadAccess<T>;
+		};
+		
+		template <typename T>
+		struct MapCompType2< T* > {
+			using type = OptionalWriteAccess<T>;
+		};
+		
+		template <typename T>
+		struct MapCompType2< T const* > {
+			using type = OptionalReadAccess<T>;
+		};
+
+		template <>
+		struct MapCompType2< EntityID > {
+			using type = ReadAccess<EntityID>;
+		};
+
+		template <typename ...Types>
+		struct MapCompType2< Require<Types...> > {
+			using type = Require<Types...>;
+		};
+		
+		template <typename ...Types>
+		struct MapCompType2< Subtractive<Types...> > {
+			using type = Subtractive<Types...>;
+		};
+		
+		template <typename ...Types>
+		struct MapCompType2< RequireAny<Types...> > {
+			using type = RequireAny<Types...>;
+		};
+
+		template <typename T>
+		using MapCompType = typename MapCompType2<T>::type;
+		
+
+		template <typename T>
+		struct GetStorageElement
+		{
+			template <typename ChunkType>
+			static decltype(auto)  Get (ChunkType &chunk, size_t i) {
+				return chunk.Get< typename MapCompType<T> >()[i];
+			}
+		};
+		
+		template <typename T>
+		struct GetStorageElement< T * >
+		{
+			template <typename ChunkType>
+			static T*  Get (ChunkType &chunk, size_t i)
+			{
+				auto&	arr = chunk.Get< typename MapCompType<T*> >();
+				return arr ? &arr[i] : null;
+			}
+		};
+		
+		template <typename ...Types>
+		struct GetStorageElement< Require<Types...> >
+		{
+			template <typename ChunkType>
+			static Require<Types...>  Get (ChunkType &, size_t) {
+				return {};
+			}
+		};
+		
+		template <typename ...Types>
+		struct GetStorageElement< RequireAny<Types...> >
+		{
+			template <typename ChunkType>
+			static RequireAny<Types...>  Get (ChunkType &, size_t) {
+				return {};
+			}
+		};
+		
+		template <typename ...Types>
+		struct GetStorageElement< Subtractive<Types...> >
+		{
+			template <typename ChunkType>
+			static Subtractive<Types...>  Get (ChunkType &, size_t) {
+				return {};
+			}
+		};
+
+	}	// _reg_detail_
+	
+/*
+=================================================
+	_Execute_v2
+=================================================
+*/
+	template <typename Fn, typename ...Args>
+	inline void  Registry::_Execute_v2 (QueryID query, Fn &&fn, const TypeList<Args...>*)
+	{
+		_Execute_v1( query,
+			[&fn] (ArrayView<Tuple< size_t, _reg_detail_::MapCompType<Args>... >> chunks)
+			{
+				for (auto& chunk : chunks)
+				{
+					for (size_t i = 0, cnt = chunk.Get<0>(); i < cnt; ++i)
+					{
+						fn( _reg_detail_::GetStorageElement<Args>::Get( chunk, i )... );
+					}
+				}
+			});
+	}
 //-----------------------------------------------------------------------------
 	
+#ifdef AE_DEBUG
 /*
 =================================================
 	ArchetypeCompatibility
@@ -907,7 +1256,7 @@ namespace AE::ECS
 		template <typename T>
 		struct ArchetypeCompatibility< OptionalWriteAccess<T> >
 		{
-			static bool Test (const Archetype &arch) {
+			static bool Test (const Archetype &) {
 				return true;
 			}
 		};
@@ -915,7 +1264,7 @@ namespace AE::ECS
 		template <typename T>
 		struct ArchetypeCompatibility< OptionalReadAccess<T> >
 		{
-			static bool Test (const Archetype &arch) {
+			static bool Test (const Archetype &) {
 				return true;
 			}
 		};
@@ -1000,7 +1349,8 @@ namespace AE::ECS
 			return true;
 		}
 	}
-	
+#endif	// AE_DEBUG
+
 /*
 =================================================
 	GetStorageComponent
