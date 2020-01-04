@@ -11,6 +11,7 @@ extern void UnitTest_FixedMap ();
 extern void UnitTest_FixedTupleArray ();
 extern void UnitTest_FileSystem ();
 extern void UnitTest_LinearAllocator ();
+extern void UnitTest_StackAllocator ();
 extern void UnitTest_Math ();
 extern void UnitTest_Math_Vec ();
 extern void UnitTest_Math_Matrix ();
@@ -42,6 +43,7 @@ int main ()
 	UnitTest_FixedTupleArray();
 	UnitTest_FileSystem();
 	UnitTest_LinearAllocator();
+	UnitTest_StackAllocator();
 	
 	UnitTest_Math();
 	UnitTest_Math_Vec();
