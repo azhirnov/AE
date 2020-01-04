@@ -13,7 +13,6 @@ message( STATUS "host system: ${CMAKE_HOST_SYSTEM_NAME} (${CMAKE_HOST_SYSTEM_VER
 
 set( AE_ENABLE_TESTS ON CACHE BOOL "enable tests" )
 set( AE_ENABLE_SIMPLE_COMPILER_OPTIONS OFF CACHE BOOL "use simplified compiler settings if you have problem with it" )
-
 set( AE_ENABLE_VTUNE_API OFF CACHE BOOL "enable helper functions for Intel VTune profiling" )
 
 #----------------------------------------------------------
@@ -22,6 +21,7 @@ set( CMAKE_DEBUG_POSTFIX "" )
 set( CMAKE_RELEASE_POSTFIX "" )
 set( MAIN_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "" FORCE )
 set( MAIN_BINARY_DIR "${CMAKE_BINARY_DIR}/bin" CACHE INTERNAL "" FORCE )
+set( AE_EXTERNAL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external" CACHE INTERNAL "" FORCE )
 
 # this settings breaks native debugger on android
 if (NOT DEFINED ANDROID)

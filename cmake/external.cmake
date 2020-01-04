@@ -20,10 +20,10 @@ else ()
 	message( FATAL_ERROR "unsupported target platform: ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION}" )
 endif ()
 
-set( EXTERNAL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/${AE_EXTERNAL_TARGET}" )
+set( EXTERNAL_PATH "${AE_EXTERNAL_PATH}/${AE_EXTERNAL_TARGET}" )
 set( EXTERNAL_REPOSITORY "https://github.com/azhirnov/AE-External.git" )
 
-file( MAKE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/external" )
+file( MAKE_DIRECTORY "${AE_EXTERNAL_PATH}" )
 
 
 # download
@@ -42,7 +42,7 @@ if (EXISTS "${EXTERNAL_PATH}/CMakeLists.txt")
 else ()
 	execute_process(
 		COMMAND git clone "${EXTERNAL_REPOSITORY}" "external/${AE_EXTERNAL_TARGET}" --branch "${AE_EXTERNAL_TARGET}"
-		WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+		WORKING_DIRECTORY "${AE_EXTERNAL_PATH}/.."
 	)
 endif ()
 
