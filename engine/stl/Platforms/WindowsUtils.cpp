@@ -5,6 +5,7 @@
 #include "stl/Algorithms/ArrayUtils.h"
 
 #ifdef PLATFORM_WINDOWS
+# include "stl/Platforms/WindowsLibrary.h"
 # include <processthreadsapi.h>
 
 namespace AE::STL
@@ -20,7 +21,7 @@ namespace
 	{
 	// variables
 	private:
-		HMODULE		_mod = null;
+		Library		_lib;
 
 	public:
 		decltype(&::GetThreadDescription)	getThreadDescription	= null;
@@ -31,18 +32,13 @@ namespace
 	public:
 		Kernel32Lib ()
 		{
-			_mod = ::LoadLibraryA( "kernel32.dll" );
-			if ( _mod )
-			{
-				getThreadDescription = BitCast<decltype(&::GetThreadDescription)>(::GetProcAddress( _mod, "GetThreadDescription" ));
-				setThreadDescription = BitCast<decltype(&::SetThreadDescription)>(::GetProcAddress( _mod, "SetThreadDescription" ));
-			}
-		}
+			_lib.Load( "kernel32.dll" );
 
-		~Kernel32Lib ()
-		{
-			if ( _mod )
-				::FreeLibrary( _mod );
+			if ( _lib )
+			{
+				_lib.GetProcAddr( "GetThreadDescription", OUT getThreadDescription );
+				_lib.GetProcAddr( "SetThreadDescription", OUT setThreadDescription );
+			}
 		}
 	};
 
@@ -94,7 +90,7 @@ namespace
 */
 	bool SetCurrentThreadName10 (NtStringView name)
 	{
-		auto	kernel = Kernel32dll();
+		auto&	kernel = Kernel32dll();
 
 		if ( not kernel.setThreadDescription )
 			return false;
@@ -106,6 +102,7 @@ namespace
 
 		HRESULT	hr = kernel.setThreadDescription( ::GetCurrentThread(), str );
 		ASSERT( SUCCEEDED(hr) );
+		Unused( hr );
 
 		return true;
 	}
@@ -117,7 +114,7 @@ namespace
 */
 	bool GetCurrentThreadName10 (OUT String &name)
 	{
-		auto	kernel = Kernel32dll();
+		auto&	kernel = Kernel32dll();
 		
 		if ( not kernel.getThreadDescription )
 			return false;
