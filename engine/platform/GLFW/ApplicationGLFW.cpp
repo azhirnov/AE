@@ -3,7 +3,7 @@
 #ifdef AE_ENABLE_GLFW
 
 # include "threading/TaskSystem/TaskScheduler.h"
-# include "platform/App/GLFW/ApplicationGLFW.h"
+# include "platform/GLFW/ApplicationGLFW.h"
 # include "stl/Algorithms/StringUtils.h"
 # include "GLFW/glfw3.h"
 

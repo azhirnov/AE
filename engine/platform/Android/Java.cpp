@@ -1,6 +1,6 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "platform/App/Android/Java.h"
+#include "platform/Android/Java.h"
 
 #ifdef PLATFORM_ANDROID
 

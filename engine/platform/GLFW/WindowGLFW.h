@@ -3,7 +3,7 @@
 #pragma once
 
 #ifdef AE_ENABLE_GLFW
-# include "platform/App/Public/IWindow.h"
+# include "platform/Public/IWindow.h"
 
 typedef struct GLFWwindow GLFWwindow;
 
@@ -39,9 +39,11 @@ namespace AE::App
 	public:
 		~WindowGLFW ();
 		
-		void  Close () override;
+		void					Close () override;
 		
-		uint2					GetSurfaceSize () override;
+		uint2					GetSurfaceSize () const override;
+		EState					GetState () const override			{ return _wndState; }
+
 		InputEventQueue const&	GetInputEventQueue () override;
 		NativeWindow			GetNative () override;
 		

@@ -6,7 +6,7 @@
 #  define GLFW_EXPOSE_NATIVE_WIN32
 # endif
 
-# include "platform/App/GLFW/WindowGLFW.h"
+# include "platform/GLFW/WindowGLFW.h"
 # include "stl/Platforms/WindowsHeader.h"
 
 # include "GLFW/glfw3.h"
@@ -57,7 +57,7 @@ namespace AE::App
 	GetSurfaceSize
 =================================================
 */
-	uint2  WindowGLFW::GetSurfaceSize ()
+	uint2  WindowGLFW::GetSurfaceSize () const
 	{
 		uint2	result;
 

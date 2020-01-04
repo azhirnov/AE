@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "platform/App/Public/Monitor.h"
-#include "platform/App/Public/IWindow.h"
+#include "platform/Public/Monitor.h"
+#include "platform/Public/IWindow.h"
 
 namespace AE::App
 {

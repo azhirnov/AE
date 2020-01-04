@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include "platform/App/Public/Common.h"
+#include "platform/Public/Common.h"
 
 #ifdef PLATFORM_ANDROID
 
-# include "platform/App/Public/IApplication.h"
-# include "platform/App/Android/AndroidWindow.h"
+# include "platform/Public/IApplication.h"
+# include "platform/Android/AndroidWindow.h"
 # include <android/asset_manager_jni.h>
 
 namespace AE::App

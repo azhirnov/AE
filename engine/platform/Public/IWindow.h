@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "platform/App/Public/Monitor.h"
-#include "platform/App/Public/InputEventQueue.h"
+#include "platform/Public/Monitor.h"
+#include "platform/Public/InputEventQueue.h"
 
 namespace AE::App
 {
@@ -84,7 +84,8 @@ namespace AE::App
 	public:
 		virtual void  Close () = 0;
 
-		ND_ virtual uint2	GetSurfaceSize () = 0;
+		ND_ virtual uint2	GetSurfaceSize () const = 0;
+		ND_ virtual EState	GetState () const = 0;
 
 		ND_ virtual InputEventQueue const&	GetInputEventQueue () = 0;	// TODO: return shared pointer ?
 		ND_ virtual NativeWindow			GetNative () = 0;
@@ -94,9 +95,6 @@ namespace AE::App
 		virtual void  SetPosition (const int2 &pos) = 0;
 		virtual void  SetPosition (Monitor::ID monitor, const int2 &pos) = 0;
 		virtual void  SetTitle (NtStringView title) = 0;
-
-		// TODO:
-		//	- input
 	};
 
 

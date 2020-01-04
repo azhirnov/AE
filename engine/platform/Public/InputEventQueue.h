@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "platform/App/Public/KeyEnums.h"
+#include "platform/Public/KeyEnums.h"
 
 namespace AE::App
 {

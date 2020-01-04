@@ -15,6 +15,10 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Android")
 	target_link_libraries( "Platform" PUBLIC "android" )
 endif ()
 
-if (${AE_ENABLE_VULKAN})
-	target_link_libraries( "Platform" PUBLIC "Vulkan-lib" )
+if (${AE_ENABLE_OPENVR})
+	target_link_libraries( "Platform" PUBLIC "OpenVR-lib" )
+endif ()
+
+if (${AE_ENABLE_OPENXR})
+	target_link_libraries( "Platform" PUBLIC "OpenXR-lib" )
 endif ()

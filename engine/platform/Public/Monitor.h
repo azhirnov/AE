@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "platform/App/Public/Common.h"
+#include "platform/Public/Common.h"
 
 namespace AE::App
 {
@@ -50,7 +50,7 @@ namespace AE::App
 			Orient_270_deg		= LandscapeReverse,
 		};
 
-		using Name_t = StaticString< 64 >;
+		using Name_t = FixedString< 64 >;
 
 
 	// variables

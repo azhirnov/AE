@@ -1,7 +1,7 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_GLFW
-# include "platform/App/GLFW/ApplicationGLFW.h"
+# include "platform/GLFW/ApplicationGLFW.h"
 
 using namespace AE::App;
 
@@ -28,12 +28,12 @@ namespace
 
 		void OnEnterForeground (IWindow &) override
 		{
-			events.push_back( 4 );
+			events.push_back( 5 );
 		}
 
 		void OnSurfaceCreated (IWindow &) override
 		{
-			events.push_back( 5 );
+			events.push_back( 4 );
 		}
 
 		void OnEnterBackground (IWindow &) override
@@ -96,8 +96,11 @@ namespace
 			events.push_back( 10 );
 		}
 			
-		void OnUpdate (IApplication &) override
-		{}
+		void OnUpdate (IApplication &app) override
+		{
+			if ( _window and _window->GetState() == IWindow::EState::Destroyed )
+				app.Terminate();
+		}
 	};
 }
 

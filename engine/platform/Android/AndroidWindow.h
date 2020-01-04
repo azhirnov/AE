@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include "platform/App/Public/Common.h"
+#include "platform/Public/Common.h"
 
 #ifdef PLATFORM_ANDROID
 
-# include "platform/App/Public/IWindow.h"
-# include "platform/App/Android/Java.h"
+# include "platform/Public/IWindow.h"
+# include "platform/Android/Java.h"
 # include <android/native_window.h>
 
 namespace AE::App
@@ -53,7 +53,8 @@ namespace AE::App
 
 		void					Close () override;
 
-		uint2					GetSurfaceSize () override;
+		uint2					GetSurfaceSize () const override;
+		EState					GetState () const override			{ return _wndState; }
 
 		InputEventQueue const&	GetInputEventQueue () override;
 		NativeWindow			GetNative () override;

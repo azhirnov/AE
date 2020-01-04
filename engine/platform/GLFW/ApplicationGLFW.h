@@ -3,8 +3,8 @@
 #pragma once
 
 #ifdef AE_ENABLE_GLFW
-# include "platform/App/Public/IApplication.h"
-# include "platform/App/GLFW/WindowGLFW.h"
+# include "platform/Public/IApplication.h"
+# include "platform/GLFW/WindowGLFW.h"
 
 extern int main ();
 

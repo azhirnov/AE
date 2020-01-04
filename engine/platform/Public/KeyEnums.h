@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "platform/App/Public/Common.h"
+#include "platform/Public/Common.h"
 
 namespace AE::App
 {

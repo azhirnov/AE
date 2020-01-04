@@ -1,10 +1,10 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "platform/App/Android/AndroidWindow.h"
+#include "platform/Android/AndroidWindow.h"
 
 #ifdef PLATFORM_ANDROID
 
-# include "platform/App/Android/AndroidApplication.h"
+# include "platform/Android/AndroidApplication.h"
 # include <android/native_window_jni.h>
 # include <android/keycodes.h>
 
@@ -96,7 +96,7 @@ namespace {
 	GetSurfaceSize
 =================================================
 */
-	uint2  AndroidWindow::GetSurfaceSize ()
+	uint2  AndroidWindow::GetSurfaceSize () const
 	{
 		EXLOCK( _drCheck );
 		return _surfSize;
