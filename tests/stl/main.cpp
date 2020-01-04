@@ -3,6 +3,7 @@
 #include "stl/Common.h"
 
 extern void UnitTest_Array ();
+extern void UnitTest_BrotliStream ();
 extern void UnitTest_Color ();
 extern void UnitTest_CT_Counter ();
 extern void UnitTest_FixedArray ();
@@ -30,6 +31,7 @@ int main ()
 #endif
 {
 	UnitTest_Array();
+	UnitTest_BrotliStream();
 	UnitTest_Color();
 	UnitTest_CT_Counter();
 	UnitTest_FixedArray();

@@ -7,6 +7,7 @@ set_property( TARGET "STL" PROPERTY FOLDER "Engine" )
 target_include_directories( "STL" PUBLIC ".." )
 target_link_libraries( "STL" PUBLIC "ProjectTemplate" )
 target_link_libraries( "STL" PUBLIC "GLM-lib" )
+target_link_libraries( "STL" PUBLIC "Brotli-lib" )
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 	target_link_libraries( "STL" PUBLIC "dl;pthread" )
