@@ -12,6 +12,12 @@
 #include <mutex>
 #include <thread>
 
+#ifdef PLATFORM_ANDROID
+#	define DRC_CHECK( ... )	CHECK_FATAL( __VA_ARGS__ )
+#else
+#	define DRC_CHECK( ... )	CHECK_ERR( __VA_ARGS__ )
+#endif
+
 namespace AE::Threading
 {
 
@@ -40,8 +46,8 @@ namespace AE::Threading
 
 			curr	= 0;
 			bool	locked	= _state.compare_exchange_strong( INOUT curr, id, EMemoryOrder::Relaxed );
-			CHECK_ERR( curr == 0 );		// locked by another thread - race condition detected!
-			CHECK_ERR( locked );
+			DRC_CHECK( curr == 0 );		// locked by another thread - race condition detected!
+			DRC_CHECK( locked );
 			return true;
 		}
 
@@ -73,13 +79,13 @@ namespace AE::Threading
 		ND_ bool  LockExclusive ()
 		{
 			bool	locked = _lockWrite.try_lock();
-			CHECK_ERR( locked );	// locked by another thread - race condition detected!
+			DRC_CHECK( locked );	// locked by another thread - race condition detected!
 
 			int		expected = _readCounter.load( EMemoryOrder::Acquire );
-			CHECK_ERR( expected <= 0 );	// has read lock(s) - race condition detected!
+			DRC_CHECK( expected <= 0 );	// has read lock(s) - race condition detected!
 
 			_readCounter.compare_exchange_strong( INOUT expected, expected-1, EMemoryOrder::Relaxed );
-			CHECK_ERR( expected <= 0 );	// has read lock(s) - race condition detected!
+			DRC_CHECK( expected <= 0 );	// has read lock(s) - race condition detected!
 			return true;
 		}
 
@@ -103,7 +109,7 @@ namespace AE::Threading
 					_lockWrite.unlock();
 					return false;	// don't call 'UnlockShared'
 				}
-				CHECK_ERR( expected >= 0 );	// has write lock(s) - race condition detected!
+				DRC_CHECK( expected >= 0 );	// has write lock(s) - race condition detected!
 			}
 			while ( not locked );
 
@@ -117,6 +123,8 @@ namespace AE::Threading
 	};
 
 }	// AE::Threading
+
+#undef DRC_CHECK
 
 namespace std
 {
@@ -250,4 +258,3 @@ namespace AE::Threading
 }	// AE::Threading
 
 #endif	// AE_ENABLE_DATA_RACE_CHECK
-

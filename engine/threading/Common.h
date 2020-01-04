@@ -5,7 +5,8 @@
 #include "stl/Common.h"
 
 #include <atomic>
-#include <mutex>	// for lock_guard
+#include <mutex>
+#include <shared_mutex>
 #include <thread>
 
 
@@ -35,8 +36,9 @@ namespace AE::Threading
 
 	template <typename T>	using Atomic	= std::atomic< T >;
 	
-	using Mutex		= std::mutex;
-	using ThreadID	= std::thread::id;
+	using Mutex			= std::mutex;
+	using ThreadID		= std::thread::id;
+	using SharedMutex	= std::shared_mutex;
 
 
 #	ifdef AE_OPTIMAL_MEMORY_ORDER
