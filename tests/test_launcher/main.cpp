@@ -8,6 +8,8 @@ extern int Test_Scripting ();
 extern int Test_Threading ();
 extern int Test_Networking ();
 extern int Test_Platform (IApplication &app, IWindow &wnd);
+extern int Test_Graphics (IApplication &app, IWindow &wnd);
+extern int Test_Serializing ();
 extern int Test_ECSst ();
 
 
@@ -81,6 +83,12 @@ public:
 		#endif
 		#ifdef AE_TEST_PLATFORM
 		    Test_Platform( _app, wnd );
+		#endif
+		#ifdef AE_TEST_GRAPHICS
+		    Test_Graphics( _app, wnd );
+		#endif
+		#ifdef AE_TEST_SERIALIZING
+			Test_Serializing();
 		#endif
 		#ifdef AE_TEST_ECS_ST
 		    Test_ECSst();

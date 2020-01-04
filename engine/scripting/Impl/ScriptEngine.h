@@ -64,6 +64,7 @@ namespace AE::Scripting
 			String	name;
 			String	script;
 
+			ModuleSource () {}
 			ModuleSource (StringView name, StringView script) : name{name}, script{script} {}
 			ModuleSource (String&& name, String&& script) : name{std::move(name)}, script{std::move(script)} {}
 		};
@@ -117,7 +118,7 @@ namespace AE::Scripting
 		static bool _CheckError (int err, StringView asFunc, StringView func, StringView file, int line);
 
 	private:
-		bool _CreateContext (const String &signature, const ScriptModulePtr &module, AngelScript::asIScriptContext* &ctx);
+		bool _CreateContext (const String &signature, const ScriptModulePtr &module, OUT AngelScript::asIScriptContext* &ctx);
 
 		static void _MessageCallback (const AngelScript::asSMessageInfo *msg, void *param);
 	};

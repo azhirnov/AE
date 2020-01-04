@@ -117,7 +117,7 @@ namespace AE::Scripting
 	_CreateContext
 =================================================
 */
-	bool  ScriptEngine::_CreateContext (const String &signature, const ScriptModulePtr &module, AngelScript::asIScriptContext* &ctx)
+	bool  ScriptEngine::_CreateContext (const String &signature, const ScriptModulePtr &module, OUT AngelScript::asIScriptContext* &ctx)
 	{
 		using namespace AngelScript;
 		

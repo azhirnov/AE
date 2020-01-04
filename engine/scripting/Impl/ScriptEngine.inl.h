@@ -66,10 +66,12 @@ namespace AE::Scripting
 		GlobalFunction<Fn>::GetDescriptor( OUT signature, entry );
 
 		AngelScript::asIScriptContext*	ctx = null;
-		if ( not _CreateContext( signature, module, ctx ) )
+		if ( not _CreateContext( signature, module, OUT ctx ))
 		{
 			if ( ctx )
 				ctx->Release();
+
+			return null;
 		}
 
 		return ScriptFnPtr<Fn>{ new ScriptFn<Fn>{ module, ctx }};
