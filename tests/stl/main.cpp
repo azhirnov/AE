@@ -8,6 +8,7 @@ extern void UnitTest_Color ();
 extern void UnitTest_CT_Counter ();
 extern void UnitTest_FixedArray ();
 extern void UnitTest_FixedMap ();
+extern void UnitTest_FileSystem ();
 extern void UnitTest_LinearAllocator ();
 extern void UnitTest_Math ();
 extern void UnitTest_Math_Matrix ();
@@ -36,6 +37,7 @@ int main ()
 	UnitTest_CT_Counter();
 	UnitTest_FixedArray();
 	UnitTest_FixedMap();
+	UnitTest_FileSystem();
 	UnitTest_LinearAllocator();
 	
 	UnitTest_Math();

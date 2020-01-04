@@ -8,7 +8,6 @@
 
 namespace AE::STL
 {
-
 	//
 	// Read-only Stream
 	//

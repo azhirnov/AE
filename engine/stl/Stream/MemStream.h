@@ -4,7 +4,6 @@
 
 #include "stl/Stream/Stream.h"
 #include <stdio.h>
-#include <filesystem>
 
 namespace AE::STL
 {

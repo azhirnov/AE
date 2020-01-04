@@ -83,3 +83,8 @@ endif()
 if (NOT ${STD_OPTIONAL_SUPPORTED})
 	message( FATAL_ERROR "std::optional support required" )
 endif()
+if (NOT ${STD_FILESYSTEM_SUPPORTED})
+	message( FATAL_ERROR "std::filesystem support required" )
+endif()
+
+target_compile_definitions( "ProjectTemplate" PUBLIC "AE_VERSION=AE::STL::MakeTuple(0,1,1)" )
