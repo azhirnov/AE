@@ -44,6 +44,13 @@ add_subdirectory( "engine/ecs-st" )
 
 #----------------------------------------------------------
 
+# tools
+if (NOT DEFINED ANDROID)
+	include( "engine_tools/res_pack/build.cmake" )
+endif ()
+
+#----------------------------------------------------------
+
 # tests
 if (${AE_ENABLE_TESTS})
 	if (NOT DEFINED ANDROID)

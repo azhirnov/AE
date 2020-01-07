@@ -1,0 +1,8 @@
+
+void main ()
+{
+	MeshPipeline@	ppln = MeshPipeline();
+	ppln.SetName( "mesh_1" );
+	ppln.SetMeshShader( "mesh_1.glsl", Version_Spirv_130, "" );
+	ppln.SetFragmentShader( "fragment_1.glsl", Version_Spirv_130, "" );
+}
