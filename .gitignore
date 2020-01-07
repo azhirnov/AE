@@ -3,3 +3,4 @@
 /build
 /external
 *.cxx
+/tests/asset_packer/sampler_test/_output
