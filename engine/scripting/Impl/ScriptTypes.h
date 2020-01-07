@@ -212,7 +212,9 @@ namespace AE::Scripting
 			void operator = (const SimpleRefCounter &) = delete;
 
 		public:
-			SimpleRefCounter ()		{}
+			SimpleRefCounter ()			{}
+			virtual ~SimpleRefCounter () {}
+
 			void __AddRef ()		{ ASSERT( _counter > 0 );  ++_counter; }
 			void __Release ()		{ ASSERT( _counter > 0 );  if ( (--_counter) == 0 ) { delete this; }}
 			int  __Counter () const	{ return _counter; }
@@ -243,7 +245,8 @@ namespace AE::Scripting
 
 			ND_ bool operator == (const SharedPtr<T> &rhs)	{ return _ptr == rhs._ptr; }
 
-			ND_ T*  operator -> ()			const			{ ASSERT( _ptr ); return _ptr; }
+			ND_ T*  operator -> ()			const			{ ASSERT( _ptr );  return _ptr; }
+			ND_ T&  operator *  ()			const			{ ASSERT( _ptr );  return *_ptr; }
 			ND_ T*  Get ()					const			{ return _ptr; }
 			ND_ explicit operator bool ()	const			{ return _ptr; }
 			ND_ int UseCount ()				const			{ return _ptr ? _ptr->__Counter() : 0; }

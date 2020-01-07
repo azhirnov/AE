@@ -184,7 +184,7 @@ namespace AE::Scripting
 			//if ( code.Find( ')', OUT pos ) )
 			//	code = code.SubString( 0, pos );
 
-			const int	int_code = std::stoi( String{code} );
+			const int	int_code = std::strtol( NtStringView{code}.c_str(), null, 0 );
 
 			str << ", code name: ";
 

@@ -46,6 +46,8 @@ namespace AE::STL
 		// require read lock
 		template <size_t Size, uint UID, bool Optimize, uint Seed>
 		ND_ uint  RecalculateSeed (const NamedID<Size, UID, Optimize, Seed> &);
+
+		ND_ bool  HasCollisions () const;
 		
 	private:
 		ND_ uint  _RecalculateSeed (Info &) const;

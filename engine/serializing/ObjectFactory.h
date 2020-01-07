@@ -188,7 +188,10 @@ namespace AE::Serializing
 		if constexpr( IsBaseOf< ISerializable, T >)
 			return obj.Serialize( *this );
 		else
+		{
+			ASSERT( !"unknown type" );
 			return false;
+		}
 	}
 	
 /*
@@ -205,14 +208,18 @@ namespace AE::Serializing
 		if constexpr( IsBaseOf< ISerializable, T >)
 			return obj.Deserialize( *this );
 		else
+		{
+			ASSERT( !"unknown type" );
 			return false;
+		}
 	}
 	
 	inline bool  Deserializer::operator () (INOUT void *obj) const
 	{
 		if ( factory )
 			return factory->Deserialize( *this, INOUT obj );
-
+		
+		ASSERT( !"unknown type" );
 		return false;
 	}
 

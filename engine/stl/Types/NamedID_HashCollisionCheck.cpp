@@ -57,6 +57,21 @@ namespace AE::STL
 			}
 		}
 	}
+	
+/*
+=================================================
+	HasCollisions
+=================================================
+*/
+	bool  NamedID_HashCollisionCheck::HasCollisions () const
+	{
+		for (auto& item : _idMap)
+		{
+			if ( item.second.hasCollisions )
+				return true;
+		}
+		return false;
+	}
 
 
 }	// AE::STL

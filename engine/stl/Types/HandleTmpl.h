@@ -38,11 +38,7 @@ namespace AE::STL
 		constexpr HandleTmpl (const Self &other) : _value{other._value} {}
 
 		constexpr HandleTmpl (Value_t index, Value_t gen) :
-			_value{Value_t(index) | (Value_t(gen) << _GenOffset)}
-		{
-			ASSERT( index == Index() );
-			ASSERT( gen == Generation() );
-		}
+			_value{Value_t(index) | (Value_t(gen) << _GenOffset)} {}
 
 		ND_ constexpr bool			IsValid ()						const	{ return _value != UMax; }
 		ND_ constexpr Index_t		Index ()						const	{ return _value & _IndexMask; }

@@ -209,7 +209,19 @@ namespace AE::Math
 		}else
 			return Abs(lhs - rhs) <= err;
 	}
-	
+
+/*
+=================================================
+	Equals
+=================================================
+*/
+	template <typename T>
+	ND_ forceinline bool  Equals (const Optional<T> &lhs, const Optional<T> &rhs)
+	{
+		return	lhs.has_value() == rhs.has_value()	and
+				(lhs.has_value() ? *lhs == *rhs : false);
+	}
+
 /*
 =================================================
 	Floor / Ceil / Trunc

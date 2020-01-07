@@ -25,5 +25,8 @@ namespace AE::Serializing
 	using SharedMutex = Threading::SharedMutex;
 	
 	using SerializedID = NamedID< 32, 0x400, AE_OPTIMIZE_IDS, UMax >;
+	
+	struct Serializer;
+	struct Deserializer;
 
 }	// AE::Serializing

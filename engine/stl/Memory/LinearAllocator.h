@@ -10,11 +10,6 @@
 
 namespace AE::STL
 {
-	template <typename AllocatorType, uint MaxBlocks>					struct LinearAllocator;
-	template <typename T, typename AllocatorType, typename MaxBlocks>	struct StdLinearAllocator;
-	template <typename AllocatorType, uint MaxBlocks>					struct UntypedLinearAllocator;
-
-
 
 	//
 	// Linear Allocator

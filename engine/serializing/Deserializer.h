@@ -57,6 +57,9 @@ namespace AE::Serializing
 		
 		template <typename K, typename V, size_t S>
 		bool _Deserialize (INOUT FixedMap<K,V,S> &) const;
+
+		template <typename T>
+		bool _Deserialize (INOUT Optional<T> &) const;
 	};
 
 	
@@ -207,7 +210,7 @@ namespace AE::Serializing
 	inline bool  Deserializer::_Deserialize (INOUT TFixedString<T,S> &str) const
 	{
 		uint	len = 0;
-		if ( stream->Read( OUT len ))
+		if ( not stream->Read( OUT len ))
 			return false;
 
 		str.resize( len );
@@ -218,7 +221,7 @@ namespace AE::Serializing
 	template <typename T, uint I>
 	inline bool  Deserializer::_Deserialize (INOUT Vec<T,I> &vec) const
 	{
-		return stream->Read( OUT vec.data(), SizeOf<T>*I );
+		return stream->Read( OUT &vec.x, SizeOf<T>*I );
 	}
 	
 
@@ -314,6 +317,21 @@ namespace AE::Serializing
 			V	value;
 			res &= (_Deserialize( OUT key ) and _Deserialize( OUT value ));
 			res &= map.insert_or_assign( std::move(key), std::move(value) ).second;
+		}
+		return res;
+	}
+	
+
+	template <typename T>
+	inline bool  Deserializer::_Deserialize (INOUT Optional<T> &value) const
+	{
+		bool	has_value;
+		bool	res			= stream->Read( OUT has_value );
+
+		if ( res & has_value )
+		{
+			value = T();
+			return _Deserialize( INOUT *value );
 		}
 		return res;
 	}

@@ -92,19 +92,22 @@ namespace AE::STL
 	
 
 	template <typename T,
-			  typename Hasher = std::hash<T>>
-	using HashSet		= std::unordered_set< T, Hasher >;
+			  typename Hasher = std::hash<T>,
+			  typename KeyEq = std::equal_to<T>>
+	using HashSet		= std::unordered_set< T, Hasher, KeyEq >;
 
 
 	template <typename Key,
 			  typename Value,
-			  typename Hasher = std::hash<Key>>
-	using HashMap		= std::unordered_map< Key, Value, Hasher >;
+			  typename Hasher = std::hash<Key>,
+			  typename KeyEq = std::equal_to<Key>>
+	using HashMap		= std::unordered_map< Key, Value, Hasher, KeyEq >;
 	
 	template <typename Key,
 			  typename Value,
-			  typename Hasher = std::hash<Key>>
-	using HashMultiMap	= std::unordered_multimap< Key, Value, Hasher >;
+			  typename Hasher = std::hash<Key>,
+			  typename KeyEq = std::equal_to<Key>>
+	using HashMultiMap	= std::unordered_multimap< Key, Value, Hasher, KeyEq >;
 
 	
 	

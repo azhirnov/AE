@@ -64,6 +64,9 @@ namespace AE::Serializing
 
 		template <typename ...Types>
 		bool _Serialize (const Union<Types...> &);
+
+		template <typename T>
+		bool _Serialize (const Optional<T> &);
 		
 		template <typename T, typename ...Args, typename ...Types>
 		bool _RecursiveSrializeUnion (const Union<Types...> &);
@@ -110,7 +113,7 @@ namespace AE::Serializing
 	template <typename F, typename S>
 	inline bool  Serializer::_Serialize (const Pair<F,S> &value)
 	{
-		return _serialize( value.first ) and _Serialize( value.second );
+		return _Serialize( value.first ) and _Serialize( value.second );
 	}
 	
 	
@@ -227,6 +230,18 @@ namespace AE::Serializing
 		{
 			res &= (_Serialize( map[i].first ) and _Serialize( map[i].second ));
 		}
+		return res;
+	}
+	
+
+	template <typename T>
+	inline bool  Serializer::_Serialize (const Optional<T> &value)
+	{
+		bool	res = stream->Write( value.has_value() );
+
+		if ( value )
+			return res & _Serialize( *value );
+
 		return res;
 	}
 

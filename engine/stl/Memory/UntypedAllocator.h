@@ -3,13 +3,10 @@
 #pragma once
 
 #include "stl/Memory/MemUtils.h"
+#include "stl/Memory/AllocatorFwdDecl.h"
 
 namespace AE::STL
 {
-
-	template <typename T>
-	struct StdAllocator;
-
 
 	//
 	// Untyped Default Allocator

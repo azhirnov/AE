@@ -127,6 +127,15 @@ namespace AE::STL
 
 namespace std
 {
+	template <>
+	struct hash< AE::STL::HashVal >
+	{
+		ND_ size_t  operator () (const AE::STL::HashVal &value) const
+		{
+			return size_t(value);
+		}
+	};
+
 	template <typename First, typename Second>
 	struct hash< std::pair<First, Second> >
 	{

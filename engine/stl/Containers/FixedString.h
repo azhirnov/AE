@@ -96,7 +96,7 @@ namespace AE::STL
 
 			if ( newSize > _length )
 			{
-				memset( &_array[_length], 0, _length - newSize );
+				std::memset( &_array[_length], 0, newSize - _length );
 			}
 
 			_length = newSize;

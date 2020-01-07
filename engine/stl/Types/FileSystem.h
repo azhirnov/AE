@@ -117,7 +117,7 @@ namespace AE::STL
 	inline bool  FileSystem::IsDirectory (const Path &p)
 	{
 		std::error_code	ec;
-		return std::filesystem::exists( p, OUT ec );
+		return std::filesystem::is_directory( p, OUT ec );
 	}
 
 	inline Path  FileSystem::CurrentPath ()
