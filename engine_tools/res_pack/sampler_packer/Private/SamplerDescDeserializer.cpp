@@ -12,10 +12,8 @@ namespace AE::SamplerPacker
 	
 	SamplerDesc::SamplerDesc (const SamplerDesc &) = default;
 
-	void SamplerDesc::SetName (const String &name)
-	{
-		_name = SamplerName{name};
-	}
+	void SamplerDesc::SetName (const String &)
+	{}
 	
 	bool SamplerDesc::Serialize (Serializing::Serializer &) const
 	{

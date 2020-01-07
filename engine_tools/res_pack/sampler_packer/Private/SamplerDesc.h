@@ -84,7 +84,7 @@ namespace AE::SamplerPacker
 
 	// variables
 	public:
-		SamplerName				_name;
+		String					_name;
 		EFilter					magFilter				= EFilter::Nearest;
 		EFilter					minFilter				= EFilter::Nearest;
 		EMipmapFilter			mipmapMode				= EMipmapFilter::Nearest;

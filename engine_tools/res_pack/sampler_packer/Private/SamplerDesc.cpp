@@ -60,9 +60,9 @@ namespace AE::SamplerPacker
 */
 	void SamplerDesc::SetName (const String &name)
 	{
-		_name = SamplerName{name};
+		_name = name;
 		
-		SamplerStorage::Instance()->_hashCollisionCheck.Add( _name );
+		SamplerStorage::Instance()->_hashCollisionCheck.Add( SamplerName{_name} );
 	}
 
 /*
@@ -188,49 +188,49 @@ namespace AE::SamplerPacker
 		{
 			if ( minFilter != magFilter )
 			{
-				AE_LOGI( "Sampler '"s <<  _name.GetName() << "': min & mag filter for unnormalized coordinates must equal" );
+				AE_LOGI( "Sampler '"s <<  _name << "': min & mag filter for unnormalized coordinates must equal" );
 				magFilter	= minFilter;
 				result		= false;
 			}
 
 			if ( mipmapMode != EMipmapFilter::Nearest )
 			{
-				AE_LOGI( "Sampler '"s <<  _name.GetName() << "': mipmap filter for unnormalized coordinates must be 'nearest'" );
+				AE_LOGI( "Sampler '"s <<  _name << "': mipmap filter for unnormalized coordinates must be 'nearest'" );
 				mipmapMode	= EMipmapFilter::Nearest;
 				result		= false;
 			}
 
 			if ( minLod != 0.0f or maxLod != 0.0f )
 			{
-				//AE_LOGI( "Sampler '"s <<  _name.GetName() << "': min & max LOD for unnormalized coordinates must be zero" );
+				//AE_LOGI( "Sampler '"s <<  _name << "': min & max LOD for unnormalized coordinates must be zero" );
 				minLod	= maxLod = 0.0f;
 				result	= false;
 			}
 
 			if ( addressMode.x != EAddressMode::ClampToEdge and addressMode.x != EAddressMode::ClampToBorder )
 			{
-				AE_LOGI( "Sampler '"s <<  _name.GetName() << "': U-address mode for unnormalized coordinates must be 'clamp'" );
+				AE_LOGI( "Sampler '"s <<  _name << "': U-address mode for unnormalized coordinates must be 'clamp'" );
 				addressMode.x	= EAddressMode::ClampToEdge;
 				result			= false;
 			}
 
 			if ( addressMode.y != EAddressMode::ClampToEdge and addressMode.y != EAddressMode::ClampToBorder )
 			{
-				AE_LOGI( "Sampler '"s <<  _name.GetName() << "': V-address mode for unnormalized coordinates must be 'clamp'" );
+				AE_LOGI( "Sampler '"s <<  _name << "': V-address mode for unnormalized coordinates must be 'clamp'" );
 				addressMode.y	= EAddressMode::ClampToEdge;
 				result			= false;
 			}
 
 			if ( maxAnisotropy.has_value() )
 			{
-				AE_LOGI( "Sampler '"s <<  _name.GetName() << "': anisotropy filter for unnormalized coordinates is not supported" );
+				AE_LOGI( "Sampler '"s <<  _name << "': anisotropy filter for unnormalized coordinates is not supported" );
 				maxAnisotropy	= {};
 				result			= false;
 			}
 
 			if ( compareOp.has_value() )
 			{
-				AE_LOGI( "Sampler '"s <<  _name.GetName() << "': compare mode for unnormalized coordinates is not supported" );
+				AE_LOGI( "Sampler '"s <<  _name << "': compare mode for unnormalized coordinates is not supported" );
 				compareOp	= {};
 				result		= false;
 			}
@@ -238,14 +238,14 @@ namespace AE::SamplerPacker
 
 		if ( maxLod < minLod )
 		{
-			AE_LOGI( "Sampler '"s <<  _name.GetName() << "': min LOD must be less than or equal to max LOD" );
+			AE_LOGI( "Sampler '"s <<  _name << "': min LOD must be less than or equal to max LOD" );
 			maxLod	= minLod;
 			result	= false;
 		}
 		
 		//if ( (minFilter == EFilter::Cubic or magFilter == EFilter::Cubic) and maxAnisotropy.has_value() )
 		//{
-		//	AE_LOGI( "Sampler '"s <<  _name.GetName() << "': anisotropy filter is not supported for cubic filter" );
+		//	AE_LOGI( "Sampler '"s <<  _name << "': anisotropy filter is not supported for cubic filter" );
 		//	maxAnisotropy	= {};
 		//	result			= false;
 		//}
@@ -318,7 +318,7 @@ namespace AE::SamplerPacker
 			
 				if ( SamplerDescEqual( lhs, desc ))
 				{
-					CHECK( sampler_names.insert_or_assign( desc._name, iter->second ).second );
+					CHECK( sampler_names.insert_or_assign( SamplerName{desc._name}, iter->second ).second );
 					return;
 				}
 			}
@@ -328,7 +328,7 @@ namespace AE::SamplerPacker
 			unique_samplers.insert({ hash, uid });
 			sampler_arr.push_back( desc );
 		
-			CHECK( sampler_names.insert_or_assign( desc._name, uid ).second );
+			CHECK( sampler_names.insert_or_assign( SamplerName{desc._name}, uid ).second );
 		};
 
 		for (auto& samp : _samplerRefs)
