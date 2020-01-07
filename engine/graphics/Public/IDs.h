@@ -12,8 +12,11 @@ namespace AE::Graphics
 	using MemoryID				= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 
 	using GraphicsPipelineID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using MeshPipelineID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 	using ComputePipelineID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 	using RayTracingPipelineID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using DescriptorSetID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using PipelinePackID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 
 
 	using UniformName			= NamedID< 32, __COUNTER__, AE_OPTIMIZE_IDS >;

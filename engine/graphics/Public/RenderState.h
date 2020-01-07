@@ -55,7 +55,8 @@ namespace AE::Graphics
 				colorMask{ true },	blend{ false }
 			{}
 
-			ND_ bool  operator == (const ColorBuffer &rhs) const;
+			ND_ bool	operator == (const ColorBuffer &rhs) const;
+			ND_ HashVal	CalcHash () const;
 		};
 
 
@@ -65,7 +66,7 @@ namespace AE::Graphics
 		struct ColorBuffersState
 		{
 		// types
-			using ColorBuffers_t	= StaticArray< ColorBuffer, Graphics_Config::MaxColorBuffers >;
+			using ColorBuffers_t	= StaticArray< ColorBuffer, GraphicsConfig::MaxColorBuffers >;
 
 		// variables
 			ColorBuffers_t		buffers;
@@ -77,7 +78,8 @@ namespace AE::Graphics
 				logicOp{ ELogicOp::None },	blendColor{ 1.0f }
 			{}
 
-			ND_ bool  operator == (const ColorBuffersState &rhs) const;
+			ND_ bool	operator == (const ColorBuffersState &rhs) const;
+			ND_ HashVal	CalcHash () const;
 		};
 		
 
@@ -103,7 +105,8 @@ namespace AE::Graphics
 				compareMask{ UMax }
 			{}
 
-			ND_ bool  operator == (const StencilFaceState &rhs) const;
+			ND_ bool	operator == (const StencilFaceState &rhs) const;
+			ND_ HashVal	CalcHash () const;
 		};
 
 
@@ -122,7 +125,8 @@ namespace AE::Graphics
 				front{}, back{}, enabled{ false }
 			{}
 
-			ND_ bool  operator == (const StencilBufferState &rhs) const;
+			ND_ bool	operator == (const StencilBufferState &rhs) const;
+			ND_ HashVal	CalcHash () const;
 		};
 
 
@@ -145,7 +149,8 @@ namespace AE::Graphics
 				write{ false },						test{ false }
 			{}
 
-			ND_ bool  operator == (const DepthBufferState &rhs) const;
+			ND_ bool	operator == (const DepthBufferState &rhs) const;
+			ND_ HashVal	CalcHash () const;
 		};
 
 
@@ -163,7 +168,8 @@ namespace AE::Graphics
 				topology{ EPrimitive::Unknown },	primitiveRestart{ false }
 			{}
 
-			ND_ bool  operator == (const InputAssemblyState &rhs) const;
+			ND_ bool	operator == (const InputAssemblyState &rhs) const;
+			ND_ HashVal	CalcHash () const;
 		};
 
 
@@ -197,7 +203,8 @@ namespace AE::Graphics
 				frontFaceCCW{ true },				cullMode{ ECullMode::None }
 			{}
 
-			ND_ bool  operator == (const RasterizationState &rhs) const;
+			ND_ bool	operator == (const RasterizationState &rhs) const;
+			ND_ HashVal	CalcHash () const;
 		};
 
 
@@ -226,7 +233,8 @@ namespace AE::Graphics
 				alphaToCoverage{ false },	alphaToOne{ false }
 			{}
 
-			ND_ bool  operator == (const MultisampleState &rhs) const;
+			ND_ bool	operator == (const MultisampleState &rhs) const;
+			ND_ HashVal	CalcHash () const;
 		};
 
 
@@ -244,8 +252,8 @@ namespace AE::Graphics
 	public:
 		RenderState () {}
 
-		ND_ bool  operator == (const RenderState &rhs) const;
-		ND_ bool  operator != (const RenderState &rhs) const	{ return not (*this == rhs); }
+		ND_ bool	operator == (const RenderState &rhs) const;
+		ND_ HashVal  CalcHash () const;
 	};
 	
 	

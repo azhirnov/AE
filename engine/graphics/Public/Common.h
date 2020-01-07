@@ -21,7 +21,7 @@ namespace AE::Graphics
 	using namespace AE::Math;
 
 
-	struct Graphics_Config
+	struct GraphicsConfig
 	{
 		#ifdef PLATFORM_ANDROID
 			// buffer

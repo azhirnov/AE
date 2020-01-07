@@ -31,15 +31,19 @@ namespace AE::Graphics
 	using DebugName_t		= FixedString<64>;
 
 	
-	using ImageID				= HandleTmpl< uint16_t, uint16_t, 100 << 4 >;
-	using BufferID				= HandleTmpl< uint16_t, uint16_t, 101 << 4 >;
-	using DescriptorSetLayoutID	= HandleTmpl< uint16_t, uint16_t, 102 << 4 >;
+	using VImageID						= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using VBufferID						= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using VSamplerID					= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using VSamplerPackID				= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 
+	using VDescriptorSetLayoutID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using VPipelineLayoutID				= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 
-	struct VConfig
-	{
-		static constexpr uint	MaxElementsInUnsizedDesc = 8;
-	};
+	using VGraphicsPipelineTemplateID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using VMeshPipelineTemplateID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using VComputePipelineTemplateID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	//using VRayTracingPipelineTemplateID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+
 
 }	// AE::Graphics
 

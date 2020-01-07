@@ -62,8 +62,8 @@ namespace AE::Graphics
 		static constexpr uint	VertexIndex_Unknown	= UMax;
 
 		
-		using Vertices_t	= FixedMap< VertexName, VertexInput, Graphics_Config::MaxVertexAttribs >;
-		using Bindings_t	= FixedMap< VertexBufferName, BufferBinding, Graphics_Config::MaxVertexBuffers >;
+		using Vertices_t	= FixedMap< VertexName, VertexInput, GraphicsConfig::MaxVertexAttribs >;
+		using Bindings_t	= FixedMap< VertexBufferName, BufferBinding, GraphicsConfig::MaxVertexBuffers >;
 		
 		friend struct std::hash < VertexInputState::VertexInput >;
 		friend struct std::hash < VertexInputState::BufferBinding >;
@@ -96,6 +96,7 @@ namespace AE::Graphics
 		bool  ApplyAttribs (ArrayView<VertexAttrib> attribs);
 		
 		ND_ bool	operator == (const VertexInputState &rhs) const;
+		ND_ HashVal	CalcHash () const;
 
 		ND_ Vertices_t const&	Vertices ()			const	{ return _vertices; }
 		ND_ Bindings_t const&	BufferBindings ()	const	{ return _bindings; }
@@ -133,24 +134,3 @@ namespace AE::Graphics
 	}
 
 }	// AE::Graphics
-
-
-namespace std
-{
-	
-	/*template <>
-	struct hash < AE::Graphics::VertexInputState::VertexInput > {
-		ND_ size_t  operator () (const AE::Graphics::VertexInputState::VertexInput &) const;
-	};
-	
-	template <>
-	struct hash < AE::Graphics::VertexInputState::BufferBinding > {
-		ND_ size_t  operator () (const AE::Graphics::VertexInputState::BufferBinding &) const;
-	};
-	
-	template <>
-	struct hash < AE::Graphics::VertexInputState > {
-		ND_ size_t  operator () (const AE::Graphics::VertexInputState &) const;
-	};*/
-
-}	// std
