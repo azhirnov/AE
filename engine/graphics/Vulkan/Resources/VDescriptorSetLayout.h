@@ -59,7 +59,7 @@ namespace AE::Graphics
 
 		bool Create (const VDevice &dev, StringView dbgName);
 		bool Create (const VDevice &dev, const Uniforms_t &uniforms, ArrayView<VkSampler> samplerStorage, StringView dbgName);
-		void Destroy (const VDevice &dev);
+		void Destroy (const VResourceManager &);
 
 		bool AllocDescriptorSet (VResourceManager &, OUT DescriptorSet &) const;
 		void ReleaseDescriptorSet (VResourceManager &, const DescriptorSet &) const;

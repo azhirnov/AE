@@ -19,6 +19,7 @@ namespace AE::PipelineCompiler
 	
 	enum class DescrSetUID		 : uint { Unknown = ~0u };
 	enum class PipelineLayoutUID : uint { Unknown = ~0u };
+	enum class RenderPassUID	 : uint { Unknown = ~0u };
 
 
 	enum class ShaderUID : uint
@@ -301,26 +302,19 @@ namespace AE::PipelineCompiler
 	{
 	// types
 	public:
-		struct FragmentOutput
-		{
-			uint			index	= UMax;
-			EFragOutput		type	= Default;
-		};
-
 		using Shaders_t			= FixedMap< EShader, ShaderUID, 8 >;	// TODO: shader alternatives
 		using TopologyBits_t	= BitSet< uint(EPrimitive::_Count) >;
 		using VertexAttrib		= VertexInputState::VertexAttrib;
 		using VertexAttribs_t	= FixedArray< VertexAttrib, 16 >;
-		using FragmentOutputs_t	= FixedMap< RenderTargetName, FragmentOutput, 8 >;
 		using SpecValues_t		= FixedMap< SpecializationName, /*bool/int/uint/float*/uint, 8 >;
 
 
 	// variables
 	public:
 		PipelineLayoutUID		layout					= Default;
+		RenderPassUID			renderPass				= Default;
 		Shaders_t				shaders;
 		TopologyBits_t			supportedTopology;
-		FragmentOutputs_t		fragmentOutputs;
 		VertexAttribs_t			vertexAttribs;
 		SpecValues_t			specialization;
 		uint					patchControlPoints		= 0;
@@ -380,8 +374,6 @@ namespace AE::PipelineCompiler
 	// types
 	public:
 		using Shaders_t			= FixedMap< EShader, ShaderUID, 4 >;	// TODO: shader alternatives
-		using FragmentOutput	= GraphicsPipelineDesc::FragmentOutput;
-		using FragmentOutputs_t	= GraphicsPipelineDesc::FragmentOutputs_t;
 		using SpecValues_t		= GraphicsPipelineDesc::SpecValues_t;
 
 
@@ -390,9 +382,9 @@ namespace AE::PipelineCompiler
 		static constexpr uint	UNDEFINED_SPECIALIZATION = UMax;
 		
 		PipelineLayoutUID		layout					= Default;
+		RenderPassUID			renderPass				= Default;
 		Shaders_t				shaders;
 		EPrimitive				topology				= Default;
-		FragmentOutputs_t		fragmentOutputs;
 		uint					maxVertices				= 0;
 		uint					maxIndices				= 0;
 		uint3					defaultTaskGroupSize;
@@ -443,6 +435,40 @@ namespace AE::PipelineCompiler
 
 
 	//
+	// Render Pass Info
+	//
+	
+	class RenderPassInfo final : public Serializing::ISerializable
+	{
+	// types
+	public:
+		struct FragmentOutput
+		{
+			uint			index	= UMax;
+			EFragOutput		type	= Default;
+
+			bool operator == (const FragmentOutput &rhs) const	{ return (index == rhs.index) & (type == rhs.type); }
+		};
+		using FragmentOutputs_t	= FixedMap< RenderTargetName, FragmentOutput, 8 >;
+
+
+	// variables
+	public:
+		FragmentOutputs_t	fragmentOutputs;
+
+
+	// methods
+	public:
+		RenderPassInfo () {}
+
+		// ISerializable
+		bool Serialize (Serializing::Serializer &) const override;
+		bool Deserialize (Serializing::Deserializer const&) override;
+	};
+
+
+
+	//
 	// Pipeline Storage
 	//
 
@@ -470,6 +496,9 @@ namespace AE::PipelineCompiler
 		using SpirvShaders_t			= Array< SpirvShaderCode >;
 		using SpirvShaderMap_t			= HashMultiMap< Hash_t, ShaderUID >;
 		using SpecConstants_t			= SpirvShaderCode::SpecConstants_t;
+		
+		using RenderPasses_t			= Array< RenderPassInfo >;
+		using RenderPassMap_t			= HashMap< RenderPassName, RenderPassUID >;
 
 		using PipelineMap_t				= HashMap< PipelineName, PipelineUID >;
 
@@ -478,6 +507,8 @@ namespace AE::PipelineCompiler
 		{
 			DescrSetLayouts		= 1 << 5,
 			PipelineLayouts		= 2 << 5,
+			RenderPasses		= 3 << 5,
+			RenderPassNames		= 4 << 5,
 			
 			PipelineNames		= 1 << 10,
 			GraphicsPipelines	= 2 << 10,
@@ -511,6 +542,9 @@ namespace AE::PipelineCompiler
 
 		PipelineMap_t				_pipelineMap;
 
+		RenderPasses_t				_renderPasses;
+		RenderPassMap_t				_renderPassMap;
+
 		SpirvShaders_t				_spirvShaders;
 		SpirvShaderMap_t			_spirvShaderMap;
 
@@ -525,6 +559,7 @@ namespace AE::PipelineCompiler
 		ND_ PipelineUID			AddPipeline (const PipelineName &name, MeshPipelineDesc &&);
 		ND_ PipelineUID			AddPipeline (const PipelineName &name, ComputePipelineDesc &&);
 		ND_ ShaderUID			AddShader (Array<uint> &&spirv, const SpecConstants_t &spec);
+		ND_ RenderPassUID		AddRenderPass (const RenderPassName &name, const RenderPassInfo &info);
 
 
 		// ISerializable

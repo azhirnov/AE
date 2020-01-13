@@ -186,31 +186,6 @@ namespace {
 		}
 		return result;
 	}
-
-/*
-=================================================
-	Deserialize_FragmentOutputs
-=================================================
-*/
-	bool Deserialize_FragmentOutputs (Serializing::Deserializer const& des, OUT GraphicsPipelineDesc::FragmentOutputs_t &fragmentOutputs)
-	{
-		uint	count	= 0;
-		bool	result	= true;
-		
-		result &= des( OUT count );
-		CHECK_ERR( result and count <= fragmentOutputs.capacity() );
-
-		for (uint i = 0; i < count; ++i)
-		{
-			RenderTargetName						name;
-			GraphicsPipelineDesc::FragmentOutput	frag;
-
-			result &= des( OUT name, OUT frag.index, OUT frag.type );
-
-			fragmentOutputs.insert_or_assign( name, frag );
-		}
-		return result;
-	}
 }
 /*
 =================================================
@@ -220,7 +195,6 @@ namespace {
 	bool GraphicsPipelineDesc::Deserialize (Serializing::Deserializer const& des)
 	{
 		bool	result = des( OUT layout, OUT shaders, OUT supportedTopology, OUT patchControlPoints, OUT specialization, OUT earlyFragmentTests );
-		result &= Deserialize_FragmentOutputs( des, OUT fragmentOutputs );
 		result &= Deserialize_VertexAttribs( des, OUT vertexAttribs );
 		return result;
 	}
@@ -251,7 +225,6 @@ namespace {
 		bool	result = true;
 		result &= des( OUT layout, OUT shaders, OUT topology, OUT maxVertices, OUT maxIndices, OUT specialization );
 		result &= des( OUT defaultTaskGroupSize, OUT taskSizeSpec, OUT defaultMeshGroupSize, OUT meshSizeSpec, OUT earlyFragmentTests );
-		result &= Deserialize_FragmentOutputs( des, OUT fragmentOutputs );
 		return result;
 	}
 //-----------------------------------------------------------------------------
@@ -268,7 +241,34 @@ namespace {
 		return des( OUT spec, OUT code );
 	}
 //-----------------------------------------------------------------------------
+	
 
+
+/*
+=================================================
+	Deserialize
+=================================================
+*/
+	bool RenderPassInfo::Deserialize (Serializing::Deserializer const& des)
+	{
+		uint	count	= 0;
+		bool	result	= true;
+		
+		result &= des( OUT count );
+		CHECK_ERR( result and count <= fragmentOutputs.capacity() );
+
+		for (uint i = 0; i < count; ++i)
+		{
+			RenderTargetName	name;
+			FragmentOutput		frag;
+
+			result &= des( OUT name, OUT frag.index, OUT frag.type );
+
+			fragmentOutputs.insert_or_assign( name, frag );
+		}
+		return result;
+	}
+//-----------------------------------------------------------------------------
 	
 
 # ifndef AE_BUILD_PIPELINE_COMPILER
@@ -304,6 +304,11 @@ namespace {
 	}
 
 	bool SpirvShaderCode::Serialize (Serializing::Serializer &) const
+	{
+		return false;
+	}
+
+	bool RenderPassInfo::Serialize (Serializing::Serializer &) const
 	{
 		return false;
 	}

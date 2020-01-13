@@ -55,6 +55,8 @@ namespace AE::Graphics
 
 			static constexpr uint	MaxPushConstants		= 8;
 			static constexpr uint	MaxSpecConstants		= 8;
+
+			static constexpr uint	MaxAttachments			= MaxColorBuffers + 1;	// color + depth_stencil
 	};
 
 }	// AE::Graphics

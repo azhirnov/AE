@@ -11,7 +11,7 @@ namespace AE::PipelineCompiler
 	using namespace AE::Scripting;
 
 	using Filename			= WString;
-	using ShaderDefines_t	= FixedArray< String, 16 >;
+	using ShaderDefines_t	= Array< String >;	// FixedArray< String, 16 >
 
 
 	enum class EShaderVersion
@@ -81,6 +81,7 @@ namespace AE::PipelineCompiler
 	//
 	struct GraphicsPipelineScriptBinding : BasePipeline
 	{
+		String			rpName;
 		ShaderInfo		vertex;
 		ShaderInfo		tessControl;
 		ShaderInfo		tessEval;
@@ -95,8 +96,9 @@ namespace AE::PipelineCompiler
 		void SetGeometryShader (const String &shaderFile, EShaderVersion version, const String &defines);
 		void SetFragmentShader (const String &shaderFile, EShaderVersion version, const String &defines);
 
-		void SetName (const String &value)		{ BasePipeline::SetName( value ); }
-		void Define (const String &value)		{ BasePipeline::Define( value ); }
+		void SetRenderPass (const String &value)	{ rpName = value; }
+		void SetName (const String &value)			{ BasePipeline::SetName( value ); }
+		void Define (const String &value)			{ BasePipeline::Define( value ); }
 
 		bool MergePass1 (INOUT size_t &merged);
 		bool MergePass2 (INOUT size_t &merged) const;
@@ -111,6 +113,7 @@ namespace AE::PipelineCompiler
 	//
 	struct MeshPipelineScriptBinding : BasePipeline
 	{
+		String			rpName;
 		ShaderInfo		task;
 		ShaderInfo		mesh;
 		ShaderInfo		fragment;
@@ -120,9 +123,10 @@ namespace AE::PipelineCompiler
 		void SetTaskShader (const String &shaderFile, EShaderVersion version, const String &defines);
 		void SetMeshShader (const String &shaderFile, EShaderVersion version, const String &defines);
 		void SetFragmentShader (const String &shaderFile, EShaderVersion version, const String &defines);
-
-		void SetName (const String &value)		{ BasePipeline::SetName( value ); }
-		void Define (const String &value)		{ BasePipeline::Define( value ); }
+		
+		void SetRenderPass (const String &value)	{ rpName = value; }
+		void SetName (const String &value)			{ BasePipeline::SetName( value ); }
+		void Define (const String &value)			{ BasePipeline::Define( value ); }
 
 		bool MergePass1 (INOUT size_t &merged);
 		bool MergePass2 (INOUT size_t &merged) const;
@@ -166,6 +170,26 @@ namespace AE::PipelineCompiler
 
 
 	//
+	// Render Pass
+	//
+	struct RenderPassScriptBinding : AngelScriptHelper::SimpleRefCounter
+	{
+		using FragmentOutput = RenderPassInfo::FragmentOutput;
+		
+		String				name;
+		RenderPassInfo		info;
+		String				source;
+
+		RenderPassScriptBinding ();
+		void SetName (const String &value);
+		void SetSource (const String &value)								{ source = value; }
+		void SetOutput (const String &id, uint index, EFragOutput value);
+	};
+	using RenderPassPtr = AngelScriptHelper::SharedPtr< RenderPassScriptBinding >;
+
+
+
+	//
 	// Shader Storage
 	//
 	struct ShaderStorage
@@ -176,12 +200,15 @@ namespace AE::PipelineCompiler
 			ShaderUID						uid;
 			String							source;
 			SpirvCompiler::ShaderReflection	reflection;
+			bool							compiled	= false;
 		};
 		using UniqueShaders_t	= std::unordered_map< ShaderInfo, ShaderData, ShaderInfoHash >;
 		using GPipelines_t		= Array< GraphicsPipelinePtr >;
 		using MPipelines_t		= Array< MeshPipelinePtr >;
 		using CPipelines_t		= Array< ComputePipelinePtr >;
 		using ShaderFolders_t	= Array< Filename >;
+		using RenderPasses_t	= Array< RenderPassPtr >;
+		using RenderPassMap_t	= HashMap< RenderPassName, RenderPassPtr >;
 
 
 	// variables
@@ -189,6 +216,8 @@ namespace AE::PipelineCompiler
 		GPipelines_t		gpipelines;
 		MPipelines_t		mpipelines;
 		CPipelines_t		cpipelines;
+		RenderPasses_t		renderPasses;
+		RenderPassMap_t		_renderPassMap;
 
 		// states
 		Filename			pipelineFilename;
@@ -211,7 +240,7 @@ namespace AE::PipelineCompiler
 		static void SetInstance (ShaderStorage* inst);
 		
 	private:
-		void _AddShader (INOUT ShaderInfo &info, const ShaderDefines_t &pplnDefines);
+		void _AddShader (INOUT ShaderInfo &info, const ShaderDefines_t &pplnDefines, const String &renderPassSrc = Default);
 		ND_ Filename  _FindShader (const Filename &path) const;
 	};
 

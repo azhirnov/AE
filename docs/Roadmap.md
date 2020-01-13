@@ -10,7 +10,7 @@
 - [x] Android
 - [x] [ECS] Core for single-threaded
 - [ ] [vulkan] wrapper (render pass cache, pipeline cache, ...)
-- [ ] [vulkan] pipeline compiler
+- [x] [vulkan] pipeline compiler
 
 ## v0.2
 - [ ] [ECS] Game components

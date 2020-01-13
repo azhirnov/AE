@@ -48,7 +48,7 @@ namespace AE::Graphics
 		
 		bool Create (const VDevice &dev, const DescriptorSets_t &descSetLayouts, const PushConstants_t &pusConstants,
 					 VkDescriptorSetLayout emptyLayout, StringView dbgName);
-		void Destroy (const VDevice &dev);
+		void Destroy (const VResourceManager &);
 		
 		bool GetDescriptorSetLayout (const DescriptorSetName &id, OUT VDescriptorSetLayoutID &layout, OUT uint &binding) const;
 

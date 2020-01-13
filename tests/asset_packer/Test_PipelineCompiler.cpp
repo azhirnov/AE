@@ -63,6 +63,14 @@ namespace
 		Array< PipelineLayoutDesc >		ppln_layouts;
 		TEST( des( OUT marker ) and marker == EMarker::PipelineLayouts );
 		TEST( des( OUT ppln_layouts ));
+
+		Array< RenderPassInfo >			render_passes;
+		TEST( des( OUT marker ) and marker == EMarker::RenderPasses );
+		TEST( des( OUT render_passes ));
+
+		Array<Pair< RenderPassName, RenderPassUID >>	render_pass_names;
+		TEST( des( OUT marker ) and marker == EMarker::RenderPassNames );
+		TEST( des( OUT render_pass_names ));
 		
 		Array< SpirvShaderCode >		spirv_shaders;
 		TEST( des( OUT marker ) and marker == EMarker::SpirvShaders );
@@ -144,6 +152,16 @@ namespace
 		TEST( ppln_layouts[2].descrSets[0].first == DescriptorSetName{"0"} );
 		TEST( ppln_layouts[2].descrSets[0].second.index == 0 );
 		TEST( ppln_layouts[2].descrSets[0].second.uid == DescrSetUID(2) );
+
+		TEST( render_passes.size() == 1 );
+		TEST( render_passes[0].fragmentOutputs.size() == 1 );
+		TEST( render_passes[0].fragmentOutputs[0].first == RenderTargetName{"out_Color"} );
+		TEST( render_passes[0].fragmentOutputs[0].second.index == 0 );
+		TEST( render_passes[0].fragmentOutputs[0].second.type == EFragOutput::Float4 );
+
+		TEST( render_pass_names.size() == 1 );
+		TEST( render_pass_names[0].first == RenderPassName{"ColorPass"} );
+		TEST( render_pass_names[0].second == RenderPassUID(0) );
 
 		TEST( spirv_shaders.size() == 4 );
 		TEST( gpipelines.size() == 1 );

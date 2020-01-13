@@ -23,17 +23,26 @@ namespace AE::Graphics
 	public:
 		struct PipelineRefs
 		{
-			using GPipelineMap_t	= HashMap< PipelineName, VGraphicsPipelineTemplateID >;
-			using MPipelineMap_t	= HashMap< PipelineName, VMeshPipelineTemplateID >;
-			using CPipelineMap_t	= HashMap< PipelineName, VComputePipelineTemplateID >;
-			//using RTPipelineMap_t	= HashMap< PipelineName, RayTracingPipelineID >;
-			using UniquePplnNames_t	= HashSet< PipelineName >;
+		// types
+			template <typename NameType, typename ValueType>
+			struct ItemsTmpl
+			{
+				mutable SharedMutex				guard;
+				HashMap< NameType, ValueType >	map;
+			};
+
+			using GPipelineMap_t	= ItemsTmpl< PipelineName, VGraphicsPipelineTemplateID >;
+			using MPipelineMap_t	= ItemsTmpl< PipelineName, VMeshPipelineTemplateID >;
+			using CPipelineMap_t	= ItemsTmpl< PipelineName, VComputePipelineTemplateID >;
+			//using RTPipelineMap_t	= ItemsTmpl< PipelineName, RayTracingPipelineID >;
+			using RPNames_t			= ItemsTmpl< RenderPassName, VRenderPassOutputID >;
 			
-			mutable SharedMutex		guard;
+		// variables
 			GPipelineMap_t			graphics;
 			MPipelineMap_t			mesh;
 			CPipelineMap_t			compute;
 			//RTPipelineMap_t		rayTracing;
+			RPNames_t				renderPassNames;
 		};
 
 
@@ -42,11 +51,15 @@ namespace AE::Graphics
 		using PipelineStorage		= PipelineCompiler::PipelineStorage;
 		using EMarker				= PipelineStorage::EMarker;
 
-		using DSLayouts_t			= Array< VDescriptorSetLayoutID >;		// TODO: custom allocator
-		using PplnLayouts_t			= Array< VPipelineLayoutID >;
+		using DSLayouts_t			= Array< UniqueID< VDescriptorSetLayoutID >>;		// TODO: custom allocator
+		using PplnLayouts_t			= Array< UniqueID< VPipelineLayoutID >>;
 		using ShaderModules_t		= Array< VkShaderModule >;
+		using GPipelines_t			= Array< UniqueID< VGraphicsPipelineTemplateID >>;
+		using MPipelines_t			= Array< UniqueID< VMeshPipelineTemplateID >>;
+		using CPipelines_t			= Array< UniqueID< VComputePipelineTemplateID >>;
+		using RPOutputs_t			= Array< UniqueID< VRenderPassOutputID >>;
 		
-		using Allocator_t			= StackAllocator< UntypedAlignedAllocator, 16 >;
+		using StackAllocator_t		= StackAllocator< UntypedAlignedAllocator, 16, false >;
 
 
 	// variables
@@ -54,7 +67,11 @@ namespace AE::Graphics
 		DSLayouts_t			_dsLayouts;
 		PplnLayouts_t		_pplnLayouts;
 		ShaderModules_t		_shaderModules;
-		
+		GPipelines_t		_gpipelines;
+		MPipelines_t		_mpipelines;
+		CPipelines_t		_cpipelines;
+		RPOutputs_t			_renderPassOutputs;
+
 		RWDataRaceCheck		_drCheck;
 
 
@@ -67,14 +84,14 @@ namespace AE::Graphics
 		void Destroy (VResourceManager &resMngr);
 
 	private:
-		bool _LoadDescrSetLayouts (VResourceManager &resMngr, Serializing::Deserializer &, Allocator_t &);
+		bool _LoadDescrSetLayouts (VResourceManager &resMngr, Serializing::Deserializer &, StackAllocator_t &);
 		bool _LoadPipelineLayouts (VResourceManager &resMngr, Serializing::Deserializer &);
-		bool _LoadSpirvShaders (const VDevice &dev, Serializing::Deserializer &, Allocator_t &);
-		bool _LoadGraphicsPipelines (VResourceManager &resMngr, Serializing::Deserializer &, Allocator_t &, OUT ArrayView<VGraphicsPipelineTemplateID> &);
-		bool _LoadMeshPipelines (VResourceManager &resMngr, Serializing::Deserializer &, Allocator_t &, OUT ArrayView<VMeshPipelineTemplateID> &);
-		bool _LoadComputePipelines (VResourceManager &resMngr, Serializing::Deserializer &, Allocator_t &, OUT ArrayView<VComputePipelineTemplateID> &);
-		bool _LoadPipelineNames (ArrayView<VGraphicsPipelineTemplateID>, ArrayView<VMeshPipelineTemplateID>,
-								 ArrayView<VComputePipelineTemplateID>, Serializing::Deserializer &des, INOUT PipelineRefs &refs);
+		bool _LoadRenderPasses (VResourceManager &resMngr, Serializing::Deserializer &, INOUT PipelineRefs &refs);
+		bool _LoadSpirvShaders (const VDevice &dev, Serializing::Deserializer &, StackAllocator_t &);
+		bool _LoadGraphicsPipelines (VResourceManager &resMngr, Serializing::Deserializer &, StackAllocator_t &allocator);
+		bool _LoadMeshPipelines (VResourceManager &resMngr, Serializing::Deserializer &, StackAllocator_t &allocator);
+		bool _LoadComputePipelines (VResourceManager &resMngr, Serializing::Deserializer &);
+		bool _LoadPipelineNames (Serializing::Deserializer &des, INOUT PipelineRefs &refs);
 	};
 
 

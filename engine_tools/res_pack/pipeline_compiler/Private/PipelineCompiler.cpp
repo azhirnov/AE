@@ -17,9 +17,11 @@
 namespace AE::Scripting
 {
 	AE_DECL_SCRIPT_TYPE(   AE::PipelineCompiler::EShaderVersion,				"Version"			);
+	AE_DECL_SCRIPT_TYPE(   AE::PipelineCompiler::EFragOutput,					"EFragOutput"		);
 	AE_DECL_SCRIPT_OBJ_RC( AE::PipelineCompiler::GraphicsPipelineScriptBinding,	"GraphicsPipeline"	);
 	AE_DECL_SCRIPT_OBJ_RC( AE::PipelineCompiler::MeshPipelineScriptBinding,		"MeshPipeline"		);
 	AE_DECL_SCRIPT_OBJ_RC( AE::PipelineCompiler::ComputePipelineScriptBinding,	"ComputePipeline"	);
+	AE_DECL_SCRIPT_OBJ_RC( AE::PipelineCompiler::RenderPassScriptBinding,		"RenderPass"		);
 
 }	// AE::Scripting
 
@@ -40,7 +42,7 @@ namespace
 		CoreBindings::BindScalarMath( se );
 		CoreBindings::BindString( se );
 
-		// bind enums
+		// bind shader version enums
 		{
 			EnumBinder<EShaderVersion>	binder{ se };
 			CHECK_ERR( binder.Create() );
@@ -49,11 +51,21 @@ namespace
 			CHECK_ERR( binder.AddValue( "Spirv_140", EShaderVersion::Spirv_140 ));
 		}
 		
+		// bind fragment output enums
+		{
+			EnumBinder<EFragOutput>	binder{ se };
+			CHECK_ERR( binder.Create() );
+			CHECK_ERR( binder.AddValue( "Int4",		EFragOutput::Int4 ));
+			CHECK_ERR( binder.AddValue( "UInt4",	EFragOutput::UInt4 ));
+			CHECK_ERR( binder.AddValue( "Float4",	EFragOutput::Float4 ));
+		}
+
 		// bind graphics pipeline
 		{
 			ClassBinder<GraphicsPipelineScriptBinding>	binder{ se };
 			CHECK_ERR( binder.CreateRef() );
 			CHECK_ERR( binder.AddMethod( &GraphicsPipelineScriptBinding::SetName,				"SetName"				));
+			CHECK_ERR( binder.AddMethod( &GraphicsPipelineScriptBinding::SetRenderPass,			"SetRenderPass"			));
 			CHECK_ERR( binder.AddMethod( &GraphicsPipelineScriptBinding::Define,				"Define"				));
 			CHECK_ERR( binder.AddMethod( &GraphicsPipelineScriptBinding::SetVertexShader,		"SetVertexShader"		));
 			CHECK_ERR( binder.AddMethod( &GraphicsPipelineScriptBinding::SetTessControlShader,	"SetTessControlShader"	));
@@ -62,18 +74,19 @@ namespace
 			CHECK_ERR( binder.AddMethod( &GraphicsPipelineScriptBinding::SetFragmentShader,		"SetFragmentShader"		));
 		}
 
-		// mesh pipeline
+		// bind mesh pipeline
 		{
 			ClassBinder<MeshPipelineScriptBinding>	binder{ se };
 			CHECK_ERR( binder.CreateRef() );
 			CHECK_ERR( binder.AddMethod( &MeshPipelineScriptBinding::SetName,			"SetName"			));
+			CHECK_ERR( binder.AddMethod( &MeshPipelineScriptBinding::SetRenderPass,		"SetRenderPass"		));
 			CHECK_ERR( binder.AddMethod( &MeshPipelineScriptBinding::Define,			"Define"			));
 			CHECK_ERR( binder.AddMethod( &MeshPipelineScriptBinding::SetTaskShader,		"SetTaskShader"		));
 			CHECK_ERR( binder.AddMethod( &MeshPipelineScriptBinding::SetMeshShader,		"SetMeshShader"		));
 			CHECK_ERR( binder.AddMethod( &MeshPipelineScriptBinding::SetFragmentShader,	"SetFragmentShader"	));
 		}
 
-		// compute pipeline
+		// bind compute pipeline
 		{
 			ClassBinder<ComputePipelineScriptBinding>	binder{ se };
 			CHECK_ERR( binder.CreateRef() );
@@ -82,8 +95,17 @@ namespace
 			CHECK_ERR( binder.AddMethod( &ComputePipelineScriptBinding::SetShader,	"SetShader" ));
 		}
 
-		// ray tracing pipeline
+		// bind ray tracing pipeline
 		{
+		}
+
+		// bind render pass
+		{
+			ClassBinder<RenderPassScriptBinding>	binder{ se };
+			CHECK_ERR( binder.CreateRef() );
+			CHECK_ERR( binder.AddMethod( &RenderPassScriptBinding::SetName,		"SetName"	));
+			CHECK_ERR( binder.AddMethod( &RenderPassScriptBinding::SetOutput,	"SetOutput"	));
+			CHECK_ERR( binder.AddMethod( &RenderPassScriptBinding::SetSource,	"SetSource"	));
 		}
 
 		return true;
@@ -315,12 +337,14 @@ namespace
 
 			BuildShaderSource( sh.first, INOUT sh.second.source );
 
-			SpirvCompiler::ShaderReflection	reflection;
 			if ( not spv_comp.BuildReflection( sh.first.type, ToSpirvVersion( sh.first.version ), "main", sh.second.source, OUT sh.second.reflection, OUT log ))
 			{
+				sh.second.compiled = false;
 				AE_LOGI( "Failed to parse shader '"s << Path{ sh.first.filename }.string() << "':\n" << log );
 				continue;
 			}
+
+			sh.second.compiled = true;
 		}
 
 		// compile shaders
@@ -329,6 +353,7 @@ namespace
 		{
 			if ( not spv_comp.Compile( sh.first.type, ToSpirvVersion( sh.first.version ), "main", sh.second.source, OUT spirv, OUT log ))
 			{
+				sh.second.compiled = false;
 				AE_LOGI( "Failed to compile shader '"s << Path{ sh.first.filename }.string() << "':\n" << log );
 				continue;
 			}

@@ -370,22 +370,6 @@ namespace {
 		}
 		return result;
 	}
-
-/*
-=================================================
-	Serialize_FragmentOutputs
-=================================================
-*/
-	bool Serialize_FragmentOutputs (Serializing::Serializer& ser, const GraphicsPipelineDesc::FragmentOutputs_t &fragmentOutputs)
-	{
-		bool	result = ser( uint(fragmentOutputs.size()) );
-
-		for (auto& frag : fragmentOutputs)
-		{
-			result &= ser( frag.first, frag.second.index, frag.second.type );
-		}
-		return result;
-	}
 }
 
 /*
@@ -396,7 +380,6 @@ namespace {
 	bool GraphicsPipelineDesc::Serialize (Serializing::Serializer& ser) const
 	{
 		bool	result = ser( layout, shaders, supportedTopology, patchControlPoints, specialization, earlyFragmentTests );
-		result &= Serialize_FragmentOutputs( ser, fragmentOutputs );
 		result &= Serialize_VertexAttribs( ser, vertexAttribs );
 		return result;
 	}
@@ -413,7 +396,6 @@ namespace {
 		bool	result = true;
 		result &= ser( layout, shaders, topology, maxVertices, maxIndices, specialization );
 		result &= ser( defaultTaskGroupSize, taskSizeSpec, defaultMeshGroupSize, meshSizeSpec, earlyFragmentTests );
-		result &= Serialize_FragmentOutputs( ser, fragmentOutputs );
 		return result;
 	}
 //-----------------------------------------------------------------------------
@@ -439,6 +421,25 @@ namespace {
 	bool SpirvShaderCode::Serialize (Serializing::Serializer &ser) const
 	{
 		return ser( spec, code );
+	}
+//-----------------------------------------------------------------------------
+	
+	
+/*
+=================================================
+	Serialize
+=================================================
+*/	
+	bool RenderPassInfo::Serialize (Serializing::Serializer &ser) const
+	{
+		bool	result = true;
+		result &= ser( uint(fragmentOutputs.size()) );
+
+		for (auto& frag : fragmentOutputs)
+		{
+			result &= ser( frag.first, frag.second.index, frag.second.type );
+		}
+		return result;
 	}
 //-----------------------------------------------------------------------------
 
@@ -649,6 +650,49 @@ namespace {
 
 		return uid;
 	}
+	
+/*
+=================================================
+	AddRenderPass
+=================================================
+*/
+	RenderPassUID  PipelineStorage::AddRenderPass (const RenderPassName &name, const RenderPassInfo &info)
+	{
+		for (size_t i = 0; i < _renderPasses.size(); ++i)
+		{
+			if ( _renderPasses[i].fragmentOutputs == info.fragmentOutputs )
+			{
+				if ( name.IsDefined() )
+				{
+					auto[iter, inserted] = _renderPassMap.insert({ name, RenderPassUID(i) });
+					if ( not inserted )
+						CHECK( iter->second == RenderPassUID(i) );
+				}
+				return RenderPassUID(i);
+			}
+		}
+
+		RenderPassName	new_name = name;
+
+		if ( new_name.GetName().empty() )
+		{
+			// make unique name
+			for (size_t i = 0; i < 1000; ++i)
+			{
+				new_name = RenderPassName{ "RP_"s << ToString(i) };
+
+				if ( not _renderPassMap.count( new_name ))
+					break;
+			}
+		}
+
+		const auto	uid = RenderPassUID(_renderPasses.size());
+
+		_renderPasses.push_back( info );
+
+		CHECK( _renderPassMap.insert_or_assign( new_name, uid ).second );
+		return uid;
+	}
 
 /*
 =================================================
@@ -669,6 +713,22 @@ namespace {
 		result &= ser( uint(EMarker::PipelineLayouts), _pplnLayouts );
 		ASSERT( result );
 		AE_LOGI( "Serialized pipeline layouts: "s << ToString(_pplnLayouts.size()) );
+
+		result &= ser( uint(EMarker::RenderPasses), _renderPasses );
+		{
+			Array<Pair< RenderPassName, RenderPassUID >>	rp_names;
+			rp_names.reserve( _renderPassMap.size() );
+
+			for (auto& item : _renderPassMap) {
+				rp_names.push_back( item );
+			}
+
+			std::sort( rp_names.begin(), rp_names.end(), [](auto& lhs, auto& rhs) { return lhs.first < rhs.first; });
+
+			result &= ser( uint(EMarker::RenderPassNames), rp_names );
+		}
+		ASSERT( result );
+		AE_LOGI( "Serialized render passes: "s << ToString(_renderPassMap.size()) );
 
 		result &= ser( uint(EMarker::SpirvShaders), _spirvShaders );
 		ASSERT( result );

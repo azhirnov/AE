@@ -82,9 +82,11 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void VDescriptorSetLayout::Destroy (const VDevice &dev)
+	void VDescriptorSetLayout::Destroy (const VResourceManager &resMngr)
 	{
 		EXLOCK( _drCheck );
+
+		auto&	dev = resMngr.GetDevice();
 
 		if ( _layout ) {
 			dev.vkDestroyDescriptorSetLayout( dev.GetVkDevice(), _layout, null );

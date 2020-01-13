@@ -28,6 +28,8 @@ namespace AE::Graphics
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( not _handle and not _layout );
+		
+		// _desc.renderPassId reference has been acquired by VResourceManager
 
 		_templ	= templId;
 		_desc	= desc;
@@ -50,6 +52,11 @@ namespace AE::Graphics
 		{
 			auto&	dev = resMngr.GetDevice();
 			dev.vkDestroyPipeline( dev.GetVkDevice(), _handle, null );
+		}
+		
+		{
+			UniqueID<RenderPassID>	rp{ _desc.renderPassId };
+			resMngr.ReleaseResource( rp );
 		}
 
 		_handle		= VK_NULL_HANDLE;
@@ -76,13 +83,14 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool  VMeshPipelineTemplate::Create (VPipelineLayoutID layoutId, const PipelineCompiler::MeshPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName)
+	bool  VMeshPipelineTemplate::Create (VPipelineLayoutID layoutId, VRenderPassOutputID rpOutputId, const PipelineCompiler::MeshPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( not _baseLayoutId );
 		
 		_baseLayoutId			= layoutId;
 		_shaders				= modules;
+		_renderPassOutput		= rpOutputId;
 
 		_topology				= desc.topology;
 		_maxVertices			= desc.maxVertices;
@@ -104,11 +112,12 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void  VMeshPipelineTemplate::Destroy (VResourceManager &)
+	void  VMeshPipelineTemplate::Destroy (const VResourceManager &)
 	{
 		EXLOCK( _drCheck );
 
-		_baseLayoutId	= Default;
+		_baseLayoutId		= Default;
+		_renderPassOutput	= Default;
 		_shaders.clear();
 	}
 

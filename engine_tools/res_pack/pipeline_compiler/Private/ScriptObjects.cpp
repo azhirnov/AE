@@ -141,7 +141,7 @@ namespace {
 */
 	void BasePipeline::Define (const String &value)
 	{
-		CHECK( _defines.size() < _defines.capacity() );
+		//CHECK( _defines.size() < _defines.capacity() );
 
 		_defines.push_back( value );
 		SortDefines( INOUT _defines );
@@ -246,8 +246,8 @@ namespace {
 			dst->second.uid   = ppln_storage.AddDescriptorSetLayout( std::move(_dsLayouts[i]) );
 		}
 
-		_dsLayouts.fill({});
-		_dsLayoutNames.fill({});
+		//_dsLayouts.fill({});
+		//_dsLayoutNames.fill({});
 
 		return ppln_storage.AddPipelineLayout( std::move(desc) );
 	}
@@ -377,6 +377,7 @@ namespace {
 		auto&					shader_storage	= *ShaderStorage::Instance();
 		auto&					ppln_storage	= *shader_storage.storage;
 		GraphicsPipelineDesc	desc;
+		RenderPassInfo			pass;
 
 		desc.layout			= BuildLayout();
 		desc.specialization	= _specValues;
@@ -388,6 +389,7 @@ namespace {
 		{
 			auto	iter = shader_storage.uniqueShaders.find( vertex );
 			CHECK_ERR( iter != shader_storage.uniqueShaders.end() );
+			CHECK_ERR( iter->second.compiled );
 
 			desc.supportedTopology	= iter->second.reflection.vertex.supportedTopology;
 			desc.vertexAttribs		= iter->second.reflection.vertex.vertexAttribs;
@@ -398,6 +400,7 @@ namespace {
 		{
 			auto	iter = shader_storage.uniqueShaders.find( tessControl );
 			CHECK_ERR( iter != shader_storage.uniqueShaders.end() );
+			CHECK_ERR( iter->second.compiled );
 
 			desc.patchControlPoints	= iter->second.reflection.tessellation.patchControlPoints;
 			desc.shaders.insert_or_assign( EShader::TessControl, iter->second.uid );
@@ -407,6 +410,7 @@ namespace {
 		{
 			auto	iter = shader_storage.uniqueShaders.find( tessEval );
 			CHECK_ERR( iter != shader_storage.uniqueShaders.end() );
+			CHECK_ERR( iter->second.compiled );
 			
 			desc.shaders.insert_or_assign( EShader::TessEvaluation, iter->second.uid );
 		}
@@ -415,6 +419,7 @@ namespace {
 		{
 			auto	iter = shader_storage.uniqueShaders.find( geometry );
 			CHECK_ERR( iter != shader_storage.uniqueShaders.end() );
+			CHECK_ERR( iter->second.compiled );
 			
 			desc.shaders.insert_or_assign( EShader::Geometry, iter->second.uid );
 		}
@@ -423,11 +428,14 @@ namespace {
 		{
 			auto	iter = shader_storage.uniqueShaders.find( fragment );
 			CHECK_ERR( iter != shader_storage.uniqueShaders.end() );
+			CHECK_ERR( iter->second.compiled );
 
-			desc.fragmentOutputs	= iter->second.reflection.fragment.fragmentOutput;
+			pass.fragmentOutputs	= iter->second.reflection.fragment.fragmentOutput;
 			desc.earlyFragmentTests	= iter->second.reflection.fragment.earlyFragmentTests;
 			desc.shaders.insert_or_assign( EShader::Fragment, iter->second.uid );
 		}
+
+		desc.renderPass = ppln_storage.AddRenderPass( RenderPassName{rpName}, pass );
 
 		Unused( ppln_storage.AddPipeline( _name, std::move(desc) ));
 		return true;
@@ -526,6 +534,7 @@ namespace {
 		auto&				shader_storage	= *ShaderStorage::Instance();
 		auto&				ppln_storage	= *shader_storage.storage;
 		MeshPipelineDesc	desc;
+		RenderPassInfo		pass;
 
 		desc.layout			= BuildLayout();
 		desc.specialization	= _specValues;
@@ -537,6 +546,7 @@ namespace {
 		{
 			auto	iter = shader_storage.uniqueShaders.find( task );
 			CHECK_ERR( iter != shader_storage.uniqueShaders.end() );
+			CHECK_ERR( iter->second.compiled );
 
 			desc.defaultTaskGroupSize	= iter->second.reflection.mesh.taskGroupSize;
 			desc.taskSizeSpec			= iter->second.reflection.mesh.taskGroupSpecialization;
@@ -547,6 +557,7 @@ namespace {
 		{
 			auto	iter = shader_storage.uniqueShaders.find( mesh );
 			CHECK_ERR( iter != shader_storage.uniqueShaders.end() );
+			CHECK_ERR( iter->second.compiled );
 			
 			desc.topology				= iter->second.reflection.mesh.topology;
 			desc.maxVertices			= iter->second.reflection.mesh.maxVertices;
@@ -560,11 +571,14 @@ namespace {
 		{
 			auto	iter = shader_storage.uniqueShaders.find( fragment );
 			CHECK_ERR( iter != shader_storage.uniqueShaders.end() );
+			CHECK_ERR( iter->second.compiled );
 
-			desc.fragmentOutputs	= iter->second.reflection.fragment.fragmentOutput;
+			pass.fragmentOutputs	= iter->second.reflection.fragment.fragmentOutput;
 			desc.earlyFragmentTests	= iter->second.reflection.fragment.earlyFragmentTests;
 			desc.shaders.insert_or_assign( EShader::Fragment, iter->second.uid );
 		}
+
+		desc.renderPass = ppln_storage.AddRenderPass( RenderPassName{rpName}, pass );
 
 		Unused( ppln_storage.AddPipeline( _name, std::move(desc) ));
 		return true;
@@ -639,6 +653,7 @@ namespace {
 		{
 			auto	iter = shader_storage.uniqueShaders.find( shader );
 			CHECK_ERR( iter != shader_storage.uniqueShaders.end() );
+			CHECK_ERR( iter->second.compiled );
 			
 			desc.defaultLocalGroupSize	= iter->second.reflection.compute.localGroupSize;
 			desc.localSizeSpec			= iter->second.reflection.compute.localGroupSpecialization;
@@ -657,6 +672,41 @@ namespace {
 	constructor
 =================================================
 */
+	RenderPassScriptBinding::RenderPassScriptBinding ()
+	{
+		ShaderStorage::Instance()->renderPasses.push_back( RenderPassPtr{this} );
+	}
+	
+/*
+=================================================
+	SetName
+=================================================
+*/
+	void RenderPassScriptBinding::SetName (const String &value)
+	{
+		name = value;
+
+		ShaderStorage::Instance()->hashCollisionCheck.Add( RenderPassName{name} );
+	}
+
+/*
+=================================================
+	SetOutput
+=================================================
+*/
+	void RenderPassScriptBinding::SetOutput (const String &id, uint index, EFragOutput value)
+	{
+		CHECK( info.fragmentOutputs.insert_or_assign( RenderTargetName{id}, FragmentOutput{ index, value }).second );
+	}
+//-----------------------------------------------------------------------------
+
+
+
+/*
+=================================================
+	constructor
+=================================================
+*/
 	ShaderStorage::ShaderStorage ()
 	{
 		gpipelines.reserve( 128 );
@@ -669,7 +719,7 @@ namespace {
 	_AddShader
 =================================================
 */
-	void ShaderStorage::_AddShader (INOUT ShaderInfo &info, const ShaderDefines_t &pplnDefines)
+	void ShaderStorage::_AddShader (INOUT ShaderInfo &info, const ShaderDefines_t &pplnDefines, const String &renderPassSrc)
 	{
 		if ( not info.IsDefined() )
 			return;
@@ -686,9 +736,19 @@ namespace {
 		SortDefines( INOUT info.defines );
 		// TODO: remove duplicates
 
+		if ( info.type == EShader::Fragment )
+		{
+			if ( renderPassSrc.size() )
+				info.defines.push_back( renderPassSrc );
+		}
+		else
+		{
+			CHECK( renderPassSrc.empty() );
+		}
+
 		uniqueShaders.insert({ info, {} });
 	}
-		
+
 /*
 =================================================
 	_FindShader
@@ -710,25 +770,90 @@ namespace {
 	
 /*
 =================================================
+	RenderPassToString
+=================================================
+*/
+namespace {
+	String  RenderPassToString (const RenderPassScriptBinding &rp)
+	{
+		String	result;
+
+		for (auto& frag : rp.info.fragmentOutputs)
+		{
+			result << "layout (location = " << ToString(frag.second.index) << ") out ";
+
+			BEGIN_ENUM_CHECKS();
+			switch ( frag.second.type )
+			{
+				case EFragOutput::Int4 :	result << "ivec4";		break;
+				case EFragOutput::UInt4 :	result << "uvec4";		break;
+				case EFragOutput::Float4 :	result << "vec4";		break;
+				case EFragOutput::Unknown :	result << "<unknown>";	break;
+			}
+			END_ENUM_CHECKS();
+
+			result << " " << frag.first.GetName() << ";\n";
+		}
+
+		result << rp.source;
+		return result;
+	}
+}
+/*
+=================================================
 	CacheShaders
 =================================================
 */
 	bool ShaderStorage::CacheShaders ()
 	{
+		_renderPassMap.clear();
+		for (auto& rp : renderPasses)
+		{
+			if ( not _renderPassMap.insert_or_assign( RenderPassName{rp->name}, rp ).second )
+			{
+				AE_LOGI( "removed duplicate render pass name: '"s << rp->name << "'" );
+				continue;
+			}
+
+			Unused( storage->AddRenderPass( RenderPassName{rp->name}, rp->info ));
+		}
+		
+		String	rp_src;
+
 		for (auto& ppln : gpipelines)
 		{
+			rp_src.clear();
+			if ( ppln->rpName.size() )
+			{
+				auto	iter = _renderPassMap.find( RenderPassName{ppln->rpName} );
+				if ( iter != _renderPassMap.end() )
+					rp_src = RenderPassToString( *iter->second );
+				else
+					AE_LOGE( "can't find render pass with name '"s << ppln->rpName << "'" );
+			}
+
 			_AddShader( INOUT ppln->vertex,      ppln->_defines );
 			_AddShader( INOUT ppln->tessControl, ppln->_defines );
 			_AddShader( INOUT ppln->tessEval,    ppln->_defines );
 			_AddShader( INOUT ppln->geometry,    ppln->_defines );
-			_AddShader( INOUT ppln->fragment,    ppln->_defines );
+			_AddShader( INOUT ppln->fragment,    ppln->_defines, rp_src );
 		}
 
 		for (auto& ppln : mpipelines)
 		{
+			rp_src.clear();
+			if ( ppln->rpName.size() )
+			{
+				auto	iter = _renderPassMap.find( RenderPassName{ppln->rpName} );
+				if ( iter != _renderPassMap.end() )
+					rp_src = RenderPassToString( *iter->second );
+				else
+					AE_LOGE( "can't find render pass with name '"s << ppln->rpName << "'" );
+			}
+
 			_AddShader( INOUT ppln->task,     ppln->_defines );
 			_AddShader( INOUT ppln->mesh,     ppln->_defines );
-			_AddShader( INOUT ppln->fragment, ppln->_defines );
+			_AddShader( INOUT ppln->fragment, ppln->_defines, rp_src );
 		}
 
 		for (auto& ppln : cpipelines)

@@ -42,14 +42,40 @@ namespace AE::Graphics
 
 		auto&	dev = resMngr.GetDevice();
 
-		for (auto& sm : _shaderModules)
-		{
+		for (auto& sm : _shaderModules) {
 			dev.vkDestroyShaderModule( dev.GetVkDevice(), sm, null );
 		}
 		_shaderModules.clear();
 
+		for (auto& id : _dsLayouts) {
+			resMngr.ReleaseResource( INOUT id );
+		}
 		_dsLayouts.clear();
+
+		for (auto& id : _pplnLayouts) {
+			resMngr.ReleaseResource( INOUT id );
+		}
 		_pplnLayouts.clear();
+
+		for (auto& id : _gpipelines) {
+			resMngr.ReleaseResource( INOUT id );
+		}
+		_gpipelines.clear();
+
+		for (auto& id : _mpipelines) {
+			resMngr.ReleaseResource( INOUT id );
+		}
+		_mpipelines.clear();
+
+		for (auto& id : _cpipelines) {
+			resMngr.ReleaseResource( INOUT id );
+		}
+		_cpipelines.clear();
+
+		for (auto& id : _renderPassOutputs) {
+			resMngr.ReleaseResource( INOUT id );
+		}
+		_renderPassOutputs.clear();
 	}
 
 /*
@@ -63,7 +89,7 @@ namespace AE::Graphics
 	{
 		EXLOCK( _drCheck );
 
-		Allocator_t					allocator;
+		StackAllocator_t			allocator;
 		Serializing::Deserializer	des;
 		des.stream = stream;
 		
@@ -72,18 +98,12 @@ namespace AE::Graphics
 
 		CHECK_ERR( _LoadDescrSetLayouts( resMngr, des, allocator ));
 		CHECK_ERR( _LoadPipelineLayouts( resMngr, des ));
+		CHECK_ERR( _LoadRenderPasses( resMngr, des, INOUT refs ));
 		CHECK_ERR( _LoadSpirvShaders( resMngr.GetDevice(), des, allocator ));
-		
-		ArrayView<VGraphicsPipelineTemplateID>	graphics_pipelines;
-		CHECK_ERR( _LoadGraphicsPipelines( resMngr, des, allocator, OUT graphics_pipelines ));
-		
-		ArrayView<VMeshPipelineTemplateID>		mesh_pipelines;
-		CHECK_ERR( _LoadMeshPipelines( resMngr, des, allocator, OUT mesh_pipelines ));
-		
-		ArrayView<VComputePipelineTemplateID>	compute_pipelines;
-		CHECK_ERR( _LoadComputePipelines( resMngr, des, allocator, OUT compute_pipelines ));
-
-		CHECK_ERR( _LoadPipelineNames( graphics_pipelines, mesh_pipelines, compute_pipelines, des, INOUT refs ));
+		CHECK_ERR( _LoadGraphicsPipelines( resMngr, des, allocator ));
+		CHECK_ERR( _LoadMeshPipelines( resMngr, des, allocator ));
+		CHECK_ERR( _LoadComputePipelines( resMngr, des ));
+		CHECK_ERR( _LoadPipelineNames( des, INOUT refs ));
 		return true;
 	}
 	
@@ -92,7 +112,7 @@ namespace AE::Graphics
 	_LoadDescrSetLayouts
 =================================================
 */
-	bool VPipelinePack::_LoadDescrSetLayouts (VResourceManager &resMngr, Serializing::Deserializer &des, Allocator_t &allocator)
+	bool VPipelinePack::_LoadDescrSetLayouts (VResourceManager &resMngr, Serializing::Deserializer &des, StackAllocator_t &allocator)
 	{
 		EMarker	marker;
 		uint	count	= 0;
@@ -136,9 +156,9 @@ namespace AE::Graphics
 			}
 			CHECK_ERR( result );
 			
-			_dsLayouts[i] = resMngr.CreateDescriptorSetLayout(
+			_dsLayouts[i].Set( resMngr.CreateDescriptorSetLayout(
 								VDescriptorSetLayout::Uniforms_t{ uniform_count, un_names, un_data },
-								ArrayView{ vk_samplers, sampler_count });
+								ArrayView{ vk_samplers, sampler_count }));
 			CHECK_ERR( _dsLayouts[i] );
 
 			allocator.Pop( bm );
@@ -182,7 +202,7 @@ namespace AE::Graphics
 				desc_sets.insert_or_assign( src.first, VPipelineLayout::DescSetLayout{ id, ds_layout->Handle(), src.second.index });
 			}
 
-			_pplnLayouts[i] = resMngr.CreatePipelineLayout( desc_sets, desc.pushConstants.items );
+			_pplnLayouts[i].Set( resMngr.CreatePipelineLayout( desc_sets, desc.pushConstants.items ));
 			CHECK_ERR( _pplnLayouts[i] );
 		}
 		return true;
@@ -190,10 +210,49 @@ namespace AE::Graphics
 	
 /*
 =================================================
+	_LoadRenderPasses
+=================================================
+*/
+	bool VPipelinePack::_LoadRenderPasses (VResourceManager &resMngr, Serializing::Deserializer &des, INOUT PipelineRefs &refs)
+	{
+		EMarker	marker;
+		uint	count	= 0;
+		CHECK_ERR( des( OUT marker, OUT count ) and marker == EMarker::RenderPasses );
+		
+		_renderPassOutputs.resize( count );
+
+		for (uint i = 0; i < count; ++i)
+		{
+			PipelineCompiler::RenderPassInfo	info;
+			CHECK_ERR( des( OUT info ));
+
+			_renderPassOutputs[i].Set( resMngr.CreateRenderPassOutput( info.fragmentOutputs ));
+			CHECK_ERR( _renderPassOutputs[i] );
+		}
+		
+		CHECK_ERR( des( OUT marker, OUT count ) and marker == EMarker::RenderPassNames );
+		
+		for (uint i = 0; i < count; ++i)
+		{
+			RenderPassName	name;
+			uint			idx;
+			CHECK_ERR( des( OUT name, OUT idx ));
+
+			CHECK_ERR( idx < _renderPassOutputs.size() );
+
+			EXLOCK( refs.renderPassNames.guard );
+			CHECK( refs.renderPassNames.map.insert_or_assign( name, _renderPassOutputs[idx] ).second );
+		}
+
+		return true;
+	}
+
+/*
+=================================================
 	_LoadSpirvShaders
 =================================================
 */
-	bool VPipelinePack::_LoadSpirvShaders (const VDevice &dev, Serializing::Deserializer &des, Allocator_t &allocator)
+	bool VPipelinePack::_LoadSpirvShaders (const VDevice &dev, Serializing::Deserializer &des, StackAllocator_t &allocator)
 	{
 		EMarker	marker;
 		uint	count	= 0;
@@ -233,8 +292,7 @@ namespace AE::Graphics
 	_LoadGraphicsPipelines
 =================================================
 */
-	bool VPipelinePack::_LoadGraphicsPipelines (VResourceManager &resMngr, Serializing::Deserializer &des, Allocator_t &allocator,
-												OUT ArrayView<VGraphicsPipelineTemplateID> &outPipelines)
+	bool VPipelinePack::_LoadGraphicsPipelines (VResourceManager &resMngr, Serializing::Deserializer &des, StackAllocator_t &allocator)
 	{
 		EMarker	marker;
 		uint	count	= 0;
@@ -243,17 +301,19 @@ namespace AE::Graphics
 		if ( not count )
 			return true;
 
-		auto*	gpipelines = allocator.Alloc<VGraphicsPipelineTemplateID>( count );
-		CHECK_ERR( gpipelines );
+		_gpipelines.resize( count );
 		
 		PipelineCompiler::GraphicsPipelineDesc	desc;
 		for (uint i = 0; i < count; ++i)
 		{
 			CHECK_ERR( desc.Deserialize( des ));
 			CHECK_ERR( size_t(desc.layout) < _pplnLayouts.size() );
+			CHECK_ERR( size_t(desc.renderPass) < _renderPassOutputs.size() );
 			
-			auto *				modules	= allocator.Alloc<ShaderModule>( desc.shaders.size() );
-			VPipelineLayoutID	id		= _pplnLayouts[ size_t(desc.layout) ];
+			auto				bm			= allocator.Push();
+			auto *				modules		= allocator.Alloc<ShaderModule>( desc.shaders.size() );
+			VPipelineLayoutID	layout_id	= _pplnLayouts[ size_t(desc.layout) ];
+			VRenderPassOutputID	rp_output_id= _renderPassOutputs[ size_t(desc.renderPass) ];
 
 			for (size_t j = 0; j < desc.shaders.size(); ++j)
 			{
@@ -265,11 +325,11 @@ namespace AE::Graphics
 				modules[j].module	= _shaderModules[idx];
 			}
 
-			gpipelines[i] = resMngr.CreateGPTemplate( id, desc, ArrayView{modules, desc.shaders.size()} );
-			CHECK_ERR( gpipelines[i] );
+			_gpipelines[i].Set( resMngr.CreateGPTemplate( layout_id, rp_output_id, desc, ArrayView{modules, desc.shaders.size()} ));
+			CHECK_ERR( _gpipelines[i] );
+			
+			allocator.Pop( bm );
 		}
-
-		outPipelines = ArrayView<VGraphicsPipelineTemplateID>{ gpipelines, count };
 		return true;
 	}
 	
@@ -278,8 +338,7 @@ namespace AE::Graphics
 	_LoadMeshPipelines
 =================================================
 */
-	bool VPipelinePack::_LoadMeshPipelines (VResourceManager &resMngr, Serializing::Deserializer &des, Allocator_t &allocator,
-											OUT ArrayView<VMeshPipelineTemplateID> &outPipelines)
+	bool VPipelinePack::_LoadMeshPipelines (VResourceManager &resMngr, Serializing::Deserializer &des, StackAllocator_t &allocator)
 	{
 		EMarker	marker;
 		uint	count	= 0;
@@ -288,17 +347,19 @@ namespace AE::Graphics
 		if ( not count )
 			return true;
 		
-		auto*	mpipelines = allocator.Alloc<VMeshPipelineTemplateID>( count );
-		CHECK_ERR( mpipelines );
+		_mpipelines.resize( count );
 		
 		PipelineCompiler::MeshPipelineDesc	desc;
 		for (uint i = 0; i < count; ++i)
 		{
 			CHECK_ERR( desc.Deserialize( des ));
 			CHECK_ERR( size_t(desc.layout) < _pplnLayouts.size() );
+			CHECK_ERR( size_t(desc.renderPass) < _renderPassOutputs.size() );
 			
-			auto *				modules	= allocator.Alloc<ShaderModule>( desc.shaders.size() );
-			VPipelineLayoutID	id		= _pplnLayouts[ size_t(desc.layout) ];
+			auto				bm			= allocator.Push();
+			auto *				modules		= allocator.Alloc<ShaderModule>( desc.shaders.size() );
+			VPipelineLayoutID	layout_id	= _pplnLayouts[ size_t(desc.layout) ];
+			VRenderPassOutputID	rp_output_id= _renderPassOutputs[ size_t(desc.renderPass) ];
 
 			for (size_t j = 0; j < desc.shaders.size(); ++j)
 			{
@@ -310,11 +371,11 @@ namespace AE::Graphics
 				modules[j].module	= _shaderModules[idx];
 			}
 
-			mpipelines[i] = resMngr.CreateMPTemplate( id, desc, ArrayView{modules, desc.shaders.size()} );
-			CHECK_ERR( mpipelines[i] );
+			_mpipelines[i].Set( resMngr.CreateMPTemplate( layout_id, rp_output_id, desc, ArrayView{modules, desc.shaders.size()} ));
+			CHECK_ERR( _mpipelines[i] );
+			
+			allocator.Pop( bm );
 		}
-
-		outPipelines = ArrayView<VMeshPipelineTemplateID>{ mpipelines, count };
 		return true;
 	}
 	
@@ -323,8 +384,7 @@ namespace AE::Graphics
 	_LoadComputePipelines
 =================================================
 */
-	bool VPipelinePack::_LoadComputePipelines (VResourceManager &resMngr, Serializing::Deserializer &des, Allocator_t &allocator,
-											   OUT ArrayView<VComputePipelineTemplateID> &outPipelines)
+	bool VPipelinePack::_LoadComputePipelines (VResourceManager &resMngr, Serializing::Deserializer &des)
 	{
 		EMarker	marker;
 		uint	count	= 0;
@@ -333,8 +393,7 @@ namespace AE::Graphics
 		if ( not count )
 			return true;
 		
-		auto*	cpipelines = allocator.Alloc<VComputePipelineTemplateID>( count );
-		CHECK_ERR( cpipelines );
+		_cpipelines.resize( count );
 		
 		PipelineCompiler::ComputePipelineDesc	desc;
 		for (uint i = 0; i < count; ++i)
@@ -348,11 +407,9 @@ namespace AE::Graphics
 			CHECK_ERR( EnumEq( desc.shader, PipelineCompiler::ShaderUID::SPIRV ));
 			CHECK_ERR( idx < _shaderModules.size() );
 
-			cpipelines[i] = resMngr.CreateCPTemplate( id, desc, _shaderModules[idx] );
-			CHECK_ERR( cpipelines[i] );
+			_cpipelines[i].Set( resMngr.CreateCPTemplate( id, desc, _shaderModules[idx] ));
+			CHECK_ERR( _cpipelines[i] );
 		}
-
-		outPipelines = ArrayView<VComputePipelineTemplateID>{ cpipelines, count };
 		return true;
 	}
 
@@ -361,23 +418,16 @@ namespace AE::Graphics
 	_LoadPipelineNames
 =================================================
 */
-	bool VPipelinePack::_LoadPipelineNames (ArrayView<VGraphicsPipelineTemplateID>	graphicsPipelines,
-											ArrayView<VMeshPipelineTemplateID>		meshPipelines,
-											ArrayView<VComputePipelineTemplateID>	computePipelines,
-											//ArrayView<VRayTracingPipelineTemplateID>	rayTracingPipelines,
-											Serializing::Deserializer				&des,
-											INOUT PipelineRefs						&refs)
+	bool VPipelinePack::_LoadPipelineNames (Serializing::Deserializer &des, INOUT PipelineRefs &refs)
 	{
 		using PipelineUID		= PipelineCompiler::PipelineUID;
-		using PipelineNameMap_t	= Array<Pair< PipelineName, PipelineUID >>;
+		using PipelineNameMap_t	= Array<Pair< PipelineName, PipelineUID >>;	// TODO: allocator
 
 		PipelineNameMap_t	pipeline_names;
 		EMarker				marker;
 
 		CHECK_ERR( des( OUT marker ) and marker == EMarker::PipelineNames );
 		CHECK_ERR( des( OUT pipeline_names ));
-
-		EXLOCK( refs.guard );
 
 		for (auto&[name, uid] : pipeline_names)
 		{
@@ -386,20 +436,24 @@ namespace AE::Graphics
 			BEGIN_ENUM_CHECKS();
 			switch ( uid & PipelineUID::_Mask )
 			{
-				case PipelineUID::Graphics :
-					CHECK( refs.graphics.insert_or_assign( name, graphicsPipelines[idx] ).second );
+				case PipelineUID::Graphics : {
+					EXLOCK( refs.graphics.guard );
+					CHECK( refs.graphics.map.insert_or_assign( name, _gpipelines[idx] ).second );
 					break;
-
-				case PipelineUID::Mesh :
-					CHECK( refs.mesh.insert_or_assign( name, meshPipelines[idx] ).second );
+				}
+				case PipelineUID::Mesh : {
+					EXLOCK( refs.mesh.guard );
+					CHECK( refs.mesh.map.insert_or_assign( name, _mpipelines[idx] ).second );
 					break;
-
-				case PipelineUID::Compute :
-					CHECK( refs.compute.insert_or_assign( name, computePipelines[idx] ).second );
+				}
+				case PipelineUID::Compute : {
+					EXLOCK( refs.compute.guard );
+					CHECK( refs.compute.map.insert_or_assign( name, _cpipelines[idx] ).second );
 					break;
-
+				}
 				case PipelineUID::RayTracing :
-					//CHECK( refs.rayTracing.insert_or_assign( name, rayTracingPipelines[idx] ).second );
+					//EXLOCK( refs.rayTracing.guard );
+					//CHECK( refs.rayTracing.map.insert_or_assign( name, _rtpipelines[idx] ).second );
 					//break;
 
 				case PipelineUID::_Mask :

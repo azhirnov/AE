@@ -39,7 +39,7 @@ namespace AE::Graphics
 		VGraphicsPipeline () {}
 		~VGraphicsPipeline ();
 
-		bool Create (VGraphicsPipelineTemplateID templId, const GraphicsPipelineDesc &desc, VkPipeline ppln, VkPipelineLayout layout);
+		bool Create (VGraphicsPipelineTemplateID, const GraphicsPipelineDesc &, VkPipeline, VkPipelineLayout);
 		void Destroy (VResourceManager &);
 
 		ND_ GraphicsPipelineDesc const&	Description ()	const	{ SHAREDLOCK( _drCheck );  return _desc; }
@@ -71,7 +71,8 @@ namespace AE::Graphics
 		using VertexAttrib		= VertexInputState::VertexAttrib;
 		using VertexAttribs_t	= PipelineCompiler::GraphicsPipelineDesc::VertexAttribs_t;
 		using SpecValues_t		= GraphicsPipelineDesc::SpecValues_t;
-		using PipelineMap_t		= HashMultiMap< HashVal, GraphicsPipelineID >;		// TODO: use flat map
+		using PipelineID_t		= GraphicsPipelineID;
+		using PipelineMap_t		= HashMultiMap< HashVal, PipelineID_t >;		// TODO: use flat map
 
 
 	// variables
@@ -82,6 +83,7 @@ namespace AE::Graphics
 		VPipelineLayoutID		_baseLayoutId;
 		ShaderModules_t			_shaders;
 
+		VRenderPassOutputID		_renderPassOutput;
 		TopologyBits_t			_supportedTopology;
 		VertexAttribs_t			_vertexAttribs;
 		SpecValues_t			_specialization;
@@ -98,8 +100,8 @@ namespace AE::Graphics
 		VGraphicsPipelineTemplate () {}
 		~VGraphicsPipelineTemplate ();
 
-		bool Create (VPipelineLayoutID layoutId, const PipelineCompiler::GraphicsPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName);
-		void Destroy (VResourceManager &);
+		bool Create (VPipelineLayoutID layoutId, VRenderPassOutputID rpOutputId, const PipelineCompiler::GraphicsPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName);
+		void Destroy (const VResourceManager &);
 		
 		ND_ VPipelineLayoutID		GetLayoutID ()			const	{ SHAREDLOCK( _drCheck );  return _baseLayoutId; }
 		ND_ ArrayView<VertexAttrib>	GetVertexAttribs ()		const	{ SHAREDLOCK( _drCheck );  return _vertexAttribs; }

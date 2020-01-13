@@ -29,6 +29,8 @@ namespace AE::Graphics
 		EXLOCK( _drCheck );
 		CHECK_ERR( not _handle and not _layout );
 
+		// _desc.renderPassId reference has been acquired by VResourceManager
+
 		_templ	= templId;
 		_desc	= desc;
 		_handle	= ppln;
@@ -52,10 +54,15 @@ namespace AE::Graphics
 			dev.vkDestroyPipeline( dev.GetVkDevice(), _handle, null );
 		}
 
+		{
+			UniqueID<RenderPassID>	rp{ _desc.renderPassId };
+			resMngr.ReleaseResource( rp );
+		}
+
 		_handle		= VK_NULL_HANDLE;
 		_layout		= VK_NULL_HANDLE;
 		_templ		= Default;
-		//_desc		= Default;
+		_desc		= Default;
 	}
 //-----------------------------------------------------------------------------
 
@@ -76,18 +83,21 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool  VGraphicsPipelineTemplate::Create (VPipelineLayoutID layoutId, const PipelineCompiler::GraphicsPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName)
+	bool  VGraphicsPipelineTemplate::Create (VPipelineLayoutID layoutId, VRenderPassOutputID rpOutputId, const PipelineCompiler::GraphicsPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( not _baseLayoutId );
 		
 		_baseLayoutId		= layoutId;
 		_shaders			= modules;
+		_renderPassOutput	= rpOutputId;
+
 		_supportedTopology	= desc.supportedTopology;
 		_vertexAttribs		= desc.vertexAttribs;
 		_specialization		= desc.specialization;
 		_patchControlPoints	= desc.patchControlPoints;
 		_earlyFragmentTests	= desc.earlyFragmentTests;
+
 		_debugName			= dbgName;
 
 		return true;
@@ -98,11 +108,12 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void  VGraphicsPipelineTemplate::Destroy (VResourceManager &)
+	void  VGraphicsPipelineTemplate::Destroy (const VResourceManager &)
 	{
 		EXLOCK( _drCheck );
 
-		_baseLayoutId	= Default;
+		_baseLayoutId		= Default;
+		_renderPassOutput	= Default;
 		_shaders.clear();
 	}
 

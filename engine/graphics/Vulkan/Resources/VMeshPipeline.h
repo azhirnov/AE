@@ -62,7 +62,8 @@ namespace AE::Graphics
 		using VertexAttrib		= VertexInputState::VertexAttrib;
 		using VertexAttribs_t	= PipelineCompiler::GraphicsPipelineDesc::VertexAttribs_t;
 		using SpecValues_t		= GraphicsPipelineDesc::SpecValues_t;
-		using PipelineMap_t		= HashMultiMap< HashVal, MeshPipelineID >;		// TODO: use flat map
+		using PipelineID_t		= MeshPipelineID;
+		using PipelineMap_t		= HashMultiMap< HashVal, PipelineID_t >;		// TODO: use flat map
 
 
 	// variables
@@ -75,8 +76,8 @@ namespace AE::Graphics
 		VPipelineLayoutID		_baseLayoutId;
 		ShaderModules_t			_shaders;
 		
+		VRenderPassOutputID		_renderPassOutput;
 		EPrimitive				_topology				= Default;
-		//FragmentOutputs_t		_fragmentOutputs;
 		uint					_maxVertices			= 0;
 		uint					_maxIndices				= 0;
 		uint3					_defaultTaskGroupSize;
@@ -96,8 +97,8 @@ namespace AE::Graphics
 		VMeshPipelineTemplate () {}
 		~VMeshPipelineTemplate ();
 
-		bool Create (VPipelineLayoutID layoutId, const PipelineCompiler::MeshPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName);
-		void Destroy (VResourceManager &);
+		bool Create (VPipelineLayoutID layoutId, VRenderPassOutputID rpOutputId, const PipelineCompiler::MeshPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName);
+		void Destroy (const VResourceManager &);
 		
 		ND_ VPipelineLayoutID		GetLayoutID ()			const	{ SHAREDLOCK( _drCheck );  return _baseLayoutId; }
 		ND_ bool					IsEarlyFragmentTests ()	const	{ SHAREDLOCK( _drCheck );  return _earlyFragmentTests; }

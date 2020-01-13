@@ -30,8 +30,7 @@ namespace AE::PipelineCompiler
 		// types
 			using VertexAttrib		= VertexInputState::VertexAttrib;
 			using VertexAttribs_t	= GraphicsPipelineDesc::VertexAttribs_t;
-			using FragmentOutput	= GraphicsPipelineDesc::FragmentOutput;
-			using FragmentOutputs_t	= GraphicsPipelineDesc::FragmentOutputs_t;
+			using FragmentOutputs_t	= RenderPassInfo::FragmentOutputs_t;
 			using TopologyBits_t	= GraphicsPipelineDesc::TopologyBits_t;
 			using SpecConstants_t	= SpirvShaderCode::SpecConstants_t;
 
@@ -88,6 +87,8 @@ namespace AE::PipelineCompiler
 		
 		using EDescriptorType	= DescriptorSetLayoutDesc::EDescriptorType;
 		using PushConstant		= PushConstants::PushConst;
+		using FragmentOutput	= RenderPassInfo::FragmentOutput;
+
 		using IncludeDirs_t		= Array< std::wstring > const &;
 
 

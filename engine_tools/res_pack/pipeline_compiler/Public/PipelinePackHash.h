@@ -31,17 +31,6 @@ namespace AE::PipelineCompiler
 
 /*
 =================================================
-	operator == (FragmentOutput)
-=================================================
-*/
-	inline bool  operator == (const GraphicsPipelineDesc::FragmentOutput &lhs, const GraphicsPipelineDesc::FragmentOutput &rhs)
-	{
-		return	(lhs.index	== rhs.index)	&
-				(lhs.type	== rhs.type);
-	}
-
-/*
-=================================================
 	operator == (VertexAttrib)
 =================================================
 */
@@ -201,22 +190,6 @@ namespace AE::PipelineCompiler
 	
 /*
 =================================================
-	FragmentOutputHash
-=================================================
-*/
-	ND_ HashVal  FragmentOutputHash (const GraphicsPipelineDesc::FragmentOutputs_t &fragOutputs)
-	{
-		HashVal	res = HashOf( fragOutputs.size() );
-
-		for (auto& fo : fragOutputs)
-		{
-			res << HashOf( fo.first ) << HashOf( fo.second.index ) << HashOf( fo.second.type );
-		}
-		return res;
-	}
-	
-/*
-=================================================
 	VertexAttribsHash
 =================================================
 */
@@ -240,9 +213,9 @@ namespace AE::PipelineCompiler
 	{
 		HashVal	res;
 		res << HashOf( desc.layout );
+		res << HashOf( desc.renderPass );
 		res << HashOf( desc.shaders );
 		res << HashOf( desc.supportedTopology );
-		res << FragmentOutputHash( desc.fragmentOutputs );
 		res << VertexAttribsHash( desc.vertexAttribs );
 		res << HashOf( desc.patchControlPoints );
 		res << HashOf( desc.earlyFragmentTests );
@@ -258,8 +231,8 @@ namespace AE::PipelineCompiler
 	{
 		HashVal	res;
 		res << HashOf( desc.layout );
+		res << HashOf( desc.renderPass );
 		res << HashOf( desc.shaders );
-		res << FragmentOutputHash( desc.fragmentOutputs );
 		res << HashOf( desc.topology );
 		res << HashOf( desc.maxVertices );
 		res << HashOf( desc.maxIndices );
@@ -457,9 +430,9 @@ namespace AE::PipelineCompiler
 	ND_ bool  Equal (const GraphicsPipelineDesc &lhs, const GraphicsPipelineDesc &rhs)
 	{
 		return	lhs.layout				== rhs.layout				and
+				lhs.renderPass			== rhs.renderPass			and
 				lhs.shaders				== rhs.shaders				and
 				lhs.supportedTopology	== rhs.supportedTopology	and
-				lhs.fragmentOutputs		== rhs.fragmentOutputs		and
 				Equal( lhs.vertexAttribs, rhs.vertexAttribs )		and
 				lhs.patchControlPoints	== rhs.patchControlPoints	and
 				lhs.earlyFragmentTests	== rhs.earlyFragmentTests;
@@ -473,9 +446,9 @@ namespace AE::PipelineCompiler
 	ND_ bool  Equal (const MeshPipelineDesc &lhs, const MeshPipelineDesc &rhs)
 	{
 		return	lhs.layout						== rhs.layout					and
+				lhs.renderPass					== rhs.renderPass				and
 				lhs.shaders						== rhs.shaders					and
 				lhs.topology					== rhs.topology					and
-				lhs.fragmentOutputs				== rhs.fragmentOutputs			and
 				lhs.maxVertices					== rhs.maxVertices				and
 				lhs.maxIndices					== rhs.maxIndices				and
 				All( lhs.defaultTaskGroupSize	== rhs.defaultTaskGroupSize )	and

@@ -1594,7 +1594,7 @@ namespace AE::PipelineCompiler
 			if ( _currentStage != EShaderStages::Fragment )
 				return true;	// skip
 
-			GraphicsPipelineDesc::FragmentOutput	frag_out;
+			FragmentOutput	frag_out;
 			frag_out.index	= (qual.hasLocation() ? uint(qual.layoutLocation) : UMax);
 			frag_out.type	= _ExtractFragmentOutputType( type );
 
