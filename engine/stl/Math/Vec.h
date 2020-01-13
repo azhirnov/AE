@@ -341,7 +341,7 @@ namespace AE::Math
 	
 /*
 =================================================
-	Min / Mag
+	Min
 =================================================
 */
 	template <typename T, int I>
@@ -351,11 +351,40 @@ namespace AE::Math
 	}
 	
 	template <typename T, int I>
+	ND_ inline constexpr Vec<T,I>  Min (const Vec<T,I> &lhs, const T &rhs)
+	{
+		return Min( lhs, Vec<T,I>(rhs) );
+	}
+
+	template <typename T, int I>
+	ND_ inline constexpr Vec<T,I>  Min (const T &lhs, const Vec<T,I> &rhs)
+	{
+		return Min( Vec<T,I>(lhs), rhs );
+	}
+	
+/*
+=================================================
+	Max
+=================================================
+*/
+	template <typename T, int I>
 	ND_ forceinline Vec<T,I>  Max (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
 	{
 		return glm::max( lhs, rhs );
 	}
 	
+	template <typename T, uint I>
+	ND_ inline constexpr Vec<T,I>  Max (const Vec<T,I> &lhs, const T &rhs)
+	{
+		return Max( lhs, Vec<T,I>(rhs) );
+	}
+
+	template <typename T, uint I>
+	ND_ inline constexpr Vec<T,I>  Max (const T &lhs, const Vec<T,I> &rhs)
+	{
+		return Max( Vec<T,I>(lhs), rhs );
+	}
+
 /*
 =================================================
 	Clamp
@@ -365,6 +394,12 @@ namespace AE::Math
 	ND_ forceinline Vec<T,I>  Clamp (const Vec<T,I> &value, const Vec<T,I> &minVal, const Vec<T,I> &maxVal)
 	{
 		return glm::clamp( value, minVal, maxVal );
+	}
+	
+	template <typename T, int I>
+	ND_ forceinline Vec<T,I>  Clamp (const Vec<T,I> &value, const T &minVal, const T &maxVal)
+	{
+		return glm::clamp( value, Vec<T,I>{minVal}, Vec<T,I>{maxVal} );
 	}
 
 /*

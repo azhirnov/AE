@@ -54,7 +54,7 @@ namespace AE::Math
 	template <typename Lhs, typename Rhs>
 	struct ValueScaleTempl::Add
 	{
-		static constexpr auto	Value	= std::min( Lhs::Value, Rhs::Value );
+		static constexpr auto	Value	= Min( Lhs::Value, Rhs::Value );
 
 		template <typename T>
 		static constexpr T  Get (T lhs, T rhs)
@@ -73,7 +73,7 @@ namespace AE::Math
 	template <typename Lhs, typename Rhs>
 	struct ValueScaleTempl::Sub
 	{
-		static constexpr auto	Value	= std::min( Lhs::Value, Rhs::Value );
+		static constexpr auto	Value	= Min( Lhs::Value, Rhs::Value );
 
 		template <typename T>
 		static constexpr T  Get (T lhs, T rhs)

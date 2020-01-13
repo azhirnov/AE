@@ -109,9 +109,15 @@ namespace AE::Math
 	template <typename LT, typename RT>
 	ND_ forceinline constexpr auto  Max (const LT &lhs, const RT &rhs)
 	{
-		using T = Conditional< IsSameTypes<LT, RT>, LT, decltype(lhs + rhs) >;
-		
-		return lhs > rhs ? T(lhs) : T(rhs);
+		if constexpr( IsSameTypes<LT, RT> )
+		{
+			return lhs > rhs ? lhs : rhs;
+		}
+		else
+		{
+			using T = Conditional< IsSameTypes<LT, RT>, LT, decltype(lhs + rhs) >;
+			return lhs > rhs ? T(lhs) : T(rhs);
+		}
 	}
 
 	template <typename T1, typename ...Types>
@@ -128,9 +134,15 @@ namespace AE::Math
 	template <typename LT, typename RT>
 	ND_ forceinline constexpr auto  Min (const LT &lhs, const RT &rhs)
 	{
-		using T = Conditional< IsSameTypes<LT, RT>, LT, decltype(lhs + rhs) >;
-		
-		return lhs > rhs ? T(rhs) : T(lhs);
+		if constexpr( IsSameTypes<LT, RT> )
+		{
+			return lhs > rhs ? rhs : lhs;
+		}
+		else
+		{
+			using T = Conditional< IsSameTypes<LT, RT>, LT, decltype(lhs + rhs) >;
+			return lhs > rhs ? T(rhs) : T(lhs);
+		}
 	}
 
 	template <typename T1, typename ...Types>

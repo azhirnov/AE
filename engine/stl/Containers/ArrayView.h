@@ -70,6 +70,9 @@ namespace AE::STL
 
 		ND_ bool  operator == (ArrayView<T> rhs) const
 		{
+			if ( (_array == rhs._array) & (_count == rhs._count) )
+				return true;
+
 			if ( size() != rhs.size() )
 				return false;
 

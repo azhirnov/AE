@@ -169,6 +169,18 @@ namespace AE::STL
 		}
 
 
+		ND_ bool  operator == (const Self &rhs) const
+		{
+			if ( this == &rs )
+				return true;
+
+			if ( _count != rhs._count )
+				return false;
+
+			return _arrays == rhs._arrays;
+		}
+
+
 	private:
 		template <size_t I>		ND_ constexpr auto*	_Data () const	{ return &(*&_arrays.Get<I>())[0]; }
 		template <size_t I>		ND_ constexpr auto*	_Data ()		{ return &(*&_arrays.Get<I>())[0]; }

@@ -203,6 +203,9 @@ namespace AE::STL
 	template <typename K, typename V, size_t S>
 	inline bool	 FixedMap<K,V,S>::operator == (const Self &rhs) const
 	{
+		if ( this == &rhs )
+			return true;
+
 		if ( _count != rhs._count )
 			return false;
 

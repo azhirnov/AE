@@ -81,13 +81,19 @@ namespace AE::STL
 	template <typename R, typename T>
 	ND_ forceinline constexpr Ptr<R const>  Cast (Ptr<T const> value)
 	{
-		return Cast<R>( value.operator->() );
+		return Cast<R>( value.get() );
 	}
 	
 	template <typename R, typename T>
 	ND_ forceinline constexpr Ptr<R>  Cast (Ptr<T> value)
 	{
-		return Cast<R>( value.operator->() );
+		return Cast<R>( value.get() );
+	}
+	
+	template <typename R, typename T>
+	ND_ forceinline constexpr R*  Cast (const UniquePtr<T> &value)
+	{
+		return Cast<R>( value.get() );
 	}
 	
 /*

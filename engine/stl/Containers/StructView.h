@@ -133,6 +133,12 @@ namespace AE::STL
 			DEBUG_ONLY( _dbgView = _CreateView<Class, sizeof(Class)>( _array ));
 		}
 		
+		StructView (const T* ptr, size_t count) :
+			_array{ ptr }, _count{ count }, _stride{ sizeof(T) }
+		{
+			DEBUG_ONLY( _dbgView = _CreateView<T, sizeof(T)>( _array ));
+		}
+
 		StructView (const void *ptr, size_t count, uint stride) :
 			_array{ptr}, _count{count}, _stride{stride}
 		{}
@@ -154,6 +160,9 @@ namespace AE::STL
 
 		ND_ bool  operator == (StructView<T> rhs) const
 		{
+			if ( (_array == rhs._array) & (_count == rhs._count) & (_stride == rhs._stride) )
+				return true;
+
 			if ( size() != rhs.size() )
 				return false;
 
@@ -163,6 +172,7 @@ namespace AE::STL
 			}
 			return true;
 		}
+
 
 		ND_ StructView<T>  section (size_t first, size_t count) const
 		{
