@@ -24,12 +24,15 @@ namespace AE::Threading
 	{
 		STATIC_ASSERT( ChunkSize > 0 );
 		STATIC_ASSERT( MaxChunks > 0 and MaxChunks < 64 );
+		STATIC_ASSERT( AllocatorType::IsThreadSafe );
 
 	// types
 	public:
 		using Self			= LfLinearAllocator< ChunkSize, MemAlign, MaxChunks, AllocatorType >;
 		using Index_t		= uint;
 		using Allocator_t	= AllocatorType;
+		
+		static constexpr bool	IsThreadSafe = true;
 
 	private:
 		using ChunkBits_t	= Atomic< Conditional< (MaxChunks > 32), uint64_t, uint32_t >>;
@@ -104,7 +107,7 @@ namespace AE::Threading
 				{
 					// lock
 					for (ChunkBits_t::value_type exp = _lockedForAlloc.load( EMemoryOrder::Relaxed ), j = 0;
-						 not _lockedForAlloc.compare_exchange_weak( INOUT exp, exp | (1u << i), EMemoryOrder::Relaxed );
+						 not _lockedForAlloc.compare_exchange_weak( INOUT exp, exp | (ChunkBits_t(1) << i), EMemoryOrder::Relaxed );
 						 ++j)
 					{
 						if ( j > 2000 ) {
@@ -125,7 +128,7 @@ namespace AE::Threading
 
 					// unlock
 					for (auto exp = _lockedForAlloc.load( EMemoryOrder::Relaxed );
-						 not _lockedForAlloc.compare_exchange_weak( INOUT exp, exp & ~(1u << i), EMemoryOrder::Relaxed );)
+						 not _lockedForAlloc.compare_exchange_weak( INOUT exp, exp & ~(ChunkBits_t(1) << i), EMemoryOrder::Relaxed );)
 					{}
 
 					--i;
@@ -133,6 +136,8 @@ namespace AE::Threading
 			}
 			return null;
 		}
+
+		// TODO: Discard
 	};
 
 

@@ -16,6 +16,8 @@ namespace AE::STL
 	{
 	// types
 		template <typename T>	using StdAllocator_t = StdAllocator<T>;
+		
+		static constexpr bool	IsThreadSafe = true;
 
 	// methods
 		ND_ AE_ALLOCATOR static void*  Allocate (BytesU size)
@@ -49,6 +51,8 @@ namespace AE::STL
 	{
 	// types
 		template <typename T>	using StdAllocator_t = StdAllocator<T>;
+
+		static constexpr bool	IsThreadSafe = true;
 
 	// methods
 		ND_ AE_ALLOCATOR static void*  Allocate (BytesU size, BytesU align)

@@ -12,16 +12,16 @@ namespace AE::STL
 	template <typename T>
 	struct StdAllocator;
 
-	template <typename AllocatorType, uint MaxBlocks>
+	template <typename AllocatorType, uint MaxBlocks, bool ThreadSafe>
 	struct LinearAllocator;
 
 	template <typename T, typename AllocatorType, typename MaxBlocks>
 	struct StdLinearAllocator;
 
-	template <typename AllocatorType, uint MaxBlocks>
+	template <typename AllocatorType, uint MaxBlocks, bool ThreadSafe>
 	struct UntypedLinearAllocator;
 
-	template <typename AllocatorType, uint MaxBlocks>
+	template <typename AllocatorType, uint MaxBlocks, bool ThreadSafe>
 	struct StackAllocator;
 
 }	// AE::STL

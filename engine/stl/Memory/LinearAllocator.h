@@ -16,14 +16,19 @@ namespace AE::STL
 	//
 
 	template <typename AllocatorType = UntypedAlignedAllocator,
-			  uint MaxBlocks = 16
+			  uint MaxBlocks = 16,
+			  bool ThreadSafe = false
 			 >
 	struct LinearAllocator final
 	{
+		STATIC_ASSERT( not ThreadSafe );
+
 	// types
 	public:
 		using Allocator_t	= AllocatorType;
-		using Self			= LinearAllocator< AllocatorType, MaxBlocks >;
+		using Self			= LinearAllocator< AllocatorType, MaxBlocks, false >;
+		
+		static constexpr bool	IsThreadSafe = false;
 
 	private:
 		struct Block
@@ -154,18 +159,23 @@ namespace AE::STL
 	//
 	
 	template <typename AllocatorType = UntypedAlignedAllocator,
-			  uint MaxBlocks = 16
+			  uint MaxBlocks = 16,
+			  bool ThreadSafe = false
 			 >
 	struct UntypedLinearAllocator final
 	{
+		STATIC_ASSERT( not ThreadSafe );
+
 	// types
 	public:
 		using Allocator_t		= AllocatorType;
-		using LinearAllocator_t	= LinearAllocator< AllocatorType, MaxBlocks >;
-		using Self				= UntypedLinearAllocator< AllocatorType, MaxBlocks >;
+		using LinearAllocator_t	= LinearAllocator< AllocatorType, MaxBlocks, false >;
+		using Self				= UntypedLinearAllocator< AllocatorType, MaxBlocks, false >;
 
 		template <typename T>
 		using StdAllocator_t	= StdLinearAllocator< T, AllocatorType, ValueToType<MaxBlocks> >;
+		
+		static constexpr bool	IsThreadSafe = false;
 
 
 	// variables
@@ -217,13 +227,14 @@ namespace AE::STL
 	// types
 	public:
 		static constexpr uint	MaxBlocks = MaxBlocksT::value;
+		static constexpr bool	IsThreadSafe = false;
 
 		using value_type			= T;
 		using Allocator_t			= AllocatorType;
-		using LinearAllocator_t		= LinearAllocator< AllocatorType, MaxBlocks >;
+		using LinearAllocator_t		= LinearAllocator< AllocatorType, MaxBlocks, IsThreadSafe >;
 		using Self					= StdLinearAllocator< T, AllocatorType, MaxBlocksT >;
-		using UntypedAllocator_t	= UntypedLinearAllocator< AllocatorType, MaxBlocks >;
-
+		using UntypedAllocator_t	= UntypedLinearAllocator< AllocatorType, MaxBlocks, IsThreadSafe >;
+		
 
 	// variables
 	private:

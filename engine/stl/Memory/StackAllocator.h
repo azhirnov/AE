@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "stl/Math/Math.h"
+#include "stl/Math/BitMath.h"
 #include "stl/Math/Bytes.h"
 #include "stl/Memory/UntypedAllocator.h"
 #include "stl/Containers/FixedArray.h"
@@ -16,16 +16,21 @@ namespace AE::STL
 	//
 
 	template <typename AllocatorType = UntypedAlignedAllocator,
-			  uint MaxBlocks = 16
+			  uint MaxBlocks = 16,
+			  bool ThreadSafe = false
 			 >
 	struct StackAllocator final
 	{
+		STATIC_ASSERT( not ThreadSafe );
+
 	// types
 	public:
-		using Self			= StackAllocator< AllocatorType, MaxBlocks >;
+		using Self			= StackAllocator< AllocatorType, MaxBlocks, false >;
 		using Allocator_t	= AllocatorType;
 
 		enum class Bookmark : size_t {};
+		
+		static constexpr bool	IsThreadSafe = false;
 
 	private:
 		struct Block
