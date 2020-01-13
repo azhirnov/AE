@@ -8,7 +8,7 @@ using namespace AE::Threading;
 
 namespace
 {
-	void ChunkedIndexedPool_Test1 ()
+	void IndexedPool_Test1 ()
 	{
 		constexpr uint							count = 1024;
 		IndexedPool< int, uint, count/16, 16 >	pool;
@@ -27,7 +27,7 @@ namespace
 	}
 
 
-	void ChunkedIndexedPool_Test2 ()
+	void IndexedPool_Test2 ()
 	{
 		constexpr uint							count = 1024;
 		IndexedPool< int, uint, count/16, 16 >	pool;
@@ -42,7 +42,7 @@ namespace
 	}
 
 
-	void ChunkedIndexedPool_Test3 ()
+	void IndexedPool_Test3 ()
 	{
 		using T = DebugInstanceCounter< int, 1 >;
 	
@@ -89,9 +89,9 @@ namespace
 
 extern void UnitTest_IndexedPool ()
 {
-	ChunkedIndexedPool_Test1();
-	ChunkedIndexedPool_Test2();
-	ChunkedIndexedPool_Test3();
+	IndexedPool_Test1();
+	IndexedPool_Test2();
+	IndexedPool_Test3();
 	CachedIndexedPool_Test1();
 
 	AE_LOGI( "UnitTest_IndexedPool - passed" );

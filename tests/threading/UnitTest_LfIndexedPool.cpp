@@ -8,9 +8,9 @@ namespace
 {
 	void LfIndexedPool_Test1 ()
 	{
-		LfIndexedPool< int, uint, 32, 16 >	pool;
+		LfIndexedPool< int, uint, 1024, 16 >	pool;
 
-		for (uint i = 0; i < 32*16*10; ++i)
+		for (uint i = 0; i < 1024*16*10; ++i)
 		{
 			uint	index;
 			TEST( pool.Assign( OUT index ));
@@ -26,9 +26,9 @@ namespace
 	
 		T::ClearStatistic();
 		{
-			LfIndexedPool< T, uint, 32, 16 >	pool;
+			LfIndexedPool< T, uint, 1024, 16 >	pool;
 	
-			for (uint i = 0; i < 32*16*10; ++i)
+			for (uint i = 0; i < 1024*16*10; ++i)
 			{
 				uint	index;
 				TEST( pool.Assign( OUT index ));
@@ -46,7 +46,7 @@ namespace
 	
 		T::ClearStatistic();
 		{
-			constexpr uint							count = 32*16;
+			constexpr uint							count = 1024*16;
 			LfIndexedPool< T, uint, count/16, 16 >	pool;
 	
 			for (uint i = 0; i < count+1; ++i)

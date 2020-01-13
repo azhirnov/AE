@@ -1,4 +1,7 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+/*
+	TODO: use LfIndexedPool instead
+*/
 
 #pragma once
 
@@ -112,8 +115,7 @@ namespace AE::Threading
 
 		void Swap (Self &other)
 		{
-			EXLOCK( _assignOpGuard );
-			EXLOCK( other._assignOpGuard );
+			std::scoped_lock	lock{ _assignOpGuard, other._assignOpGuard };
 
 			CHECK( _alloc == other._alloc );
 			std::swap( _indexCount,	other._indexCount );

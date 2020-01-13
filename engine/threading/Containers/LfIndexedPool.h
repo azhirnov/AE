@@ -1,4 +1,20 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+/*
+	This lock-free container has some limitations:
+	- write access by same index must be externally synchronized.
+	- read access is safe after flush & invalidation (synchronization).
+	- Release() must be externally synchronized with all other read and write accesses.
+	- Unassign() must be externally synchronized with all other read and write accesses to the 'index'.
+	- custom allocator must be thread safe (use mutex or lock-free algorithms).
+
+	Valid usage:
+	1. Call Assign( index ).
+	2. Write data by this 'index'.
+	3. Share 'index' with other threads with only read access. Flush and invalidate cache before using in other threads.
+	   Usually you will use mutex or other default sync primitive that automaticaly updates cache when share 'index' with other threads.
+	   If you use lock-free algorithm use 'release' memory order after writing to 'index' and use 'acquire' memory order before reading from 'index'.
+	4. Wait until all threads finish reading from 'index' then you may call Unassign( index ).
+*/
 
 #pragma once
 
@@ -12,7 +28,7 @@ namespace AE::Threading
 {
 
 	//
-	// Chunked Indexed Pool
+	// Lock-Free Indexed Pool
 	//
 
 	template <typename ValueType,
@@ -23,8 +39,11 @@ namespace AE::Threading
 			 >
 	struct LfIndexedPool final
 	{
-		STATIC_ASSERT( ChunkSize > 0 and MaxChunks > 0 );
-		STATIC_ASSERT( IsPowerOfTwo( ChunkSize ) );	// must be power of 2 to increase performance
+		STATIC_ASSERT( ChunkSize > 0 );
+		STATIC_ASSERT( (ChunkSize % 32) == 0 );
+		STATIC_ASSERT( MaxChunks > 0 );
+		STATIC_ASSERT( IsPowerOfTwo( ChunkSize ));	// must be power of 2 to increase performance
+		STATIC_ASSERT( AllocatorType::IsThreadSafe );
 		
 	// types
 	public:
@@ -34,13 +53,15 @@ namespace AE::Threading
 		using Allocator_t		= AllocatorType;
 
 	private:
-		using Bitfield_t		= Conditional< (ChunkSize > 64), void, Conditional< (ChunkSize > 32), uint64_t, Conditional< (ChunkSize > 16), uint32_t, uint16_t >>>;
-		using BitfieldArray_t	= StaticArray< Atomic<Bitfield_t>, MaxChunks >;
+		using Bitfield_t		= Conditional< (ChunkSize % 64) == 0, uint64_t, uint32_t >;
+
+		static constexpr size_t	AtomicSize		= sizeof(Bitfield_t) * 8;
+		static constexpr size_t	AtomicsCount	= ChunkSize / AtomicSize;
+
+		using BitfieldArray_t	= StaticArray< Atomic<Bitfield_t>, AtomicsCount * MaxChunks >;
 		
 		using ValueChunk_t		= StaticArray< Value_t, ChunkSize >;
 		using ValueChunks_t		= StaticArray< Atomic<ValueChunk_t *>, MaxChunks >;
-		
-		static constexpr uint	ChunkSizePOT = CT_IntLog2< ChunkSize >;
 
 		STATIC_ASSERT( BitfieldArray_t::value_type::is_always_lock_free );
 		STATIC_ASSERT( ValueChunks_t::value_type::is_always_lock_free );
@@ -51,7 +72,7 @@ namespace AE::Threading
 		BitfieldArray_t		_assignedBits;	// 1 - is unassigned bit, 0 - assigned bit
 		BitfieldArray_t		_createdBits;	// 1 - constructor has been called
 		ValueChunks_t		_values;
-		Allocator_t			_alloc;
+		Allocator_t			_alloc;			// must be thread safe
 
 
 	// methods
@@ -66,11 +87,14 @@ namespace AE::Threading
 		explicit LfIndexedPool (const Allocator_t &alloc = Allocator_t()) :
 			_alloc{ alloc }
 		{
-			for (size_t i = 0; i < MaxChunks; ++i)
-			{
-				_assignedBits[i].store( UMax, EMemoryOrder::Relaxed );
-				_createdBits[i].store( 0, EMemoryOrder::Relaxed );
-				_values[i].store( null, EMemoryOrder::Relaxed );
+			for (auto& item : _assignedBits) {
+				item.store( UMax, EMemoryOrder::Relaxed );
+			}
+			for (auto& item : _createdBits) {
+				item.store( 0, EMemoryOrder::Relaxed );
+			}
+			for (auto& item : _values) {
+				item.store( null, EMemoryOrder::Relaxed );
 			}
 
 			// flush cache
@@ -83,36 +107,36 @@ namespace AE::Threading
 		}
 		
 		
+		// Must be externally synchronized.
+		// It is unsafe to call destructor for a value that can be used in another thread.
 		template <typename FN>
 		void Release (FN &&dtor)
 		{
-			// invalidate cache
-			ThreadFence( EMemoryOrder::Acquire );
-
 			for (size_t i = 0; i < MaxChunks; ++i)
 			{
-				ValueChunk_t*	value		= _values[i].load( EMemoryOrder::Relaxed );
-				Bitfield_t		ctor_bits	= _createdBits[i].load( EMemoryOrder::Relaxed );
-				Bitfield_t		assigned	= _assignedBits[i].load( EMemoryOrder::Relaxed );
+				// invalidate cache
+				ValueChunk_t*	chunk = _values[i].exchange( null, EMemoryOrder::Acquire );
 
-				Unused( assigned );
-				ASSERT( assigned == UMax );
-
-				if ( not value )
+				if ( not chunk )
 					continue;
-				
-				// reset
-				_assignedBits[i].store( UMax, EMemoryOrder::Relaxed );
-				_createdBits[i].store( 0, EMemoryOrder::Relaxed );
-				_values[i].store( null, EMemoryOrder::Relaxed );
 
-				for (size_t j = 0; j < ChunkSize; ++j)
+				for (size_t k = 0, j = i * AtomicsCount; k < AtomicsCount; ++k, ++j)
 				{
-					if ( ctor_bits & (1u<<j) )
-						dtor( value->data()[j] );
+					Bitfield_t	ctor_bits	= _createdBits[j].exchange( UMax, EMemoryOrder::Relaxed );
+					Bitfield_t	assigned	= _assignedBits[j].exchange( 0, EMemoryOrder::Relaxed );
+
+					Unused( assigned );
+					ASSERT( assigned == UMax );
+
+					// call destructor
+					for (size_t c = 0; c < AtomicSize; ++c)
+					{
+						if ( ctor_bits & (Bitfield_t(1) << c) )
+							dtor( (*chunk)[c + k*AtomicSize] );
+					}
 				}
 
-				_alloc.Deallocate( value, SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> );
+				_alloc.Deallocate( chunk, SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> );
 			}
 		}
 
@@ -127,47 +151,53 @@ namespace AE::Threading
 		{
 			for (size_t i = 0; i < MaxChunks; ++i)
 			{
-				Bitfield_t		bits = _assignedBits[i].load( EMemoryOrder::Relaxed );
-				ValueChunk_t*	ptr  = _values[i].load( EMemoryOrder::Relaxed );
-				
 				// allocate
-				if ( ptr == null )
+				ValueChunk_t*	chunk = _values[i].load( EMemoryOrder::Relaxed );
+
+				if ( chunk == null )
 				{
-					ptr = Cast<ValueChunk_t>(_alloc.Allocate( SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> ));
+					chunk = Cast<ValueChunk_t>(_alloc.Allocate( SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> ));
 
 					// set new pointer and invalidate cache
 					for (ValueChunk_t* expected = null;
-						 not _values[i].compare_exchange_weak( INOUT expected, ptr, EMemoryOrder::Acquire );)
+						 not _values[i].compare_exchange_weak( INOUT expected, chunk, EMemoryOrder::Acquire );)
 					{
 						// another thread has been allocated this chunk
-						if ( expected != null and expected != ptr )
+						if ( expected != null and expected != chunk )
 						{
-							_alloc.Deallocate( ptr, SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> );
-							ptr = expected;
+							_alloc.Deallocate( chunk, SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> );
+							chunk = expected;
 							break;
 						}
 					}
 				}
 
 				// find available index
-				for (int index = BitScanForward( bits ); index >= 0;)
+				for (size_t k = 0, j = i * AtomicsCount; k < AtomicsCount; ++k, ++j)
 				{
-					const Bitfield_t	mask = Bitfield_t(1) << index;
+					Bitfield_t	bits = _assignedBits[j].load( EMemoryOrder::Relaxed );
 
-					if ( _assignedBits[i].compare_exchange_weak( INOUT bits, bits ^ mask, EMemoryOrder::Acquire, EMemoryOrder::Relaxed ))
+					for (int index = BitScanForward( bits ); index >= 0;)
 					{
-						outIndex = Index_t(index) | (Index_t(i) << ChunkSizePOT);
+						const Bitfield_t	mask = Bitfield_t(1) << index;
 
-						if ( !(_createdBits[i].fetch_or( mask, EMemoryOrder::Relaxed ) & mask) )
+						if ( _assignedBits[j].compare_exchange_weak( INOUT bits, bits ^ mask, EMemoryOrder::Acquire, EMemoryOrder::Relaxed ))	// 1 -> 0
 						{
-							ctor( &(*ptr)[index], outIndex );
-						}
-						return true;
-					}
+							outIndex = Index_t(index) | (Index_t(j) * AtomicSize);
 
-					index = BitScanForward( bits );
+							if ( not (_createdBits[j].fetch_or( mask, EMemoryOrder::Relaxed ) & mask) )	// 0 -> 1
+							{
+								ctor( &(*chunk)[index + k*AtomicSize], outIndex );
+							}
+							return true;
+						}
+
+						index = BitScanForward( bits );
+					}
 				}
 			}
+
+			outIndex = UMax;
 			return false;
 		}
 		
@@ -177,35 +207,45 @@ namespace AE::Threading
 		}
 
 
+		// Must be externally synchronized with all threads that using 'index'
 		void  Unassign (Index_t index)
 		{
-			const uint	chunk_idx	= index >> ChunkSizePOT;
-			const uint	bit_idx		= index & (ChunkSize-1);
-			Bitfield_t	mask		= 1 << bit_idx;
-			Bitfield_t	old_bits	= _assignedBits[chunk_idx].fetch_or( mask, EMemoryOrder::Relaxed );	// 0 -> 1
+			if ( index < Capacity() )
+			{
+				const uint	chunk_idx	= index / AtomicSize;
+				const uint	bit_idx		= index % AtomicSize;
+				Bitfield_t	mask		= Bitfield_t(1) << bit_idx;
+				Bitfield_t	old_bits	= _assignedBits[chunk_idx].fetch_or( mask, EMemoryOrder::Relaxed );	// 0 -> 1
 
-			Unused( old_bits );
-			ASSERT( !(old_bits & mask) );
+				Unused( old_bits );
+				ASSERT( not (old_bits & mask) );
+			}
 		}
 
 
 		ND_ bool  IsAssigned (Index_t index)
 		{
-			const uint	chunk_idx	= index >> ChunkSizePOT;
-			const uint	bit_idx		= index & (ChunkSize-1);
-			Bitfield_t	mask		= 1 << bit_idx;
-			Bitfield_t	bits		= _assignedBits[chunk_idx].load( EMemoryOrder::Relaxed );
-
-			return !(bits & mask);
+			if ( index < Capacity() );
+			{
+				const uint	chunk_idx	= index / AtomicSize;
+				const uint	bit_idx		= index % AtomicSize;
+				Bitfield_t	mask		= Bitfield_t(1) << bit_idx;
+				Bitfield_t	bits		= _assignedBits[chunk_idx].load( EMemoryOrder::Relaxed );
+				return not (bits & mask);
+			}
+			return false;
 		}
 
 
+		// Read access by same index is safe,
+		// but write access must be externally synchronized.
 		ND_ Value_t&  operator [] (Index_t index)
 		{
+			ASSERT( index < Capacity() );
 			ASSERT( IsAssigned( index ));
 
-			const uint		chunk_idx	= index >> ChunkSizePOT;
-			const uint		bit_idx		= index & (ChunkSize-1);
+			const uint		chunk_idx	= index / ChunkSize;
+			const uint		bit_idx		= index % ChunkSize;
 			ValueChunk_t*	chunk		= _values[chunk_idx].load( EMemoryOrder::Relaxed );
 
 			ASSERT( chunk );
@@ -216,7 +256,7 @@ namespace AE::Threading
 		ND_ size_t  AssignedBitsCount ()
 		{
 			size_t	count = 0;
-			for (size_t i = 0; i < MaxChunks; ++i)
+			for (size_t i = 0; i < (MaxChunks * AtomicsCount); ++i)
 			{
 				Bitfield_t	bits = _assignedBits[i].load( EMemoryOrder::Relaxed );
 
@@ -225,16 +265,29 @@ namespace AE::Threading
 			return count;
 		}
 		
+
 		ND_ size_t  CreatedObjectsCount ()
 		{
 			size_t	count = 0;
-			for (size_t i = 0; i < MaxChunks; ++i)
+			for (size_t i = 0; i < (MaxChunks * AtomicsCount); ++i)
 			{
 				Bitfield_t	bits = _createdBits[i].load( EMemoryOrder::Relaxed );
 
 				count += BitCount( bits );
 			}
 			return count;
+		}
+
+
+		ND_ BytesU  DynamicSize () const
+		{
+			BytesU	result;
+			for (size_t i = 0; i < MaxChunks; ++i)
+			{
+				if ( _values[i].load( EMemoryOrder::Relaxed ) != null )
+					result += sizeof(ValueChunk_t);
+			}
+			return result;
 		}
 
 
