@@ -57,7 +57,7 @@ namespace AE::Graphics
 	HasExtension
 =================================================
 */
-	bool VDevice::HasExtension (StringView name) const
+	bool  VDevice::HasExtension (StringView name) const
 	{
 		return !!_instanceExtensions.count( name );
 	}
@@ -67,7 +67,7 @@ namespace AE::Graphics
 	HasDeviceExtension
 =================================================
 */
-	bool VDevice::HasDeviceExtension (StringView name) const
+	bool  VDevice::HasDeviceExtension (StringView name) const
 	{
 		return !!_deviceExtensions.count( name );
 	}
@@ -77,7 +77,7 @@ namespace AE::Graphics
 	SetObjectName
 =================================================
 */
-	bool VDevice::SetObjectName (uint64_t id, NtStringView name, VkObjectType type) const
+	bool  VDevice::SetObjectName (uint64_t id, NtStringView name, VkObjectType type) const
 	{
 		if ( name.empty() or id == VK_NULL_HANDLE )
 			return false;
@@ -95,6 +95,28 @@ namespace AE::Graphics
 		}
 
 		return false;
+	}
+	
+/*
+=================================================
+	GetQueueFamilies
+=================================================
+*/
+	void  VDevice::GetQueueFamilies (EQueueMask mask, OUT VQueueFamilyIndices_t &result) const
+	{
+		result.clear();
+
+		for (uint i = 0; i <= uint(mask); ++i)
+		{
+			if ( not EnumEq( mask, i ))
+				continue;
+
+			auto	q = GetQueue( EQueueType(i) );
+			if ( not q )
+				continue;
+
+			result.push_back( uint(q->familyIndex) );
+		}
 	}
 //-----------------------------------------------------------------------------
 
@@ -117,8 +139,8 @@ namespace AE::Graphics
 	CreateInstance
 =================================================
 */
-	bool VDeviceInitializer::CreateInstance (NtStringView appName, NtStringView engineName, ArrayView<const char*> layers,
-											 ArrayView<const char*> extensions, InstanceVersion version, uint appVer, uint engineVer)
+	bool  VDeviceInitializer::CreateInstance (NtStringView appName, NtStringView engineName, ArrayView<const char*> layers,
+											  ArrayView<const char*> extensions, InstanceVersion version, uint appVer, uint engineVer)
 	{
 		CHECK_ERR( not _vkInstance );
 		CHECK_ERR( VulkanLoader::Initialize() );
@@ -168,7 +190,7 @@ namespace AE::Graphics
 	SetInstance
 =================================================
 */
-	bool VDeviceInitializer::SetInstance (VkInstance newInstance, ArrayView<const char*> instanceExtensions)
+	bool  VDeviceInitializer::SetInstance (VkInstance newInstance, ArrayView<const char*> instanceExtensions)
 	{
 		CHECK_ERR( not _vkInstance );
 		CHECK_ERR( newInstance );
@@ -191,7 +213,7 @@ namespace AE::Graphics
 	DestroyInstance
 =================================================
 */
-	bool VDeviceInitializer::DestroyInstance ()
+	bool  VDeviceInitializer::DestroyInstance ()
 	{
 		if ( not _vkInstance )
 			return false;
@@ -213,7 +235,7 @@ namespace AE::Graphics
 */
 namespace {
 	template <typename Fn>
-	void WithPhysicalDevices (const VDevice &vulkan, Fn &&fn)
+	void  WithPhysicalDevices (const VDevice &vulkan, Fn &&fn)
 	{
 		uint						count	= 0;
 		Array< VkPhysicalDevice >	devices;
@@ -293,7 +315,7 @@ namespace {
 	ChooseDevice
 =================================================
 */
-	bool VDeviceInitializer::ChooseDevice (StringView deviceName)
+	bool  VDeviceInitializer::ChooseDevice (StringView deviceName)
 	{
 		CHECK_ERR( _vkInstance );
 		CHECK_ERR( not _vkLogicalDevice );
@@ -322,7 +344,7 @@ namespace {
 	ChooseHighPerformanceDevice
 =================================================
 */
-	bool VDeviceInitializer::ChooseHighPerformanceDevice ()
+	bool  VDeviceInitializer::ChooseHighPerformanceDevice ()
 	{
 		CHECK_ERR( _vkInstance );
 		CHECK_ERR( not _vkLogicalDevice );
@@ -366,7 +388,7 @@ namespace {
 	SetPhysicalDevice
 =================================================
 */
-	bool VDeviceInitializer::SetPhysicalDevice (VkPhysicalDevice newPhysicalDevice)
+	bool  VDeviceInitializer::SetPhysicalDevice (VkPhysicalDevice newPhysicalDevice)
 	{
 		CHECK_ERR( _vkInstance );
 		CHECK_ERR( not _vkLogicalDevice );
@@ -419,7 +441,7 @@ namespace {
 =================================================
 */
 namespace {
-	bool SetupDeviceFeatures (VkPhysicalDevice pdev, DeviceFeatures &features, void** nextExt, ArrayView<const char*> extensions)
+	bool  SetupDeviceFeatures (VkPhysicalDevice pdev, DeviceFeatures &features, void** nextExt, ArrayView<const char*> extensions)
 	{
 		VkPhysicalDeviceFeatures2	feat2		= {};
 		void **						next_feat	= &feat2.pNext;;
@@ -539,7 +561,7 @@ namespace {
 	CreateLogicalDevice
 =================================================
 */
-	bool VDeviceInitializer::CreateLogicalDevice (ArrayView<QueueCreateInfo> queues, ArrayView<const char*> extensions)
+	bool  VDeviceInitializer::CreateLogicalDevice (ArrayView<QueueCreateInfo> queues, ArrayView<const char*> extensions)
 	{
 		CHECK_ERR( _vkPhysicalDevice );
 		CHECK_ERR( not _vkLogicalDevice );
@@ -628,7 +650,8 @@ namespace {
 			_deviceExtensions.insert( ext );
 		}
 		
-		CHECK_ERR( _InitDevice() );
+		CHECK_ERR( _InitDeviceFeatures() );
+		CHECK_ERR( _SetupQueueTypes() );
 		return true;
 	}
 
@@ -637,7 +660,7 @@ namespace {
 	SetLogicalDevice
 =================================================
 */
-	bool VDeviceInitializer::SetLogicalDevice (VkDevice newDevice, ArrayView<const char*> extensions)
+	bool  VDeviceInitializer::SetLogicalDevice (VkDevice newDevice, ArrayView<const char*> extensions)
 	{
 		CHECK_ERR( _vkPhysicalDevice );
 		CHECK_ERR( not _vkLogicalDevice );
@@ -654,7 +677,8 @@ namespace {
 
 		// TODO: get queues
 
-		CHECK_ERR( _InitDevice() );
+		CHECK_ERR( _InitDeviceFeatures() );
+		CHECK_ERR( _SetupQueueTypes() );
 		return true;
 	}
 	
@@ -663,7 +687,7 @@ namespace {
 	DestroyLogicalDevice
 =================================================
 */
-	bool VDeviceInitializer::DestroyLogicalDevice ()
+	bool  VDeviceInitializer::DestroyLogicalDevice ()
 	{
 		if ( not _vkLogicalDevice )
 			return false;
@@ -680,10 +704,10 @@ namespace {
 
 /*
 =================================================
-	_InitDevice
+	_InitDeviceFeatures
 =================================================
 */
-	bool VDeviceInitializer::_InitDevice ()
+	bool  VDeviceInitializer::_InitDeviceFeatures ()
 	{
 		vkGetPhysicalDeviceFeatures( _vkPhysicalDevice, OUT &_deviceInfo.features );
 		vkGetPhysicalDeviceProperties( _vkPhysicalDevice, OUT &_deviceInfo.properties );
@@ -763,13 +787,189 @@ namespace {
 
 		return true;
 	}
+	
+/*
+=================================================
+	_SetupQueueTypes
+=================================================
+*/
+	bool  VDeviceInitializer::_SetupQueueTypes ()
+	{
+		for (EQueueType t = EQueueType(0); t < EQueueType::_Count; t = EQueueType(uint(t) + 1))
+		{
+			BEGIN_ENUM_CHECKS();
+			switch ( t )
+			{
+				case EQueueType::Graphics :			_AddGraphicsQueue();		break;
+				case EQueueType::AsyncCompute :		_AddAsyncComputeQueue();	break;
+				case EQueueType::AsyncTransfer :	_AddAsyncTransferQueue();	break;
+				case EQueueType::_Count :
+				case EQueueType::Unknown :
+				default :							CHECK( !"unknown queue type" );
+			}
+			END_ENUM_CHECKS();
+		}
+		return true;
+	}
+	
+	
+/*
+=================================================
+	IsUniqueQueue
+=================================================
+*/
+namespace {
+	ND_ bool  IsUniqueQueue (VQueuePtr ptr, ArrayView<VQueuePtr> qtypes)
+	{
+		for (auto& q : qtypes) {
+			if ( q == ptr )
+				return false;
+		}
+		return true;
+	}
+}
+/*
+=================================================
+	_AddGraphicsQueue
+=================================================
+*/
+	bool  VDeviceInitializer::_AddGraphicsQueue ()
+	{
+		VQueuePtr	best_match;
+		VQueuePtr	compatible;
+
+		for (auto& queue : _vkQueues)
+		{
+			const bool	is_unique		= IsUniqueQueue( &queue, _queueTypes );
+			const bool	has_graphics	= EnumEq( queue.familyFlags, VK_QUEUE_GRAPHICS_BIT );
+
+			if ( has_graphics )
+			{
+				compatible = &queue;
+
+				if ( is_unique ) {
+					best_match = &queue;
+					break;
+				}
+			}
+		}
+		
+		if ( not best_match )
+			best_match = compatible;
+
+		if ( not best_match )
+			return false;
+		
+		_queueTypes[ uint(EQueueType::Graphics) ] = best_match;
+		return true;
+	}
+	
+/*
+=================================================
+	_AddAsyncComputeQueue
+=================================================
+*/
+	bool  VDeviceInitializer::_AddAsyncComputeQueue ()
+	{
+		VQueuePtr	unique;
+		VQueuePtr	best_match;
+		VQueuePtr	compatible;
+
+		for (auto& queue : _vkQueues)
+		{
+			const bool	is_unique		= IsUniqueQueue( &queue, _queueTypes );
+			const bool	has_compute		= EnumEq( queue.familyFlags, VK_QUEUE_COMPUTE_BIT );
+			const bool	has_graphics	= EnumEq( queue.familyFlags, VK_QUEUE_GRAPHICS_BIT );
+
+			// compute without graphics
+			if ( has_compute and not has_graphics )
+			{
+				compatible = &queue;
+
+				if ( is_unique ) {
+					best_match = &queue;
+					break;
+				}
+			}
+			else
+			
+			// any unique queue that supports compute
+			if ( (has_compute or has_graphics) and is_unique )
+			{
+				unique = &queue;
+			}
+		}
+
+		// unique compute/graphics queue is better than non-unique compute queue
+		if ( not best_match )
+			best_match = unique;
+		
+		if ( not best_match )
+			best_match = compatible;
+		
+		if ( not best_match )
+			return false;
+
+		_queueTypes[ uint(EQueueType::AsyncCompute) ] = best_match;
+		return true;
+	}
+	
+/*
+=================================================
+	_AddAsyncTransferQueue
+=================================================
+*/
+	bool  VDeviceInitializer::_AddAsyncTransferQueue ()
+	{
+		VQueuePtr	unique;
+		VQueuePtr	best_match;
+		VQueuePtr	compatible;
+
+		for (auto& queue : _vkQueues)
+		{
+			const bool	is_unique			= IsUniqueQueue( &queue, _queueTypes );
+			const bool	has_transfer		= EnumEq( queue.familyFlags, VK_QUEUE_TRANSFER_BIT );
+			const bool	supports_transfer	= EnumAny( queue.familyFlags, VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT );
+
+			// transfer without graphics or compute
+			if ( has_transfer and not supports_transfer )
+			{
+				compatible = &queue;
+
+				if ( is_unique ) {
+					best_match = &queue;
+					break;
+				}
+			}
+			else
+			
+			// any unique queue that supports transfer
+			if ( (has_transfer or supports_transfer) and is_unique )
+			{
+				unique = &queue;
+			}
+		}
+		
+		// unique compute/graphics queue is better than non-unique transfer queue
+		if ( not best_match )
+			best_match = unique;
+		
+		if ( not best_match )
+			best_match = compatible;
+		
+		if ( not best_match )
+			return false;
+
+		_queueTypes[ uint(EQueueType::AsyncTransfer) ] = best_match;
+		return true;
+	}
 
 /*
 =================================================
 	_ChooseQueueIndex
 =================================================
 */
-	bool VDeviceInitializer::_ChooseQueueIndex (ArrayView<VkQueueFamilyProperties> queueFamilyProps, INOUT VkQueueFlags &requiredFlags, OUT uint &familyIndex) const
+	bool  VDeviceInitializer::_ChooseQueueIndex (ArrayView<VkQueueFamilyProperties> queueFamilyProps, INOUT VkQueueFlags &requiredFlags, OUT uint &familyIndex) const
 	{
 		// validate required flags
 		{
@@ -814,7 +1014,7 @@ namespace {
 	_SetupQueues
 =================================================
 */
-	bool VDeviceInitializer::_SetupQueues (ArrayView<QueueCreateInfo> queues)
+	bool  VDeviceInitializer::_SetupQueues (ArrayView<QueueCreateInfo> queues)
 	{
 		CHECK_ERR( _vkQueues.empty() );
 		
@@ -835,11 +1035,12 @@ namespace {
 		if ( queues.empty() )
 		{
 			uint			family_index	= 0;
-			VkQueueFlags	flags			= VkQueueFlags(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
+			VkQueueFlags	flags			= VK_QUEUE_GRAPHICS_BIT;
 
 			CHECK_ERR( _ChooseQueueIndex( queue_family_props, INOUT flags, OUT family_index ));
 
 			VQueue	vq;
+			vq.type			= EQueueType::Graphics;
 			vq.familyIndex	= EQueueFamily(family_index);
 			vq.familyFlags	= flags;
 			vq.minImageTransferGranularity = { queue_family_props[family_index].minImageTransferGranularity.width,
@@ -881,7 +1082,7 @@ namespace {
 	_ValidateInstanceVersion
 =================================================
 */
-	void VDeviceInitializer::_ValidateInstanceVersion (INOUT uint &version) const
+	void  VDeviceInitializer::_ValidateInstanceVersion (INOUT uint &version) const
 	{
 		const uint	min_ver		= VK_API_VERSION_1_0;
 		const uint	old_ver		= version;
@@ -900,7 +1101,7 @@ namespace {
 	_ValidateInstanceLayers
 =================================================
 */
-	void VDeviceInitializer::_ValidateInstanceLayers (INOUT Array<const char*> &layers) const
+	void  VDeviceInitializer::_ValidateInstanceLayers (INOUT Array<const char*> &layers) const
 	{
 		Array<VkLayerProperties> inst_layers;
 
@@ -947,7 +1148,7 @@ namespace {
 	_ValidateInstanceExtensions
 =================================================
 */
-	void VDeviceInitializer::_ValidateInstanceExtensions (INOUT Array<const char*> &extensions) const
+	void  VDeviceInitializer::_ValidateInstanceExtensions (INOUT Array<const char*> &extensions) const
 	{
 		using ExtName_t = FixedString<VK_MAX_EXTENSION_NAME_SIZE>;
 
@@ -993,7 +1194,7 @@ namespace {
 	_ValidateDeviceExtensions
 =================================================
 */
-	void VDeviceInitializer::_ValidateDeviceExtensions (INOUT Array<const char*> &extensions) const
+	void  VDeviceInitializer::_ValidateDeviceExtensions (INOUT Array<const char*> &extensions) const
 	{
 		// load supported device extensions
 		uint	count = 0;
@@ -1198,7 +1399,7 @@ namespace {
 				VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
 			#endif
 			#ifdef VK_KHR_spirv_1_4
-				VK_KHR_SPIRV_1_4_EXTENSION_NAME
+				VK_KHR_SPIRV_1_4_EXTENSION_NAME,
 			#endif
 
 			// Vendor specific extensions

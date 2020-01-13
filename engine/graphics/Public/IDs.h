@@ -30,6 +30,11 @@ namespace AE::Graphics
 
 	using SamplerName			= NamedID< 64, __COUNTER__, AE_OPTIMIZE_IDS >;
 	using RenderTargetName		= NamedID< 32, __COUNTER__, AE_OPTIMIZE_IDS >;
+	using RenderPassName		= NamedID< 32, __COUNTER__, AE_OPTIMIZE_IDS >;
+
+
+	static constexpr RenderTargetName	RenderTarget_Depth {"Depth"};
+	static constexpr RenderTargetName	RenderTarget_DepthStencil {"DepthStencil"};
 
 
 	
@@ -116,6 +121,51 @@ namespace AE::Graphics
 
 	// add this to output dependency to indicate that pass writes to non-virtual resource and must not be skiped.
 	static constexpr GfxResourceID	GfxResourceID_External {UMax, UMax, GfxResourceID::EType::Unknown};
+
+
+
+	//
+	// Unique ID
+	//
+
+	template <typename IDType>
+	struct UniqueID
+	{
+	// types
+	public:
+		using ID_t	= IDType;
+		using Self	= UniqueID< IDType >;
+
+
+	// variables
+	private:
+		ID_t	_id;
+
+
+	// methods
+	public:
+		UniqueID ()													{}
+		UniqueID (Self &&other) : _id{other._id}					{ other._id = Default; }
+		explicit UniqueID (const ID_t &id) : _id{id}				{}
+		~UniqueID ()												{ ASSERT(not IsValid()); }	// handle must be released
+		
+		Self&				Set (ID_t id)							{ ASSERT(not IsValid());  _id = id;  return *this; }
+
+		Self&				operator = (Self &&rhs)					{ ASSERT(not IsValid());  _id = rhs._id;  rhs._id = Default;  return *this; }
+		Self&				operator = (const Self &rhs)			{ ASSERT(not IsValid());  _id = rhs._id;  rhs._id = Default;  return *this; }
+		
+		ND_ ID_t			Release ()								{ ID_t temp{_id};  _id = Default;  return temp; }
+		ND_ bool			IsValid ()						const	{ return bool(_id); }
+
+		ND_ ID_t const&		operator * ()					const	{ return _id; }
+
+		ND_ bool			operator == (const Self &rhs)	const	{ return _id == rhs._id; }
+		ND_ bool			operator != (const Self &rhs)	const	{ return _id != rhs._id; }
+
+		ND_ explicit		operator bool ()				const	{ return IsValid(); }
+
+		ND_					operator ID_t ()				const	{ return _id; }
+	};
 
 
 }	// AE::Graphics

@@ -28,7 +28,7 @@ namespace AE::Graphics
 		~VSampler ();
 
 		bool Create (const VDevice &dev, const VkSamplerCreateInfo &info, StringView dbgName);
-		void Destroy (const VDevice &);
+		void Destroy (const VResourceManager &);
 
 		ND_ VkSampler	Handle ()	const	{ SHAREDLOCK( _drCheck );  return _sampler; }
 	};
@@ -49,7 +49,7 @@ namespace AE::Graphics
 			HashMap< SamplerName, VSamplerID >	map;
 		};
 	private:
-		using Samplers_t	= Array< VSamplerID >;
+		using Samplers_t	= Array< UniqueID< VSamplerID >>;
 
 
 	// variables

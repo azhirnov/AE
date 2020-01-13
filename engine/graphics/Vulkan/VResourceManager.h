@@ -6,10 +6,11 @@
 
 # include "graphics/Public/ResourceManager.h"
 # include "graphics/Vulkan/VDevice.h"
+# include "graphics/Vulkan/VMemoryManager.h"
 
 # include "graphics/Vulkan/Resources/VResourceBase.h"
-# include "graphics/Vulkan/Resources/VBuffer.h"
 # include "graphics/Vulkan/Resources/VDependency.h"
+# include "graphics/Vulkan/Resources/VBuffer.h"
 # include "graphics/Vulkan/Resources/VImage.h"
 # include "graphics/Vulkan/Resources/VSampler.h"
 # include "graphics/Vulkan/Resources/VMemoryObj.h"
@@ -20,6 +21,11 @@
 # include "graphics/Vulkan/Resources/VComputePipeline.h"
 # include "graphics/Vulkan/Resources/VMeshPipeline.h"
 # include "graphics/Vulkan/Resources/VSampler.h"
+# include "graphics/Vulkan/Resources/VRenderPassOutput.h"
+# include "graphics/Vulkan/Resources/VRenderPass.h"
+# include "graphics/Vulkan/Resources/VFramebuffer.h"
+# include "graphics/Vulkan/Resources/VVirtualBuffer.h"
+# include "graphics/Vulkan/Resources/VVirtualImage.h"
 
 # include "threading/Containers/LfIndexedPool.h"
 # include "threading/Containers/CachedIndexedPool.h"
@@ -34,11 +40,14 @@ namespace AE::Graphics
 	class VResourceManager final : public IResourceManager
 	{
 	// types
-	private:
+	public:
 		using Index_t	= MemoryID::Index_t;
 
 		template <typename T, size_t ChunkSize, size_t MaxChunks>
 		using PoolTmpl	= Threading::IndexedPool< T, Index_t, ChunkSize, MaxChunks, UntypedAlignedAllocator >;
+		
+		template <typename T, size_t ChunkSize, size_t MaxChunks>
+		using CachedPoolTmpl = Threading::CachedIndexedPool< T, Index_t, ChunkSize, MaxChunks, UntypedAlignedAllocator >;
 
 		// chunk size
 		static constexpr uint	MaxDeps			= 1u << 10;
@@ -52,6 +61,8 @@ namespace AE::Graphics
 		using DepsPool_t			= PoolTmpl< VResourceBase<VDependency>,					MaxDeps,		32 >;
 		using BufferPool_t			= PoolTmpl< VResourceBase<VBuffer>,						MaxBuffers,		32 >;
 		using ImagePool_t			= PoolTmpl< VResourceBase<VImage>,						MaxImages,		32 >;
+		using VirtBufferPool_t		= PoolTmpl< VResourceBase<VVirtualBuffer>,				MaxBuffers,		32 >;
+		using VirtImagePool_t		= PoolTmpl< VResourceBase<VVirtualImage>,				MaxImages,		32 >;
 		using SamplerPackPool_t		= PoolTmpl< VResourceBase<VSamplerPack>,				128,			1 >;
 		using SamplerPool_t			= PoolTmpl< VResourceBase<VSampler>,					4096,			1 >;		// TODO: static array
 		using PipelinePackPool_t	= PoolTmpl< VResourceBase<VPipelinePack>,				128,			1 >;		// TODO: static array
@@ -64,16 +75,9 @@ namespace AE::Graphics
 		using CPTemplatePool_t		= PoolTmpl< VResourceBase<VComputePipelineTemplate>,	MaxCached,		8 >;
 		using MPipelinePool_t		= PoolTmpl< VResourceBase<VMeshPipeline>,				MaxPipelines,	32 >;
 		using MPTemplatePool_t		= PoolTmpl< VResourceBase<VMeshPipelineTemplate>,		MaxCached,		8 >;
-	/*
-		using RTPipelinePool_t		= PoolTmpl<			VResourceBase<VRayTracingPipeline>,		MaxCached,		8 >;
-		using RenderPassPool_t		= CachedPoolTmpl<	VResourceBase<VRenderPass>,				MaxCached,		8 >;
-		using FramebufferPool_t		= CachedPoolTmpl<	VResourceBase<VFramebuffer>,			MaxCached,		8 >;
-		using PplnResourcesPool_t	= CachedPoolTmpl<	VResourceBase<VPipelineResources>,		MaxCached,		8 >;
-		using RTGeometryPool_t		= PoolTmpl<			VResourceBase<VRayTracingGeometry>,		MaxRTObjects,	16 >;
-		using RTScenePool_t			= PoolTmpl<			VResourceBase<VRayTracingScene>,		MaxRTObjects,	16 >;
-		using RTShaderTablePool_t	= PoolTmpl<			VResourceBase<VRayTracingShaderTable>,	MaxRTObjects,	16 >;
-		using SwapchainPool_t		= PoolTmpl<			VResourceBase<VSwapchain>,				64,				1 >;
-		*/
+		using RPOutputPool_t		= PoolTmpl< VResourceBase<VRenderPassOutput>,			MaxCached,		8 >;
+		using RenderPassPool_t		= CachedPoolTmpl< VResourceBase<VRenderPass>,			MaxCached,		8 >;
+		using FramebufferPool_t		= CachedPoolTmpl< VResourceBase<VFramebuffer>,			MaxCached,		8 >;
 
 		using PipelineRefs			= VPipelinePack::PipelineRefs;
 		using SamplerRefs			= VSamplerPack::SamplerRefs;
@@ -108,24 +112,27 @@ namespace AE::Graphics
 			MPipelinePool_t			meshPpln;
 			MPTemplatePool_t		meshTempl;
 
-			/*
-			RTPipelinePool_t		_rayTracingPplnPool;
+			RPOutputPool_t			renderPassOutputs;
 
-			PplnResourcesPool_t		_pplnResourcesCache;
+			RenderPassPool_t		renderPassCache;
+			FramebufferPool_t		framebufferCache;
 
-			RenderPassPool_t		_renderPassCache;
-			FramebufferPool_t		_framebufferCache;
+			VirtBufferPool_t		virtBuffers;
+			VirtImagePool_t			virtImages;
 
-			RTGeometryPool_t		_rtGeometryPool;
-			RTScenePool_t			_rtScenePool;
-			RTShaderTablePool_t		_rtShaderTablePool;*/
 		}						_resPool;
 		
-		SamplerRefs				_samplerRefs;	// TODO: guard
-		PipelineRefs			_pipelineRefs;	// TODO: guard
+		SamplerRefs				_samplerRefs;
+		PipelineRefs			_pipelineRefs;
 		
+		// dummy resource descriptions
+		const BufferDesc		_dummyBufferDesc;
+		const ImageDesc			_dummyImageDesc;
+
 		VSamplerID				_defaultSampler;
 		VDescriptorSetLayoutID	_emptyDSLayout;
+
+		VMemoryManager			_memMngr;
 
 		// cached resources validation
 		/*struct {
@@ -139,59 +146,88 @@ namespace AE::Graphics
 
 	// public
 	public:
-		GfxResourceID		CreateDependency (StringView dbgName) override;
-		GfxResourceID		CreateImage (const VirtualImageDesc &desc, StringView dbgName) override;
-		GfxResourceID		CreateBuffer (const VirtualBufferDesc &desc, StringView dbgName) override;
+		explicit VResourceManager (const VDevice &);
+		~VResourceManager ();
 
-		GfxResourceID		CreateImage (const ImageDesc &desc, EResourceState defaultState, StringView dbgName) override;
-		GfxResourceID		CreateBuffer (const BufferDesc &desc, StringView dbgName) override;
+		bool  Initialize ();
+		void  Deinitialize ();
+
+		UniqueID<GfxResourceID>		CreateDependency (StringView dbgName) override;
+		UniqueID<GfxResourceID>		CreateImage (const VirtualImageDesc &desc, StringView dbgName) override;
+		UniqueID<GfxResourceID>		CreateBuffer (const VirtualBufferDesc &desc, StringView dbgName) override;
+
+		UniqueID<GfxResourceID>		CreateImage (const ImageDesc &desc, EResourceState defaultState, StringView dbgName) override;
+		UniqueID<GfxResourceID>		CreateBuffer (const BufferDesc &desc, StringView dbgName) override;
 		
-		PipelinePackID		LoadPipelinePack (const SharedPtr<RStream> &stream) override;
-		bool				ReloadPipelinePack (const SharedPtr<RStream> &stream, PipelinePackID id) override;
+		UniqueID<PipelinePackID>	LoadPipelinePack (const SharedPtr<RStream> &stream) override;
+		bool						ReloadPipelinePack (const SharedPtr<RStream> &stream, PipelinePackID id) override;
 		
 		GraphicsPipelineID	GetGraphicsPipeline (const PipelineName &name, const GraphicsPipelineDesc &desc) override;
 		MeshPipelineID		GetMeshPipeline (const PipelineName &name, const MeshPipelineDesc &desc) override;
 		ComputePipelineID	GetComputePipeline (const PipelineName &name, const ComputePipelineDesc &desc) override;
 		RayTracingPipelineID GetRayTracingPipeline (const PipelineName &name, const RayTracingPipelineDesc &desc) override;
 
-		ND_ VDescriptorSetLayoutID		CreateDescriptorSetLayout (const VDescriptorSetLayout::Uniforms_t &uniforms, ArrayView<VkSampler> samplerStorage, StringView dbgName = Default);
-		ND_ VPipelineLayoutID			CreatePipelineLayout (const VPipelineLayout::DescriptorSets_t &descSetLayouts, const VPipelineLayout::PushConstants_t &pusConstants, StringView dbgName = Default);
-		ND_ VGraphicsPipelineTemplateID	CreateGPTemplate (VPipelineLayoutID layoutId, const PipelineCompiler::GraphicsPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName = Default);
-		ND_ VMeshPipelineTemplateID		CreateMPTemplate (VPipelineLayoutID layoutId, const PipelineCompiler::MeshPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName = Default);
-		ND_ VComputePipelineTemplateID	CreateCPTemplate (VPipelineLayoutID layoutId, const PipelineCompiler::ComputePipelineDesc &desc, VkShaderModule modules, StringView dbgName = Default);
-
-		bool				LoadSamplerPack (const SharedPtr<RStream> &stream) override;
-		ND_ VSamplerID		CreateSampler (const VkSamplerCreateInfo &info, StringView dbgName = Default);
-		ND_ VSamplerID		GetSampler (const SamplerName &name) const;
-		ND_ VkSampler		GetVkSampler (const SamplerName &name) const;
-
-		bool				ReleaseResource (GfxResourceID id) override;
-		bool				ReleaseResource (MemoryID id) override;
-		bool				ReleaseResource (PipelinePackID id) override;
-		bool				ReleaseResource (VDescriptorSetLayoutID id);
-		bool				ReleaseResource (VPipelineLayoutID id);
-		bool				ReleaseResource (VGraphicsPipelineTemplateID id);
-		bool				ReleaseResource (VMeshPipelineTemplateID id);
-		bool				ReleaseResource (VComputePipelineTemplateID id);
-		bool				ReleaseResource (VSamplerID id);
+		ND_ UniqueID<VDescriptorSetLayoutID>		CreateDescriptorSetLayout (const VDescriptorSetLayout::Uniforms_t &uniforms, ArrayView<VkSampler> samplerStorage, StringView dbgName = Default);
+		ND_ UniqueID<VPipelineLayoutID>				CreatePipelineLayout (const VPipelineLayout::DescriptorSets_t &descSetLayouts, const VPipelineLayout::PushConstants_t &pusConstants, StringView dbgName = Default);
+		ND_ UniqueID<VGraphicsPipelineTemplateID>	CreateGPTemplate (VPipelineLayoutID layoutId, VRenderPassOutputID rpOutputId, const PipelineCompiler::GraphicsPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName = Default);
+		ND_ UniqueID<VMeshPipelineTemplateID>		CreateMPTemplate (VPipelineLayoutID layoutId, VRenderPassOutputID rpOutputId, const PipelineCompiler::MeshPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName = Default);
+		ND_ UniqueID<VComputePipelineTemplateID>	CreateCPTemplate (VPipelineLayoutID layoutId, const PipelineCompiler::ComputePipelineDesc &desc, VkShaderModule modules, StringView dbgName = Default);
 		
+		ND_ UniqueID<VRenderPassOutputID>	CreateRenderPassOutput (const VRenderPassOutput::Output_t &fragOutput);
+		ND_ VRenderPassOutputID				GetRenderPassOutput (const RenderPassName &name) const;
+		
+		ND_ UniqueID<RenderPassID>		CreateRenderPass (ArrayView<VLogicalRenderPass*> logicalPasses, StringView dbgName = Default);
+		ND_ UniqueID<VFramebufferID>	CreateFramebuffer (ArrayView<Pair<VImageID, ImageViewDesc>> attachments, RenderPassID rp, uint2 dim, uint layers, StringView dbgName = Default);
+
+		bool						LoadSamplerPack (const SharedPtr<RStream> &stream) override;
+		ND_ UniqueID<VSamplerID>	CreateSampler (const VkSamplerCreateInfo &info, StringView dbgName = Default);
+		ND_ VSamplerID				GetSampler (const SamplerName &name) const;
+		ND_ VkSampler				GetVkSampler (const SamplerName &name) const;
+
+		bool				ReleaseResource (UniqueID<GfxResourceID> &id)		override;
+		bool				ReleaseResource (UniqueID<MemoryID> &id)			override	{ return _ReleaseResource( id.Release() ) == 0; }
+		bool				ReleaseResource (UniqueID<PipelinePackID> &id)		override	{ return _ReleaseResource( id.Release() ) == 0; }
+		bool				ReleaseResource (UniqueID<VDescriptorSetLayoutID> &id)			{ return _ReleaseResource( id.Release() ) == 0; }
+		bool				ReleaseResource (UniqueID<VPipelineLayoutID> &id)				{ return _ReleaseResource( id.Release() ) == 0; }
+		bool				ReleaseResource (UniqueID<VGraphicsPipelineTemplateID> &id)		{ return _ReleaseResource( id.Release() ) == 0; }
+		bool				ReleaseResource (UniqueID<VMeshPipelineTemplateID> &id)			{ return _ReleaseResource( id.Release() ) == 0; }
+		bool				ReleaseResource (UniqueID<VComputePipelineTemplateID> &id)		{ return _ReleaseResource( id.Release() ) == 0; }
+		bool				ReleaseResource (UniqueID<VSamplerID> &id)						{ return _ReleaseResource( id.Release() ) == 0; }
+		bool				ReleaseResource (UniqueID<VRenderPassOutputID> &id)				{ return _ReleaseResource( id.Release() ) == 0; }
+		bool				ReleaseResource (UniqueID<RenderPassID> &id)					{ return _ReleaseResource( id.Release() ) == 0; }
+		
+		NativeBufferHandle_t	GetBufferHandle (GfxResourceID id) const override;
+		NativeImageHandle_t		GetImageHandle (GfxResourceID id) const override;
+
 		template <typename ID>
-		ND_ bool			IsResourceAlive (ID id) const;
+		ND_ UniqueID<ID>	AcquireResource (ID id);
+
+		template <typename ID>
+		ND_ bool			IsAlive (ID id) const;
+		bool				IsResourceAlive (GfxResourceID id) const override;
 
 		template <typename ID>
 		ND_ auto const*		GetResource (ID id, bool incRef = false, bool quiet = false) const;
+		
+		template <typename ID>
+		ND_ auto const*		GetResource (const UniqueID<ID> &id, bool incRef = false, bool quiet = false) const;
+
+		template <typename ID>
+		ND_ auto const&		GetDescription (ID id) const;
 
 		ND_ VDevice const&	GetDevice ()	const	{ return _device; }
+
+		ND_ VMemoryManager&	GetMemoryManager ()		{ return _memMngr; }
 
 
 	private:
 		bool  _CreateMemory (OUT MemoryID &id, OUT VResourceBase<VMemoryObj>* &memPtr, EMemoryType type, StringView dbgName);
 		
 		template <typename ID, typename FnInitialize, typename FnCreate>
-		ND_ ID  _CreateCachedResource (StringView errorStr, FnInitialize&& fnInit, FnCreate&& fnCreate);
+		ND_ UniqueID<ID>  _CreateCachedResource (StringView errorStr, FnInitialize&& fnInit, FnCreate&& fnCreate);
 
 	// resource pool
-		ND_ auto&  _GetResourcePool (const GfxResourceID &id)				{ CHECK( id.ResourceType() == GfxResourceID::EType::Unknown ); return _resPool.deps; }
+		ND_ auto&  _GetResourcePool (const VDependencyID &)					{ return _resPool.deps; }
 		ND_ auto&  _GetResourcePool (const VBufferID &)						{ return _resPool.buffers; }
 		ND_ auto&  _GetResourcePool (const VImageID &)						{ return _resPool.images; }
 		ND_ auto&  _GetResourcePool (const MemoryID &)						{ return _resPool.memoryObjs; }
@@ -206,23 +242,19 @@ namespace AE::Graphics
 		ND_ auto&  _GetResourcePool (const VMeshPipelineTemplateID &)		{ return _resPool.meshTempl; }
 		ND_ auto&  _GetResourcePool (const VSamplerPackID &)				{ return _resPool.samplerPacks; }
 		ND_ auto&  _GetResourcePool (const VSamplerID &)					{ return _resPool.samplers; }
-
-		/*ND_ auto&  _GetResourcePool (const RawRenderPassID &)			{ return _renderPassCache; }
-		ND_ auto&  _GetResourcePool (const RawFramebufferID &)			{ return _framebufferCache; }
-		ND_ auto&  _GetResourcePool (const RawPipelineResourcesID &)	{ return _pplnResourcesCache; }
-		ND_ auto&  _GetResourcePool (const RawRTGeometryID &)			{ return _rtGeometryPool; }
-		ND_ auto&  _GetResourcePool (const RawRTSceneID &)				{ return _rtScenePool; }
-		ND_ auto&  _GetResourcePool (const RawRTShaderTableID &)		{ return _rtShaderTablePool; }*/
+		ND_ auto&  _GetResourcePool (const VRenderPassOutputID &)			{ return _resPool.renderPassOutputs; }
+		ND_ auto&  _GetResourcePool (const RenderPassID &)					{ return _resPool.renderPassCache; }
+		ND_ auto&  _GetResourcePool (const VFramebufferID &)				{ return _resPool.framebufferCache; }
+		ND_ auto&  _GetResourcePool (const VVirtualBufferID &)				{ return _resPool.virtBuffers; }
+		ND_ auto&  _GetResourcePool (const VVirtualImageID &)				{ return _resPool.virtImages; }
 		
 		template <typename ID>
-		ND_ const auto&  _GetResourceCPool (const ID &id)	const		{ return const_cast<VResourceManager *>(this)->_GetResourcePool( id ); }
+		ND_ const auto&  _GetResourceCPool (const ID &id)	const			{ return const_cast<VResourceManager *>(this)->_GetResourcePool( id ); }
 		
 
 	// 
 		template <typename ID>	ND_ bool   _Assign (OUT ID &id);
 		template <typename ID>		void   _Unassign (ID id);
-
-		ND_ EQueueFamilyMask  _GetQueueFamilies (EQueueMask mask) const;
 
 
 	// empty descriptor set layout
@@ -231,8 +263,37 @@ namespace AE::Graphics
 
 			bool  _CreateDefaultSampler ();
 
+
 	// pipeline creation & validation
-	
+		template <typename PplnTemplType, typename DescType>
+		ND_ auto  _FindPipelineInCache (PplnTemplType* tmpl, const DescType &desc, HashVal hash) const;
+		
+		template <typename PplnTemplType, typename DescType, typename ID>
+		ND_ bool  _AddPipelineToCache (PplnTemplType* tmpl, const DescType &desc, HashVal hash, ID id) const;
+
+		template <typename NameType, typename ValueType, typename ID, typename PplnTemplType>
+		ND_ bool  _FindPipelineTemplate (const PipelineName &name, VPipelinePack::PipelineRefs::ItemsTmpl<NameType, ValueType> &items,
+										 OUT UniqueID<ID> &pplnTmplId, OUT PplnTemplType* &pplnTmpl);
+		
+		GraphicsPipelineID	_GetGraphicsPipeline (const PipelineName &name, const GraphicsPipelineDesc &desc,
+												  UniqueID<VGraphicsPipelineTemplateID> &pplnTemplId, UniqueID<RenderPassID> &renderPassId);
+		MeshPipelineID		_GetMeshPipeline (const PipelineName &name, const MeshPipelineDesc &desc,
+											  UniqueID<VMeshPipelineTemplateID> &pplnTemplId, UniqueID<RenderPassID> &renderPassId);
+		ComputePipelineID	_GetComputePipeline (const PipelineName &name, const ComputePipelineDesc &desc,
+												 UniqueID<VComputePipelineTemplateID> &pplnTemplId);
+		//RayTracingPipelineID _GetRayTracingPipeline (const PipelineName &name, const RayTracingPipelineDesc &desc,
+		//											 UniqueID<VRayTracingPipelineTemplateID> &pplnTemplId);
+
+
+	// 
+		template <typename ID>
+		int  _ReleaseResource (ID id, uint refCount = 1);
+
+		template <typename DataT, size_t CS, size_t MC>
+		int  _ReleaseResource (PoolTmpl<DataT,CS,MC> &pool, DataT& data, Index_t index, uint refCount);
+		
+		template <typename DataT, size_t CS, size_t MC>
+		int  _ReleaseResource (CachedPoolTmpl<DataT,CS,MC> &pool, DataT& data, Index_t index, uint refCount);
 	};
 
 	
@@ -266,19 +327,70 @@ namespace AE::Graphics
 		return static_cast< Result_t >(null);
 	}
 	
+	template <typename ID>
+	inline auto const*  VResourceManager::GetResource (const UniqueID<ID> &id, bool incRef, bool quiet) const
+	{
+		return GetResource( *id, incRef, quiet );
+	}
+
 /*
 =================================================
-	IsResourceAlive
+	IsAlive
 =================================================
 */
 	template <typename ID>
-	inline bool  VResourceManager::IsResourceAlive (ID id) const
+	inline bool  VResourceManager::IsAlive (ID id) const
 	{
 		ASSERT( id );
 		auto&	pool = _GetResourceCPool( id );
 		
 		return	id.Index() < pool.size() and
 				pool[id.Index()].GetGeneration() == id.Generation();
+	}
+
+/*
+=================================================
+	AcquireResource
+=================================================
+*/
+	template <typename ID>
+	inline UniqueID<ID>  VResourceManager::AcquireResource (ID id)
+	{
+		ASSERT( id );
+		
+		auto&	pool = _GetResourcePool( id );
+
+		if ( id.Index() < pool.size() )
+		{
+			auto&	data = pool[ id.Index() ];
+
+			if ( not data.IsCreated() or data.GetGeneration() != id.Generation() )
+				return Default;
+
+			data.AddRef();
+			return UniqueID<ID>{ id };
+		}
+
+		return Default;
+	}
+
+/*
+=================================================
+	GetDescription
+=================================================
+*/
+	template <>
+	inline auto const&  VResourceManager::GetDescription (VBufferID id) const
+	{
+		auto*	res = GetResource( id );
+		return res ? res->Description() : _dummyBufferDesc;
+	}
+
+	template <>
+	inline auto const&  VResourceManager::GetDescription (VImageID id) const
+	{
+		auto*	res = GetResource( id );
+		return res ? res->Description() : _dummyImageDesc;
 	}
 
 /*
@@ -314,6 +426,56 @@ namespace AE::Graphics
 		auto&	pool = _GetResourcePool( id );
 
 		pool.Unassign( id.Index() );
+	}
+	
+/*
+=================================================
+	_ReleaseResource
+=================================================
+*/
+	template <typename ID>
+	inline int  VResourceManager::_ReleaseResource (ID id, uint refCount)
+	{
+		ASSERT( id );
+
+		auto&	pool = _GetResourcePool( id );
+		
+		if ( id.Index() >= pool.size() )
+			return -1;
+
+		auto&	data = pool[ id.Index() ];
+		
+		if ( data.GetGeneration() != id.Generation() )
+			return -1;	// this instance is already destroyed
+
+		return _ReleaseResource( pool, data, id.Index(), refCount );
+	}
+	
+	template <typename DataT, size_t CS, size_t MC>
+	inline int  VResourceManager::_ReleaseResource (PoolTmpl<DataT,CS,MC> &pool, DataT& data, Index_t index, uint refCount)
+	{
+		int	count = data.ReleaseRef( refCount );
+
+		if ( count == 0 and data.IsCreated() )
+		{
+			data.Destroy( *this );
+			pool.Unassign( index );
+		}
+		return count;
+	}
+	
+	template <typename DataT, size_t CS, size_t MC>
+	inline int  VResourceManager::_ReleaseResource (CachedPoolTmpl<DataT,CS,MC> &pool, DataT& data, Index_t index, uint refCount)
+	{
+		int	count = data.ReleaseRef( refCount );
+
+		if ( count == 0 and data.IsCreated() )
+		{
+			pool.RemoveFromCache( index );
+			data.Destroy( *this );
+			pool.Unassign( index );
+		}
+		return count;
 	}
 
 

@@ -10,32 +10,21 @@ namespace AE::Graphics
 {
 
 	//
-	// Dependency
+	// Vulkan Memory Manager
 	//
 
-	class VDependency
+	class VMemoryManager final
 	{
 	// variables
 	private:
-		DebugName_t		_debugName;
 
 
 	// methods
 	public:
-		VDependency () {}
-		~VDependency () {}
-
-
-		bool Create (StringView dbgName)
-		{
-			_debugName = dbgName;
-			return true;
-		}
-
-
-		void Destroy (const VResourceManager &)
-		{}
+		VMemoryManager ();
+		~VMemoryManager ();
 	};
+
 
 }	// AE::Graphics
 

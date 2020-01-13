@@ -9,7 +9,7 @@ namespace AE::Graphics
 {
 
 	//
-	// Buffer Description
+	// Buffer description
 	//
 
 	struct BufferDesc
@@ -18,7 +18,7 @@ namespace AE::Graphics
 		BytesU			size;
 		EBufferUsage	usage		= Default;
 		EQueueMask		queues		= Default;
-		EMemoryType		memType		= Default;
+		EMemoryType		memType		= EMemoryType::DeviceLocal;
 
 	// methods
 		BufferDesc () {}
@@ -26,14 +26,14 @@ namespace AE::Graphics
 		BufferDesc (BytesU			size,
 					EBufferUsage	usage,
 					EQueueMask		queues	= Default,
-					EMemoryType		memType	= Default) :
+					EMemoryType		memType	= EMemoryType::DeviceLocal) :
 			size{size}, usage{usage}, queues{queues}, memType{memType} {}
 	};
 
 
 
 	//
-	// Virtual Buffer Description
+	// Virtual Buffer description
 	//
 
 	struct VirtualBufferDesc
@@ -47,4 +47,40 @@ namespace AE::Graphics
 	};
 
 
+
+	//
+	// Buffer View description
+	//
+
+	struct BufferViewDesc
+	{
+	// variables
+		EPixelFormat		format	= Default;
+		BytesU				offset;
+		BytesU				size	{ ~0_b };
+
+	// methods
+		BufferViewDesc () {}
+
+		BufferViewDesc (EPixelFormat	format,
+						BytesU			offset,
+						BytesU			size) :
+			format{format}, offset{offset}, size{size} {}
+
+		void Validate (const BufferDesc &desc);
+		
+		ND_ bool operator == (const BufferViewDesc &rhs) const;
+	};
+
+
 }	// AE::Graphics
+
+
+namespace std
+{
+	template <>
+	struct hash< AE::Graphics::BufferViewDesc > {
+		ND_ size_t  operator () (const AE::Graphics::BufferViewDesc &value) const;
+	};
+
+}	// std

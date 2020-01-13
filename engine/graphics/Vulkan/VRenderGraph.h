@@ -4,8 +4,9 @@
 
 #ifdef AE_ENABLE_VULKAN
 
-#include "graphics/Public/RenderGraph.h"
-#include "stl/Memory/LinearAllocator.h"
+# include "graphics/Public/RenderGraph.h"
+# include "graphics/Vulkan/VCommandPool.h"
+# include "stl/Memory/LinearAllocator.h"
 
 namespace AE::Graphics
 {
@@ -18,10 +19,12 @@ namespace AE::Graphics
 	{
 	// types
 	private:
-		class VTransferContext;
-		class VComputeContext;
-		class VGraphicsContext;
-		class VRenderContext;
+		class GraphicsContext;
+		class RenderContext;
+
+		class LocalBuffer;
+		class LocalImage;
+		class BarrierManager;
 
 		struct BaseCmd;
 		struct RenderCmd;
@@ -31,18 +34,40 @@ namespace AE::Graphics
 
 		using VirtualResWrite_t		= StaticArray< BaseCmd*, 1u << 16 >;
 		using VirtualResUsage_t		= StaticArray< EVirtualResourceUsage, 1u << 16 >;
+		using CtxPerQueue_t			= StaticArray< UniquePtr<GraphicsContext>, uint(EQueueType::_Count) >;
+		
+		enum class ExeOrderIndex : uint {
+			Initial	= 0,
+			Unknown = ~0u
+		};
 
 
 	// variables
 	private:
 		LinearAllocator<>		_allocator;
+
+		Mutex					_cmdGuard;
 		Array<BaseCmd *>		_commands;
 		VirtualResWrite_t		_resWriteCmd;
 		VirtualResUsage_t		_resUsage;
 
+		CtxPerQueue_t			_contexts;
+
+		VResourceManager &		_resMngr;
+		
+		RWDataRaceCheck			_drCheck;
+
 
 	// methods
 	public:
+		explicit VRenderGraph (VResourceManager &);
+		~VRenderGraph ();
+
+		bool  Initialize ();
+		void  Deinitialize ();
+		
+		EQueueMask  GetPresentQueues () override;
+
 		bool Add (EQueueType				queue,
 				  VirtualResources_t		input,
 				  VirtualResources_t		output,
@@ -77,6 +102,10 @@ namespace AE::Graphics
 					  VirtualResources_t	input,
 					  VirtualResources_t	output,
 					  StringView			dbgName);
+
+		ND_ VLogicalRenderPass*  _CreateLogicalPass (const RenderPassDesc &desc);
+
+		bool  _CreateRenderPass (ArrayView<VLogicalRenderPass*> passes);
 	};
 
 

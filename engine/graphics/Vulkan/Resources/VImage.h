@@ -7,7 +7,7 @@
 # include "graphics/Public/ImageDesc.h"
 # include "graphics/Public/EResourceState.h"
 # include "graphics/Public/IDs.h"
-# include "../VQueue.h"
+# include "graphics/Vulkan/VQueue.h"
 
 namespace AE::Graphics
 {
@@ -34,14 +34,12 @@ namespace AE::Graphics
 		mutable SharedMutex			_viewMapLock;
 		mutable ImageViewMap_t		_viewMap;
 
-		MemoryID					_memoryId;
+		UniqueID<MemoryID>			_memoryId;
 		VkImageAspectFlags			_aspectMask			= 0;
 		VkImageLayout				_defaultLayout		= VK_IMAGE_LAYOUT_MAX_ENUM;
 		VkAccessFlags				_readAccessMask		= 0;
-		EQueueFamilyMask			_queueFamilyMask	= Default;
 
 		DebugName_t					_debugName;
-		//OnRelease_t				_onRelease;
 
 		RWDataRaceCheck				_drCheck;
 
@@ -49,11 +47,10 @@ namespace AE::Graphics
 	// methods
 	public:
 		VImage () {}
-		VImage (VImage &&) = default;
 		~VImage ();
 
 		bool Create (VResourceManager &, const ImageDesc &desc, MemoryID memId, VMemoryObj &memObj,
-					 EQueueFamilyMask queueFamilyMask, EResourceState defaultState, StringView dbgName);
+					 EResourceState defaultState, StringView dbgName);
 
 		//bool Create (const VDevice &dev, const VulkanImageDesc &desc, StringView dbgName, OnRelease_t &&onRelease);
 
@@ -72,7 +69,7 @@ namespace AE::Graphics
 
 		ND_ ImageDesc const&	Description ()			const	{ SHAREDLOCK( _drCheck );  return _desc; }
 		ND_ VkImageAspectFlags	AspectMask ()			const	{ SHAREDLOCK( _drCheck );  return _aspectMask; }
-		ND_ uint3				Dimension ()			const	{ SHAREDLOCK( _drCheck );  return _desc.dimension; }
+		ND_ uint3 const			Dimension ()			const	{ SHAREDLOCK( _drCheck );  return _desc.dimension; }
 		ND_ VkImageLayout		DefaultLayout ()		const	{ SHAREDLOCK( _drCheck );  return _defaultLayout; }
 
 		ND_ uint const			Width ()				const	{ SHAREDLOCK( _drCheck );  return _desc.dimension.x; }
@@ -86,8 +83,7 @@ namespace AE::Graphics
 		
 		ND_ VkAccessFlags		GetAllReadAccessMask ()	const	{ SHAREDLOCK( _drCheck );  return _readAccessMask; }
 
-		ND_ bool				IsExclusiveSharing ()	const	{ SHAREDLOCK( _drCheck );  return _queueFamilyMask == Default; }
-		ND_ EQueueFamilyMask	GetQueueFamilyMask ()	const	{ SHAREDLOCK( _drCheck );  return _queueFamilyMask; }
+		ND_ bool				IsExclusiveSharing ()	const	{ SHAREDLOCK( _drCheck );  return _desc.queues == Default; }
 		ND_ StringView			GetDebugName ()			const	{ SHAREDLOCK( _drCheck );  return _debugName; }
 
 

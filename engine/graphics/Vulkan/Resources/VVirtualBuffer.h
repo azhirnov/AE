@@ -10,10 +10,10 @@ namespace AE::Graphics
 {
 
 	//
-	// Dependency
+	// Vulkan Virtual Buffer
 	//
 
-	class VDependency
+	class VVirtualBuffer
 	{
 	// variables
 	private:
@@ -22,8 +22,8 @@ namespace AE::Graphics
 
 	// methods
 	public:
-		VDependency () {}
-		~VDependency () {}
+		VVirtualBuffer () {}
+		~VVirtualBuffer () {}
 
 
 		bool Create (StringView dbgName)

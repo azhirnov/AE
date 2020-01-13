@@ -7,6 +7,7 @@ using namespace AE::App;
 extern void UnitTest_GfxResourceID ();
 extern void Test_VulkanDevice ();
 extern void Test_VulkanSwapchain (IApplication &app, IWindow &wnd);
+extern void Test_VulkanRenderGraph (IApplication &app, IWindow &wnd);
 
 
 #ifdef PLATFORM_ANDROID
@@ -16,6 +17,7 @@ extern int Test_Platform (IApplication &app, IWindow &wnd)
 
 	Test_VulkanDevice();
 	Test_VulkanSwapchain( app, wnd );
+	Test_VulkanRenderGraph( app, wnd );
 
 	AE_LOGI( "Tests.Graphics finished" );
 	return 0;
@@ -29,7 +31,6 @@ extern int Test_Platform (IApplication &app, IWindow &wnd)
 	{
 	private:
 		IApplication&	_app;
-		uint			_counter	= 0;
 
 	public:
 		WndListener (IApplication &app) : _app{app} {}
@@ -47,10 +48,8 @@ extern int Test_Platform (IApplication &app, IWindow &wnd)
 
 		void OnSurfaceCreated (IWindow &wnd) override
 		{
-			UnitTest_GfxResourceID();
-
-			Test_VulkanDevice();
 			Test_VulkanSwapchain( _app, wnd );
+			Test_VulkanRenderGraph( _app, wnd );
 
 			AE_LOGI( "Tests.Graphics finished" );
 			wnd.Close();
@@ -68,11 +67,14 @@ extern int Test_Platform (IApplication &app, IWindow &wnd)
 		
 		void OnStart (IApplication &app) override
 		{
-			#ifndef AE_CI_BUILD
+			UnitTest_GfxResourceID();
+			//Test_VulkanDevice();	// temp
+
+			#ifdef AE_CI_BUILD
+				app.Terminate();
+			#else
 				_window = app.CreateWindow( MakeUnique<WndListener>( app ), Default );
 				CHECK_FATAL( _window );
-			#else
-				app.Terminate();
 			#endif
 		}
 

@@ -32,7 +32,8 @@ namespace AE::Graphics
 
 
 	private:
-		using Queues_t			= FixedArray< VQueue, 16 >;
+		using Queues_t			= FixedArray< VQueue, VConfig::MaxQueues >;
+		using QueueTypes_t		= StaticArray< VQueuePtr, uint(EQueueType::_Count) >;
 		
 		using ExtensionName_t	= FixedString<VK_MAX_EXTENSION_NAME_SIZE>;
 		using ExtensionSet_t	= HashSet< ExtensionName_t >;
@@ -43,7 +44,7 @@ namespace AE::Graphics
 		VkDevice				_vkLogicalDevice;
 
 		Queues_t				_vkQueues;
-		//EQueueFamilyMask		_availableQueues;
+		QueueTypes_t			_queueTypes;
 
 		VkPhysicalDevice		_vkPhysicalDevice;
 		VkInstance				_vkInstance;
@@ -94,8 +95,8 @@ namespace AE::Graphics
 		ND_ VkPhysicalDevice		GetVkPhysicalDevice ()			const	{ return _vkPhysicalDevice; }
 		ND_ VkInstance				GetVkInstance ()				const	{ return _vkInstance; }
 		ND_ InstanceVersion			GetVkVersion ()					const	{ return _vkVersion; }
-		ND_ ArrayView< VQueue >		GetQueues ()					const	{ return _vkQueues; }
-		//ND_ EQueueFamilyMask		GetQueueFamilyMask ()			const	{ return _availableQueues; }
+		ND_ ArrayView< VQueue >		GetVkQueues ()					const	{ return _vkQueues; }
+		ND_ VQueuePtr				GetQueue (EQueueType type)		const	{ return uint(type) < _queueTypes.size() ? _queueTypes[uint(type)] : null; }
 
 
 		ND_ VkPhysicalDeviceProperties const&					GetDeviceProperties ()					const	{ return _deviceInfo.properties; }
@@ -112,6 +113,8 @@ namespace AE::Graphics
 		ND_ bool HasDeviceExtension (StringView name) const;
 		
 		bool SetObjectName (uint64_t id, NtStringView name, VkObjectType type) const;
+
+		void GetQueueFamilies (EQueueMask mask, OUT VQueueFamilyIndices_t &) const;
 	};
 
 
@@ -166,7 +169,12 @@ namespace AE::Graphics
 
 		bool _SetupQueues (ArrayView<QueueCreateInfo> queue);
 		bool _ChooseQueueIndex (ArrayView<VkQueueFamilyProperties> props, INOUT VkQueueFlags &flags, OUT uint &index) const;
-		bool _InitDevice ();
+		bool _InitDeviceFeatures ();
+
+		bool _SetupQueueTypes ();
+		bool _AddGraphicsQueue ();
+		bool _AddAsyncComputeQueue ();
+		bool _AddAsyncTransferQueue ();
 	};
 
 

@@ -138,6 +138,16 @@ namespace AE::Graphics
 		Unknown		= None,
 	};
 	AE_BIT_OPERATORS( ECullMode );
+
+
+	enum class EStencilFace : uint8_t
+	{
+		Front			= 1 << 0,
+		Back			= 1 << 1,
+		FrontAndBack	= Front | Back,
+		Unknown			= 0,
+	};
+	AE_BIT_OPERATORS( EStencilFace );
 	
 
 	enum class EPipelineDynamicState : uint8_t

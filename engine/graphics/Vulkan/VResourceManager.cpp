@@ -29,14 +29,171 @@ namespace {
 
 /*
 =================================================
+	constructor
+=================================================
+*/
+	VResourceManager::VResourceManager (const VDevice &dev) :
+		_device{ dev }
+	{
+	}
+	
+/*
+=================================================
+	destructor
+=================================================
+*/
+	VResourceManager::~VResourceManager ()
+	{
+	}
+	
+/*
+=================================================
+	Initialize
+=================================================
+*/
+	bool  VResourceManager::Initialize ()
+	{
+		// _memMngr.Initialize();
+
+		return true;
+	}
+	
+/*
+=================================================
+	Deinitialize
+=================================================
+*/
+	void  VResourceManager::Deinitialize ()
+	{
+	}
+	
+/*
+=================================================
+	IsResourceAlive
+=================================================
+*/
+	bool  VResourceManager::IsResourceAlive (GfxResourceID id) const
+	{
+		using EType = GfxResourceID::EType;
+		
+		BEGIN_ENUM_CHECKS();
+		switch ( id.ResourceType() )
+		{
+			case EType::Unknown :				return IsAlive( VDependencyID{ id.Index(), id.Generation() });
+			case EType::Buffer :				return IsAlive( VBufferID{ id.Index(), id.Generation() });
+			case EType::Image :					return IsAlive( VImageID{ id.Index(), id.Generation() });
+			case EType::RayTracingGeometry :	break; //return IsAlive( VRayTracingGeometryID{ id.Index(), id.Generation() });
+			case EType::RayTracingScene :		break; //return IsAlive( VRayTracingSceneID{ id.Index(), id.Generation() });
+			case EType::VirtualBuffer :			return IsAlive( VVirtualBufferID{ id.Index(), id.Generation() });
+			case EType::VirtualImage :			return IsAlive( VVirtualImageID{ id.Index(), id.Generation() });
+			case EType::_Count :				break;
+		}
+		END_ENUM_CHECKS();
+		RETURN_ERR( "unknown Gfx resource type" );
+	}
+
+/*
+=================================================
+	ReleaseResource
+=================================================
+*/
+	bool  VResourceManager::ReleaseResource (UniqueID<GfxResourceID> &res)
+	{
+		using EType = GfxResourceID::EType;
+
+		GfxResourceID	id = res.Release();
+
+		BEGIN_ENUM_CHECKS();
+		switch ( id.ResourceType() )
+		{
+			case EType::Unknown :				return _ReleaseResource( VDependencyID{ id.Index(), id.Generation() });
+			case EType::Buffer :				return _ReleaseResource( VBufferID{ id.Index(), id.Generation() });
+			case EType::Image :					return _ReleaseResource( VImageID{ id.Index(), id.Generation() });
+			case EType::RayTracingGeometry :	break; //return _ReleaseResource( VRayTracingGeometryID{ id.Index(), id.Generation() });
+			case EType::RayTracingScene :		break; //return _ReleaseResource( VRayTracingSceneID{ id.Index(), id.Generation() });
+			case EType::VirtualBuffer :			return _ReleaseResource( VVirtualBufferID{ id.Index(), id.Generation() });
+			case EType::VirtualImage :			return _ReleaseResource( VVirtualImageID{ id.Index(), id.Generation() });
+			case EType::_Count :				break;
+		}
+		END_ENUM_CHECKS();
+		RETURN_ERR( "unknown Gfx resource type" );
+	}
+	
+/*
+=================================================
+	GetBufferHandle
+=================================================
+*/
+	VResourceManager::NativeBufferHandle_t  VResourceManager::GetBufferHandle (GfxResourceID id) const
+	{
+		CHECK_ERR( id.ResourceType() == GfxResourceID::EType::Buffer );
+
+		auto*	buf = GetResource( VBufferID{ id.Index(), id.Generation() });
+		CHECK_ERR( buf );
+
+		return BitCast<BufferVk_t>(buf->Handle());
+	}
+
+/*
+=================================================
+	GetImageHandle
+=================================================
+*/
+	VResourceManager::NativeImageHandle_t  VResourceManager::GetImageHandle (GfxResourceID id) const
+	{
+		CHECK_ERR( id.ResourceType() == GfxResourceID::EType::Image );
+
+		auto*	img = GetResource( VImageID{ id.Index(), id.Generation() });
+		CHECK_ERR( img );
+
+		return BitCast<ImageVk_t>(img->Handle());
+	}
+//-----------------------------------------------------------------------------
+
+
+/*
+=================================================
 	CreateDependency
 =================================================
 */
-	GfxResourceID  VResourceManager::CreateDependency (StringView dbgName)
+	UniqueID<GfxResourceID>  VResourceManager::CreateDependency (StringView dbgName)
+	{
+		VDependencyID	id;
+		CHECK_ERR( _Assign( OUT id ));
+
+		auto&	data = _GetResourcePool( id )[ id.Index() ];
+		Replace( data );
+
+		if ( not data.Create( dbgName ))
+		{
+			_Unassign( id );
+			RETURN_ERR( "failed when creating dependency" );
+		}
+		
+		data.AddRef();
+		return UniqueID<GfxResourceID>{ GfxResourceID{ id.Index(), id.Generation(), GfxResourceID::EType::Unknown }};
+	}
+	
+/*
+=================================================
+	CreateImage
+=================================================
+*/
+	UniqueID<GfxResourceID>  VResourceManager::CreateImage (const VirtualImageDesc &, StringView)
 	{
 		return Default;
 	}
 	
+/*
+=================================================
+	CreateBuffer
+=================================================
+*/
+	UniqueID<GfxResourceID>  VResourceManager::CreateBuffer (const VirtualBufferDesc &, StringView)
+	{
+		return Default;
+	}
+
 /*
 =================================================
 	_CreateMemory
@@ -49,7 +206,7 @@ namespace {
 		auto&	data = _GetResourcePool( id )[ id.Index() ];
 		Replace( data );
 
-		if ( not data.Create( type, dbgName ) )
+		if ( not data.Create( type, dbgName ))
 		{
 			_Unassign( id );
 			RETURN_ERR( "failed when creating memory object" );
@@ -64,7 +221,7 @@ namespace {
 	CreateImage
 =================================================
 */
-	GfxResourceID  VResourceManager::CreateImage (const ImageDesc &desc, EResourceState defaultState, StringView dbgName)
+	UniqueID<GfxResourceID>  VResourceManager::CreateImage (const ImageDesc &desc, EResourceState defaultState, StringView dbgName)
 	{
 		MemoryID					mem_id;
 		VResourceBase<VMemoryObj>*	mem_obj	= null;
@@ -76,9 +233,9 @@ namespace {
 		auto&	data = _GetResourcePool( id )[ id.Index() ];
 		Replace( data );
 
-		if ( not data.Create( *this, desc, mem_id, mem_obj->Data(), _GetQueueFamilies( desc.queues ), defaultState, dbgName ))
+		if ( not data.Create( *this, desc, mem_id, mem_obj->Data(), defaultState, dbgName ))
 		{
-			ReleaseResource( mem_id );
+			_ReleaseResource( mem_id );
 			_Unassign( id );
 			RETURN_ERR( "failed when creating image" );
 		}
@@ -86,7 +243,7 @@ namespace {
 		mem_obj->AddRef();
 		data.AddRef();
 
-		return GfxResourceID{ id.Index(), id.Generation(), GfxResourceID::EType::Image };
+		return UniqueID<GfxResourceID>{ GfxResourceID{ id.Index(), id.Generation(), GfxResourceID::EType::Image }};
 	}
 	
 /*
@@ -94,7 +251,7 @@ namespace {
 	CreateBuffer
 =================================================
 */
-	GfxResourceID  VResourceManager::CreateBuffer (const BufferDesc &desc, StringView dbgName)
+	UniqueID<GfxResourceID>  VResourceManager::CreateBuffer (const BufferDesc &desc, StringView dbgName)
 	{
 		MemoryID					mem_id;
 		VResourceBase<VMemoryObj>*	mem_obj	= null;
@@ -106,9 +263,9 @@ namespace {
 		auto&	data = _GetResourcePool( id )[ id.Index() ];
 		Replace( data );
 		
-		if ( not data.Create( *this, desc, mem_id, mem_obj->Data(), _GetQueueFamilies( desc.queues ), dbgName ))
+		if ( not data.Create( *this, desc, mem_id, mem_obj->Data(), dbgName ))
 		{
-			ReleaseResource( mem_id );
+			_ReleaseResource( mem_id );
 			_Unassign( id );
 			RETURN_ERR( "failed when creating buffer" );
 		}
@@ -116,16 +273,16 @@ namespace {
 		mem_obj->AddRef();
 		data.AddRef();
 
-		return GfxResourceID{ id.Index(), id.Generation(), GfxResourceID::EType::Buffer };
+		return UniqueID<GfxResourceID>{ GfxResourceID{ id.Index(), id.Generation(), GfxResourceID::EType::Buffer }};
 	}
 	
 /*
 =================================================
 	_CreateCachedResource
 =================================================
-*
+*/
 	template <typename ID, typename FnInitialize, typename FnCreate>
-	inline ID  VResourceManager::_CreateCachedResource (StringView errorStr, FnInitialize&& fnInit, FnCreate&& fnCreate)
+	inline UniqueID<ID>  VResourceManager::_CreateCachedResource (StringView errorStr, FnInitialize&& fnInit, FnCreate&& fnCreate)
 	{
 		ID	id;
 		CHECK_ERR( _Assign( OUT id ));
@@ -141,7 +298,7 @@ namespace {
 		if ( temp_id == UMax )
 		{
 			// create new
-			if ( not fnCreate( data ) )
+			if ( not fnCreate( data ))
 			{
 				_Unassign( id );
 				RETURN_ERR( errorStr );
@@ -155,7 +312,7 @@ namespace {
 		}
 
 		if ( temp_id == id.Index() )
-			return id;
+			return UniqueID<ID>{ id };
 
 		// use already cached resource
 		auto&	temp = pool[ temp_id ];
@@ -166,74 +323,38 @@ namespace {
 		
 		_Unassign( id );
 
-		return ID( temp_id, temp.GetInstanceID() );
-	}
-
-/*
-=================================================
-	Create***
-=================================================
-*
-	SamplerID  VResourceManager::CreateSampler (const SamplerDesc &desc, StringView dbgName)
-	{
-		return _CreateCachedResource<SamplerID>( "failed when creating sampler",
-										[&] (auto& data) { return Replace( data, _device, desc ); },
-										[&] (auto& data) { return data.Create( _device, dbgName ); });
+		return UniqueID<ID>{ ID{ temp_id, temp.GetGeneration() }};
 	}
 	
 /*
 =================================================
-	GetDescriptorSetLayout
-=================================================
-*
-	DescriptorSetLayoutID  VResourceManager::GetDescriptorSetLayout (EShaderDebugMode debugMode, EShaderStages debuggableShaders)
-	{
-		const uint	key  = (uint(debuggableShaders) & 0xFFFFFF) | (uint(debugMode) << 24);
-		auto		iter = _debugDSLayoutsCache.find( key );
-
-		if ( iter != _debugDSLayoutsCache.end() )
-			return iter->second;
-
-		PipelineDescription::UniformMap_t	uniforms;
-		PipelineDescription::Uniform		sb_uniform;
-		PipelineDescription::StorageBuffer	sb_desc;
-
-		sb_desc.state				= EResourceState_FromShaders( debuggableShaders ) | EResourceState::ShaderReadWrite | EResourceState::_BufferDynamicOffset;
-		sb_desc.arrayStride			= SizeOf<uint>;
-		sb_desc.staticSize			= GetDebugShaderStorageSize( debuggableShaders ) + SizeOf<uint>;	// per shader data + position
-		sb_desc.dynamicOffsetIndex	= 0;
-
-		sb_uniform.index			= BindingIndex{ UMax, 0 };
-		sb_uniform.stageFlags		= debuggableShaders;
-		sb_uniform.data				= sb_desc;
-		sb_uniform.arraySize		= 1;
-
-		uniforms.insert({ UniformID{"dbg_ShaderTrace"}, sb_uniform });
-
-		auto	layout = CreateDescriptorSetLayout( MakeShared<const PipelineDescription::UniformMap_t>( std::move(uniforms) ));
-		CHECK_ERR( layout );
-
-		_debugDSLayoutsCache.insert({ key, layout });
-		return layout;
-	}
-
-/*
-=================================================
-	_GetQueueFamilies
+	CreateRenderPass
 =================================================
 */
-	EQueueFamilyMask  VResourceManager::_GetQueueFamilies (EQueueMask mask) const
+	UniqueID<RenderPassID>  VResourceManager::CreateRenderPass (ArrayView<VLogicalRenderPass*> logicalPasses, StringView dbgName)
 	{
-		EQueueFamilyMask	result = Default;
-
-		for (auto& q : _device.GetQueues())
-		{
-			if ( EnumEq( mask, EQueueMask(0) | q.type ))
-				result |= q.familyIndex;
-		}
-
-		return result;
+		return _CreateCachedResource<RenderPassID>( "failed when creating render pass",
+										[&] (auto& data) { return Replace( data, logicalPasses ); },
+										[&] (auto& data) { return data.Create( _device, dbgName ); });
 	}
+	
+	UniqueID<VFramebufferID>  VResourceManager::CreateFramebuffer (ArrayView<Pair<VImageID, ImageViewDesc>> attachments,
+																	RenderPassID rp, uint2 dim, uint layers, StringView dbgName)
+	{
+		return _CreateCachedResource<VFramebufferID>( "failed when creating framebuffer",
+										[&] (auto& data) {
+											return Replace( data, attachments, AcquireResource(rp), dim, layers );
+										},
+										[&] (auto& data) {
+											if ( data.Create( *this, dbgName )) {
+												//_validation.createdFramebuffers.fetch_add( 1, memory_order_relaxed );	// TODO
+												return true;
+											}
+											return false;
+										});
+	}
+//-----------------------------------------------------------------------------
+
 	
 /*
 =================================================
@@ -263,7 +384,7 @@ namespace {
 	CreateSampler
 =================================================
 */
-	VSamplerID  VResourceManager::CreateSampler (const VkSamplerCreateInfo &info, StringView dbgName)
+	UniqueID<VSamplerID>  VResourceManager::CreateSampler (const VkSamplerCreateInfo &info, StringView dbgName)
 	{
 		VSamplerID	id;
 		CHECK_ERR( _Assign( OUT id ));
@@ -278,7 +399,7 @@ namespace {
 		}
 		
 		data.AddRef();
-		return id;
+		return UniqueID<VSamplerID>{ id };
 	}
 	
 /*
@@ -372,7 +493,7 @@ namespace {
 			info.pNext		= null;
 			info.flags		= 0;
 			info.module		= sh.module;
-			info.pName		= "main";
+			info.pName		= "main";		// TODO
 			info.stage		= sh.stage;
 			info.pSpecializationInfo = null;
 		}
@@ -579,31 +700,35 @@ namespace {
 						   const uint2								&viewportSize,
 						   const uint								viewportCount,
 						   EPipelineDynamicState					dynamicStates,
-							  LinearAllocator<>						&allocator)
+						   LinearAllocator<>						&allocator)
 	{
+		outState.sType			= VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		outState.pNext			= null;
+		outState.flags			= 0;
+		outState.viewportCount	= viewportCount;
+		outState.scissorCount	= viewportCount;
+
+		if ( EnumEq( dynamicStates, EPipelineDynamicState::Viewport ) and EnumEq( dynamicStates, EPipelineDynamicState::Scissor ) )
+			return;
+		
 		auto*	viewports	= allocator.Alloc<VkViewport>( viewportCount );
 		auto*	scissors	= allocator.Alloc<VkRect2D>( viewportCount );
 
 		for (uint i = 0; i < viewportCount; ++i)
 		{
 			viewports[i] = VkViewport{ 0, 0, float(viewportSize.x), float(viewportSize.y), 0.0f, 1.0f };
-			scissors[i]	 = VkRect2D{ VkOffset2D{ 0, 0 }, VkExtent2D{ viewportSize.x, viewportSize.y } };
+			scissors[i]	 = VkRect2D{ VkOffset2D{ 0, 0 }, VkExtent2D{ viewportSize.x, viewportSize.y }};
 		}
 
-		outState.sType			= VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-		outState.pNext			= null;
-		outState.flags			= 0;
-		outState.pViewports		= EnumEq( dynamicStates, EPipelineDynamicState::Viewport ) ? null : viewports;
-		outState.viewportCount	= viewportCount;
-		outState.pScissors		= EnumEq( dynamicStates, EPipelineDynamicState::Scissor ) ? null : scissors;
-		outState.scissorCount	= viewportCount;
+		outState.pViewports	= EnumEq( dynamicStates, EPipelineDynamicState::Viewport ) ? null : viewports;
+		outState.pScissors	= EnumEq( dynamicStates, EPipelineDynamicState::Scissor ) ? null : scissors;
 	}
 
 /*
 =================================================
 	SetColorBlendAttachmentState
 =================================================
-*
+*/
 	void SetColorBlendAttachmentState (OUT VkPipelineColorBlendAttachmentState &outState,
 									   const RenderState::ColorBuffer &inState,
 									   const bool logicOpEnabled)
@@ -625,27 +750,27 @@ namespace {
 =================================================
 	SetColorBlendState
 =================================================
-*
+*/
 	void SetColorBlendState (OUT VkPipelineColorBlendStateCreateInfo	&outState,
-							 OUT ColorAttachments_t						&attachments,
 							 const RenderState::ColorBuffersState		&inState,
 							 const VRenderPass							&renderPass,
-							 const uint									subpassIndex)
+							 const uint									subpassIndex,
+							 LinearAllocator<>							&allocator)
 	{
 		ASSERT( subpassIndex < renderPass.GetCreateInfo().subpassCount );
 
-		const bool					logic_op_enabled	= ( inState.logicOp != ELogicOp::None );
-		const VkSubpassDescription&	subpass				= renderPass.GetCreateInfo().pSubpasses[ subpassIndex ];
+		const bool		logic_op_enabled	= ( inState.logicOp != ELogicOp::None );
+		const auto&		subpass				= renderPass.GetCreateInfo().pSubpasses[ subpassIndex ];
+		auto*			attachments			= allocator.Alloc<VkPipelineColorBlendAttachmentState>( subpass.colorAttachmentCount );
 
 		for (size_t i = 0; i < subpass.colorAttachmentCount; ++i)
 		{
-			VkPipelineColorBlendAttachmentState		color_state = {};
+			VkPipelineColorBlendAttachmentState&	color_state = attachments[i];
 			color_state.colorWriteMask	= VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
 										  VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-			attachments.push_back( color_state );
 		}
 
-		for (size_t i = 0, cnt = Min(inState.buffers.size(), attachments.size()); i < cnt; ++i)
+		for (size_t i = 0, cnt = Min(inState.buffers.size(), subpass.colorAttachmentCount); i < cnt; ++i)
 		{
 			SetColorBlendAttachmentState( OUT attachments[i], inState.buffers[i], logic_op_enabled );
 		}
@@ -653,8 +778,8 @@ namespace {
 		outState.sType				= VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		outState.pNext				= null;
 		outState.flags				= 0;
-		outState.attachmentCount	= uint(attachments.size());
-		outState.pAttachments		= attachments.empty() ? null : attachments.data();
+		outState.attachmentCount	= subpass.colorAttachmentCount;
+		outState.pAttachments		= subpass.colorAttachmentCount ? attachments : null;
 		outState.logicOpEnable		= logic_op_enabled;
 		outState.logicOp			= logic_op_enabled ? VEnumCast( inState.logicOp ) : VK_LOGIC_OP_CLEAR;
 
@@ -808,26 +933,78 @@ namespace {
 
 /*
 =================================================
-	GetGraphicsPipeline
+	_FindPipelineInCache
 =================================================
 */
-	GraphicsPipelineID  VResourceManager::GetGraphicsPipeline (const PipelineName &name, const GraphicsPipelineDesc &inDesc)
+	template <typename PplnTemplType, typename DescType>
+	auto  VResourceManager::_FindPipelineInCache (PplnTemplType* tmpl, const DescType &desc, HashVal descHash) const
 	{
-		VGraphicsPipelineTemplateID			templ_id;
+		SHAREDLOCK( tmpl->_pipelineMapGuard );
+
+		for (auto iter = tmpl->_pipelineMap.find( descHash );
+			 iter != tmpl->_pipelineMap.end() and iter->first == descHash;
+			 ++iter)
+		{
+			auto*	rhs = GetResource( iter->second );
+
+			if ( rhs and desc == rhs->Description() )
+				return iter->second;
+		}
+
+		return (typename PplnTemplType::PipelineID_t)(Default);
+	}
+	
+/*
+=================================================
+	_FindPipelineInCache
+=================================================
+*/
+	template <typename PplnTemplType, typename DescType, typename ID>
+	bool  VResourceManager::_AddPipelineToCache (PplnTemplType* tmpl, const DescType &, HashVal descHash, ID id) const
+	{
+		EXLOCK( tmpl->_pipelineMapGuard );
+
+		tmpl->_pipelineMap.insert({ descHash, id });
+
+		return true;
+	}
+
+/*
+=================================================
+	_FindPipelineTemplate
+=================================================
+*/
+	template <typename NameType, typename ValueType, typename ID, typename PplnTemplType>
+	bool  VResourceManager::_FindPipelineTemplate (const PipelineName &name, VPipelinePack::PipelineRefs::ItemsTmpl<NameType, ValueType> &items,
+												   OUT UniqueID<ID> &pplnTmplId, OUT PplnTemplType* &pplnTmpl)
+	{
+		EXLOCK( items.guard );
+
+		auto	iter = items.map.find( name );
+		CHECK_ERR( iter != items.map.end() );
+
+		pplnTmplId = AcquireResource( iter->second );
+
+		pplnTmpl = GetResource( pplnTmplId );
+		CHECK_ERR( pplnTmpl );
+
+		return true;
+	}
+
+/*
+=================================================
+	_GetGraphicsPipeline
+=================================================
+*/
+	GraphicsPipelineID  VResourceManager::_GetGraphicsPipeline (const PipelineName &name, const GraphicsPipelineDesc &inDesc,
+																OUT UniqueID<VGraphicsPipelineTemplateID> &pplnTemplId,
+																OUT UniqueID<RenderPassID> &renderPassId)
+	{
 		GraphicsPipelineDesc				desc		= inDesc;
 		HashVal								desc_hash;
 		VGraphicsPipelineTemplate const*	ppln_templ	= null;
 
-		// find pipeline template
-		{
-			auto	iter = _pipelineRefs.graphics.find( name );
-			CHECK_ERR( iter != _pipelineRefs.graphics.end() );
-
-			templ_id = iter->second;
-
-			ppln_templ = GetResource( templ_id );
-			CHECK_ERR( ppln_templ );
-		}
+		CHECK_ERR( _FindPipelineTemplate( name, _pipelineRefs.graphics, OUT pplnTemplId, OUT ppln_templ ));
 
 		// validate
 		{
@@ -844,25 +1021,22 @@ namespace {
 			desc_hash = desc.CalcHash();
 		}
 
-		// find in existing pipelines
-		{
-			SHAREDLOCK( ppln_templ->_pipelineMapGuard );
-
-			for (auto iter = ppln_templ->_pipelineMap.find( desc_hash );
-				 iter != ppln_templ->_pipelineMap.end() and iter->first == desc_hash;
-				 ++iter)
-			{
-				auto*	rhs = GetResource( iter->second );
-
-				if ( rhs and desc == rhs->Description() )
-					return iter->second;
-			}
-		}
+		if ( auto id = _FindPipelineInCache( ppln_templ, desc, desc_hash ); id )
+			return id;
 
 		// create new pipeline
 		VkPipeline			ppln	= VK_NULL_HANDLE;
 		VkPipelineLayout	layout	= VK_NULL_HANDLE;
 		{
+			renderPassId = AcquireResource( desc.renderPassId );
+
+			auto*	render_pass = GetResource( desc.renderPassId );
+			CHECK_ERR( render_pass );
+
+			auto*	layout_res = GetResource( ppln_templ->GetLayoutID() );
+			CHECK_ERR( layout_res );
+			layout = layout_res->Handle();
+
 			VkGraphicsPipelineCreateInfo			pipeline_info		= {};
 			VkPipelineInputAssemblyStateCreateInfo	input_assembly_info	= {};
 			VkPipelineColorBlendStateCreateInfo		blend_info			= {};
@@ -883,15 +1057,13 @@ namespace {
 			SetRasterizationState( OUT rasterization_info, desc.renderState.rasterization );
 			SetupPipelineInputAssemblyState( OUT input_assembly_info, desc.renderState.inputAssembly );
 			SetVertexInputState( OUT vertex_input_info, desc.vertexInput, allocator );
-			//SetViewportState( OUT viewport_info, uint2(1024, 1024), desc.viewportCount, desc.dynamicState );
-			//SetColorBlendState( OUT blend_info, OUT _tempAttachments, inst.renderState.color, *render_pass, inst.subpassIndex );	// TODO
-
-			//pipeline_info.pColorBlendState	= &blend_info;
-			//pipeline_info.renderPass			= render_pass->Handle();
+			SetViewportState( OUT viewport_info, uint2(1024, 1024), desc.viewportCount, desc.dynamicState, allocator );
+			SetColorBlendState( OUT blend_info, desc.renderState.color, *render_pass, desc.subpassIndex, allocator );
 
 			pipeline_info.sType					= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 			pipeline_info.basePipelineIndex		= -1;
 			pipeline_info.basePipelineHandle	= VK_NULL_HANDLE;
+			pipeline_info.pColorBlendState		= &blend_info;
 			pipeline_info.pDepthStencilState	= &depth_stencil_info;
 			pipeline_info.pDynamicState			= &dynamic_state_info;
 			pipeline_info.pInputAssemblyState	= &input_assembly_info;
@@ -900,6 +1072,7 @@ namespace {
 			pipeline_info.pTessellationState	= (ppln_templ->_patchControlPoints > 0 ? &tessellation_info : null);
 			pipeline_info.pVertexInputState		= &vertex_input_info;
 			pipeline_info.layout				= layout;
+			pipeline_info.renderPass			= render_pass->Handle();
 			pipeline_info.subpass				= desc.subpassIndex;
 
 			if ( not rasterization_info.rasterizerDiscardEnable )
@@ -922,13 +1095,149 @@ namespace {
 		auto&	data = _GetResourcePool( id )[ id.Index() ];
 		Replace( data );
 		
-		if ( not data.Create( templ_id, desc, ppln, layout ))
+		if ( not data.Create( *pplnTemplId, desc, ppln, layout ))
 		{
 			_Unassign( id );
 			RETURN_ERR( "failed to create graphics pipeline" );
 		}
+
+		// render pass id moved to pipeline class
+		Unused( renderPassId.Release() );
 		
 		data.AddRef();
+		
+		_AddPipelineToCache( ppln_templ, desc, desc_hash, id );
+		return id;
+	}
+	
+/*
+=================================================
+	GetGraphicsPipeline
+=================================================
+*/
+	GraphicsPipelineID  VResourceManager::GetGraphicsPipeline (const PipelineName &name, const GraphicsPipelineDesc &desc)
+	{
+		// keep strong reference to some resources to prevent deleting from another thread
+		UniqueID<VGraphicsPipelineTemplateID>	ppln_templ_id;
+		UniqueID<RenderPassID>					render_pass_id;
+
+		GraphicsPipelineID	id = _GetGraphicsPipeline( name, desc, OUT ppln_templ_id, OUT render_pass_id );
+
+		ReleaseResource( ppln_templ_id );
+		ReleaseResource( render_pass_id );
+		return id;
+	}
+
+/*
+=================================================
+	_GetMeshPipeline
+=================================================
+*/
+	MeshPipelineID  VResourceManager::_GetMeshPipeline (const PipelineName &name, const MeshPipelineDesc &inDesc,
+														UniqueID<VMeshPipelineTemplateID> &pplnTemplId,
+														UniqueID<RenderPassID> &renderPassId)
+	{
+		MeshPipelineDesc				desc		= inDesc;
+		HashVal							desc_hash;
+		VMeshPipelineTemplate const*	ppln_templ	= null;
+		
+		CHECK_ERR( _FindPipelineTemplate( name, _pipelineRefs.mesh, OUT pplnTemplId, OUT ppln_templ ));
+
+		// validate
+		{
+			ValidateRenderState( _device, INOUT desc.renderState, INOUT desc.dynamicState );
+
+			desc.renderState.inputAssembly.topology = ppln_templ->_topology;
+
+			desc_hash = desc.CalcHash();
+		}
+		
+		if ( auto id = _FindPipelineInCache( ppln_templ, desc, desc_hash ); id )
+			return id;
+
+		// create new pipeline
+		VkPipeline			ppln	= VK_NULL_HANDLE;
+		VkPipelineLayout	layout	= VK_NULL_HANDLE;
+		{
+			renderPassId = AcquireResource( desc.renderPassId );
+
+			auto*	render_pass = GetResource( desc.renderPassId );
+			CHECK_ERR( render_pass );
+
+			auto*	layout_res = GetResource( ppln_templ->GetLayoutID() );
+			CHECK_ERR( layout_res );
+			layout = layout_res->Handle();
+			
+			VkGraphicsPipelineCreateInfo			pipeline_info		= {};
+			VkPipelineInputAssemblyStateCreateInfo	input_assembly_info	= {};
+			VkPipelineColorBlendStateCreateInfo		blend_info			= {};
+			VkPipelineDepthStencilStateCreateInfo	depth_stencil_info	= {};
+			VkPipelineMultisampleStateCreateInfo	multisample_info	= {};
+			VkPipelineRasterizationStateCreateInfo	rasterization_info	= {};
+			VkPipelineDynamicStateCreateInfo		dynamic_state_info	= {};
+			VkPipelineVertexInputStateCreateInfo	vertex_input_info	= {};
+			VkPipelineViewportStateCreateInfo		viewport_info		= {};
+			LinearAllocator<>						allocator;			allocator.SetBlockSize( 16_Kb );
+			
+			SetShaderStages( OUT pipeline_info.pStages, OUT pipeline_info.stageCount, ppln_templ->_shaders, allocator );
+			SetDynamicState( OUT dynamic_state_info, desc.dynamicState, allocator );
+			SetColorBlendState( OUT blend_info, desc.renderState.color, *render_pass, desc.subpassIndex, allocator );
+			SetMultisampleState( OUT multisample_info, desc.renderState.multisample );
+			SetDepthStencilState( OUT depth_stencil_info, desc.renderState.depth, desc.renderState.stencil );
+			SetRasterizationState( OUT rasterization_info, desc.renderState.rasterization );
+			SetupPipelineInputAssemblyState( OUT input_assembly_info, desc.renderState.inputAssembly );
+			SetViewportState( OUT viewport_info, uint2(1024, 1024), desc.viewportCount, desc.dynamicState, allocator );
+
+			vertex_input_info.sType	= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+			pipeline_info.sType					= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+			pipeline_info.pNext					= null;
+			pipeline_info.flags					= 0; //inst.flags;
+			pipeline_info.pInputAssemblyState	= &input_assembly_info;
+			pipeline_info.pRasterizationState	= &rasterization_info;
+			pipeline_info.pColorBlendState		= &blend_info;
+			pipeline_info.pDepthStencilState	= &depth_stencil_info;
+			pipeline_info.pMultisampleState		= &multisample_info;
+			pipeline_info.pVertexInputState		= &vertex_input_info;
+			pipeline_info.pDynamicState			= &dynamic_state_info;
+			pipeline_info.basePipelineIndex		= -1;
+			pipeline_info.basePipelineHandle	= VK_NULL_HANDLE;
+			pipeline_info.layout				= layout;
+			pipeline_info.renderPass			= render_pass->Handle();
+			pipeline_info.subpass				= desc.subpassIndex;
+		
+			if ( not rasterization_info.rasterizerDiscardEnable )
+			{
+				pipeline_info.pViewportState		= &viewport_info;
+			}else{
+				pipeline_info.pViewportState		= null;
+				pipeline_info.pMultisampleState		= null;
+				pipeline_info.pDepthStencilState	= null;
+				pipeline_info.pColorBlendState		= null;
+			}
+
+			VK_CHECK( _device.vkCreateGraphicsPipelines( _device.GetVkDevice(), VK_NULL_HANDLE, 1, &pipeline_info, null, OUT &ppln ));
+		}
+
+		// create pipeline wrapper
+		MeshPipelineID	id;
+		CHECK_ERR( _Assign( OUT id ));
+
+		auto&	data = _GetResourcePool( id )[ id.Index() ];
+		Replace( data );
+		
+		if ( not data.Create( *pplnTemplId, desc, ppln, layout ))
+		{
+			_Unassign( id );
+			RETURN_ERR( "failed to create mesh pipeline" );
+		}
+		
+		// render pass id moved to pipeline class
+		Unused( renderPassId.Release() );
+
+		data.AddRef();
+		
+		_AddPipelineToCache( ppln_templ, desc, desc_hash, id );
 		return id;
 	}
 	
@@ -936,33 +1245,112 @@ namespace {
 =================================================
 	GetMeshPipeline
 =================================================
-*
-	MeshPipelineID  VResourceManager::GetMeshPipeline (const PipelineName &name)
+*/
+	MeshPipelineID  VResourceManager::GetMeshPipeline (const PipelineName &name, const MeshPipelineDesc &desc)
 	{
-		auto	iter = _pipelineRefs.mesh.find( name );
-		return iter != _pipelineRefs.mesh.end() ? iter->second : Default;
+		// keep strong reference to some resources to prevent deleting from another thread
+		UniqueID<VMeshPipelineTemplateID>	ppln_templ_id;
+		UniqueID<RenderPassID>				render_pass_id;
+
+		MeshPipelineID	id = _GetMeshPipeline( name, desc, OUT ppln_templ_id, OUT render_pass_id );
+
+		ReleaseResource( ppln_templ_id );
+		ReleaseResource( render_pass_id );
+		return id;
+	}
+
+/*
+=================================================
+	_GetComputePipeline
+=================================================
+*/
+	ComputePipelineID  VResourceManager::_GetComputePipeline (const PipelineName &name, const ComputePipelineDesc &inDesc,
+															  UniqueID<VComputePipelineTemplateID> &pplnTemplId)
+	{
+		ComputePipelineDesc				desc		= inDesc;
+		HashVal							desc_hash;
+		VComputePipelineTemplate const*	ppln_templ	= null;
+		
+		CHECK_ERR( _FindPipelineTemplate( name, _pipelineRefs.compute, OUT pplnTemplId, OUT ppln_templ ));
+
+		// validate
+		{
+			desc.localGroupSize	= desc.localGroupSize.value_or( ppln_templ->_defaultLocalGroupSize );
+			desc.localGroupSize = { ppln_templ->_localSizeSpec.x != VComputePipelineTemplate::UNDEFINED_SPECIALIZATION ? desc.localGroupSize->x : ppln_templ->_defaultLocalGroupSize.x,
+									ppln_templ->_localSizeSpec.y != VComputePipelineTemplate::UNDEFINED_SPECIALIZATION ? desc.localGroupSize->y : ppln_templ->_defaultLocalGroupSize.y,
+									ppln_templ->_localSizeSpec.z != VComputePipelineTemplate::UNDEFINED_SPECIALIZATION ? desc.localGroupSize->z : ppln_templ->_defaultLocalGroupSize.z };
+
+			desc_hash = desc.CalcHash();
+		}
+		
+		if ( auto id = _FindPipelineInCache( ppln_templ, desc, desc_hash ); id )
+			return id;
+
+		// create new pipeline
+		VkPipeline			ppln	= VK_NULL_HANDLE;
+		VkPipelineLayout	layout	= VK_NULL_HANDLE;
+		{
+			auto*	layout_res = GetResource( ppln_templ->GetLayoutID() );
+			CHECK_ERR( layout_res );
+			layout = layout_res->Handle();
+
+			VkComputePipelineCreateInfo		pipeline_info = {};
+
+			pipeline_info.sType			= VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+			pipeline_info.layout		= layout;
+			pipeline_info.flags			= desc.dispatchBase ? VK_PIPELINE_CREATE_DISPATCH_BASE_BIT : 0;
+			pipeline_info.stage.sType	= VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+			pipeline_info.stage.flags	= 0;
+			pipeline_info.stage.stage	= VK_SHADER_STAGE_COMPUTE_BIT;
+			pipeline_info.stage.module	= ppln_templ->_shader;
+			pipeline_info.stage.pName	= "main";		// TODO
+
+			VK_CHECK( _device.vkCreateComputePipelines( _device.GetVkDevice(), VK_NULL_HANDLE, 1, &pipeline_info, null, OUT &ppln ));
+		}
+
+		// create pipeline wrapper
+		ComputePipelineID	id;
+		CHECK_ERR( _Assign( OUT id ));
+
+		auto&	data = _GetResourcePool( id )[ id.Index() ];
+		Replace( data );
+		
+		if ( not data.Create( *pplnTemplId, desc, ppln, layout ))
+		{
+			_Unassign( id );
+			RETURN_ERR( "failed to create compute pipeline" );
+		}
+		
+		data.AddRef();
+		
+		_AddPipelineToCache( ppln_templ, desc, desc_hash, id );
+		return id;
 	}
 	
 /*
 =================================================
 	GetComputePipeline
 =================================================
-*
-	ComputePipelineID  VResourceManager::GetComputePipeline (const PipelineName &name)
+*/
+	ComputePipelineID  VResourceManager::GetComputePipeline (const PipelineName &name, const ComputePipelineDesc &desc)
 	{
-		auto	iter = _pipelineRefs.compute.find( name );
-		return iter != _pipelineRefs.compute.end() ? iter->second : Default;
+		// keep strong reference to some resources to prevent deleting from another thread
+		UniqueID<VComputePipelineTemplateID>	ppln_templ_id;
+
+		ComputePipelineID	id = _GetComputePipeline( name, desc, OUT ppln_templ_id );
+
+		ReleaseResource( ppln_templ_id );
+		return id;
 	}
-	
+
 /*
 =================================================
 	GetRayTracingPipeline
 =================================================
-*
-	RayTracingPipelineID  VResourceManager::GetRayTracingPipeline (const PipelineName &name)
+*/
+	RayTracingPipelineID  VResourceManager::GetRayTracingPipeline (const PipelineName &, const RayTracingPipelineDesc &)
 	{
-		auto	iter = _pipelineRefs.rayTracing.find( name );
-		return iter != _pipelineRefs.rayTracing.end() ? iter->second : Default;
+		return Default;
 	}
 
 /*
@@ -970,7 +1358,7 @@ namespace {
 	LoadPipelinePack
 =================================================
 */
-	PipelinePackID  VResourceManager::LoadPipelinePack (const SharedPtr<RStream> &stream)
+	UniqueID<PipelinePackID>  VResourceManager::LoadPipelinePack (const SharedPtr<RStream> &stream)
 	{
 		PipelinePackID	id;
 		CHECK_ERR( _Assign( OUT id ));
@@ -985,7 +1373,7 @@ namespace {
 		}
 		
 		data.AddRef();
-		return id;
+		return UniqueID<PipelinePackID>{ id };
 	}
 	
 /*
@@ -993,7 +1381,7 @@ namespace {
 	ReloadPipelinePack
 =================================================
 */
-	bool  VResourceManager::ReloadPipelinePack (const SharedPtr<RStream> &stream, PipelinePackID id)
+	bool  VResourceManager::ReloadPipelinePack (const SharedPtr<RStream> &, PipelinePackID)
 	{
 		// TODO
 		return false;
@@ -1004,7 +1392,9 @@ namespace {
 	CreateDescriptorSetLayout
 =================================================
 */
-	VDescriptorSetLayoutID  VResourceManager::CreateDescriptorSetLayout (const VDescriptorSetLayout::Uniforms_t &uniforms, ArrayView<VkSampler> samplerStorage, StringView dbgName)
+	UniqueID<VDescriptorSetLayoutID>  VResourceManager::CreateDescriptorSetLayout (const VDescriptorSetLayout::Uniforms_t &uniforms,
+																				   ArrayView<VkSampler> samplerStorage,
+																				   StringView dbgName)
 	{
 		VDescriptorSetLayoutID	id;
 		CHECK_ERR( _Assign( OUT id ));
@@ -1019,7 +1409,7 @@ namespace {
 		}
 		
 		data.AddRef();
-		return id;
+		return UniqueID<VDescriptorSetLayoutID>{ id };
 	}
 	
 /*
@@ -1052,7 +1442,9 @@ namespace {
 	CreatePipelineLayout
 =================================================
 */
-	VPipelineLayoutID  VResourceManager::CreatePipelineLayout (const VPipelineLayout::DescriptorSets_t &descSetLayouts, const VPipelineLayout::PushConstants_t &pusConstants, StringView dbgName)
+	UniqueID<VPipelineLayoutID>  VResourceManager::CreatePipelineLayout (const VPipelineLayout::DescriptorSets_t &descSetLayouts,
+																		 const VPipelineLayout::PushConstants_t &pusConstants,
+																		 StringView dbgName)
 	{
 		VPipelineLayoutID	id;
 		CHECK_ERR( _Assign( OUT id ));
@@ -1070,7 +1462,7 @@ namespace {
 		}
 		
 		data.AddRef();
-		return id;
+		return UniqueID<VPipelineLayoutID>{ id };
 	}
 	
 /*
@@ -1078,8 +1470,9 @@ namespace {
 	CreateGPTemplate
 =================================================
 */
-	VGraphicsPipelineTemplateID  VResourceManager::CreateGPTemplate (VPipelineLayoutID layoutId, const PipelineCompiler::GraphicsPipelineDesc &desc,
-																	 ArrayView<ShaderModule> modules, StringView dbgName)
+	UniqueID<VGraphicsPipelineTemplateID>  VResourceManager::CreateGPTemplate (VPipelineLayoutID layoutId, VRenderPassOutputID rpOutputId,
+																			   const PipelineCompiler::GraphicsPipelineDesc &desc,
+																			   ArrayView<ShaderModule> modules, StringView dbgName)
 	{
 		VGraphicsPipelineTemplateID		id;
 		CHECK_ERR( _Assign( OUT id ));
@@ -1090,14 +1483,14 @@ namespace {
 		auto*	empty_ds = GetResource( _emptyDSLayout );
 		CHECK_ERR( empty_ds );
 
-		if ( not data.Create( layoutId, desc, modules, dbgName ))
+		if ( not data.Create( layoutId, rpOutputId, desc, modules, dbgName ))
 		{
 			_Unassign( id );
 			RETURN_ERR( "failed when creating graphics pipeline template" );
 		}
 		
 		data.AddRef();
-		return id;
+		return UniqueID<VGraphicsPipelineTemplateID>{ id };
 	}
 	
 /*
@@ -1105,8 +1498,9 @@ namespace {
 	CreateGPTemplate
 =================================================
 */
-	VMeshPipelineTemplateID  VResourceManager::CreateMPTemplate (VPipelineLayoutID layoutId, const PipelineCompiler::MeshPipelineDesc &desc,
-																 ArrayView<ShaderModule> modules, StringView dbgName)
+	UniqueID<VMeshPipelineTemplateID>  VResourceManager::CreateMPTemplate (VPipelineLayoutID layoutId, VRenderPassOutputID rpOutputId,
+																		   const PipelineCompiler::MeshPipelineDesc &desc,
+																		   ArrayView<ShaderModule> modules, StringView dbgName)
 	{
 		VMeshPipelineTemplateID		id;
 		CHECK_ERR( _Assign( OUT id ));
@@ -1117,14 +1511,14 @@ namespace {
 		auto*	empty_ds = GetResource( _emptyDSLayout );
 		CHECK_ERR( empty_ds );
 
-		if ( not data.Create( layoutId, desc, modules, dbgName ))
+		if ( not data.Create( layoutId, rpOutputId, desc, modules, dbgName ))
 		{
 			_Unassign( id );
 			RETURN_ERR( "failed when creating mesh pipeline template" );
 		}
 		
 		data.AddRef();
-		return id;
+		return UniqueID<VMeshPipelineTemplateID>{ id };
 	}
 	
 /*
@@ -1132,8 +1526,8 @@ namespace {
 	CreateGPTemplate
 =================================================
 */
-	VComputePipelineTemplateID  VResourceManager::CreateCPTemplate (VPipelineLayoutID layoutId, const PipelineCompiler::ComputePipelineDesc &desc,
-																	VkShaderModule modules, StringView dbgName)
+	UniqueID<VComputePipelineTemplateID>  VResourceManager::CreateCPTemplate (VPipelineLayoutID layoutId, const PipelineCompiler::ComputePipelineDesc &desc,
+																			  VkShaderModule modules, StringView dbgName)
 	{
 		VComputePipelineTemplateID		id;
 		CHECK_ERR( _Assign( OUT id ));
@@ -1151,9 +1545,49 @@ namespace {
 		}
 		
 		data.AddRef();
-		return id;
+		return UniqueID<VComputePipelineTemplateID>{ id };
 	}
 	
+/*
+=================================================
+	CreateRenderPassOutput
+=================================================
+*/
+	UniqueID<VRenderPassOutputID>  VResourceManager::CreateRenderPassOutput (const VRenderPassOutput::Output_t &fragOutput)
+	{
+		VRenderPassOutputID		id;
+		CHECK_ERR( _Assign( OUT id ));
+
+		auto&	data = _GetResourcePool( id )[ id.Index() ];
+		Replace( data );
+
+		if ( not data.Create( fragOutput ))
+		{
+			_Unassign( id );
+			RETURN_ERR( "failed when creating render pass output" );
+		}
+		
+		data.AddRef();
+		return UniqueID<VRenderPassOutputID>{ id };
+	}
+	
+/*
+=================================================
+	CreateRenderPassOutput
+=================================================
+*/
+	VRenderPassOutputID  VResourceManager::GetRenderPassOutput (const RenderPassName &name) const
+	{
+		SHAREDLOCK( _pipelineRefs.renderPassNames.guard );
+
+		auto	iter = _pipelineRefs.renderPassNames.map.find( name );
+		
+		if ( iter == _pipelineRefs.renderPassNames.map.end() )
+			return Default;
+
+		return iter->second;
+	}
+
 
 }	// AE::Graphics
 

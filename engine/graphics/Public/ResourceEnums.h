@@ -34,17 +34,21 @@ namespace AE::Graphics
 
 	enum class EMemoryType : uint
 	{
+		// device memory
 		DeviceLocal		= 1 << 0,
-		HostVisible		= 1 << 1,
-		Transient		= 1 << 3,		// allocate in tile cache, available only inside render pass
+		Transient		= 1 << 1,		// for render target only: allocate in tile cache, available only inside render pass
+
+		// host memory
+		HostCocherent	= 1 << 8,	// for small host writa only memory and for host read only memory
+		HostCached		= 1 << 9,	// for large host writa only memory
 
 		// flags
 		Dedicated		= 1 << 16,		// force to use dedicated allocation
 		//ShortLifeTime	= 1 << 17,		// optimize for frequently allocations and deallocations
 
-		Shared			=HostVisible | DeviceLocal,
-		Unknown			= DeviceLocal,
-		_Last,
+		_HostVisible	= HostCocherent | HostCached,
+		Shared			= HostCocherent | DeviceLocal,
+		Unknown			= 0,
 	};
 	AE_BIT_OPERATORS( EMemoryType );
 
@@ -63,6 +67,9 @@ namespace AE::Graphics
 		RayTracing		= 1 << 9,
 		ShaderAddress	= 1 << 10,
 		_Last,
+
+		// TODO:
+		// StorageAtomic
 		
 		All				= ((_Last-1) << 1) - 1,
 		Transfer		= TransferDst | TransferSrc,
@@ -73,19 +80,41 @@ namespace AE::Graphics
 
 	enum class EImage : uint
 	{
-		// TODO: rename
-		Tex1D		= 0,
-		Tex1DArray,
-		Tex2D,
-		Tex2DArray,
-		Tex2DMS,
-		Tex2DMSArray,
-		TexCube,
-		TexCubeArray,
-		Tex3D,
-		Buffer,
+		_1D,
+		_2D,
+		_3D,
+		OneDim		= _1D,
+		TwoDim		= _2D,
+		ThreeDim	= _3D,
 		Unknown		= ~0u,
 	};
+	
+	enum class EImageView : uint
+	{
+		_1D,
+		_2D,
+		_3D,
+		_1DArray,
+		_2DArray,
+		Cube,
+		CubeArray,
+		OneDim			= _1D,
+		TwoDim			= _2D,
+		ThreeDim		= _3D,
+		OneDimArray		= _1DArray,
+		TwoDimArray		= _2DArray,
+		Unknown			= ~0u,
+	};
+
+
+	enum class EImageFlags : uint
+	{
+		CubeCompatibple		= 1 << 0,
+		_Last,
+		
+		Unknown				= 0,
+	};
+	AE_BIT_OPERATORS( EImageFlags );
 
 
 	enum class EImageUsage : uint
@@ -101,6 +130,10 @@ namespace AE::Graphics
 		ShadingRate				= 1 << 8,
 		FragmentDensityMap		= 1 << 9,
 		_Last,
+
+		// TODO:
+		//	StorageAtomic
+		//	ColorAttachmentBlend
 
 		All						= ((_Last-1) << 1) - 1,
 		Transfer				= TransferSrc | TransferDst,
@@ -309,6 +342,15 @@ namespace AE::Graphics
 		Int4		= uint( EPixelFormat::RGBA32I ),
 		UInt4		= uint( EPixelFormat::RGBA32U ),
 		Float4		= uint( EPixelFormat::RGBA32F ),
+		// TODO: sRGB
+	};
+
+
+	enum class EBlitFilter : uint
+	{
+		Nearest,
+		Linear,
+		//Cubic,
 	};
 
 

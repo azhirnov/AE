@@ -21,6 +21,7 @@ namespace AE::Graphics
 	// variables
 		RenderPassID			renderPassId;
 		uint					subpassIndex		= 0;
+		uint					viewportCount		= 1;
 		VertexInputState		vertexInput;
 		RenderState				renderState;
 		EPipelineDynamicState	dynamicState		= EPipelineDynamicState::Viewport | EPipelineDynamicState::Scissor;
@@ -47,10 +48,11 @@ namespace AE::Graphics
 	// variables
 		RenderPassID			renderPassId;
 		uint					subpassIndex		= 0;
+		uint					viewportCount		= 1;
 		RenderState				renderState;
 		EPipelineDynamicState	dynamicState		= EPipelineDynamicState::Viewport | EPipelineDynamicState::Scissor;
-		uint3					taskGroupSize;
-		uint3					meshGroupSize;
+		Optional<uint3>			taskGroupSize;
+		Optional<uint3>			meshGroupSize;
 		SpecValues_t			specialization;
 
 	// methods
@@ -72,8 +74,9 @@ namespace AE::Graphics
 		using SpecValues_t	= GraphicsPipelineDesc::SpecValues_t;
 
 	// variables
-		uint3				localGroupSize;
+		Optional<uint3>		localGroupSize;
 		SpecValues_t		specialization;
+		bool				dispatchBase	= false;
 
 	// methods
 		ComputePipelineDesc () {}

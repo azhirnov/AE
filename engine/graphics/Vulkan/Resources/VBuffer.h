@@ -6,7 +6,7 @@
 
 # include "graphics/Public/BufferDesc.h"
 # include "graphics/Public/IDs.h"
-# include "../VQueue.h"
+# include "graphics/Vulkan/VQueue.h"
 
 namespace AE::Graphics
 {
@@ -21,39 +21,38 @@ namespace AE::Graphics
 
 	// types
 	private:
+		using BufferViewMap_t	= HashMap< BufferViewDesc, VkBufferView >;
 		//using OnRelease_t	= IFrameGraph::OnExternalBufferReleased_t;
 
 
 	// variables
 	private:
-		VkBuffer				_buffer				= VK_NULL_HANDLE;
-		MemoryID				_memoryId;
-		BufferDesc				_desc;
-		EQueueFamilyMask		_queueFamilyMask	= Default;
-		VkAccessFlags			_readAccessMask		= 0;
+		VkBuffer					_buffer				= VK_NULL_HANDLE;
+		BufferDesc					_desc;
+		
+		mutable SharedMutex			_viewMapLock;
+		mutable BufferViewMap_t		_viewMap;
+		
+		UniqueID<MemoryID>			_memoryId;
+		//VkAccessFlags				_readAccessMask		= 0;
 
-		DebugName_t				_debugName;
-		//OnRelease_t				_onRelease;
+		DebugName_t					_debugName;
 
-		RWDataRaceCheck			_drCheck;
+		RWDataRaceCheck				_drCheck;
 
 
 	// methods
 	public:
 		VBuffer () {}
-		VBuffer (VBuffer &&) = default;
 		~VBuffer ();
 
-		bool Create (VResourceManager &, const BufferDesc &desc, MemoryID memId, VMemoryObj &memObj,
-					 EQueueFamilyMask queueFamilyMask, StringView dbgName);
+		bool Create (VResourceManager &, const BufferDesc &desc, MemoryID memId, VMemoryObj &memObj, StringView dbgName);
 
 		//bool Create (const VDevice &dev, const VulkanBufferDesc &desc, StringView dbgName, OnRelease_t &&onRelease);
 
 		void Destroy (VResourceManager &);
 
-		//void Merge (BufferViewMap_t &, OUT AppendableVkResources_t) const;
-
-		//ND_ VkBufferView		GetView (const HashedBufferViewDesc &) const;
+		ND_ VkBufferView		GetView (const VDevice &dev, const BufferViewDesc &) const;
 		
 		//ND_ VulkanBufferDesc	GetApiSpecificDescription () const;
 
@@ -64,13 +63,15 @@ namespace AE::Graphics
 		ND_ MemoryID			GetMemoryID ()			const	{ SHAREDLOCK( _drCheck );  return _memoryId; }
 
 		ND_ BufferDesc const&	Description ()			const	{ SHAREDLOCK( _drCheck );  return _desc; }
-		ND_ BytesU				Size ()					const	{ SHAREDLOCK( _drCheck );  return _desc.size; }
 		
-		ND_ VkAccessFlags		GetAllReadAccessMask ()	const	{ SHAREDLOCK( _drCheck );  return _readAccessMask; }
+		//ND_ VkAccessFlags		GetAllReadAccessMask ()	const	{ SHAREDLOCK( _drCheck );  return _readAccessMask; }
 
-		ND_ bool				IsExclusiveSharing ()	const	{ SHAREDLOCK( _drCheck );  return _queueFamilyMask == Default; }
-		ND_ EQueueFamilyMask	GetQueueFamilyMask ()	const	{ SHAREDLOCK( _drCheck );  return _queueFamilyMask; }
+		ND_ bool				IsExclusiveSharing ()	const	{ SHAREDLOCK( _drCheck );  return _desc.queues == Default; }
 		ND_ StringView			GetDebugName ()			const	{ SHAREDLOCK( _drCheck );  return _debugName; }
+
+
+	private:
+		bool _CreateView (const VDevice &, const BufferViewDesc &, OUT VkBufferView &) const;
 	};
 	
 

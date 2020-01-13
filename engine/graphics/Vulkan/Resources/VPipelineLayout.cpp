@@ -18,53 +18,6 @@ namespace AE::Graphics
 	{
 		CHECK( _layout == VK_NULL_HANDLE );
 	}
-	
-/*
-=================================================
-	_AddDescriptorSets
-=================================================
-*
-	void VPipelineLayout::_AddDescriptorSets (const PipelineDescription::PipelineLayout &ppln, DSLayoutArray_t sets,
-											  INOUT HashVal &hash, OUT DescriptorSets_t &setsInfo) const
-	{
-		setsInfo.clear();
-
-		for (size_t i = 0; i < ppln.descriptorSets.size(); ++i)
-		{
-			auto&	ds  = ppln.descriptorSets[i];
-			auto&	res = sets[i].second->Data();
-
-			ASSERT( ds.id.IsValid() );
-			ASSERT( ds.bindingIndex < MaxDescSets );
-			ASSERT( res.Handle() );
-
-			setsInfo.insert({ ds.id, DescSetLayout{ sets[i].first, res.Handle(), ds.bindingIndex }});
-			
-			// calculate hash
-			hash << HashOf( ds.id );
-			hash << HashOf( ds.bindingIndex );
-			hash << res.GetHash();
-		}
-	}
-	
-/*
-=================================================
-	_AddPushConstants
-=================================================
-*
-	void VPipelineLayout::_AddPushConstants (const PipelineDescription::PipelineLayout &ppln, INOUT HashVal &hash,
-											 OUT PushConstants_t &pushConst) const
-	{
-		pushConst = ppln.pushConstants;
-
-		for (auto& pc : ppln.pushConstants)
-		{
-			ASSERT( pc.first.IsDefined() );
-
-			// calculate hash
-			hash << PushConstantHash( pc );
-		}
-	}
 
 /*
 =================================================
@@ -138,9 +91,11 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void VPipelineLayout::Destroy (const VDevice &dev)
+	void VPipelineLayout::Destroy (const VResourceManager &resMngr)
 	{
 		EXLOCK( _drCheck );
+
+		auto&	dev = resMngr.GetDevice();
 
 		if ( _layout ) {
 			dev.vkDestroyPipelineLayout( dev.GetVkDevice(), _layout, null );

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "stl/Algorithms/StringUtils.h"
+#include "graphics/Public/Common.h"
 
 using namespace AE::Graphics;
 

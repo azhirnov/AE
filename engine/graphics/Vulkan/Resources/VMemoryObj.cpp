@@ -2,8 +2,9 @@
 
 #ifdef AE_ENABLE_VULKAN
 
-# include "VMemoryObj.h"
-# include "../VResourceManager.h"
+# include "graphics/Vulkan/Resources/VMemoryObj.h"
+# include "graphics/Vulkan/VMemoryManager.h"
+# include "graphics/Vulkan/VResourceManager.h"
 
 namespace AE::Graphics
 {
@@ -26,6 +27,7 @@ namespace AE::Graphics
 	{
 		EXLOCK( _drCheck );
 
+		_memType	= memType;
 		_debugName	= dbgName;
 		
 		return true;
@@ -35,12 +37,12 @@ namespace AE::Graphics
 =================================================
 	AllocateForBuffer
 =================================================
-*
+*/
 	bool VMemoryObj::AllocateForBuffer (VMemoryManager &memMngr, VkBuffer buf)
 	{
 		EXLOCK( _drCheck );
 
-		CHECK_ERR( memMngr.AllocateForBuffer( buf, _desc, INOUT _storage ));
+		//CHECK_ERR( memMngr.AllocateForBuffer( buf, _desc, INOUT _storage ));
 		return true;
 	}
 	
@@ -48,12 +50,12 @@ namespace AE::Graphics
 =================================================
 	AllocateForImage
 =================================================
-*
+*/
 	bool VMemoryObj::AllocateForImage (VMemoryManager &memMngr, VkImage img)
 	{
 		EXLOCK( _drCheck );
 
-		CHECK_ERR( memMngr.AllocateForImage( img, _desc, INOUT _storage ));
+		//CHECK_ERR( memMngr.AllocateForImage( img, _desc, INOUT _storage ));
 		return true;
 	}
 	
@@ -74,12 +76,12 @@ namespace AE::Graphics
 =================================================
 	Destroy
 =================================================
-*
+*/
 	void VMemoryObj::Destroy (VResourceManager &resMngr)
 	{
 		EXLOCK( _drCheck );
 
-		resMngr.GetMemoryManager().Deallocate( INOUT _storage );
+		//resMngr.GetMemoryManager().Deallocate( INOUT _storage );
 
 		_debugName.clear();
 	}

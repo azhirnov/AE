@@ -64,39 +64,35 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool VBuffer::Create (VResourceManager &resMngr, const BufferDesc &desc, MemoryID memId, VMemoryObj &memObj,
-						  EQueueFamilyMask queueFamilyMask, StringView dbgName)
+	bool VBuffer::Create (VResourceManager &resMngr, const BufferDesc &desc, MemoryID memId, VMemoryObj &memObj, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( _buffer == VK_NULL_HANDLE );
 		CHECK_ERR( not _memoryId );
 
+		auto&	dev = resMngr.GetDevice();
+
 		_desc		= desc;
-		_memoryId	= MemoryID{ memId };
+		_memoryId	= UniqueID<MemoryID>{ memId };
 
 		// create buffer
 		VkBufferCreateInfo	info = {};
-		info.sType			= VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		info.pNext			= null;
-		info.flags			= 0;
-		info.usage			= VEnumCast( _desc.usage );
-		info.size			= VkDeviceSize( _desc.size );
+		info.sType	= VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		info.pNext	= null;
+		info.flags	= 0;
+		info.usage	= VEnumCast( _desc.usage );
+		info.size	= VkDeviceSize( _desc.size );
 
-		StaticArray<uint32_t, 8>	queue_family_indices = {};
+		VQueueFamilyIndices_t	queue_family_indices;
 
 		// setup sharing mode
-		if ( queueFamilyMask != Default )
+		if ( _desc.queues != Default )
 		{
+			dev.GetQueueFamilies( _desc.queues, OUT queue_family_indices );
+
 			info.sharingMode			= VK_SHARING_MODE_CONCURRENT;
 			info.pQueueFamilyIndices	= queue_family_indices.data();
-			
-			for (uint i = 0, mask = (1u<<i);
-				 mask <= uint(queueFamilyMask) and info.queueFamilyIndexCount < queue_family_indices.size();
-				 ++i, mask = (1u<<i))
-			{
-				if ( EnumEq( queueFamilyMask, mask ) )
-					queue_family_indices[ info.queueFamilyIndexCount++ ] = i;
-			}
+			info.queueFamilyIndexCount	= uint(queue_family_indices.size());
 		}
 
 		// reset to exclusive mode
@@ -107,18 +103,16 @@ namespace AE::Graphics
 			info.queueFamilyIndexCount	= 0;
 		}
 
-		auto&	dev = resMngr.GetDevice();
 		VK_CHECK( dev.vkCreateBuffer( dev.GetVkDevice(), &info, null, OUT &_buffer ));
 
-		//CHECK_ERR( memObj.AllocateForBuffer( resMngr.GetMemoryManager(), _buffer ));
+		CHECK_ERR( memObj.AllocateForBuffer( resMngr.GetMemoryManager(), _buffer ));
 
 		if ( not dbgName.empty() )
 		{
 			dev.SetObjectName( BitCast<uint64_t>(_buffer), dbgName, VK_OBJECT_TYPE_BUFFER );
 		}
 
-		_readAccessMask		= GetAllBufferReadAccessMasks( info.usage );
-		_queueFamilyMask	= queueFamilyMask;
+		//_readAccessMask	= GetAllBufferReadAccessMasks( info.usage );
 		_debugName			= dbgName;
 
 		return true;
@@ -169,10 +163,6 @@ namespace AE::Graphics
 
 		auto&	dev = resMngr.GetDevice();
 
-		//if ( _onRelease ) {
-		//	_onRelease( BitCast<BufferVk_t>(_buffer) );
-		//}
-		//else
 		if ( _buffer ) {
 			dev.vkDestroyBuffer( dev.GetVkDevice(), _buffer, null );
 		}
@@ -181,15 +171,64 @@ namespace AE::Graphics
 			resMngr.ReleaseResource( _memoryId );
 		}
 
-		_buffer				= VK_NULL_HANDLE;
-		_memoryId			= Default;
-		_desc				= Default;
-		_queueFamilyMask	= Default;
-		//_onRelease			= {};
+		_buffer		= VK_NULL_HANDLE;
+		_memoryId	= Default;
+		_desc		= Default;
 
 		_debugName.clear();
 	}
 	
+/*
+=================================================
+	GetView
+=================================================
+*/
+	VkBufferView  VBuffer::GetView (const VDevice &dev, const BufferViewDesc &desc) const
+	{
+		SHAREDLOCK( _drCheck );
+
+		// find already created image view
+		{
+			SHAREDLOCK( _viewMapLock );
+
+			auto	iter = _viewMap.find( desc );
+
+			if ( iter != _viewMap.end() )
+				return iter->second;
+		}
+
+		// create new image view
+		EXLOCK( _viewMapLock );
+
+		auto[iter, inserted] = _viewMap.insert({ desc, VK_NULL_HANDLE });
+
+		if ( not inserted )
+			return iter->second;	// other thread create view before
+		
+		CHECK_ERR( _CreateView( dev, desc, OUT iter->second ));
+
+		return iter->second;
+	}
+	
+/*
+=================================================
+	_CreateView
+=================================================
+*/
+	bool  VBuffer::_CreateView (const VDevice &dev, const BufferViewDesc &desc, OUT VkBufferView &outView) const
+	{
+		VkBufferViewCreateInfo	info = {};
+		info.sType		= VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
+		info.flags		= 0;
+		info.buffer		= _buffer;
+		info.format		= VEnumCast( desc.format );
+		info.offset		= VkDeviceSize(desc.offset);
+		info.range		= VkDeviceSize(desc.size);
+
+		VK_CHECK( dev.vkCreateBufferView( dev.GetVkDevice(), &info, null, OUT &outView ));
+		return true;
+	}
+
 /*
 =================================================
 	IsReadOnly

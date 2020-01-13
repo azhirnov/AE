@@ -163,7 +163,7 @@ namespace AE::Graphics
 =================================================
 	EImage_IsMultisampled
 =================================================
-*/
+*
 	ND_ inline constexpr bool EImage_IsMultisampled (EImage value)
 	{
 		return value == EImage::Tex2DMS or value == EImage::Tex2DMSArray;
@@ -173,7 +173,7 @@ namespace AE::Graphics
 =================================================
 	EImage_IsCube
 =================================================
-*/
+*
 	ND_ inline constexpr bool EImage_IsCube (EImage value)
 	{
 		return value == EImage::TexCube or value == EImage::TexCubeArray;
@@ -183,7 +183,7 @@ namespace AE::Graphics
 =================================================
 	EImage_IsArray
 =================================================
-*/
+*
 	ND_ inline constexpr bool EImage_IsArray (EImage value)
 	{
 		return	value == EImage::Tex1DArray		or

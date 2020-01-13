@@ -5,161 +5,27 @@
 # include "graphics/Vulkan/VRenderGraph.h"
 # include "graphics/Vulkan/VDevice.h"
 # include "graphics/Vulkan/VEnumCast.h"
+# include "graphics/Vulkan/VResourceManager.h"
+# include "graphics/Vulkan/Resources/VLogicalRenderPass.h"
+# include "graphics/Vulkan/Resources/VFramebuffer.h"
+# include "graphics/Vulkan/Resources/VRenderPass.h"
+
+# include "graphics/Private/EnumUtils.h"
+# include "graphics/Private/ResourceDataRange.h"
+
+# include "stl/Memory/LinearAllocator.h"
+# include "stl/Containers/StructView.h"
+
+# include "threading/Containers/IndexedPool.h"
+
+# include "graphics/Vulkan/VRenderGraph.BarrierManager.h"
+# include "graphics/Vulkan/VRenderGraph.LocalBuffer.h"
+# include "graphics/Vulkan/VRenderGraph.LocalImage.h"
+# include "graphics/Vulkan/VRenderGraph.GraphicsContext.h"
+# include "graphics/Vulkan/VRenderGraph.RenderContext.h"
 
 namespace AE::Graphics
 {
-	
-	//
-	// Vulkan Transfer Context
-	//
-
-	class VRenderGraph::VTransferContext final : public ITransferContext
-	{
-	};
-//-----------------------------------------------------------------------------
-
-
-
-	//
-	// Vulkan Compute Context
-	//
-
-	class VRenderGraph::VComputeContext final : public IComputeContext
-	{
-	};
-//-----------------------------------------------------------------------------
-
-
-
-	//
-	// Vulkan Graphics Context
-	//
-
-	class VRenderGraph::VGraphicsContext final : public IGraphicsContext
-	{
-	};
-//-----------------------------------------------------------------------------
-
-
-
-	//
-	// Vulkan Render Context
-	//
-
-	class VRenderGraph::VRenderContext final : public VulkanDeviceFn, public IRenderContext
-	{
-	// variables
-	private:
-		VkCommandBuffer		_cmdbuf;
-		VkRenderPass		_renderPass;
-		VkFramebuffer		_framebuffer;
-		uint				_subpassIndex;
-
-		VkPipelineLayout	_curLayout;
-		VkPipeline			_curPipeline;
-
-
-	// methods
-	public:
-		NativeContext_t  GetNativeContext () override
-		{
-			VulkanContext	vctx;
-			vctx.cmdBuffer		= uint64_t(_cmdbuf);
-			vctx.renderPass		= uint64_t(_renderPass);
-			vctx.framebuffer	= uint64_t(_framebuffer);
-			vctx.subpassIndex	= _subpassIndex;
-			return vctx;
-		}
-
-		void ResetStates () override
-		{
-		}
-
-		void BindPipeline (GraphicsPipelineID ppln) override
-		{
-			vkCmdBindPipeline( _cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, _curPipeline );
-		}
-
-		void BindPipeline (MeshPipelineID ppln) override
-		{
-			vkCmdBindPipeline( _cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, _curPipeline );
-		}
-		
-		void BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets) override
-		{
-			//vkCmdBindDescriptorSets( _cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, _curLayout, index, 1, ds, uint(dynamicOffsets.size()), dynamicOffsets.data() );
-		}
-
-		void PushConstant (BytesU offset, BytesU size, const void *values, EShaderStages stages) override
-		{
-			vkCmdPushConstants( _cmdbuf, _curLayout, VEnumCast(stages), uint(offset), uint(size), values );
-		}
-
-		void BindIndexBuffer () override
-		{
-		}
-
-		void BindVertexBuffer () override
-		{
-		}
-
-		void Draw (uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance) override
-		{
-			vkCmdDraw( _cmdbuf, vertexCount, instanceCount, firstVertex, firstInstance );
-		}
-
-		void DrawIndexed (uint indexCount, uint instanceCount, uint firstIndex, int vertexOffset, uint firstInstance) override
-		{
-			vkCmdDrawIndexed( _cmdbuf, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance );
-		}
-
-		void DrawIndirect (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride) override
-		{
-			CHECK( buffer.ResourceType() == GfxResourceID::EType::Buffer );
-			//vkCmdDrawIndirect( _cmdbuf, buffer, VkDeviceSize(offset), drawCount, uint(stride) );
-		}
-
-		void DrawIndexedIndirect (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride) override
-		{
-			CHECK( buffer.ResourceType() == GfxResourceID::EType::Buffer );
-			//vkCmdDrawIndexedIndirect( _cmdbuf, buffer, VkDeviceSize(offset), drawCount, uint(stride) );
-		}
-
-		void DrawIndirectCount (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride) override
-		{
-			CHECK( buffer.ResourceType() == GfxResourceID::EType::Buffer );
-			CHECK( countBuffer.ResourceType() == GfxResourceID::EType::Buffer );
-			//vkCmdDrawIndirectCount( _cmdbuf, buffer, VkDeviceSize(offset), countBuffer, VkDeviceSize(countBufferOffset), maxDrawCount, uint(stride) );
-		}
-
-		void DrawIndexedIndirectCount (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride) override
-		{
-			CHECK( buffer.ResourceType() == GfxResourceID::EType::Buffer );
-			CHECK( countBuffer.ResourceType() == GfxResourceID::EType::Buffer );
-			//vkCmdDrawIndexedIndirectCount( _cmdbuf, buffer, VkDeviceSize(offset), countBuffer, VkDeviceSize(countBufferOffset), maxDrawCount, uint(stride) );
-		}
-
-		void DrawMeshTasksNV (uint taskCount, uint firstTask) override
-		{
-			vkCmdDrawMeshTasksNV( _cmdbuf, taskCount, firstTask );
-		}
-
-		void DrawMeshTasksIndirectNV (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride) override
-		{
-			CHECK( buffer.ResourceType() == GfxResourceID::EType::Buffer );
-			//vkCmdDrawMeshTasksIndirectNV( _cmdbuf, buffer, VkDeviceSize(offset), drawCount, uint(stride) );
-		}
-
-		void DrawMeshTasksIndirectCountNV (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride) override
-		{
-			CHECK( buffer.ResourceType() == GfxResourceID::EType::Buffer );
-			CHECK( countBuffer.ResourceType() == GfxResourceID::EType::Buffer );
-			//vkCmdDrawMeshTasksIndirectCountNV( _cmdbuf, buffer, VkDeviceSize(offset), countBuffer, VkDeviceSize(countBufferOffset), maxDrawCount, uint(stride) );
-		}
-	};
-//-----------------------------------------------------------------------------
-
-
 	
 	struct VRenderGraph::BaseCmd
 	{
@@ -178,7 +44,8 @@ namespace AE::Graphics
 		GfxResourceID *			output;
 		BaseCmd **				inputCmd;
 		char *					dbgName;
-		Function<void (void*)>	pass;
+
+		Function<bool (GraphicsContext &)>	pass;
 	};
 
 	struct VRenderGraph::RenderCmd : BaseCmd
@@ -200,7 +67,73 @@ namespace AE::Graphics
 	};
 //-----------------------------------------------------------------------------
 
+
+
+/*
+=================================================
+	constructor
+=================================================
+*/
+	VRenderGraph::VRenderGraph (VResourceManager &resMngr) :
+		_resMngr{ resMngr }
+	{}
 	
+/*
+=================================================
+	destructor
+=================================================
+*/
+	VRenderGraph::~VRenderGraph ()
+	{
+	}
+
+/*
+=================================================
+	Initialize
+=================================================
+*/
+	bool VRenderGraph::Initialize ()
+	{
+		EXLOCK( _drCheck );
+
+		for (size_t i = 0; i < _contexts.size(); ++i)
+		{
+			auto	q = _resMngr.GetDevice().GetQueue( EQueueType(i) );
+			if ( not q )
+				continue;
+
+			_contexts[i] = MakeUnique<GraphicsContext>( _resMngr, q );
+			CHECK_ERR( _contexts[i]->Create() );
+		}
+
+		return true;
+	}
+	
+/*
+=================================================
+	Deinitialize
+=================================================
+*/
+	void VRenderGraph::Deinitialize ()
+	{
+		EXLOCK( _drCheck );
+
+		for (auto& ctx : _contexts) {
+			ctx.reset();
+		}
+	}
+	
+/*
+=================================================
+	GetPresentQueues
+=================================================
+*/
+	EQueueMask  VRenderGraph::GetPresentQueues ()
+	{
+		SHAREDLOCK( _drCheck );
+		return Default;	// TODO
+	}
+
 /*
 =================================================
 	_Add
@@ -212,6 +145,9 @@ namespace AE::Graphics
 								   VirtualResources_t	output,
 								   StringView			dbgName)
 	{
+		// TODO: lock-free
+		EXLOCK( _cmdGuard );
+
 		auto*	cmd = _allocator.Alloc<T>();
 		CHECK_ERR( cmd );
 
@@ -264,21 +200,29 @@ namespace AE::Graphics
 							StringView				dbgName)
 	{
 		CHECK_ERR( queue == EQueueType::Graphics );
+		SHAREDLOCK( _drCheck );
 
 		auto*	cmd = _Add<RenderCmd>( queue, input, output, dbgName );
 		CHECK_ERR( cmd );
 
+		// TODO
 		//PlacementNew<RenderPassSetupFn_t>( &cmd->setup, std::move(setup) );
 		//PlacementNew<RenderPassFn_t>( &cmd->draw, std::move(draw) );
 		
-		PlacementNew< Function< void (void *) >>(
+		PlacementNew< Function< void (GraphicsContext &) >>(
 			&cmd->pass,
-			[setup = std::move(setup), draw = std::move(draw), cmd] (void* ctx)
+			[this, setup = std::move(setup), draw = std::move(draw), cmd] (GraphicsContext &ctx) -> bool
 			{
-				setup( *static_cast<IGraphicsContext*>(ctx), ArrayView{cmd->input, cmd->inputCount}, ArrayView{cmd->output, cmd->outputCount} );
+				RenderPassDesc	rp_desc;
+				setup( ctx, ArrayView{cmd->input, cmd->inputCount}, ArrayView{cmd->output, cmd->outputCount}, OUT rp_desc );
 
-				VRenderContext	rctx;
+				auto*	logical_rp = _CreateLogicalPass( rp_desc );
+				CHECK_ERR( logical_rp );
+				CHECK_ERR( _CreateRenderPass( {logical_rp} ));
+
+				RenderContext	rctx{ ctx, *logical_rp, _resMngr };
 				draw( rctx, ArrayView{cmd->input, cmd->inputCount}, ArrayView{cmd->output, cmd->outputCount} );
+				return true;
 			});
 		return true;
 	}
@@ -295,15 +239,17 @@ namespace AE::Graphics
 							StringView				dbgName)
 	{
 		CHECK_ERR( queue == EQueueType::Graphics );
+		SHAREDLOCK( _drCheck );
 
 		auto*	cmd = _Add<GraphicsCmd>( queue, input, output, dbgName );
 		CHECK_ERR( cmd );
 		
-		PlacementNew< Function< void (void *) >>(
+		PlacementNew< Function< void (GraphicsContext &) >>(
 			&cmd->pass,
-			[fn = std::move(pass), cmd] (void* ctx)
+			[fn = std::move(pass), cmd] (GraphicsContext &ctx)
 			{
-				fn( *static_cast<IGraphicsContext*>(ctx), ArrayView{cmd->input, cmd->inputCount}, ArrayView{cmd->output, cmd->outputCount} );
+				fn( ctx, ArrayView{cmd->input, cmd->inputCount}, ArrayView{cmd->output, cmd->outputCount} );
+				return true;
 			});
 		return true;
 	}
@@ -320,15 +266,17 @@ namespace AE::Graphics
 							StringView				dbgName)
 	{
 		CHECK_ERR( queue == EQueueType::Graphics or queue == EQueueType::AsyncCompute );
+		SHAREDLOCK( _drCheck );
 
 		auto*	cmd = _Add<ComputeCmd>( queue, input, output, dbgName );
 		CHECK_ERR( cmd );
 		
-		PlacementNew< Function< void (void *) >>(
+		PlacementNew< Function< void (GraphicsContext &) >>(
 			&cmd->pass,
-			[fn = std::move(pass), cmd] (void* ctx)
+			[fn = std::move(pass), cmd] (GraphicsContext &ctx)
 			{
-				fn( *static_cast<IComputeContext*>(ctx), ArrayView{cmd->input, cmd->inputCount}, ArrayView{cmd->output, cmd->outputCount} );
+				fn( ctx, ArrayView{cmd->input, cmd->inputCount}, ArrayView{cmd->output, cmd->outputCount} );
+				return true;
 			});
 		return true;
 	}
@@ -344,14 +292,17 @@ namespace AE::Graphics
 							TransferCommandFn_t&&	pass,
 							StringView				dbgName)
 	{
+		SHAREDLOCK( _drCheck );
+
 		auto*	cmd = _Add<TransferCmd>( queue, input, output, dbgName );
 		CHECK_ERR( cmd );
 		
-		PlacementNew< Function< void (void *) >>(
+		PlacementNew< Function< void (GraphicsContext &) >>(
 			&cmd->pass,
-			[fn = std::move(pass), cmd] (void* ctx)
+			[fn = std::move(pass), cmd] (GraphicsContext &ctx)
 			{
-				fn( *static_cast<ITransferContext*>(ctx), ArrayView{cmd->input, cmd->inputCount}, ArrayView{cmd->output, cmd->outputCount} );
+				fn( ctx, ArrayView{cmd->input, cmd->inputCount}, ArrayView{cmd->output, cmd->outputCount} );
+				return true;
 			});
 		return true;
 	}
@@ -360,11 +311,14 @@ namespace AE::Graphics
 =================================================
 	Flush
 ----
-	TODO: optimize
+	TODO: optimize sorting?, multithreading execution
 =================================================
 */
 	bool VRenderGraph::Flush ()
 	{
+		SHAREDLOCK( _drCheck );
+		EXLOCK( _cmdGuard );
+
 		// resolve input dependencies
 		for (auto& cmd : _commands)
 		{
@@ -426,26 +380,29 @@ namespace AE::Graphics
 		// TODO: merge render passes
 
 		// execute
-		VGraphicsContext	gctx;
-		//VComputeContext	cctx;
-		//VTransferContext	tctx;
-
 		for (auto* cmd : ordered)
 		{
 			ASSERT( cmd->state == BaseCmd::EState::Pending );
 			
-			cmd->pass( &gctx );
+			CHECK( cmd->pass( *_contexts[uint(EQueueType::Graphics)] ));
 
-			/*BEGIN_ENUM_CHECKS();
-			switch ( cmd->queue )
+			/*
+			ASSERT( cmd->queue < EQueueType::_Count );
+
+			if ( prev_queue != cmd->queue )
 			{
-				case EQueueType::Graphics :			cmd->pass( &gctx );		break;
-				case EQueueType::AsyncCompute :		cmd->pass( &cctx );		break;
-				case EQueueType::AsyncTransfer :	cmd->pass( &tctx );		break;
-				case EQueueType::Unknown :
-				case EQueueType::_Count :			ASSERT(false);			break;
+				for (auto& ctx : _contexts) {
+					CHECK( ctx->Submit() );
+				}
+				_contexts[ uint(cmd->queue) ]->Begin();
 			}
-			END_ENUM_CHECKS();*/
+
+			CHECK( cmd->pass( *_contexts[uint(cmd->queue)] ));
+			*/
+		}
+
+		for (auto& ctx : _contexts) {
+			CHECK( ctx->Submit() );
 		}
 
 		_commands.clear();
@@ -453,6 +410,97 @@ namespace AE::Graphics
 		_resUsage.fill( EVirtualResourceUsage::Unknown );
 		_allocator.Discard();
 
+		return true;
+	}
+	
+/*
+=================================================
+	_CreateLogicalPass
+=================================================
+*/
+	VLogicalRenderPass*  VRenderGraph::_CreateLogicalPass (const RenderPassDesc &desc)
+	{
+		VLogicalRenderPass*	ptr = null;
+		
+		// allocate
+		{
+			EXLOCK( _cmdGuard );
+			ptr = _allocator.Alloc< VLogicalRenderPass >();
+			CHECK_ERR( ptr );
+		}
+		
+		PlacementNew< VLogicalRenderPass >( ptr );
+
+		CHECK_ERR( ptr->Create( _resMngr, desc ));
+		return ptr;
+	}
+	
+/*
+=================================================
+	_CreateRenderPass
+=================================================
+*/
+	bool  VRenderGraph::_CreateRenderPass (ArrayView<VLogicalRenderPass*> passes)
+	{
+		RenderPassID	pass_id = _resMngr.CreateRenderPass( passes );
+		CHECK_ERR( pass_id );
+
+		StaticArray< Pair<VImageID, ImageViewDesc>, GraphicsConfig::MaxAttachments >	attachments;
+
+		uint2	dimension;
+		uint	layers			= 0;
+		bool	initialized		= false;
+		uint	viewport_count	= 0;
+
+		for (auto* pass : passes)
+		{
+			if ( pass == passes.front() )
+				viewport_count = uint(pass->GetViewports().size());
+			else
+				CHECK_ERR( viewport_count == pass->GetViewports().size() );
+
+
+			for (auto&[name, rt] : pass->GetColorTargets())
+			{
+				auto&	dst = attachments[rt.index];
+				
+				if ( dst.first == Default )
+				{
+					// initialize attachment
+					dst.first	= rt.imageId;
+					dst.second	= rt.viewDesc;
+
+					// compare dimension and layer count
+					{
+						auto&	desc = _resMngr.GetDescription( rt.imageId );
+
+						if ( initialized )
+						{
+							CHECK_ERR( All( dimension == uint2{ desc.dimension.x, desc.dimension.y } ));
+							CHECK_ERR( layers == rt.viewDesc.layerCount );
+						}
+						else
+						{
+							dimension	= uint2{ desc.dimension.x, desc.dimension.y };
+							layers		= rt.viewDesc.layerCount;
+						}
+					}
+				}
+				else
+				{
+					CHECK_ERR( dst.first  == rt.imageId );
+					CHECK_ERR( dst.second == rt.viewDesc );
+				}
+			}
+		}
+
+		VFramebufferID	framebuffer_id = _resMngr.CreateFramebuffer( attachments, pass_id, dimension, layers );
+		CHECK_ERR( framebuffer_id );
+
+		for (size_t i = 0; i < passes.size(); ++i)
+		{
+			CHECK_ERR( passes[i]->SetRenderPass( _resMngr, pass_id, uint(i), framebuffer_id ));
+		}
 		return true;
 	}
 

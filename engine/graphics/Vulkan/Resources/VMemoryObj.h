@@ -6,7 +6,7 @@
 
 # include "stl/Containers/UntypedStorage.h"
 # include "graphics/Public/ResourceEnums.h"
-# include "../VCommon.h"
+# include "graphics/Vulkan/VCommon.h"
 
 namespace AE::Graphics
 {
@@ -34,6 +34,8 @@ namespace AE::Graphics
 	// variables
 	private:
 		Storage_t				_storage;
+		EMemoryType				_memType		= Default;
+
 		DebugName_t				_debugName;
 		
 		RWDataRaceCheck			_drCheck;
@@ -42,20 +44,19 @@ namespace AE::Graphics
 	// methods
 	public:
 		VMemoryObj () {}
-		VMemoryObj (VMemoryObj &&) = default;
 		~VMemoryObj ();
 
 		bool Create (EMemoryType memType, StringView dbgName);
 		void Destroy (VResourceManager &);
 
-		//bool AllocateForImage (VMemoryManager &, VkImage);
-		//bool AllocateForBuffer (VMemoryManager &, VkBuffer);
+		bool AllocateForImage (VMemoryManager &, VkImage);
+		bool AllocateForBuffer (VMemoryManager &, VkBuffer);
 		//bool AllocateForAccelStruct (VMemoryManager &, VkAccelerationStructureNV);
 
 		//bool GetInfo (VMemoryManager &, OUT MemoryInfo &) const;
 
 		//ND_ MemoryDesc const&	Description ()	const	{ SHAREDLOCK( _drCheck );  return _desc; }
-		//ND_ EMemoryTypeExt	MemoryType ()		const	{ SHAREDLOCK( _drCheck );  return EMemoryTypeExt(_desc.type); }
+		ND_ EMemoryType		MemoryType ()		const	{ SHAREDLOCK( _drCheck );  return _memType; }
 	};
 
 

@@ -16,6 +16,43 @@
 
 namespace AE::Graphics
 {
+	
+/*
+=================================================
+	StencilFaceFlags
+=================================================
+*/
+	ND_ inline VkStencilFaceFlags  VEnumCast (EStencilFace value)
+	{
+		BEGIN_ENUM_CHECKS();
+		switch ( value )
+		{
+			case EStencilFace::Front :			return VK_STENCIL_FACE_FRONT_BIT;
+			case EStencilFace::Back :			return VK_STENCIL_FACE_BACK_BIT;
+			case EStencilFace::FrontAndBack :	return VK_STENCIL_FACE_FRONT_AND_BACK;
+			case EStencilFace::Unknown :
+			default :							break;
+		}
+		END_ENUM_CHECKS();
+		RETURN_ERR( "unknown stencil face", VK_STENCIL_FACE_FLAG_BITS_MAX_ENUM );
+	}
+	
+/*
+=================================================
+	Filter
+=================================================
+*/
+	ND_ inline VkFilter  VEnumCast (EBlitFilter value)
+	{
+		BEGIN_ENUM_CHECKS();
+		switch ( value )
+		{
+			case EBlitFilter::Nearest :	return VK_FILTER_NEAREST;
+			case EBlitFilter::Linear :	return VK_FILTER_LINEAR;
+		}
+		END_ENUM_CHECKS();
+		RETURN_ERR( "unknown filter type", VK_FILTER_MAX_ENUM );
+	}
 
 /*
 =================================================
@@ -260,11 +297,16 @@ namespace AE::Graphics
 */
 	ND_ inline VkShaderStageFlags  VEnumCast (EShaderStages values)
 	{
-		VkShaderStageFlags	flags = 0;
+		if ( values == EShaderStages::AllGraphics )
+			return VK_SHADER_STAGE_ALL_GRAPHICS;
 
+		if ( values == EShaderStages::All )
+			return VK_SHADER_STAGE_ALL;
+
+		VkShaderStageFlags	flags = 0;
 		for (EShaderStages t = EShaderStages(1); t <= values; t = EShaderStages(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ) )
+			if ( not EnumEq( values, t ))
 				continue;
 
 			BEGIN_ENUM_CHECKS();
@@ -443,28 +485,71 @@ namespace AE::Graphics
 		END_ENUM_CHECKS();
 		RETURN_ERR( "unknown cull mode" );
 	}
+	
+/*
+=================================================
+	ImageCreateFlags
+=================================================
+*/
+	ND_ inline VkImageCreateFlags  VEnumCast (EImageFlags values)
+	{
+		VkImageCreateFlags	result = 0;
+
+		for (EImageFlags t = EImageFlags(1); t <= values; t = EImageFlags(uint(t) << 1)) 
+		{
+			if ( not EnumEq( values, t ))
+				continue;
+		
+			BEGIN_ENUM_CHECKS();
+			switch ( t )
+			{
+				case EImageFlags::CubeCompatibple :		result |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;	break;
+				case EImageFlags::_Last :
+				case EImageFlags::Unknown :
+				default :								RETURN_ERR( "unknown image flag", VK_IMAGE_CREATE_FLAG_BITS_MAX_ENUM );
+			}
+			END_ENUM_CHECKS();
+		}
+		return result;
+	}
+	
+/*
+=================================================
+	ImageType
+=================================================
+*/
+	ND_ inline VkImageType  VEnumCast (EImage value)
+	{
+		BEGIN_ENUM_CHECKS();
+		switch ( value )
+		{
+			case EImage::_1D :		return VK_IMAGE_TYPE_1D;
+			case EImage::_2D :		return VK_IMAGE_TYPE_2D;
+			case EImage::_3D :		return VK_IMAGE_TYPE_3D;
+			case EImage::Unknown :	break;
+		}
+		END_ENUM_CHECKS();
+		RETURN_ERR( "unsupported image type", VK_IMAGE_TYPE_MAX_ENUM );
+	}
 
 /*
 =================================================
 	ImageViewType
 =================================================
 */
-	ND_ inline VkImageViewType  VEnumCast (EImage value)
+	ND_ inline VkImageViewType  VEnumCast (EImageView value)
 	{
 		BEGIN_ENUM_CHECKS();
 		switch ( value )
 		{
-			case EImage::Tex1D			: return VK_IMAGE_VIEW_TYPE_1D;
-			case EImage::Tex1DArray		: return VK_IMAGE_VIEW_TYPE_1D_ARRAY;
-			case EImage::Tex2DMS		:
-			case EImage::Tex2D			: return VK_IMAGE_VIEW_TYPE_2D;
-			case EImage::Tex2DMSArray	:
-			case EImage::Tex2DArray		: return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-			case EImage::TexCube		: return VK_IMAGE_VIEW_TYPE_CUBE;
-			case EImage::TexCubeArray	: return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-			case EImage::Tex3D			: return VK_IMAGE_VIEW_TYPE_3D;
-			case EImage::Buffer			:
-			case EImage::Unknown		: break;	// not supported
+			case EImageView::_1D :			return VK_IMAGE_VIEW_TYPE_1D;
+			case EImageView::_1DArray :		return VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+			case EImageView::_2D :			return VK_IMAGE_VIEW_TYPE_2D;
+			case EImageView::_2DArray :		return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+			case EImageView::Cube :			return VK_IMAGE_VIEW_TYPE_CUBE;
+			case EImageView::CubeArray :	return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+			case EImageView::_3D :			return VK_IMAGE_VIEW_TYPE_3D;
+			case EImageView::Unknown :		break;	// not supported
 		}
 		END_ENUM_CHECKS();
 		RETURN_ERR( "unsupported image view type", VK_IMAGE_VIEW_TYPE_MAX_ENUM );
@@ -610,7 +695,7 @@ namespace AE::Graphics
 =================================================
 	IndexType
 =================================================
-*
+*/
 	ND_ inline VkIndexType  VEnumCast (EIndex value)
 	{
 		BEGIN_ENUM_CHECKS();
@@ -847,8 +932,9 @@ namespace AE::Graphics
 			case EResourceState::Unknown :							return VK_IMAGE_LAYOUT_UNDEFINED;
 
 			case EResourceState::ShaderSample :
-			case EResourceState::InputAttachment :					return EnumEq( aspect, VK_IMAGE_ASPECT_COLOR_BIT ) ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL :
-																														 VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+			case EResourceState::InputAttachment :					return EnumEq( aspect, VK_IMAGE_ASPECT_COLOR_BIT ) ?
+																			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL :
+																			VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 			case EResourceState::ShaderRead :
 			case EResourceState::ShaderWrite :
 			case EResourceState::ShaderReadWrite :					return VK_IMAGE_LAYOUT_GENERAL;

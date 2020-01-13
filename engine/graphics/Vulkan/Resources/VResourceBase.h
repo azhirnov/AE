@@ -49,8 +49,7 @@ namespace AE::Graphics
 
 	// methods
 	public:
-		VResourceBase ()
-		{}
+		VResourceBase () {}
 
 		VResourceBase (Self &&) = delete;
 		VResourceBase (const Self &) = delete;
@@ -63,14 +62,14 @@ namespace AE::Graphics
 			ASSERT( IsDestroyed() );
 		}
 
-		void AddRef () const
+		void  AddRef () const
 		{
 			_refCounter.fetch_add( 1, EMemoryOrder::Relaxed );
 		}
 
-		ND_ bool ReleaseRef (int refCount) const
+		ND_ int  ReleaseRef (int refCount) const
 		{
-			return _refCounter.fetch_sub( refCount, EMemoryOrder::Relaxed ) == refCount;
+			return (_refCounter.fetch_sub( refCount, EMemoryOrder::Relaxed ) - refCount);
 		}
 		
 
@@ -90,7 +89,7 @@ namespace AE::Graphics
 
 
 		template <typename ...Args>
-		bool Create (Args&& ...args)
+		bool  Create (Args&& ...args)
 		{
 			ASSERT( IsDestroyed() );
 			ASSERT( GetRefCount() == 0 );
@@ -107,7 +106,7 @@ namespace AE::Graphics
 		}
 
 		template <typename ...Args>
-		void Destroy (Args&& ...args)
+		void  Destroy (Args&& ...args)
 		{
 			ASSERT( not IsDestroyed() );
 			//ASSERT( GetRefCount() == 0 );

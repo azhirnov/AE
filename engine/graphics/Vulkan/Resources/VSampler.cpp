@@ -49,9 +49,11 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void VSampler::Destroy (const VDevice &dev)
+	void VSampler::Destroy (const VResourceManager &resMngr)
 	{
 		EXLOCK( _drCheck );
+
+		auto&	dev = resMngr.GetDevice();
 
 		if ( _sampler )
 			dev.vkDestroySampler( dev.GetVkDevice(), _sampler, null );
@@ -257,7 +259,7 @@ namespace {
 			VkSamplerCreateInfo	info = {};
 			CreateSampler( resMngr.GetDevice(), desc, OUT info );
 
-			_samplers[i] = resMngr.CreateSampler( info );
+			_samplers[i].Set( resMngr.CreateSampler( info ));
 			CHECK_ERR( _samplers[i] );
 		}
 
@@ -281,7 +283,7 @@ namespace {
 		EXLOCK( _drCheck );
 
 		for (auto& id : _samplers) {
-			resMngr.ReleaseResource( id );
+			resMngr.ReleaseResource( INOUT id );
 		}
 		_samplers.clear();
 	}

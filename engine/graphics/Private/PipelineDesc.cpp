@@ -12,12 +12,13 @@ namespace AE::Graphics
 */
 	bool  GraphicsPipelineDesc::operator == (const GraphicsPipelineDesc &rhs) const
 	{
-		return	renderPassId	== rhs.renderPassId		and
-				subpassIndex	== rhs.subpassIndex		and
-				vertexInput		== rhs.vertexInput		and
-				renderState		== rhs.renderState		and
-				dynamicState	== rhs.dynamicState		and
-				specialization	== rhs.specialization;
+		return	(renderPassId	== rhs.renderPassId)	&
+				(subpassIndex	== rhs.subpassIndex)	&
+				(viewportCount	== rhs.viewportCount)	&
+				(vertexInput	== rhs.vertexInput)		&
+				(renderState	== rhs.renderState)		&
+				(dynamicState	== rhs.dynamicState)	&
+				(specialization	== rhs.specialization);
 	}
 	
 /*
@@ -30,6 +31,7 @@ namespace AE::Graphics
 		HashVal	result;
 		result << HashOf( renderPassId );
 		result << HashOf( subpassIndex );
+		result << HashOf( viewportCount );
 		result << vertexInput.CalcHash();
 		result << renderState.CalcHash();
 		result << HashOf( dynamicState );
@@ -46,13 +48,18 @@ namespace AE::Graphics
 */
 	bool  MeshPipelineDesc::operator == (const MeshPipelineDesc &rhs) const
 	{
-		return	renderPassId		== rhs.renderPassId		and
-				subpassIndex		== rhs.subpassIndex		and
-				renderState			== rhs.renderState		and
-				dynamicState		== rhs.dynamicState		and
-				All( taskGroupSize	== rhs.taskGroupSize )	and
-				All( meshGroupSize	== rhs.meshGroupSize )	and
-				specialization		== rhs.specialization;
+		return	(renderPassId				== rhs.renderPassId)				&
+				(subpassIndex				== rhs.subpassIndex)				&
+				(viewportCount				== rhs.viewportCount)				&
+				(renderState				== rhs.renderState)					&
+				(dynamicState				== rhs.dynamicState)				&
+				(taskGroupSize.has_value()	== rhs.taskGroupSize.has_value())	&
+				(taskGroupSize.has_value() ?
+					All( *taskGroupSize		== *rhs.taskGroupSize ) : true)		&
+				(meshGroupSize.has_value()	== rhs.meshGroupSize.has_value())	&
+				(meshGroupSize.has_value() ?
+					All( *meshGroupSize	== *rhs.meshGroupSize ) : true)			&
+				(specialization		== rhs.specialization);
 	}
 	
 /*
@@ -65,6 +72,7 @@ namespace AE::Graphics
 		HashVal	result;
 		result << HashOf( renderPassId );
 		result << HashOf( subpassIndex );
+		result << HashOf( viewportCount );
 		result << renderState.CalcHash();
 		result << HashOf( dynamicState );
 		result << HashOf( taskGroupSize );
@@ -82,8 +90,11 @@ namespace AE::Graphics
 */
 	bool  ComputePipelineDesc::operator == (const ComputePipelineDesc &rhs) const
 	{
-		return	All( localGroupSize	== rhs.localGroupSize )	and
-				specialization		== rhs.specialization;
+		return	(localGroupSize.has_value()	== rhs.localGroupSize.has_value())	&
+				(localGroupSize.has_value() ?
+					All( *localGroupSize	== *rhs.localGroupSize ) : true)	&
+				(specialization				== rhs.specialization)				&
+				(dispatchBase				== rhs.dispatchBase);
 	}
 	
 /*
@@ -96,6 +107,7 @@ namespace AE::Graphics
 		HashVal	result;
 		result << HashOf( localGroupSize );
 		result << HashOf( specialization );
+		result << HashOf( dispatchBase );
 		return result;
 	}
 //-----------------------------------------------------------------------------
@@ -108,7 +120,7 @@ namespace AE::Graphics
 */
 	bool  RayTracingPipelineDesc::operator == (const RayTracingPipelineDesc &rhs) const
 	{
-		return	specialization == rhs.specialization;
+		return	(specialization == rhs.specialization);
 	}
 	
 /*
