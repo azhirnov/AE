@@ -17,6 +17,17 @@ namespace AE::STL
 	{
 		return std::addressof( value );
 	}
+
+/*
+=================================================
+	AddressDistance
+=================================================
+*/
+	template <typename LT, typename RT>
+	ND_ forceinline BytesU  AddressDistance (LT &lhs, RT &rhs)
+	{
+		return BytesU{ size_t(AddressOf(lhs)) - size_t(AddressOf(rhs)) };
+	}
 	
 /*
 =================================================

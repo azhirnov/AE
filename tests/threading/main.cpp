@@ -9,7 +9,8 @@ extern void PerfTest_Threading ();
 extern void UnitTest_IndexedPool ();
 extern void UnitTest_LfLinearAllocator ();
 extern void UnitTest_LfIndexedPool ();
-extern void UnitTest_LfStaticStorage ();
+extern void UnitTest_LfIndexedPool2 ();
+extern void UnitTest_LfStaticPool ();
 
 
 #ifdef PLATFORM_ANDROID
@@ -21,7 +22,8 @@ int main ()
 	UnitTest_IndexedPool();
 	UnitTest_LfLinearAllocator();
 	UnitTest_LfIndexedPool();
-	UnitTest_LfStaticStorage();
+	UnitTest_LfIndexedPool2();
+	UnitTest_LfStaticPool();
 
 	UnitTest_TaskDeps();
 	UnitTest_Promise();

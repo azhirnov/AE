@@ -44,11 +44,6 @@ namespace AE::Threading
 
 	// methods
 	public:
-		CachedIndexedPool (Self &&) = default;
-
-		Self&  operator = (Self &&) = default;
-
-
 		explicit CachedIndexedPool (const Allocator_t &alloc = Allocator_t()) :
 			_pool{ alloc },  _cache{ StdAlloc_t{alloc} }
 		{}

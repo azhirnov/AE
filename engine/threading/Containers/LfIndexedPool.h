@@ -18,11 +18,13 @@
 
 #pragma once
 
-#include "stl/Containers/FixedArray.h"
-#include "stl/CompileTime/Math.h"
-#include "stl/Math/BitMath.h"
-#include "stl/Memory/UntypedAllocator.h"
-#include "threading/Common.h"
+#ifndef AE_LFAS_ENABLED
+# include "stl/Containers/FixedArray.h"
+# include "stl/CompileTime/Math.h"
+# include "stl/Math/BitMath.h"
+# include "stl/Memory/UntypedAllocator.h"
+# include "threading/Common.h"
+#endif
 
 namespace AE::Threading
 {
@@ -40,7 +42,7 @@ namespace AE::Threading
 	struct LfIndexedPool final
 	{
 		STATIC_ASSERT( ChunkSize > 0 );
-		STATIC_ASSERT( (ChunkSize % 32) == 0 );
+		STATIC_ASSERT( ((ChunkSize % 32) == 0) or ((ChunkSize % 64) == 0) );
 		STATIC_ASSERT( MaxChunks > 0 );
 		STATIC_ASSERT( IsPowerOfTwo( ChunkSize ));	// must be power of 2 to increase performance
 		STATIC_ASSERT( AllocatorType::IsThreadSafe );
@@ -72,20 +74,20 @@ namespace AE::Threading
 		BitfieldArray_t		_assignedBits;	// 1 - is unassigned bit, 0 - assigned bit
 		BitfieldArray_t		_createdBits;	// 1 - constructor has been called
 		ValueChunks_t		_values;
-		Allocator_t			_alloc;			// must be thread safe
+		Allocator_t			_allocator;		// must be thread safe
 
 
 	// methods
 	public:
 		LfIndexedPool (const Self &) = delete;
-		LfIndexedPool (Self &&) = default;
+		LfIndexedPool (Self &&) = delete;
 
 		Self& operator = (const Self &) = delete;
-		Self& operator = (Self &&) = default;
+		Self& operator = (Self &&) = delete;
 		
 
 		explicit LfIndexedPool (const Allocator_t &alloc = Allocator_t()) :
-			_alloc{ alloc }
+			_allocator{ alloc }
 		{
 			for (auto& item : _assignedBits) {
 				item.store( UMax, EMemoryOrder::Relaxed );
@@ -101,7 +103,7 @@ namespace AE::Threading
 			ThreadFence( EMemoryOrder::Release );
 		}
 
-		~LfIndexedPool()
+		~LfIndexedPool ()
 		{
 			Release();
 		}
@@ -112,10 +114,12 @@ namespace AE::Threading
 		template <typename FN>
 		void Release (FN &&dtor)
 		{
+			// invalidate cache 
+			ThreadFence( EMemoryOrder::Acquire );
+
 			for (size_t i = 0; i < MaxChunks; ++i)
 			{
-				// invalidate cache
-				ValueChunk_t*	chunk = _values[i].exchange( null, EMemoryOrder::Acquire );
+				ValueChunk_t*	chunk = _values[i].exchange( null, EMemoryOrder::Relaxed );
 
 				if ( not chunk )
 					continue;
@@ -136,7 +140,7 @@ namespace AE::Threading
 					}
 				}
 
-				_alloc.Deallocate( chunk, SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> );
+				_allocator.Deallocate( chunk, SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> );
 			}
 		}
 
@@ -156,7 +160,7 @@ namespace AE::Threading
 
 				if ( chunk == null )
 				{
-					chunk = Cast<ValueChunk_t>(_alloc.Allocate( SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> ));
+					chunk = Cast<ValueChunk_t>(_allocator.Allocate( SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> ));
 
 					// set new pointer and invalidate cache
 					for (ValueChunk_t* expected = null;
@@ -165,7 +169,7 @@ namespace AE::Threading
 						// another thread has been allocated this chunk
 						if ( expected != null and expected != chunk )
 						{
-							_alloc.Deallocate( chunk, SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> );
+							_allocator.Deallocate( chunk, SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> );
 							chunk = expected;
 							break;
 						}
@@ -208,7 +212,7 @@ namespace AE::Threading
 
 
 		// Must be externally synchronized with all threads that using 'index'
-		void  Unassign (Index_t index)
+		bool  Unassign (Index_t index)
 		{
 			if ( index < Capacity() )
 			{
@@ -217,15 +221,15 @@ namespace AE::Threading
 				Bitfield_t	mask		= Bitfield_t(1) << bit_idx;
 				Bitfield_t	old_bits	= _assignedBits[chunk_idx].fetch_or( mask, EMemoryOrder::Relaxed );	// 0 -> 1
 
-				Unused( old_bits );
-				ASSERT( not (old_bits & mask) );
+				return not (old_bits & mask);
 			}
+			return false;
 		}
 
 
 		ND_ bool  IsAssigned (Index_t index)
 		{
-			if ( index < Capacity() );
+			if ( index < Capacity() )
 			{
 				const uint	chunk_idx	= index / AtomicSize;
 				const uint	bit_idx		= index % AtomicSize;

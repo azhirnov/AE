@@ -12,7 +12,7 @@ namespace AE::Threading
 
 /*
 =================================================
-	ArraySizeOf
+	constructor
 =================================================
 */
 	Barrier::Barrier (uint numThreads)
@@ -24,7 +24,7 @@ namespace AE::Threading
 	
 /*
 =================================================
-	ArraySizeOf
+	destructor
 =================================================
 */
 	Barrier::~Barrier ()

@@ -193,7 +193,7 @@ namespace AE::Threading
 	{
 	// types
 	private:
-		struct _PerQueue
+		struct alignas(AE_CACHE_LINE) _PerQueue
 		{
 			SpinLock			guard;
 			Array<AsyncTask>	tasks;

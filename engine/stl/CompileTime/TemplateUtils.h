@@ -17,5 +17,16 @@ namespace AE::STL
 		static constexpr auto	value = Value;
 	};
 
+	
+	//
+	// Deferred Template Type
+	//
+
+	template <template <typename ...> class Templ, typename ...Types>
+	struct DeferredTemplate
+	{
+		using type	= Templ< Types... >;
+	};
+
 
 }	// AE::STL

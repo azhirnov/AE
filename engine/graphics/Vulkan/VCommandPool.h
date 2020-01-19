@@ -5,8 +5,7 @@
 #ifdef AE_ENABLE_VULKAN
 
 # include "graphics/Vulkan/VQueue.h"
-# include "threading/Containers/LfStaticStorage.h"
-
+# include "threading/Containers/LfStaticPool.h"
 
 namespace AE::Graphics
 {
@@ -19,7 +18,7 @@ namespace AE::Graphics
 	{
 	// types
 	private:
-		using CmdBufStorage_t	= Threading::LfStaticStorage< VkCommandBuffer, 64 >;
+		using CmdBufStorage_t	= Threading::LfStaticPool< VkCommandBuffer, 64 >;
 
 
 	// variables

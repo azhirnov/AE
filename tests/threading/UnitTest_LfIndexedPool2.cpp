@@ -1,20 +1,24 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "threading/Containers/LfIndexedPool.h"
+#include "threading/Containers/LfIndexedPool2.h"
 #include "../stl/UnitTest_Common.h"
 using namespace AE::Threading;
 
 namespace
 {
-	void LfIndexedPool_Test1 ()
+	void LfIndexedPool2_Test1 ()
 	{
 		using T = DebugInstanceCounter< int, 1 >;
+		using Pool_t = LfIndexedPool2< T, uint, 8*64, 8 >;
 	
 		T::ClearStatistic();
 		{
-			LfIndexedPool< T, uint, 1024, 16 >	pool;
-	
-			for (uint i = 0; i < 1024*16*10; ++i)
+			Pool_t	pool;
+
+			STATIC_ASSERT( Pool_t::LowLevel_Count == 64 );
+			STATIC_ASSERT( Pool_t::HiLevel_Count == 8 );
+
+			for (uint i = 0; i < 8*64*8*10; ++i)
 			{
 				uint	index;
 				TEST( pool.Assign( OUT index ));
@@ -26,16 +30,18 @@ namespace
 		}
 		TEST( T::CheckStatistic() );
 	}
+	
 
-
-	void LfIndexedPool_Test2 ()
+	void LfIndexedPool2_Test2 ()
 	{
+		constexpr uint	count = 1024*16;
+
 		using T = DebugInstanceCounter< int, 2 >;
+		using Pool_t = LfIndexedPool2< T, uint, count/16, 16 >;
 	
 		T::ClearStatistic();
 		{
-			constexpr uint							count = 1024*16;
-			LfIndexedPool< T, uint, count/16, 16 >	pool;
+			Pool_t	pool;
 	
 			for (uint i = 0; i < count+1; ++i)
 			{
@@ -63,10 +69,10 @@ namespace
 }
 
 
-extern void UnitTest_LfIndexedPool ()
+extern void UnitTest_LfIndexedPool2 ()
 {
-	LfIndexedPool_Test1();
-	LfIndexedPool_Test2();
+	LfIndexedPool2_Test1();
+	LfIndexedPool2_Test2();
 
-	AE_LOGI( "UnitTest_LfIndexedPool - passed" );
+	AE_LOGI( "UnitTest_LfIndexedPool2 - passed" );
 }

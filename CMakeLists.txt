@@ -47,6 +47,7 @@ add_subdirectory( "engine/ecs-st" )
 # tools
 if (NOT DEFINED ANDROID)
 	include( "engine_tools/res_pack/build.cmake" )
+	add_subdirectory( "engine_tools/lfas" )
 endif ()
 
 #----------------------------------------------------------

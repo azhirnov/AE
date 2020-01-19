@@ -46,16 +46,6 @@ namespace AE::Math
 			return ret;
 		}
 
-		template <typename T, int I>
-		ND_ Vec<T,I>  Uniform (const Vec<T,I> &min, const Vec<T,I> &max)
-		{
-			Vec<T,I>	ret;
-			for (int i = 0; i < I; ++i) {
-				ret[i] = Uniform( min[i], max[i] );
-			}
-			return ret;
-		}
-
 		template <typename T>
 		ND_ T  Uniform ()
 		{
@@ -64,10 +54,11 @@ namespace AE::Math
 
 
 	// Bernoulli //
+		// 'p' - the p distribution parameter (probability of generating true)
 		ND_ bool   Bernoulli (double p)		{ return std::bernoulli_distribution{p}( _gen ); }
-		ND_ bvec2  Bernoulli2 (double p)	{ return {Bernoulli(p), Bernoulli(p)}; }
-		ND_ bvec3  Bernoulli3 (double p)	{ return {Bernoulli(p), Bernoulli(p), Bernoulli(p)}; }
-		ND_ bvec4  Bernoulli4 (double p)	{ return {Bernoulli(p), Bernoulli(p), Bernoulli(p), Bernoulli(p)}; }
+		ND_ bool2  Bernoulli2 (double p)	{ return {Bernoulli(p), Bernoulli(p)}; }
+		ND_ bool3  Bernoulli3 (double p)	{ return {Bernoulli(p), Bernoulli(p), Bernoulli(p)}; }
+		ND_ bool4  Bernoulli4 (double p)	{ return {Bernoulli(p), Bernoulli(p), Bernoulli(p), Bernoulli(p)}; }
 
 
 	// Index //

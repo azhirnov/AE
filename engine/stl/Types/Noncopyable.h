@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "stl/Common.h"
+
 namespace AE::STL
 {
 
