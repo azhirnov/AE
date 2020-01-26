@@ -16,6 +16,8 @@
 # include "graphics/Vulkan/VulkanLoader.h"
 # include "graphics/Public/IDs.h"
 
+# include "graphics/Vulkan/VulkanCheckError.h"
+
 namespace AE::Graphics
 {
 	using AE::Threading::Atomic;
@@ -23,10 +25,9 @@ namespace AE::Graphics
 	using AE::Threading::SharedMutex;
 	using AE::Threading::RWDataRaceCheck;
 	using AE::Threading::EMemoryOrder;
+	using AE::Threading::ThreadFence;
 
 	class VDevice;
-	class VMemoryObj;
-	class VMemoryManager;
 	class VResourceManager;
 	class VLogicalRenderPass;
 	class VRenderPass;

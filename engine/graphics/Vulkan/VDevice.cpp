@@ -54,10 +54,10 @@ namespace AE::Graphics
 
 /*
 =================================================
-	HasExtension
+	HasInstanceExtension
 =================================================
 */
-	bool  VDevice::HasExtension (StringView name) const
+	bool  VDevice::HasInstanceExtension (StringView name) const
 	{
 		return !!_instanceExtensions.count( name );
 	}
@@ -128,10 +128,14 @@ namespace AE::Graphics
 */
 	VDeviceInitializer::InstanceVersion  VDeviceInitializer::GetInstanceVersion () const
 	{
+	#ifdef VK_VERSION_1_1
 		uint	ver = VK_MAKE_VERSION( 1, 0, 0 );
 		Unused( vkEnumerateInstanceVersion( OUT &ver ));
 
 		return InstanceVersion{ VK_VERSION_MAJOR(ver), VK_VERSION_MINOR(ver) };
+	#else
+		return InstanceVersion{ 1, 0 };
+	#endif
 	}
 	
 /*
@@ -203,8 +207,11 @@ namespace AE::Graphics
 		for (auto inst : instanceExtensions) {
 			_instanceExtensions.insert( inst );
 		}
+		
+		uint	vk_ver = VK_MAKE_VERSION( 1, 2, 0 );
+		_ValidateInstanceVersion( INOUT vk_ver );
+		_vkVersion = { VK_VERSION_MAJOR(vk_ver), VK_VERSION_MINOR(vk_ver) };
 
-		// TODO: set version
 		return true;
 	}
 	
@@ -416,21 +423,85 @@ namespace {
 		VkPhysicalDeviceBlendOperationAdvancedFeaturesEXT		blendOpAdvanced;
 		VkPhysicalDeviceConditionalRenderingFeaturesEXT			conditionalRendering;
 		VkPhysicalDeviceShaderDrawParameterFeatures				shaderDrawParameters;
+
+		#ifdef VK_NV_mesh_shader
 		VkPhysicalDeviceMeshShaderFeaturesNV					meshShader;
+		#endif
+
 		VkPhysicalDeviceDescriptorIndexingFeaturesEXT			descriptorIndexing;
 		//VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT		vertexAttribDivisor;
 		//VkPhysicalDeviceASTCDecodeFeaturesEXT					astcDecode;
+		
+		#ifdef VK_KHR_vulkan_memory_model
 		VkPhysicalDeviceVulkanMemoryModelFeaturesKHR			memoryModel;
+		#endif
+
+		#ifdef VK_EXT_inline_uniform_block
 		VkPhysicalDeviceInlineUniformBlockFeaturesEXT			inlineUniformBlock;
+		#endif
+
+		#ifdef VK_NV_representative_fragment_test
 		VkPhysicalDeviceRepresentativeFragmentTestFeaturesNV	representativeFragmentTest;
+		#endif
+
 		//VkPhysicalDeviceExclusiveScissorFeaturesNV			exclusiveScissorTest;
 		//VkPhysicalDeviceCornerSampledImageFeaturesNV			cornerSampledImage;
 		//VkPhysicalDeviceComputeShaderDerivativesFeaturesNV	computeShaderDerivatives;
+
+		#ifdef VK_NV_fragment_shader_barycentric
 		VkPhysicalDeviceFragmentShaderBarycentricFeaturesNV		fragmentShaderBarycentric;
+		#endif
+
+		#ifdef VK_NV_shader_image_footprint
 		VkPhysicalDeviceShaderImageFootprintFeaturesNV			shaderImageFootprint;
+		#endif
+
+		#ifdef VK_NV_shading_rate_image
 		VkPhysicalDeviceShadingRateImageFeaturesNV				shadingRateImage;
+		#endif
+		
+		#ifdef VK_KHR_shader_float16_int8
+		VkPhysicalDeviceShaderFloat16Int8Features				shaderFloat16Int8;
+		#endif
+
+		#ifdef VK_KHR_timeline_semaphore
+		VkPhysicalDeviceTimelineSemaphoreFeatures				timelineSemaphore;
+		#endif
+		
+		#ifdef VK_KHR_buffer_device_address
+		VkPhysicalDeviceBufferDeviceAddressFeatures				bufferDeviceAddress;
+		#endif
+		
+		#ifdef VK_KHR_shader_atomic_int64
+		VkPhysicalDeviceShaderAtomicInt64FeaturesKHR			shaderAtomicInt64;
+		#endif
 
 		DeviceFeatures () {
+			std::memset( this, 0, sizeof(*this) );
+		}
+	};
+
+	struct EnabledExtensions
+	{
+		bool	multiview						: 1;
+		bool	storage8Bit						: 1;
+		bool	storage16Bit					: 1;
+		bool	samplerYcbcr					: 1;
+		bool	blendOpAdvanced					: 1;
+		bool	descriptorIndexing				: 1;
+		bool	meshShaderNV					: 1;
+		bool	memoryModel						: 1;
+		bool	inlineUniformBlock				: 1;
+		bool	representativeFragmentTestNV	: 1;
+		bool	fragmentShaderBarycentricNV		: 1;
+		bool	imageFootprintNV				: 1;
+		bool	shadingRateImageNV				: 1;
+		bool	shaderFloat16Int8				: 1;
+		bool	timelineSemaphore				: 1;
+		bool	bufferDeviceAddress				: 1;
+		bool	shaderAtomicInt64				: 1;
+		
+		EnabledExtensions () {
 			std::memset( this, 0, sizeof(*this) );
 		}
 	};
@@ -438,121 +509,197 @@ namespace {
 /*
 =================================================
 	SetupDeviceFeatures
+----
+	enable all available features for extensions
 =================================================
 */
 namespace {
-	bool  SetupDeviceFeatures (VkPhysicalDevice pdev, DeviceFeatures &features, void** nextExt, ArrayView<const char*> extensions)
+	bool  SetupDeviceFeatures (VkPhysicalDevice pdev, DeviceFeatures &features, void** nextExt, ArrayView<const char*> extensions, const VDevice::InstanceVersion &version)
 	{
 		VkPhysicalDeviceFeatures2	feat2		= {};
 		void **						next_feat	= &feat2.pNext;;
 		feat2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 		
+		EnabledExtensions	enabled;
+		const bool			is_vk_1_1	= (version >= VDevice::InstanceVersion{1,1});
+		const bool			is_vk_1_2	= (version >= VDevice::InstanceVersion{1,2});
+		
+		Unused( is_vk_1_1, is_vk_1_2 );
+
 		for (StringView ext : extensions)
 		{
-			if ( ext == VK_NV_MESH_SHADER_EXTENSION_NAME )
-			{
-				*next_feat	= *nextExt		= &features.meshShader;
-				next_feat	= nextExt		= &features.meshShader.pNext;
-				features.meshShader.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
-			}
-			else
-			if ( ext == VK_KHR_MULTIVIEW_EXTENSION_NAME )
-			{
-				*next_feat	= *nextExt		= &features.multiview;
-				next_feat	= nextExt		= &features.multiview.pNext;
-				features.multiview.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
-			}
-			else
-			if ( ext == VK_KHR_8BIT_STORAGE_EXTENSION_NAME )
-			{
-				*next_feat	= *nextExt		= &features.storage8Bit;
-				next_feat	= nextExt		= &features.storage8Bit.pNext;
-				features.storage8Bit.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES_KHR;
-			}
-			else
-			if ( ext == VK_KHR_16BIT_STORAGE_EXTENSION_NAME )
-			{
-				*next_feat	= *nextExt		= &features.storage16Bit;
-				next_feat	= nextExt		= &features.storage16Bit.pNext;
-				features.storage16Bit.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
-			}
-			else
-			if ( ext == VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME )
-			{
-				*next_feat	= *nextExt					= &features.samplerYcbcrConversion;
-				next_feat	= nextExt					= &features.samplerYcbcrConversion.pNext;
-				features.samplerYcbcrConversion.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES;
-			}
-			else
-			if ( ext == VK_EXT_BLEND_OPERATION_ADVANCED_EXTENSION_NAME )
-			{
-				*next_feat	= *nextExt			= &features.blendOpAdvanced;
-				next_feat	= nextExt			= &features.blendOpAdvanced.pNext;
-				features.blendOpAdvanced.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BLEND_OPERATION_ADVANCED_FEATURES_EXT;
-			}
-			else
-			if ( ext == VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME )
-			{
-				*next_feat	= *nextExt				= &features.conditionalRendering;
-				next_feat	= nextExt				= &features.conditionalRendering.pNext;
-				features.conditionalRendering.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CONDITIONAL_RENDERING_FEATURES_EXT;
-			}
-			else
-			if ( ext == VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME )
-			{
-				*next_feat	= *nextExt		= &features.memoryModel;
-				next_feat	= nextExt		= &features.memoryModel.pNext;
-				features.memoryModel.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES_KHR;
-			}
-			else
-			if ( ext == VK_EXT_INLINE_UNIFORM_BLOCK_EXTENSION_NAME )
-			{
-				*next_feat	= *nextExt				= &features.inlineUniformBlock;
-				next_feat	= nextExt				= &features.inlineUniformBlock.pNext;
-				features.inlineUniformBlock.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INLINE_UNIFORM_BLOCK_FEATURES_EXT;
-			}
-			else
-			if ( ext == VK_NV_REPRESENTATIVE_FRAGMENT_TEST_EXTENSION_NAME )
-			{
-				*next_feat	= *nextExt						= &features.representativeFragmentTest;
-				next_feat	= nextExt						= &features.representativeFragmentTest.pNext;
-				features.representativeFragmentTest.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_REPRESENTATIVE_FRAGMENT_TEST_FEATURES_NV;
-			}
-			else
-			if ( ext == VK_NV_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME )
-			{
-				*next_feat	= *nextExt						= &features.fragmentShaderBarycentric;
-				next_feat	= nextExt						= &features.fragmentShaderBarycentric.pNext;
-				features.fragmentShaderBarycentric.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_NV;
-			}
-			else
-			if ( ext == VK_NV_SHADER_IMAGE_FOOTPRINT_EXTENSION_NAME )
-			{
-				*next_feat	= *nextExt				= &features.shaderImageFootprint;
-				next_feat	= nextExt				= &features.shaderImageFootprint.pNext;
-				features.shaderImageFootprint.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_IMAGE_FOOTPRINT_FEATURES_NV;
-			}
-			else
-			if ( ext == VK_NV_SHADING_RATE_IMAGE_EXTENSION_NAME )
-			{
-				*next_feat	= *nextExt			= &features.shadingRateImage;
-				next_feat	= nextExt			= &features.shadingRateImage.pNext;
-				features.shadingRateImage.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_FEATURES_NV;
-			}
-			else
-			if ( ext == VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME )
-			{
-				*next_feat	= *nextExt				= &features.descriptorIndexing;
-				next_feat	= nextExt				= &features.descriptorIndexing.pNext;
-				features.descriptorIndexing.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
-			}
+			if ( ext == VK_KHR_MULTIVIEW_EXTENSION_NAME )					{ enabled.multiview = true;						continue; }
+			if ( ext == VK_KHR_8BIT_STORAGE_EXTENSION_NAME )				{ enabled.storage8Bit = true;					continue; }
+			if ( ext == VK_KHR_16BIT_STORAGE_EXTENSION_NAME )				{ enabled.storage16Bit = true;					continue; }
+			if ( ext == VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME )	{ enabled.samplerYcbcr = true;					continue; }
+			if ( ext == VK_EXT_BLEND_OPERATION_ADVANCED_EXTENSION_NAME )	{ enabled.blendOpAdvanced = true;				continue; }
+			if ( ext == VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME )			{ enabled.descriptorIndexing = true;			continue; }
+				
+			#ifdef VK_NV_mesh_shader
+			if ( ext == VK_NV_MESH_SHADER_EXTENSION_NAME )					{ enabled.meshShaderNV = true;					continue; }
+			#endif
+			#ifdef VK_KHR_vulkan_memory_model
+			if ( ext == VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME )			{ enabled.memoryModel = true;					continue; }
+			#endif
+			#ifdef VK_EXT_inline_uniform_block
+			if ( ext == VK_EXT_INLINE_UNIFORM_BLOCK_EXTENSION_NAME )		{ enabled.inlineUniformBlock = true;			continue; }
+			#endif
+			#ifdef VK_NV_representative_fragment_test
+			if ( ext == VK_NV_REPRESENTATIVE_FRAGMENT_TEST_EXTENSION_NAME )	{ enabled.representativeFragmentTestNV = true;	continue; }
+			#endif
+			#ifdef VK_NV_fragment_shader_barycentric
+			if ( ext == VK_NV_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME )	{ enabled.fragmentShaderBarycentricNV = true;	continue; }
+			#endif
+			#ifdef VK_NV_shader_image_footprint
+			if ( ext == VK_NV_SHADER_IMAGE_FOOTPRINT_EXTENSION_NAME )		{ enabled.imageFootprintNV = true;				continue; }
+			#endif
+			#ifdef VK_NV_shading_rate_image
+			if ( ext == VK_NV_SHADING_RATE_IMAGE_EXTENSION_NAME )			{ enabled.shadingRateImageNV = true;			continue; }
+			#endif
+			#ifdef VK_KHR_shader_float16_int8
+			if ( ext == VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME )			{ enabled.shaderFloat16Int8 = true;				continue; }
+			#endif
+			#ifdef VK_KHR_timeline_semaphore
+			if ( ext == VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME )			{ enabled.timelineSemaphore = true;				continue; }
+			#endif
+			#ifdef VK_KHR_buffer_device_address
+			if ( ext == VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME )		{ enabled.bufferDeviceAddress = true;			continue; }
+			#endif
+			#ifdef VK_KHR_shader_atomic_int64
+			if ( ext == VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME )			{ enabled.shaderAtomicInt64 = true;				continue; }
+			#endif
 		}
+
+		if ( enabled.multiview )
+		{
+			*next_feat	= *nextExt		= &features.multiview;
+			next_feat	= nextExt		= &features.multiview.pNext;
+			features.multiview.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
+		}
+		if ( enabled.storage8Bit )
+		{
+			*next_feat	= *nextExt		= &features.storage8Bit;
+			next_feat	= nextExt		= &features.storage8Bit.pNext;
+			features.storage8Bit.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES_KHR;
+		}
+		if ( enabled.storage16Bit )
+		{
+			*next_feat	= *nextExt		= &features.storage16Bit;
+			next_feat	= nextExt		= &features.storage16Bit.pNext;
+			features.storage16Bit.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
+		}
+		if ( enabled.samplerYcbcr )
+		{
+			*next_feat	= *nextExt					= &features.samplerYcbcrConversion;
+			next_feat	= nextExt					= &features.samplerYcbcrConversion.pNext;
+			features.samplerYcbcrConversion.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES;
+		}
+		if ( enabled.blendOpAdvanced )
+		{
+			*next_feat	= *nextExt			= &features.blendOpAdvanced;
+			next_feat	= nextExt			= &features.blendOpAdvanced.pNext;
+			features.blendOpAdvanced.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BLEND_OPERATION_ADVANCED_FEATURES_EXT;
+		}
+		if ( enabled.descriptorIndexing or is_vk_1_2 )
+		{
+			*next_feat	= *nextExt				= &features.descriptorIndexing;
+			next_feat	= nextExt				= &features.descriptorIndexing.pNext;
+			features.descriptorIndexing.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+		}
+		#ifdef VK_NV_mesh_shader
+		if ( enabled.meshShaderNV )
+		{
+			*next_feat	= *nextExt		= &features.meshShader;
+			next_feat	= nextExt		= &features.meshShader.pNext;
+			features.meshShader.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+		}
+		#endif
+		#ifdef VK_KHR_vulkan_memory_model
+		if ( enabled.memoryModel )
+		{
+			*next_feat	= *nextExt		= &features.memoryModel;
+			next_feat	= nextExt		= &features.memoryModel.pNext;
+			features.memoryModel.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES_KHR;
+		}
+		#endif
+		#ifdef VK_EXT_inline_uniform_block
+		if ( enabled.inlineUniformBlock )
+		{
+			*next_feat	= *nextExt				= &features.inlineUniformBlock;
+			next_feat	= nextExt				= &features.inlineUniformBlock.pNext;
+			features.inlineUniformBlock.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INLINE_UNIFORM_BLOCK_FEATURES_EXT;
+		}
+		#endif
+		#ifdef VK_NV_representative_fragment_test
+		if ( enabled.representativeFragmentTestNV )
+		{
+			*next_feat	= *nextExt						= &features.representativeFragmentTest;
+			next_feat	= nextExt						= &features.representativeFragmentTest.pNext;
+			features.representativeFragmentTest.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_REPRESENTATIVE_FRAGMENT_TEST_FEATURES_NV;
+		}
+		#endif
+		#ifdef VK_NV_fragment_shader_barycentric
+		if ( enabled.fragmentShaderBarycentricNV )
+		{
+			*next_feat	= *nextExt						= &features.fragmentShaderBarycentric;
+			next_feat	= nextExt						= &features.fragmentShaderBarycentric.pNext;
+			features.fragmentShaderBarycentric.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_NV;
+		}
+		#endif
+		#ifdef VK_NV_shader_image_footprint
+		if ( enabled.imageFootprintNV )
+		{
+			*next_feat	= *nextExt				= &features.shaderImageFootprint;
+			next_feat	= nextExt				= &features.shaderImageFootprint.pNext;
+			features.shaderImageFootprint.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_IMAGE_FOOTPRINT_FEATURES_NV;
+		}
+		#endif
+		#ifdef VK_NV_shading_rate_image
+		if ( enabled.shadingRateImageNV )
+		{
+			*next_feat	= *nextExt			= &features.shadingRateImage;
+			next_feat	= nextExt			= &features.shadingRateImage.pNext;
+			features.shadingRateImage.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_FEATURES_NV;
+		}
+		#endif
+		#ifdef VK_KHR_shader_float16_int8
+		if ( enabled.shaderFloat16Int8 or is_vk_1_2 )
+		{
+			*next_feat	= *nextExt			= &features.shaderFloat16Int8;
+			next_feat	= nextExt			= &features.shaderFloat16Int8.pNext;
+			features.shaderFloat16Int8.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES;
+		}
+		#endif
+		#ifdef VK_KHR_timeline_semaphore
+		if ( enabled.timelineSemaphore or is_vk_1_2 )
+		{
+			*next_feat	= *nextExt			= &features.timelineSemaphore;
+			next_feat	= nextExt			= &features.timelineSemaphore.pNext;
+			features.timelineSemaphore.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+		}
+		#endif
+		#ifdef VK_KHR_buffer_device_address
+		if ( enabled.bufferDeviceAddress or is_vk_1_2 )
+		{
+			*next_feat	= *nextExt			= &features.bufferDeviceAddress;
+			next_feat	= nextExt			= &features.bufferDeviceAddress.pNext;
+			features.bufferDeviceAddress.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+		}
+		#endif
+		#ifdef VK_KHR_shader_atomic_int64
+		if ( enabled.shaderAtomicInt64 or is_vk_1_2 )
+		{
+			*next_feat	= *nextExt			= &features.shaderAtomicInt64;
+			next_feat	= nextExt			= &features.shaderAtomicInt64.pNext;
+			features.shaderAtomicInt64.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES_KHR;
+		}
+		#endif
 		
 		*next_feat	= *nextExt				= &features.shaderDrawParameters;
 		next_feat	= nextExt				= &features.shaderDrawParameters.pNext;
 		features.shaderDrawParameters.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETER_FEATURES;
 
-		vkGetPhysicalDeviceFeatures2( pdev, &feat2 );
+		vkGetPhysicalDeviceFeatures2KHR( pdev, &feat2 );
 		return true;
 	}
 }
@@ -631,10 +778,10 @@ namespace {
 		DeviceFeatures	features;
 		vkGetPhysicalDeviceFeatures( _vkPhysicalDevice, OUT &features.main );
 		device_info.pEnabledFeatures = &features.main;
-
-		if ( _vkVersion >= InstanceVersion{1,1} )
+		
+		if ( _vkVersion >= InstanceVersion{1,1} or HasInstanceExtension( VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME ))
 		{
-			CHECK_ERR( SetupDeviceFeatures( _vkPhysicalDevice, features, INOUT next_ext, device_extensions ));
+			CHECK_ERR( SetupDeviceFeatures( _vkPhysicalDevice, features, INOUT next_ext, device_extensions, _vkVersion ));
 		}
 
 		VK_CHECK( vkCreateDevice( _vkPhysicalDevice, &device_info, null, OUT &_vkLogicalDevice ));
@@ -646,7 +793,7 @@ namespace {
 			vkGetDeviceQueue( _vkLogicalDevice, uint(q.familyIndex), q.queueIndex, OUT &q.handle );
 		}
 		
-		for (auto ext : extensions) {
+		for (auto* ext : device_extensions) {
 			_deviceExtensions.insert( ext );
 		}
 		
@@ -709,22 +856,205 @@ namespace {
 */
 	bool  VDeviceInitializer::_InitDeviceFeatures ()
 	{
+		std::memset( &_deviceInfo, 0, sizeof(_deviceInfo) );
 		vkGetPhysicalDeviceFeatures( _vkPhysicalDevice, OUT &_deviceInfo.features );
 		vkGetPhysicalDeviceProperties( _vkPhysicalDevice, OUT &_deviceInfo.properties );
 		vkGetPhysicalDeviceMemoryProperties( _vkPhysicalDevice, OUT &_deviceInfo.memoryProperties );
 
 		// get api version
 		{
-			_vkVersion.major = VK_VERSION_MAJOR( GetDeviceProperties().apiVersion );
-			_vkVersion.minor = VK_VERSION_MINOR( GetDeviceProperties().apiVersion );
+			_vkVersion.major = VK_VERSION_MAJOR( _deviceInfo.properties.apiVersion );
+			_vkVersion.minor = VK_VERSION_MINOR( _deviceInfo.properties.apiVersion );
 		}
 		
-		_supported.debugUtils			= HasExtension( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
-		_supported.meshShaderNV			= HasDeviceExtension( VK_NV_MESH_SHADER_EXTENSION_NAME );
-		_supported.rayTracingNV			= HasDeviceExtension( VK_NV_RAY_TRACING_EXTENSION_NAME );
-		_supported.shadingRateImageNV	= HasDeviceExtension( VK_NV_SHADING_RATE_IMAGE_EXTENSION_NAME );
-		_supported.samplerMirrorClamp	= HasDeviceExtension( VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME );
-		_supported.descriptorIndexing	= HasDeviceExtension( VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME );
+		_supported.debugUtils				= HasInstanceExtension( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+		_supported.bindMemory2				= _vkVersion >= InstanceVersion{1,1} or (HasDeviceExtension( VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME ) and HasDeviceExtension( VK_KHR_BIND_MEMORY_2_EXTENSION_NAME ));
+		_supported.dedicatedAllocation		= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME );
+		_supported.descriptorUpdateTemplate	= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME );
+		_supported.imageViewUsage			= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE2_EXTENSION_NAME );
+		_supported.create2DArrayCompatible	= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE1_EXTENSION_NAME );
+		_supported.commandPoolTrim			= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE1_EXTENSION_NAME );
+		_supported.dispatchBase				= _vkVersion >= InstanceVersion{1,1};
+		_supported.renderPass2				= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME );
+		_supported.samplerMirrorClamp		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME );
+		_supported.descriptorIndexing		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME );
+		_supported.drawIndirectCount		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME );
+		
+		#ifdef VK_NV_mesh_shader
+		_supported.meshShaderNV				= HasDeviceExtension( VK_NV_MESH_SHADER_EXTENSION_NAME );
+		#endif
+		#ifdef VK_NV_ray_tracing
+		_supported.rayTracingNV				= HasDeviceExtension( VK_NV_RAY_TRACING_EXTENSION_NAME );
+		#endif
+		#ifdef VK_NV_shading_rate_image
+		_supported.shadingRateImageNV		= HasDeviceExtension( VK_NV_SHADING_RATE_IMAGE_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_shader_clock
+		_supported.shaderClock				= HasDeviceExtension( VK_KHR_SHADER_CLOCK_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_shader_float16_int8
+		_supported.float16Arithmetic		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_timeline_semaphore
+		_supported.timelineSemaphore		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME ),
+		#endif
+		#ifdef VK_KHR_buffer_device_address
+		_supported.bufferAddress			= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME ),
+		#endif
+		#ifdef VK_KHR_depth_stencil_resolve
+		_supported.depthStencilResolve		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_shader_atomic_int64
+		_supported.shaderAtomicInt64		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME );
+		#endif
+
+		// load extensions
+		if ( _vkVersion >= InstanceVersion{1,1} or HasInstanceExtension( VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME ))
+		{
+			VkPhysicalDeviceFeatures2	feat2		= {};
+			void **						next_feat	= &feat2.pNext;
+			feat2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+			
+			#ifdef VK_NV_mesh_shader
+			if ( _supported.meshShaderNV )
+			{
+				*next_feat	= &_deviceInfo.meshShaderFeatures;
+				next_feat	= &_deviceInfo.meshShaderFeatures.pNext;
+				_deviceInfo.meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+			}
+			#endif
+			#ifdef VK_NV_shading_rate_image
+			if ( _supported.shadingRateImageNV )
+			{
+				*next_feat	= &_deviceInfo.shadingRateImageFeatures;
+				next_feat	= &_deviceInfo.shadingRateImageFeatures.pNext;
+				_deviceInfo.shadingRateImageFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_FEATURES_NV;
+			}
+			#endif
+			#ifdef VK_KHR_shader_clock
+			if ( _supported.shaderClock )
+			{
+				*next_feat	= &_deviceInfo.shaderClock;
+				next_feat	= &_deviceInfo.shaderClock.pNext;
+				_deviceInfo.shaderClock.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR;
+			}
+			#endif
+			#ifdef VK_KHR_shader_float16_int8
+			VkPhysicalDeviceShaderFloat16Int8Features	shader_float16_int8_feat = {};
+			if ( _supported.float16Arithmetic )
+			{
+				*next_feat	= &shader_float16_int8_feat;
+				next_feat	= &shader_float16_int8_feat.pNext;
+				shader_float16_int8_feat.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES;
+			}
+			#endif
+			#ifdef VK_KHR_timeline_semaphore
+			VkPhysicalDeviceTimelineSemaphoreFeatures	timeline_sem_feat = {};
+			if ( _supported.timelineSemaphore )
+			{
+				*next_feat	= &timeline_sem_feat;
+				next_feat	= &timeline_sem_feat.pNext;
+				timeline_sem_feat.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+			}
+			#endif
+			#ifdef VK_KHR_buffer_device_address
+			if ( _supported.bufferAddress )
+			{
+				*next_feat	= &_deviceInfo.bufferDeviceAddress;
+				next_feat	= &_deviceInfo.bufferDeviceAddress.pNext;
+				_deviceInfo.bufferDeviceAddress.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+			}
+			#endif
+			#ifdef VK_KHR_shader_atomic_int64
+			if ( _supported.shaderAtomicInt64 )
+			{
+				*next_feat	= &_deviceInfo.shaderAtomicInt64;
+				next_feat	= &_deviceInfo.shaderAtomicInt64.pNext;
+				_deviceInfo.shaderAtomicInt64.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+			}
+			#endif
+			Unused( next_feat );
+
+			vkGetPhysicalDeviceFeatures2KHR( GetVkPhysicalDevice(), OUT &feat2 );
+			
+			#ifdef VK_NV_mesh_shader
+			_supported.meshShaderNV			&= (_deviceInfo.meshShaderFeatures.meshShader or _deviceInfo.meshShaderFeatures.taskShader);
+			#endif
+			#ifdef VK_NV_shading_rate_image
+			_supported.shadingRateImageNV	&= (_deviceInfo.shadingRateImageFeatures.shadingRateImage == VK_TRUE);
+			#endif
+			#ifdef VK_KHR_shader_clock
+			_supported.shaderClock			&= !!(_deviceInfo.shaderClock.shaderDeviceClock | _deviceInfo.shaderClock.shaderSubgroupClock);
+			#endif
+			#ifdef VK_KHR_shader_float16_int8
+			_supported.float16Arithmetic	&= (shader_float16_int8_feat.shaderFloat16 == VK_TRUE);
+			#endif
+			#ifdef VK_KHR_timeline_semaphore
+			_supported.timelineSemaphore	&= (timeline_sem_feat.timelineSemaphore == VK_TRUE);
+			#endif
+			#ifdef VK_KHR_buffer_device_address
+			_supported.bufferAddress		&= (_deviceInfo.bufferDeviceAddress.bufferDeviceAddress == VK_TRUE);
+			#endif
+			#ifdef VK_KHR_shader_atomic_int64
+			_supported.shaderAtomicInt64	&= (_deviceInfo.shaderAtomicInt64.shaderBufferInt64Atomics == VK_TRUE);
+			#endif
+
+			VkPhysicalDeviceProperties2	props2		= {};
+			void **						next_props	= &props2.pNext;
+			props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+			
+			#ifdef VK_NV_mesh_shader
+			if ( _supported.meshShaderNV )
+			{
+				*next_props	= &_deviceInfo.meshShaderProperties;
+				next_props	= &_deviceInfo.meshShaderProperties.pNext;
+				_deviceInfo.meshShaderProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
+			}
+			#endif
+			#ifdef VK_NV_shading_rate_image
+			if ( _supported.shadingRateImageNV )
+			{
+				*next_props	= &_deviceInfo.shadingRateImageProperties;
+				next_props	= &_deviceInfo.shadingRateImageProperties.pNext;
+				_deviceInfo.shadingRateImageProperties.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_PROPERTIES_NV;
+			}
+			#endif
+			#ifdef VK_NV_ray_tracing
+			if ( _supported.rayTracingNV )
+			{
+				*next_props	= &_deviceInfo.rayTracingProperties;
+				next_props	= &_deviceInfo.rayTracingProperties.pNext;
+				_deviceInfo.rayTracingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV;
+			}
+			#endif
+			#ifdef VK_KHR_timeline_semaphore
+			if ( _supported.timelineSemaphore )
+			{
+				*next_props	= &_deviceInfo.timelineSemaphoreProps;
+				next_props	= &_deviceInfo.timelineSemaphoreProps.pNext;
+				_deviceInfo.timelineSemaphoreProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_PROPERTIES;
+			}
+			#endif
+			#ifdef VK_KHR_depth_stencil_resolve
+			if ( _supported.depthStencilResolve )
+			{
+				*next_props	= &_deviceInfo.depthStencilResolve;
+				next_props	= &_deviceInfo.depthStencilResolve.pNext;
+				_deviceInfo.depthStencilResolve.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_STENCIL_RESOLVE_PROPERTIES;
+			}
+			#endif
+			#ifdef VK_VERSION_1_2
+			if ( _vkVersion >= InstanceVersion{1,2} )
+			{
+				*next_props	= &_deviceInfo.properties120;
+				next_props	= &_deviceInfo.properties120.pNext;
+				_deviceInfo.properties120.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
+			}
+			#endif
+			Unused( next_props );
+
+			vkGetPhysicalDeviceProperties2KHR( GetVkPhysicalDevice(), OUT &props2 );
+		}
 
 		AE_LOGI( "Created vulkan device on GPU: "s << _deviceInfo.properties.deviceName
 			<< "\n  version:             " << ToString(_vkVersion.major) << '.' << ToString(_vkVersion.minor)
@@ -733,57 +1063,9 @@ namespace {
 			<< "\n  ray_tracing:         " << ToString( _supported.rayTracingNV )
 			<< "\n  shading_rate_image:  " << ToString( _supported.shadingRateImageNV )
 			<< "\n  descriptor_indexing: " << ToString( _supported.descriptorIndexing )
+			<< "\n  shader_clock:        " << ToString( _supported.shaderClock )
+			<< "\n  buffer address:      " << ToString(  _supported.bufferAddress )
 		);
-
-		// load extensions
-		if ( _vkVersion >= InstanceVersion{1,1} )
-		{
-			VkPhysicalDeviceFeatures2	feat2		= {};
-			void **						next_feat	= &feat2.pNext;
-			feat2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-			
-			if ( _supported.meshShaderNV )
-			{
-				*next_feat	= &_deviceInfo.meshShaderFeatures;
-				next_feat	= &_deviceInfo.meshShaderFeatures.pNext;
-				_deviceInfo.meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
-			}
-			if ( _supported.shadingRateImageNV )
-			{
-				*next_feat	= &_deviceInfo.shadingRateImageFeatures;
-				next_feat	= &_deviceInfo.shadingRateImageFeatures.pNext;
-				_deviceInfo.shadingRateImageFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_FEATURES_NV;
-			}
-			vkGetPhysicalDeviceFeatures2( GetVkPhysicalDevice(), &feat2 );
-
-			_supported.meshShaderNV			&= (_deviceInfo.meshShaderFeatures.meshShader or _deviceInfo.meshShaderFeatures.taskShader);
-			_supported.shadingRateImageNV	&= (_deviceInfo.shadingRateImageFeatures.shadingRateImage == VK_TRUE);
-
-
-			VkPhysicalDeviceProperties2	props2		= {};
-			void **						next_props	= &props2.pNext;
-			props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-
-			if ( _supported.meshShaderNV )
-			{
-				*next_props	= &_deviceInfo.meshShaderProperties;
-				next_props	= &_deviceInfo.meshShaderProperties.pNext;
-				_deviceInfo.meshShaderProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
-			}
-			if ( _supported.shadingRateImageNV )
-			{
-				*next_props	= &_deviceInfo.shadingRateImageProperties;
-				next_props	= &_deviceInfo.shadingRateImageProperties.pNext;
-				_deviceInfo.shadingRateImageProperties.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_PROPERTIES_NV;
-			}
-			if ( _supported.rayTracingNV )
-			{
-				*next_props	= &_deviceInfo.rayTracingProperties;
-				next_props	= &_deviceInfo.rayTracingProperties.pNext;
-				_deviceInfo.rayTracingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV;
-			}
-			vkGetPhysicalDeviceProperties2( GetVkPhysicalDevice(), &props2 );
-		}
 
 		return true;
 	}
@@ -969,22 +1251,22 @@ namespace {
 	_ChooseQueueIndex
 =================================================
 */
-	bool  VDeviceInitializer::_ChooseQueueIndex (ArrayView<VkQueueFamilyProperties> queueFamilyProps, INOUT VkQueueFlags &requiredFlags, OUT uint &familyIndex) const
+	bool  VDeviceInitializer::_ChooseQueueIndex (ArrayView<VkQueueFamilyProperties> queueFamilyProps, INOUT VkQueueFlagBits &requiredFlags, OUT uint &familyIndex) const
 	{
 		// validate required flags
 		{
 			// if the capabilities of a queue family include VK_QUEUE_GRAPHICS_BIT or VK_QUEUE_COMPUTE_BIT,
 			// then reporting the VK_QUEUE_TRANSFER_BIT capability separately for that queue family is optional.
-			if ( requiredFlags & (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT) )
+			if ( EnumAny( requiredFlags, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT ))
 				requiredFlags &= ~VK_QUEUE_TRANSFER_BIT;
 		}
 
-		Pair<VkQueueFlags, uint>	compatible {0, UMax};
+		Pair<VkQueueFlagBits, uint>		compatible { VkQueueFlagBits(0), UMax };
 
 		for (size_t i = 0; i < queueFamilyProps.size(); ++i)
 		{
-			const auto&		prop			 = queueFamilyProps[i];
-			VkQueueFlags	curr_flags		 = prop.queueFlags;
+			const auto&		prop		 = queueFamilyProps[i];
+			VkQueueFlagBits	curr_flags	 = BitCast<VkQueueFlagBits>( prop.queueFlags );
 
 			if ( curr_flags == requiredFlags )
 			{
@@ -994,7 +1276,7 @@ namespace {
 			}
 
 			if ( EnumEq( curr_flags, requiredFlags ) and 
-				 (compatible.first == 0 or BitSet<32>{compatible.first}.count() > BitSet<32>{curr_flags}.count()) )
+				 (compatible.first == 0 or BitCount(compatible.first) > BitCount(curr_flags)) )
 			{
 				compatible = { curr_flags, uint(i) };
 			}
@@ -1035,7 +1317,7 @@ namespace {
 		if ( queues.empty() )
 		{
 			uint			family_index	= 0;
-			VkQueueFlags	flags			= VK_QUEUE_GRAPHICS_BIT;
+			VkQueueFlagBits	flags			= VK_QUEUE_GRAPHICS_BIT;
 
 			CHECK_ERR( _ChooseQueueIndex( queue_family_props, INOUT flags, OUT family_index ));
 
@@ -1056,7 +1338,7 @@ namespace {
 		for (auto& q : queues)
 		{
 			uint			family_index	= 0;
-			VkQueueFlags	flags			= q.flags;
+			VkQueueFlagBits	flags			= q.flags;
 			CHECK_ERR( _ChooseQueueIndex( queue_family_props, INOUT flags, OUT family_index ));
 
 			if ( qcount[family_index]++ < queue_family_props[family_index].queueCount )
@@ -1088,7 +1370,11 @@ namespace {
 		const uint	old_ver		= version;
 		uint		current_ver	= 0;
 
+	#ifdef VK_VERSION_1_1
 		VK_CALL( vkEnumerateInstanceVersion( OUT &current_ver ));
+	#else
+		current_ver = min_ver;
+	#endif
 
 		version = Min( Max( version, min_ver ), Max( current_ver, min_ver ));
 		
@@ -1259,8 +1545,7 @@ namespace {
 			};
 		#else
 			static const char*	instance_layers[] = {
-				"VK_LAYER_LUNARG_standard_validation",
-				"VK_LAYER_LUNARG_assistant_layer"
+				"VK_LAYER_LUNARG_standard_validation"
 			};
 		#endif
 		return instance_layers;
@@ -1314,6 +1599,25 @@ namespace {
 	
 /*
 =================================================
+	GetInstanceExtensions_v120
+=================================================
+*/
+	ArrayView<const char*>	VDeviceInitializer::GetInstanceExtensions_v120 ()
+	{
+		static const char*	instance_extensions[] =
+		{
+			#ifdef VK_KHR_surface
+				VK_KHR_SURFACE_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_debug_utils
+				VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+			#endif
+		};
+		return instance_extensions;
+	}
+	
+/*
+=================================================
 	GetDeviceExtensions_v100
 =================================================
 */
@@ -1340,6 +1644,12 @@ namespace {
 			#endif
 			#ifdef VK_KHR_descriptor_update_template
 				VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_maintenance1
+				VK_KHR_MAINTENANCE1_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_maintenance2
+				VK_KHR_MAINTENANCE2_EXTENSION_NAME,
 			#endif
 		};
 		return device_extensions;
@@ -1386,9 +1696,6 @@ namespace {
 			#ifdef VK_EXT_blend_operation_advanced
 				VK_EXT_BLEND_OPERATION_ADVANCED_EXTENSION_NAME,
 			#endif
-			#ifdef VK_EXT_conditional_rendering
-				VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME,
-			#endif
 			#ifdef VK_EXT_inline_uniform_block
 				VK_EXT_INLINE_UNIFORM_BLOCK_EXTENSION_NAME,
 			#endif
@@ -1398,8 +1705,26 @@ namespace {
 			#ifdef VK_EXT_memory_budget
 				VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
 			#endif
+			#ifdef VK_KHR_shader_clock
+				VK_KHR_SHADER_CLOCK_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_timeline_semaphore
+				VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_subgroup_size_control
+				VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_performance_query
+				VK_KHR_PERFORMANCE_QUERY_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_filter_cubic
+				VK_EXT_FILTER_CUBIC_EXTENSION_NAME,
+			#endif
 			#ifdef VK_KHR_spirv_1_4
 				VK_KHR_SPIRV_1_4_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_depth_stencil_resolve
+				VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME,
 			#endif
 
 			// Vendor specific extensions
@@ -1418,9 +1743,71 @@ namespace {
 			#ifdef VK_NV_ray_tracing
 				VK_NV_RAY_TRACING_EXTENSION_NAME,
 			#endif
+
+			#ifdef VK_AMD_shader_info
+				VK_AMD_SHADER_INFO_EXTENSION_NAME,
+			#endif
+			#ifdef VK_AMD_shader_core_properties
+				VK_AMD_SHADER_CORE_PROPERTIES_EXTENSION_NAME,
+			#endif
+			#ifdef VK_AMD_shader_core_properties2
+				VK_AMD_SHADER_CORE_PROPERTIES_2_EXTENSION_NAME,
+			#endif
+			#ifdef VK_AMD_rasterization_order
+				VK_AMD_RASTERIZATION_ORDER_EXTENSION_NAME,
+			#endif
 		};
 		return device_extensions;
 	}
+	
+/*
+=================================================
+	GetDeviceExtensions_v120
+=================================================
+*/
+	ArrayView<const char*>	VDeviceInitializer::GetDeviceExtensions_v120 ()
+	{
+		static const char *	device_extensions[] =
+		{
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			
+			#ifdef VK_KHR_shader_clock
+				VK_KHR_SHADER_CLOCK_EXTENSION_NAME,
+			#endif
+
+			// Vendor specific extensions
+			#ifdef VK_NV_mesh_shader
+				VK_NV_MESH_SHADER_EXTENSION_NAME,
+			#endif
+			#ifdef VK_NV_shader_image_footprint
+				VK_NV_SHADER_IMAGE_FOOTPRINT_EXTENSION_NAME,
+			#endif
+			#ifdef VK_NV_shading_rate_image
+				VK_NV_SHADING_RATE_IMAGE_EXTENSION_NAME,
+			#endif
+			#ifdef VK_NV_fragment_shader_barycentric
+				VK_NV_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME,
+			#endif
+			#ifdef VK_NV_ray_tracing
+				VK_NV_RAY_TRACING_EXTENSION_NAME,
+			#endif
+
+			#ifdef VK_AMD_shader_info
+				VK_AMD_SHADER_INFO_EXTENSION_NAME,
+			#endif
+			#ifdef VK_AMD_shader_core_properties
+				VK_AMD_SHADER_CORE_PROPERTIES_EXTENSION_NAME,
+			#endif
+			#ifdef VK_AMD_shader_core_properties2
+				VK_AMD_SHADER_CORE_PROPERTIES_2_EXTENSION_NAME,
+			#endif
+			#ifdef VK_AMD_rasterization_order
+				VK_AMD_RASTERIZATION_ORDER_EXTENSION_NAME,
+			#endif
+		};
+		return device_extensions;
+	}
+
 
 }	// AE::Graphics
 

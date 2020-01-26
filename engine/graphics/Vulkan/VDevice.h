@@ -5,7 +5,6 @@
 #ifdef AE_ENABLE_VULKAN
 
 # include "graphics/Vulkan/VQueue.h"
-# include "graphics/Vulkan/VulkanCheckError.h"
 
 namespace AE::Graphics
 {
@@ -18,7 +17,8 @@ namespace AE::Graphics
 	{
 	// types
 	public:
-		struct InstanceVersion {
+		struct InstanceVersion
+		{
 			uint	major	: 16;
 			uint	minor	: 16;
 
@@ -28,6 +28,72 @@ namespace AE::Graphics
 			ND_ bool  operator == (const InstanceVersion &rhs) const;
 			ND_ bool  operator >  (const InstanceVersion &rhs) const;
 			ND_ bool  operator >= (const InstanceVersion &rhs) const;
+		};
+
+		struct EnabledFeatures
+		{
+			// vulkan 1.1 core
+			bool	bindMemory2				: 1;
+			bool	dedicatedAllocation		: 1;
+			bool	descriptorUpdateTemplate: 1;
+			bool	imageViewUsage			: 1;
+			bool	create2DArrayCompatible	: 1;
+			bool	commandPoolTrim			: 1;
+			bool	dispatchBase			: 1;
+			// vulkan 1.2 core
+			bool	samplerMirrorClamp		: 1;
+			bool	shaderAtomicInt64		: 1;	// for uniform/storage buffer, for shared variables check features
+			bool	float16Arithmetic		: 1;
+			bool	bufferAddress			: 1;
+			bool	descriptorIndexing		: 1;
+			bool	renderPass2				: 1;
+			bool	depthStencilResolve		: 1;
+			bool	drawIndirectCount		: 1;
+			// extensions
+			bool	debugUtils				: 1;
+			bool	meshShaderNV			: 1;
+			bool	rayTracingNV			: 1;
+			bool	shadingRateImageNV		: 1;
+		//	bool	pushDescriptor			: 1;
+		//	bool	inlineUniformBlock		: 1;
+			bool	shaderClock				: 1;
+			bool	timelineSemaphore		: 1;
+		};
+
+		struct DeviceProperties
+		{
+			VkPhysicalDeviceProperties						properties;
+			VkPhysicalDeviceFeatures						features;
+			VkPhysicalDeviceMemoryProperties				memoryProperties;
+			#ifdef VK_NV_mesh_shader
+			VkPhysicalDeviceMeshShaderFeaturesNV			meshShaderFeatures;
+			VkPhysicalDeviceMeshShaderPropertiesNV			meshShaderProperties;
+			#endif
+			#ifdef VK_NV_shading_rate_image
+			VkPhysicalDeviceShadingRateImageFeaturesNV		shadingRateImageFeatures;
+			VkPhysicalDeviceShadingRateImagePropertiesNV	shadingRateImageProperties;
+			#endif
+			#ifdef VK_NV_ray_tracing
+			VkPhysicalDeviceRayTracingPropertiesNV			rayTracingProperties;
+			#endif
+			#ifdef VK_KHR_shader_clock
+			VkPhysicalDeviceShaderClockFeaturesKHR			shaderClock;
+			#endif
+			#if defined(VK_VERSION_1_2) or defined(VK_KHR_timeline_semaphore)
+			VkPhysicalDeviceTimelineSemaphoreProperties		timelineSemaphoreProps;
+			#endif
+			#ifdef VK_VERSION_1_2
+			VkPhysicalDeviceVulkan12Properties				properties120;
+			#endif
+			#ifdef VK_KHR_buffer_device_address
+			VkPhysicalDeviceBufferDeviceAddressFeatures		bufferDeviceAddress;
+			#endif
+			#ifdef VK_KHR_depth_stencil_resolve
+			VkPhysicalDeviceDepthStencilResolveProperties	depthStencilResolve;
+			#endif
+			#ifdef VK_KHR_shader_atomic_int64
+			VkPhysicalDeviceShaderAtomicInt64Features		shaderAtomicInt64;
+			#endif
 		};
 
 
@@ -50,30 +116,11 @@ namespace AE::Graphics
 		VkInstance				_vkInstance;
 		InstanceVersion			_vkVersion;
 		
-		struct {
-			bool					debugUtils			: 1;
-			bool					meshShaderNV		: 1;
-			bool					rayTracingNV		: 1;
-			bool					samplerMirrorClamp	: 1;
-			bool					shadingRateImageNV	: 1;
-			bool					descriptorIndexing	: 1;
-		//	bool					pushDescriptor		: 1;
-		//	bool					inlineUniformBlock	: 1;
-		//	bool					atomicInt64			: 1;
-		}						_supported;
+		EnabledFeatures			_supported;
 
 		VulkanDeviceFnTable		_deviceFnTable;
 		
-		struct {
-			VkPhysicalDeviceProperties						properties;
-			VkPhysicalDeviceFeatures						features;
-			VkPhysicalDeviceMemoryProperties				memoryProperties;
-			VkPhysicalDeviceMeshShaderFeaturesNV			meshShaderFeatures;
-			VkPhysicalDeviceMeshShaderPropertiesNV			meshShaderProperties;
-			VkPhysicalDeviceShadingRateImageFeaturesNV		shadingRateImageFeatures;
-			VkPhysicalDeviceShadingRateImagePropertiesNV	shadingRateImageProperties;
-			VkPhysicalDeviceRayTracingPropertiesNV			rayTracingProperties;
-		}						_deviceInfo;
+		DeviceProperties		_deviceInfo;
 		
 		ExtensionSet_t			_instanceExtensions;
 		ExtensionSet_t			_deviceExtensions;
@@ -84,12 +131,8 @@ namespace AE::Graphics
 		VDevice ();
 		~VDevice ();
 		
-		ND_ bool					IsDebugUtilsEnabled ()			const	{ return _supported.debugUtils; }
-		ND_ bool					IsMeshShaderEnabled ()			const	{ return _supported.meshShaderNV; }
-		ND_ bool					IsRayTracingEnabled ()			const	{ return _supported.rayTracingNV; }
-		ND_ bool					IsSamplerMirrorClampEnabled ()	const	{ return _supported.samplerMirrorClamp; }
-		ND_ bool					IsShadingRateImageEnabled ()	const	{ return _supported.shadingRateImageNV; }
-		ND_ bool					IsDescriptorIndexingEnabled ()	const	{ return _supported.descriptorIndexing; }
+		ND_ EnabledFeatures const&	GetFeatures ()					const	{ return _supported; }
+		ND_ DeviceProperties const&	GetProperties ()				const	{ return _deviceInfo; }
 
 		ND_ VkDevice				GetVkDevice ()					const	{ return _vkLogicalDevice; }
 		ND_ VkPhysicalDevice		GetVkPhysicalDevice ()			const	{ return _vkPhysicalDevice; }
@@ -98,18 +141,8 @@ namespace AE::Graphics
 		ND_ ArrayView< VQueue >		GetVkQueues ()					const	{ return _vkQueues; }
 		ND_ VQueuePtr				GetQueue (EQueueType type)		const	{ return uint(type) < _queueTypes.size() ? _queueTypes[uint(type)] : null; }
 
-
-		ND_ VkPhysicalDeviceProperties const&					GetDeviceProperties ()					const	{ return _deviceInfo.properties; }
-		ND_ VkPhysicalDeviceFeatures const&						GetDeviceFeatures ()					const	{ return _deviceInfo.features; }
-		//ND_ VkPhysicalDeviceMemoryProperties const&				GetDeviceMemoryProperties ()			const	{ return _deviceInfo.memoryProperties; }
-		//ND_ VkPhysicalDeviceLimits const&						GetDeviceLimits ()						const	{ return _deviceInfo.properties.limits; }
-		//ND_ VkPhysicalDeviceSparseProperties const&				GetDeviceSparseProperties ()			const	{ return _deviceInfo.properties.sparseProperties; }
-		//ND_ VkPhysicalDeviceMeshShaderPropertiesNV const&		GetDeviceMeshShaderProperties ()		const	{ return _deviceInfo.meshShaderProperties; }
-		//ND_ VkPhysicalDeviceRayTracingPropertiesNV const&		GetDeviceRayTracingProperties ()		const	{ return _deviceInfo.rayTracingProperties; }
-		//ND_ VkPhysicalDeviceShadingRateImagePropertiesNV const&	GetDeviceShadingRateImageProperties ()	const	{ return _deviceInfo.shadingRateImageProperties; }
-		
 		// check extensions
-		ND_ bool HasExtension (StringView name) const;
+		ND_ bool HasInstanceExtension (StringView name) const;
 		ND_ bool HasDeviceExtension (StringView name) const;
 		
 		bool SetObjectName (uint64_t id, NtStringView name, VkObjectType type) const;
@@ -129,12 +162,12 @@ namespace AE::Graphics
 	public:
 		struct QueueCreateInfo
 		{
-			VkQueueFlags		flags		= 0;
+			VkQueueFlagBits		flags		= VkQueueFlagBits(0);
 			float				priority	= 0.0f;
 			DebugName_t			debugName;
 
 			QueueCreateInfo () {}
-			QueueCreateInfo (VkQueueFlags flags, float priority = 0.0f, StringView name = {}) : flags{flags}, priority{priority}, debugName{name} {}
+			QueueCreateInfo (VkQueueFlagBits flags, float priority = 0.0f, StringView name = {}) : flags{flags}, priority{priority}, debugName{name} {}
 		};
 
 
@@ -158,8 +191,10 @@ namespace AE::Graphics
 		ND_ static ArrayView<const char*>	GetRecomendedInstanceLayers ();
 		ND_ static ArrayView<const char*>	GetInstanceExtensions_v100 ();
 		ND_ static ArrayView<const char*>	GetInstanceExtensions_v110 ();
+		ND_ static ArrayView<const char*>	GetInstanceExtensions_v120 ();
 		ND_ static ArrayView<const char*>	GetDeviceExtensions_v100 ();
 		ND_ static ArrayView<const char*>	GetDeviceExtensions_v110 ();
+		ND_ static ArrayView<const char*>	GetDeviceExtensions_v120 ();
 
 	private:
 		void _ValidateInstanceVersion (INOUT uint &version) const;
@@ -168,7 +203,7 @@ namespace AE::Graphics
 		void _ValidateDeviceExtensions (INOUT Array<const char*> &ext) const;
 
 		bool _SetupQueues (ArrayView<QueueCreateInfo> queue);
-		bool _ChooseQueueIndex (ArrayView<VkQueueFamilyProperties> props, INOUT VkQueueFlags &flags, OUT uint &index) const;
+		bool _ChooseQueueIndex (ArrayView<VkQueueFamilyProperties> props, INOUT VkQueueFlagBits &flags, OUT uint &index) const;
 		bool _InitDeviceFeatures ();
 
 		bool _SetupQueueTypes ();
