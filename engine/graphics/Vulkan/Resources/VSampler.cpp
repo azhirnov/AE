@@ -172,8 +172,8 @@ namespace {
 		info.unnormalizedCoordinates= desc.unnormalizedCoordinates ? VK_TRUE : VK_FALSE;
 		
 		// validate
-		const VkPhysicalDeviceLimits&	limits	= dev.GetDeviceProperties().limits;
-		const VkPhysicalDeviceFeatures&	feat	= dev.GetDeviceFeatures();
+		const VkPhysicalDeviceLimits&	limits	= dev.GetProperties().properties.limits;
+		const VkPhysicalDeviceFeatures&	feat	= dev.GetProperties().features;
 		
 		if ( info.mipLodBias > limits.maxSamplerLodBias )
 		{
@@ -192,7 +192,7 @@ namespace {
 			info.maxAnisotropy = Clamp( info.maxAnisotropy, 1.0f, limits.maxSamplerAnisotropy );
 		}
 
-		if ( not dev.IsSamplerMirrorClampEnabled() )
+		if ( not dev.GetFeatures().samplerMirrorClamp )
 		{
 			if ( info.addressModeU == VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE )
 			{

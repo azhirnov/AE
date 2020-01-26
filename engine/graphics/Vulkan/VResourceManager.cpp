@@ -4,6 +4,9 @@
 
 # include "graphics/Vulkan/VResourceManager.h"
 # include "graphics/Vulkan/VEnumCast.h"
+
+# include "graphics/Vulkan/Allocators/VUniMemAllocator.h"
+
 # include "stl/Memory/LinearAllocator.h"
 
 namespace AE::Graphics
@@ -35,6 +38,11 @@ namespace {
 	VResourceManager::VResourceManager (const VDevice &dev) :
 		_device{ dev }
 	{
+		STATIC_ASSERT( GfxResourceID::MaxIndex() <= DepsPool_t::capacity() );
+		STATIC_ASSERT( GfxResourceID::MaxIndex() <= BufferPool_t::capacity() );
+		STATIC_ASSERT( GfxResourceID::MaxIndex() <= ImagePool_t::capacity() );
+		//STATIC_ASSERT( GfxResourceID::MaxIndex() <= VirtBufferPool_t::capacity() );
+		//STATIC_ASSERT( GfxResourceID::MaxIndex() <= VirtImagePool_t::capacity() );
 	}
 	
 /*
@@ -44,6 +52,7 @@ namespace {
 */
 	VResourceManager::~VResourceManager ()
 	{
+		CHECK( not _defaultAllocator );
 	}
 	
 /*
@@ -53,10 +62,30 @@ namespace {
 */
 	bool  VResourceManager::Initialize ()
 	{
-		// _memMngr.Initialize();
+		CHECK_ERR( _CreateEmptyDescriptorSetLayout() );
+		CHECK_ERR( _CreateDefaultSampler() );
+
+		_defaultAllocator = MakeShared< VUniMemAllocator >( _device );
 
 		return true;
 	}
+	
+/*
+=================================================
+	ResourceDestructor
+=================================================
+*/
+	struct VResourceManager::ResourceDestructor
+	{
+		VResourceManager&	res;
+
+		template <typename T, uint I>
+		void operator () ()
+		{
+			auto&	pool = res._GetResourcePool( T{} );
+			pool.Release();
+		}
+	};
 	
 /*
 =================================================
@@ -65,6 +94,19 @@ namespace {
 */
 	void  VResourceManager::Deinitialize ()
 	{
+		if ( _defaultAllocator )
+		{
+			CHECK( _defaultAllocator.use_count() == 1 );
+			_defaultAllocator = null;
+		}
+
+		ReleaseResource( _defaultSampler );
+		ReleaseResource( _emptyDSLayout );
+
+		AllResourceIDs_t::Visit( ResourceDestructor{*this} );
+		
+		_semaphorePool.Clear( [this](VkSemaphore &sem) { _device.vkDestroySemaphore( _device.GetVkDevice(), sem, null ); });
+		_fencePool.Clear( [this](VkFence &fence) { _device.vkDestroyFence( _device.GetVkDevice(), fence, null ); });
 	}
 	
 /*
@@ -121,6 +163,30 @@ namespace {
 	
 /*
 =================================================
+	GetBufferDescription
+=================================================
+*/
+	BufferDesc const&  VResourceManager::GetBufferDescription (GfxResourceID id) const
+	{
+		CHECK_ERR( id.ResourceType() == GfxResourceID::EType::Buffer, _dummyBufferDesc );
+
+		return GetDescription( VBufferID{ id.Index(), id.Generation() });
+	}
+	
+/*
+=================================================
+	GetImageDescription
+=================================================
+*/
+	ImageDesc const&  VResourceManager::GetImageDescription (GfxResourceID id) const
+	{
+		CHECK_ERR( id.ResourceType() == GfxResourceID::EType::Image, _dummyImageDesc );
+
+		return GetDescription( VImageID{ id.Index(), id.Generation() });
+	}
+
+/*
+=================================================
 	GetBufferHandle
 =================================================
 */
@@ -147,6 +213,108 @@ namespace {
 		CHECK_ERR( img );
 
 		return BitCast<ImageVk_t>(img->Handle());
+	}
+		
+/*
+=================================================
+	IsSupported
+=================================================
+*/
+	bool  VResourceManager::IsSupported (const BufferDesc &desc) const
+	{
+		return VBuffer::IsSupported( _device, desc );
+	}
+
+	bool  VResourceManager::IsSupported (const ImageDesc &desc) const
+	{
+		return VImage::IsSupported( _device, desc );
+	}
+	
+	bool  VResourceManager::IsSupported (GfxResourceID buffer, const BufferViewDesc &desc) const
+	{
+		CHECK_ERR( buffer.ResourceType() == GfxResourceID::EType::Buffer );
+
+		auto*	buf = GetResource( VBufferID{ buffer.Index(), buffer.Generation() });
+		CHECK_ERR( buf );
+
+		return buf->IsSupported( _device, desc );
+	}
+	
+	bool  VResourceManager::IsSupported (GfxResourceID image, const ImageViewDesc &desc) const
+	{
+		CHECK_ERR( image.ResourceType() == GfxResourceID::EType::Image );
+
+		auto*	img = GetResource( VImageID{ image.Index(), image.Generation() });
+		CHECK_ERR( img );
+
+		return img->IsSupported( _device, desc );
+	}
+	
+/*
+=================================================
+	_ChooseAllocator
+=================================================
+*/
+	GfxMemAllocatorPtr  VResourceManager::_ChooseAllocator (const GfxMemAllocatorPtr &userDefined)
+	{
+		if ( userDefined )
+			return userDefined;
+
+		// TODO: more allocators
+		return _defaultAllocator;
+	}
+	
+/*
+=================================================
+	CreateFence
+=================================================
+*/
+	VkFence  VResourceManager::CreateFence ()
+	{
+		VkFence	fence = VK_NULL_HANDLE;
+
+		if ( _fencePool.Extract( OUT fence ))
+			return fence;
+
+		VkFenceCreateInfo	info = {};
+		info.sType	= VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+		VK_CHECK( _device.vkCreateFence( _device.GetVkDevice(), &info, null, OUT &fence ));
+		return fence;
+	}
+
+/*
+=================================================
+	ReleaseFences
+=================================================
+*/
+	void  VResourceManager::ReleaseFences (ArrayView<VkFence> fences)
+	{
+		VK_CALL( _device.vkResetFences( _device.GetVkDevice(), uint(fences.size()), fences.data() ));
+
+		for (auto& fence : fences)
+		{
+			if ( not _fencePool.Put( fence ))
+			{
+				_device.vkDestroyFence( _device.GetVkDevice(), fence, null );
+			}
+		}
+	}
+	
+/*
+=================================================
+	ReleaseSemaphores
+=================================================
+*/
+	void  VResourceManager::ReleaseSemaphores (ArrayView<VkSemaphore> semaphores)
+	{
+		for (auto& sem : semaphores)
+		{
+			if ( not _semaphorePool.Put( sem ))
+			{
+				_device.vkDestroySemaphore( _device.GetVkDevice(), sem, null );
+			}
+		}
 	}
 //-----------------------------------------------------------------------------
 
@@ -196,51 +364,23 @@ namespace {
 
 /*
 =================================================
-	_CreateMemory
-=================================================
-*/
-	bool  VResourceManager::_CreateMemory (OUT MemoryID &id, OUT VResourceBase<VMemoryObj>* &memPtr, EMemoryType type, StringView dbgName)
-	{
-		CHECK_ERR( _Assign( OUT id ));
-
-		auto&	data = _GetResourcePool( id )[ id.Index() ];
-		Replace( data );
-
-		if ( not data.Create( type, dbgName ))
-		{
-			_Unassign( id );
-			RETURN_ERR( "failed when creating memory object" );
-		}
-		
-		memPtr = &data;
-		return true;
-	}
-
-/*
-=================================================
 	CreateImage
 =================================================
 */
-	UniqueID<GfxResourceID>  VResourceManager::CreateImage (const ImageDesc &desc, EResourceState defaultState, StringView dbgName)
+	UniqueID<GfxResourceID>  VResourceManager::CreateImage (const ImageDesc &desc, EResourceState defaultState, StringView dbgName, const GfxMemAllocatorPtr &allocator)
 	{
-		MemoryID					mem_id;
-		VResourceBase<VMemoryObj>*	mem_obj	= null;
-		CHECK_ERR( _CreateMemory( OUT mem_id, OUT mem_obj, desc.memType, dbgName ));
-
 		VImageID	id;
 		CHECK_ERR( _Assign( OUT id ));
 
 		auto&	data = _GetResourcePool( id )[ id.Index() ];
 		Replace( data );
 
-		if ( not data.Create( *this, desc, mem_id, mem_obj->Data(), defaultState, dbgName ))
+		if ( not data.Create( *this, desc, _ChooseAllocator( allocator ), defaultState, dbgName ))
 		{
-			_ReleaseResource( mem_id );
 			_Unassign( id );
 			RETURN_ERR( "failed when creating image" );
 		}
 		
-		mem_obj->AddRef();
 		data.AddRef();
 
 		return UniqueID<GfxResourceID>{ GfxResourceID{ id.Index(), id.Generation(), GfxResourceID::EType::Image }};
@@ -251,26 +391,20 @@ namespace {
 	CreateBuffer
 =================================================
 */
-	UniqueID<GfxResourceID>  VResourceManager::CreateBuffer (const BufferDesc &desc, StringView dbgName)
+	UniqueID<GfxResourceID>  VResourceManager::CreateBuffer (const BufferDesc &desc, StringView dbgName, const GfxMemAllocatorPtr &allocator)
 	{
-		MemoryID					mem_id;
-		VResourceBase<VMemoryObj>*	mem_obj	= null;
-		CHECK_ERR( _CreateMemory( OUT mem_id, OUT mem_obj, desc.memType, dbgName ));
-
 		VBufferID	id;
 		CHECK_ERR( _Assign( OUT id ));
 
 		auto&	data = _GetResourcePool( id )[ id.Index() ];
 		Replace( data );
 		
-		if ( not data.Create( *this, desc, mem_id, mem_obj->Data(), dbgName ))
+		if ( not data.Create( *this, desc, _ChooseAllocator( allocator ), dbgName ))
 		{
-			_ReleaseResource( mem_id );
 			_Unassign( id );
 			RETURN_ERR( "failed when creating buffer" );
 		}
 		
-		mem_obj->AddRef();
 		data.AddRef();
 
 		return UniqueID<GfxResourceID>{ GfxResourceID{ id.Index(), id.Generation(), GfxResourceID::EType::Buffer }};
@@ -878,7 +1012,7 @@ namespace {
 
 		// validate color buffer states
 		{
-			const bool	dual_src_blend	= dev.GetDeviceFeatures().dualSrcBlend;
+			const bool	dual_src_blend	= dev.GetProperties().features.dualSrcBlend;
 
 			const auto	IsDualSrcBlendFactor = [] (EBlendFactor value) {
 				switch ( value ) {
@@ -1298,7 +1432,7 @@ namespace {
 
 			pipeline_info.sType			= VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 			pipeline_info.layout		= layout;
-			pipeline_info.flags			= desc.dispatchBase ? VK_PIPELINE_CREATE_DISPATCH_BASE_BIT : 0;
+			pipeline_info.flags			= desc.dispatchBase ? VK_PIPELINE_CREATE_DISPATCH_BASE_KHR : 0;
 			pipeline_info.stage.sType	= VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			pipeline_info.stage.flags	= 0;
 			pipeline_info.stage.stage	= VK_SHADER_STAGE_COMPUTE_BIT;
@@ -1433,7 +1567,7 @@ namespace {
 		
 		data.AddRef();
 
-		_emptyDSLayout = id;
+		_emptyDSLayout.Set( id );
 		return true;
 	}
 

@@ -4,10 +4,10 @@ namespace AE::Graphics
 {
 
 	//
-	// Local Buffer
+	// Vulkan Local Buffer
 	//
 
-	class VRenderGraph::LocalBuffer
+	class VLocalBuffer
 	{
 	// types
 	private:
@@ -16,8 +16,9 @@ namespace AE::Graphics
 		struct BufferAccess
 		{
 		// variables
-			VkPipelineStageFlags	stages		= 0;
-			VkAccessFlags			access		= 0;
+			VkPipelineStageFlagBits	stages		= VkPipelineStageFlagBits(0);
+			VkAccessFlagBits		access		= VkAccessFlagBits(0);
+			VkAccessFlagBits		writeMask	= VkAccessFlagBits(0);
 			ExeOrderIndex			index		= ExeOrderIndex::Initial;
 			bool					isReadable	: 1;
 			bool					isWritable	: 1;
@@ -40,12 +41,13 @@ namespace AE::Graphics
 
 	// methods
 	public:
-		LocalBuffer () {}
+		VLocalBuffer () {}
 
 		bool Create (const VBuffer *buf);
 		
 		void AddPendingState (EResourceState state, ExeOrderIndex order) const;
-		void CommitBarrier (BarrierManager &) const;
+		void ResetState (VBarrierManager &) const;
+		void CommitBarrier (VBarrierManager &) const;
 		
 		ND_ bool				IsMutable ()		const	{ return _isMutable; }
 		ND_ VkBuffer			Handle ()			const	{ return _bufferData->Handle(); }
@@ -63,16 +65,18 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool  VRenderGraph::LocalBuffer::Create (const VBuffer *bufferData)
+	bool  VLocalBuffer::Create (const VBuffer *bufferData)
 	{
 		CHECK_ERR( _bufferData == null );
 		CHECK_ERR( bufferData );
 
 		_bufferData			= bufferData;
-		_isMutable			= not _bufferData->IsReadOnly();
+		_isMutable			= true; //not _bufferData->IsReadOnly();
 		_accessForWrite		= Default;
 		_accessForRead		= Default;
 		_pendingAccesses	= Default;
+
+		_accessForRead.stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
 		return true;
 	}
@@ -82,7 +86,7 @@ namespace AE::Graphics
 	AddPendingState
 =================================================
 */
-	void  VRenderGraph::LocalBuffer::AddPendingState (EResourceState state, ExeOrderIndex order) const
+	void  VLocalBuffer::AddPendingState (EResourceState state, ExeOrderIndex order) const
 	{
 		ASSERT( _isMutable );
 		
@@ -98,7 +102,7 @@ namespace AE::Graphics
 	CommitBarrier
 =================================================
 */
-	void  VRenderGraph::LocalBuffer::CommitBarrier (BarrierManager &barrierMngr) const
+	void  VLocalBuffer::CommitBarrier (VBarrierManager &barrierMngr) const
 	{
 		ASSERT( _isMutable );
 		
@@ -145,6 +149,20 @@ namespace AE::Graphics
 			_accessForRead.access	|= _pendingAccesses.access;
 			_accessForRead.index	 = Max( _accessForRead.index, _pendingAccesses.index );
 		}
+
+		_pendingAccesses = Default;
+	}
+	
+/*
+=================================================
+	ResetState
+=================================================
+*/
+	void  VLocalBuffer::ResetState (VBarrierManager &barrierMngr) const
+	{
+		ASSERT( _isMutable );
+		
+		// TODO
 	}
 
 

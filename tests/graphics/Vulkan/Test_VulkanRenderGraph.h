@@ -6,7 +6,7 @@
 
 # include "graphics/Vulkan/VDevice.h"
 # include "graphics/Vulkan/VSwapchain.h"
-# include "graphics/Vulkan/VRenderGraph.h"
+# include "graphics/Vulkan/RenderGraph/VRenderGraph.h"
 # include "graphics/Vulkan/VResourceManager.h"
 
 # include "platform/Public/IWindow.h"
@@ -66,7 +66,7 @@ private:
 template <typename Arg0, typename ...Args>
 inline void  VRGTest::DeleteResources (Arg0 &arg0, Args& ...args)
 {
-	_resourceMngr.ReleaseResource( INOUT arg0 );
+	_resourceMngr->ReleaseResource( INOUT arg0 );
 		
 	if constexpr ( CountOf<Args...>() )
 		DeleteResources( std::forward<Args&>( args )... );

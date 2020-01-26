@@ -9,7 +9,7 @@
 namespace AE::Graphics
 {
 	using RenderPassID			= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using MemoryID				= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using CmdBatchID			= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 
 	using GraphicsPipelineID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 	using MeshPipelineID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
@@ -39,7 +39,7 @@ namespace AE::Graphics
 
 	
 	//
-	// Resource ID
+	// Graphics Resource ID
 	//
 
 	struct GfxResourceID
@@ -110,6 +110,9 @@ namespace AE::Graphics
 		
 		ND_ explicit constexpr		operator bool ()				const	{ return IsValid(); }
 		
+		ND_ static constexpr uint	MaxIndex ()								{ return _IndexMask; }
+		ND_ static constexpr uint	MaxGeneration ()						{ return _GenMask; }
+
 
 	// debugging
 	public:
@@ -169,3 +172,16 @@ namespace AE::Graphics
 
 
 }	// AE::Graphics
+
+namespace std
+{
+
+	template <>
+	struct hash< AE::Graphics::GfxResourceID >
+	{
+		ND_ size_t  operator () (const AE::Graphics::GfxResourceID &value) const {
+			return size_t(value.GetHash());
+		}
+	};
+
+}	// std

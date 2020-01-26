@@ -2,7 +2,7 @@
 
 #ifdef AE_ENABLE_VULKAN
 
-# include "graphics/Vulkan/VRenderGraph.h"
+# include "graphics/Vulkan/RenderGraph/VRenderGraph.h"
 # include "graphics/Vulkan/VDevice.h"
 # include "graphics/Vulkan/VEnumCast.h"
 # include "graphics/Vulkan/VResourceManager.h"
@@ -11,18 +11,29 @@
 # include "graphics/Vulkan/Resources/VRenderPass.h"
 
 # include "graphics/Private/EnumUtils.h"
-# include "graphics/Private/ResourceDataRange.h"
 
 # include "stl/Memory/LinearAllocator.h"
 # include "stl/Containers/StructView.h"
 
 # include "threading/Containers/IndexedPool.h"
 
-# include "graphics/Vulkan/VRenderGraph.BarrierManager.h"
-# include "graphics/Vulkan/VRenderGraph.LocalBuffer.h"
-# include "graphics/Vulkan/VRenderGraph.LocalImage.h"
-# include "graphics/Vulkan/VRenderGraph.GraphicsContext.h"
-# include "graphics/Vulkan/VRenderGraph.RenderContext.h"
+namespace AE::Graphics
+{
+	enum class ExeOrderIndex : uint {
+		Initial	= 0,
+		Unknown = ~0u
+	};
+	
+	class VBarrierManager;
+}
+
+# include "graphics/Vulkan/RenderGraph/VCommandBatch.h"
+# include "graphics/Vulkan/RenderGraph/VCommandPool.h"
+# include "graphics/Vulkan/RenderGraph/VBarrierManager.h"
+# include "graphics/Vulkan/RenderGraph/VLocalBuffer.h"
+# include "graphics/Vulkan/RenderGraph/VLocalImage.h"
+# include "graphics/Vulkan/RenderGraph/VGraphicsContext.h"
+# include "graphics/Vulkan/RenderGraph/VRenderContext.h"
 
 namespace AE::Graphics
 {
@@ -85,6 +96,11 @@ namespace AE::Graphics
 */
 	VRenderGraph::~VRenderGraph ()
 	{
+		EXLOCK( _drCheck );
+
+		for (auto& ctx : _contexts) {
+			CHECK( not ctx );
+		}
 	}
 
 /*
@@ -117,6 +133,8 @@ namespace AE::Graphics
 	void VRenderGraph::Deinitialize ()
 	{
 		EXLOCK( _drCheck );
+
+		_cmdBatchPool.Release();
 
 		for (auto& ctx : _contexts) {
 			ctx.reset();
@@ -155,30 +173,37 @@ namespace AE::Graphics
 		cmd->queue			= queue;
 		cmd->inputCount		= uint16_t(input.size());
 		cmd->outputCount	= uint16_t(output.size());
-		cmd->input			= input.size() ? _allocator.Alloc<GfxResourceID>( input.size() ) : null;
-		cmd->output			= output.size() ? _allocator.Alloc<GfxResourceID>( output.size() ) : null;
-		cmd->inputCmd		= input.size() ? _allocator.Alloc<BaseCmd*>( input.size() ) : null;
-		cmd->dbgName		= dbgName.size() ? _allocator.Alloc<char>( dbgName.length()+1 ) : "";
+		cmd->input			= input.size()   ? _allocator.Alloc<GfxResourceID>( input.size() )  : null;
+		cmd->output			= output.size()  ? _allocator.Alloc<GfxResourceID>( output.size() ) : null;
+		cmd->inputCmd		= input.size()   ? _allocator.Alloc<BaseCmd*>( input.size() )       : null;
+		cmd->dbgName		= dbgName.size() ? _allocator.Alloc<char>( dbgName.length()+1 )     : "";
 
 		for (size_t i = 0; i < input.size(); ++i)
 		{
 			cmd->input[i] = input[i].first;
-			_resUsage[ input[i].first.Index() ] |= input[i].second;
-			CHECK_ERR( input[i].first.IsVirtual() );
+
+			if ( input[i].first.IsVirtual() )
+				_resUsage[ input[i].first ] |= input[i].second;
 		}
 		for (size_t i = 0; i < output.size(); ++i)
 		{
 			cmd->output[i] = output[i].first;
-			_resUsage[ output[i].first.Index() ] |= output[i].second;
-			CHECK_ERR( output[i].first.IsVirtual() );
+
+			if ( output[i].first.IsVirtual() )
+				_resUsage[ output[i].first ] |= output[i].second;
 		}
 
-		std::memcpy( cmd->dbgName, dbgName.data(), dbgName.length()+1 );
-		DEBUG_ONLY( std::memset( cmd->inputCmd, 0xCD, input.size() * sizeof(*cmd->inputCmd) ));
+		if ( cmd->dbgName and dbgName.size() )
+			std::memcpy( cmd->dbgName, dbgName.data(), dbgName.length()+1 );
+
+		//DEBUG_ONLY(
+		if ( cmd->inputCmd )
+			std::memset( cmd->inputCmd, 0xCD, input.size() * sizeof(*cmd->inputCmd) );
+		//)
 
 		for (auto&[id, usage] : output)
 		{
-			auto&	dst = _resWriteCmd[ id.Index() ];
+			auto&	dst = _resWriteCmd[ id ];
 			CHECK( dst == null );
 			dst = cmd;
 		}
@@ -220,7 +245,7 @@ namespace AE::Graphics
 				CHECK_ERR( logical_rp );
 				CHECK_ERR( _CreateRenderPass( {logical_rp} ));
 
-				RenderContext	rctx{ ctx, *logical_rp, _resMngr };
+				RenderContext	rctx{ ctx, *logical_rp };
 				draw( rctx, ArrayView{cmd->input, cmd->inputCount}, ArrayView{cmd->output, cmd->outputCount} );
 				return true;
 			});
@@ -309,33 +334,71 @@ namespace AE::Graphics
 	
 /*
 =================================================
-	Flush
+	Submit
 ----
 	TODO: optimize sorting?, multithreading execution
 =================================================
 */
-	bool VRenderGraph::Flush ()
+	CmdBatchID  VRenderGraph::Submit ()
 	{
 		SHAREDLOCK( _drCheck );
 		EXLOCK( _cmdGuard );
 
-		// resolve input dependencies
+		_ResolveDependencies();
+
+		Array<BaseCmd*>		ordered;
+		_SortCommands( OUT ordered );
+
+		_MergeRenderPasses();
+
+		CmdBatchID		batch_id;
+		VCommandBatch*	batch;
+		if ( _AcquireNextBatch( OUT batch_id, OUT batch ))
+		{
+			_ExecuteCommands( ordered, batch );
+			_RecycleCmdBatches();
+		}
+
+		// reset
+		_commands.clear();
+		_resUsage.clear();
+		_resWriteCmd.clear();
+		_allocator.Discard();
+
+		return batch_id;
+	}
+	
+/*
+=================================================
+	_ResolveDependencies
+=================================================
+*/
+	void  VRenderGraph::_ResolveDependencies ()
+	{
 		for (auto& cmd : _commands)
 		{
 			bool	complete = true;
 
 			for (size_t i = 0; i < cmd->inputCount; ++i)
 			{
-				auto*	dep = _resWriteCmd[ cmd->input[i].Index() ];
+				auto	iter	= _resWriteCmd.find( cmd->input[i] );
+				auto*	dep		= iter != _resWriteCmd.end() ? iter->second : null;
+
 				cmd->inputCmd[i] = dep;
 				complete &= (dep != null);
 			}
 
 			cmd->state = complete ? BaseCmd::EState::Complete : BaseCmd::EState::Incomplete;
 		}
-
-		// sort
-		Array<BaseCmd*>	ordered;
+	}
+	
+/*
+=================================================
+	_SortCommands
+=================================================
+*/
+	void  VRenderGraph::_SortCommands (OUT Array<BaseCmd*> &ordered)
+	{
 		for (; _commands.size();)
 		{
 			for (auto iter = _commands.begin(); iter != _commands.end();)
@@ -376,10 +439,56 @@ namespace AE::Graphics
 				++iter;
 			}
 		}
+	}
+	
+/*
+=================================================
+	_MergeRenderPasses
+=================================================
+*/
+	void  VRenderGraph::_MergeRenderPasses ()
+	{
+		// TODO
+	}
+	
+/*
+=================================================
+	_AcquireNextBatch
+=================================================
+*/
+	bool  VRenderGraph::_AcquireNextBatch (OUT CmdBatchID &batchId, OUT VCommandBatch* &outBatch)
+	{
+		outBatch = null;
 
-		// TODO: merge render passes
+		for (uint i = 0; i < 10; ++i)
+		{
+			uint	index;
+			if ( _cmdBatchPool.Assign( OUT index, [](VCommandBatch* ptr, uint) { PlacementNew<VCommandBatch>( ptr ); }) )
+			{
+				outBatch = &_cmdBatchPool[index];
+				batchId  = CmdBatchID{ index, outBatch->Generation() };
+				break;
+			}
+			
+			std::this_thread::yield();
+		}
+		
+		if ( not outBatch )
+			RETURN_ERR( "cmdbatch pool overflow!" );
 
-		// execute
+		outBatch->Initialize();
+		return true;
+	}
+
+/*
+=================================================
+	_ExecuteCommands
+=================================================
+*/
+	void  VRenderGraph::_ExecuteCommands (ArrayView<BaseCmd*> ordered, VCommandBatch* batch)
+	{
+		_contexts[uint(EQueueType::Graphics)]->Begin( batch );
+
 		for (auto* cmd : ordered)
 		{
 			ASSERT( cmd->state == BaseCmd::EState::Pending );
@@ -394,25 +503,111 @@ namespace AE::Graphics
 				for (auto& ctx : _contexts) {
 					CHECK( ctx->Submit() );
 				}
-				_contexts[ uint(cmd->queue) ]->Begin();
+				_contexts[ uint(cmd->queue) ]->Begin( batch );
 			}
 
 			CHECK( cmd->pass( *_contexts[uint(cmd->queue)] ));
 			*/
 		}
 
-		for (auto& ctx : _contexts) {
-			CHECK( ctx->Submit() );
+		for (auto& ctx : _contexts)
+		{
+			if ( ctx ) {
+				CHECK( ctx->Submit() );
+			}
+		}
+	}
+	
+/*
+=================================================
+	_RecycleCmdBatches
+=================================================
+*/
+	void  VRenderGraph::_RecycleCmdBatches ()
+	{
+		for (auto iter = _submitted.begin(); iter != _submitted.end();)
+		{
+			auto&	batch = _cmdBatchPool[ iter->Index() ];
+
+			if ( batch.Generation() != iter->Generation() )
+			{
+				iter = _submitted.erase( iter );
+				continue;
+			}
+
+			if ( batch.OnComplete( _resMngr ))
+			{
+				_cmdBatchPool.Unassign( iter->Index() );
+				iter = _submitted.erase( iter );
+				continue;
+			}
+
+			++iter;
+		}
+	}
+
+/*
+=================================================
+	Wait
+=================================================
+*/
+	bool  VRenderGraph::Wait (ArrayView<CmdBatchID> batches)
+	{
+		SHAREDLOCK( _drCheck );
+
+		for (auto& id : batches)
+		{
+			auto&	batch = _cmdBatchPool[ id.Index() ];
+
+			if ( batch.Generation() != id.Generation() )
+				continue;
+
+			CHECK( batch.OnComplete( _resMngr ));
 		}
 
-		_commands.clear();
-		_resWriteCmd.fill( null );
-		_resUsage.fill( EVirtualResourceUsage::Unknown );
-		_allocator.Discard();
-
+		_RecycleCmdBatches();
 		return true;
 	}
 	
+/*
+=================================================
+	WaitIdle
+=================================================
+*/
+	bool  VRenderGraph::WaitIdle ()
+	{
+		SHAREDLOCK( _drCheck );
+
+		auto&	dev = _resMngr.GetDevice();
+		VK_CHECK( dev.vkDeviceWaitIdle( dev.GetVkDevice() ));
+
+		_RecycleCmdBatches();
+		return true;
+	}
+	
+/*
+=================================================
+	IsComplete
+=================================================
+*/
+	bool  VRenderGraph::IsComplete (ArrayView<CmdBatchID> batches)
+	{
+		SHAREDLOCK( _drCheck );
+
+		for (auto& id : batches)
+		{
+			auto&	batch = _cmdBatchPool[ id.Index() ];
+
+			if ( id.Generation() != batch.Generation() )
+				continue;
+
+			if ( not batch.IsComplete() )
+				return false;
+		}
+
+		return true;
+	}
+
 /*
 =================================================
 	_CreateLogicalPass

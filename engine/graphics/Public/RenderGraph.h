@@ -18,6 +18,8 @@
 #include "graphics/Public/RenderPassDesc.h"
 #include "graphics/Public/ShaderEnums.h"
 #include "graphics/Public/VertexEnums.h"
+#include "graphics/Public/BufferView.h"
+#include "graphics/Public/ImageView.h"
 #include "graphics/Public/NativeTypes.OpenGL.h"
 #include "graphics/Public/NativeTypes.Vulkan.h"
 
@@ -204,6 +206,9 @@ namespace AE::Graphics
 
 		//virtual void ImageBarrier () = 0;
 		//virtual void BufferBarrier () = 0;
+
+		// for debugging only
+		//virtual void GlobalBarrier () = 0;
 		
 		ND_ virtual GfxResourceID   GetOutput (GfxResourceID id) = 0;
 		virtual void SetOutput (GfxResourceID id, GfxResourceID res) = 0;
@@ -217,6 +222,10 @@ namespace AE::Graphics
 		// update mapped memory
 		virtual bool UpdateHostBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint> data) = 0;
 		virtual bool MapHostBuffer (GfxResourceID buffer, BytesU offset, INOUT BytesU &size, OUT void* &mapped) = 0;
+
+		// read from GPU memory using staging buffer
+		virtual bool ReadBuffer (GfxResourceID buffer, BytesU offset, BytesU size, const Function<void (BufferView)> &fn) = 0;
+		virtual bool ReadImage (GfxResourceID image, const Function<void (ImageView)> &fn) = 0;
 
 		// upload data to GPU using staging buffer
 		//virtual bool UploadBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint> data) = 0;
@@ -306,11 +315,11 @@ namespace AE::Graphics
 	// types
 	public:
 		// on input - resolved resource, on output - virtual and should be resolved
-		using RenderPassSetupFn_t	= Function<void (const IGraphicsContext &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output, OUT RenderPassDesc &)>;
-		using RenderPassDrawFn_t	= Function<void (const IRenderContext   &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
-		using GraphicsCommandFn_t	= Function<void (const IGraphicsContext &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
-		using ComputeCommandFn_t	= Function<void (const IComputeContext  &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
-		using TransferCommandFn_t	= Function<void (const ITransferContext &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
+		using RenderPassSetupFn_t	= Function<void (IGraphicsContext &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output, OUT RenderPassDesc &)>;
+		using RenderPassDrawFn_t	= Function<void (IRenderContext   &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
+		using GraphicsCommandFn_t	= Function<void (IGraphicsContext &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
+		using ComputeCommandFn_t	= Function<void (IComputeContext  &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
+		using TransferCommandFn_t	= Function<void (ITransferContext &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
 
 		using VirtualResources_t	= ArrayView<Pair< GfxResourceID, EVirtualResourceUsage >>;
 
@@ -346,7 +355,13 @@ namespace AE::Graphics
 						  TransferCommandFn_t&&		pass,
 						  StringView				dbgName = Default) = 0;
 
-		virtual bool Flush () = 0;
+		virtual CmdBatchID  Submit () = 0;
+
+		// wait on CPU side
+		virtual bool  Wait (ArrayView<CmdBatchID> batches) = 0;
+		virtual bool  WaitIdle () = 0;
+
+		ND_ virtual bool  IsComplete (ArrayView<CmdBatchID> batches) = 0;
 	};
 
 

@@ -18,14 +18,14 @@ namespace AE::Graphics
 	{
 		EXLOCK( _drCheck );
 		ASSERT( _buffer == VK_NULL_HANDLE );
-		ASSERT( not _memoryId );
+		ASSERT( _viewMap.empty() );
 	}
 	
 /*
 =================================================
 	GetAllBufferReadAccessMasks
 =================================================
-*/
+*
 	static VkAccessFlags  GetAllBufferReadAccessMasks (VkBufferUsageFlags usage)
 	{
 		VkAccessFlags	result = 0;
@@ -64,16 +64,15 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool VBuffer::Create (VResourceManager &resMngr, const BufferDesc &desc, MemoryID memId, VMemoryObj &memObj, StringView dbgName)
+	bool VBuffer::Create (VResourceManager &resMngr, const BufferDesc &desc, GfxMemAllocatorPtr allocator, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( _buffer == VK_NULL_HANDLE );
-		CHECK_ERR( not _memoryId );
+		CHECK_ERR( allocator );
 
 		auto&	dev = resMngr.GetDevice();
 
-		_desc		= desc;
-		_memoryId	= UniqueID<MemoryID>{ memId };
+		_desc = desc;
 
 		// create buffer
 		VkBufferCreateInfo	info = {};
@@ -96,7 +95,7 @@ namespace AE::Graphics
 		}
 
 		// reset to exclusive mode
-		if ( info.queueFamilyIndexCount < 2 )
+		if ( info.queueFamilyIndexCount <= 1 )
 		{
 			info.sharingMode			= VK_SHARING_MODE_EXCLUSIVE;
 			info.pQueueFamilyIndices	= null;
@@ -105,13 +104,14 @@ namespace AE::Graphics
 
 		VK_CHECK( dev.vkCreateBuffer( dev.GetVkDevice(), &info, null, OUT &_buffer ));
 
-		CHECK_ERR( memObj.AllocateForBuffer( resMngr.GetMemoryManager(), _buffer ));
+		CHECK_ERR( allocator->AllocForBuffer( BitCast<BufferVk_t>(_buffer), _desc, INOUT _memStorage ));
 
 		if ( not dbgName.empty() )
 		{
 			dev.SetObjectName( BitCast<uint64_t>(_buffer), dbgName, VK_OBJECT_TYPE_BUFFER );
 		}
-
+		
+		_memAllocator		= std::move(allocator);
 		//_readAccessMask	= GetAllBufferReadAccessMasks( info.usage );
 		_debugName			= dbgName;
 
@@ -163,21 +163,50 @@ namespace AE::Graphics
 
 		auto&	dev = resMngr.GetDevice();
 
+		for (auto& view : _viewMap) {
+			dev.vkDestroyBufferView( dev.GetVkDevice(), view.second, null );
+		}
+
 		if ( _buffer ) {
 			dev.vkDestroyBuffer( dev.GetVkDevice(), _buffer, null );
 		}
 
-		if ( _memoryId ) {
-			resMngr.ReleaseResource( _memoryId );
+		if ( _memAllocator ) {
+			CHECK( _memAllocator->Dealloc( INOUT _memStorage ));
 		}
 
-		_buffer		= VK_NULL_HANDLE;
-		_memoryId	= Default;
-		_desc		= Default;
-
+		_viewMap.clear();
 		_debugName.clear();
+
+		_memAllocator	= null;
+		_buffer			= VK_NULL_HANDLE;
+		_desc			= Default;
 	}
 	
+/*
+=================================================
+	GetMemoryInfo
+=================================================
+*/
+	bool VBuffer::GetMemoryInfo (OUT VResourceMemoryInfo &outInfo) const
+	{
+		SHAREDLOCK( _drCheck );
+		CHECK_ERR( _memAllocator );
+
+		IGfxMemAllocator::NativeMemInfo_t	info;
+		CHECK_ERR( _memAllocator->GetInfo( _memStorage, OUT info ));
+
+		auto*	vk_info = UnionGetIf<VulkanMemoryObjInfo>( &info );
+		CHECK_ERR( vk_info );
+
+		outInfo.memory		= BitCast<VkDeviceMemory>( vk_info->memory );
+		outInfo.flags		= BitCast<VkMemoryPropertyFlagBits>( vk_info->flags );
+		outInfo.offset		= vk_info->offset;
+		outInfo.size		= vk_info->size;
+		outInfo.mappedPtr	= vk_info->mappedPtr;
+		return true;
+	}
+
 /*
 =================================================
 	GetView
@@ -255,20 +284,77 @@ namespace AE::Graphics
 
 /*
 =================================================
-	GetApiSpecificDescription
+	GetNativeDescription
 =================================================
-*
-	VulkanBufferDesc  VBuffer::GetApiSpecificDescription () const
+*/
+	VulkanBufferDesc  VBuffer::GetNativeDescription () const
 	{
 		VulkanBufferDesc	desc;
 		desc.buffer			= BitCast<BufferVk_t>( _buffer );
 		desc.usage			= BitCast<BufferUsageFlagsVk_t>( VEnumCast( _desc.usage ));
 		desc.size			= _desc.size;
-		desc.queueFamily	= VK_QUEUE_FAMILY_IGNORED;
+		//desc.queueFamily	= VK_QUEUE_FAMILY_IGNORED;
 		//desc.queueFamilyIndices	// TODO
 		return desc;
 	}
-	*/
+	
+/*
+=================================================
+	IsSupported
+=================================================
+*/
+	bool  VBuffer::IsSupported (const VDevice &dev, const BufferDesc &desc)
+	{
+		Unused( dev, desc );
+		return true;
+	}
+	
+/*
+=================================================
+	IsSupported
+=================================================
+*/
+	bool  VBuffer::IsSupported (const VDevice &dev, const BufferViewDesc &desc) const
+	{
+		SHAREDLOCK( _drCheck );
+
+		VkFormatProperties	props = {};
+		vkGetPhysicalDeviceFormatProperties( dev.GetVkPhysicalDevice(), VEnumCast( desc.format ), OUT &props );
+		
+		const VkFormatFeatureFlags	dev_flags	= props.bufferFeatures;
+		VkFormatFeatureFlags		buf_flags	= 0;
+		
+		for (EBufferUsage t = EBufferUsage(1); t <= _desc.usage; t = EBufferUsage(uint(t) << 1))
+		{
+			if ( not EnumEq( _desc.usage, t ))
+				continue;
+
+			BEGIN_ENUM_CHECKS();
+			switch ( t )
+			{
+				case EBufferUsage::UniformTexel :		buf_flags |= VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;	break;
+				case EBufferUsage::StorageTexel :		buf_flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT | VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT;	break;
+				case EBufferUsage::TransferSrc :		break;
+				case EBufferUsage::TransferDst :		break;
+				case EBufferUsage::Uniform :			break;
+				case EBufferUsage::Storage :			break;
+				case EBufferUsage::Index :				break;
+				case EBufferUsage::Vertex :				break;
+				case EBufferUsage::Indirect :			break;
+				case EBufferUsage::RayTracing :			break;
+				case EBufferUsage::ShaderAddress :		break;
+				case EBufferUsage::_Last :
+				case EBufferUsage::All :
+				case EBufferUsage::Transfer :
+				case EBufferUsage::Unknown :
+				default :								ASSERT(false);	break;
+			}
+			END_ENUM_CHECKS();
+		}
+
+		return (dev_flags & buf_flags);
+	}
+
 
 }	// AE::Graphics
 

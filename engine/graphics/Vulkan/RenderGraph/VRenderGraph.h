@@ -5,11 +5,15 @@
 #ifdef AE_ENABLE_VULKAN
 
 # include "graphics/Public/RenderGraph.h"
-# include "graphics/Vulkan/VCommandPool.h"
+# include "graphics/Vulkan/VCommon.h"
+
 # include "stl/Memory/LinearAllocator.h"
+# include "threading/Containers/LfIndexedPool.h"
 
 namespace AE::Graphics
 {
+	class VCommandBatch;
+
 
 	//
 	// Vulkan Render Graph
@@ -22,24 +26,18 @@ namespace AE::Graphics
 		class GraphicsContext;
 		class RenderContext;
 
-		class LocalBuffer;
-		class LocalImage;
-		class BarrierManager;
-
 		struct BaseCmd;
 		struct RenderCmd;
 		struct GraphicsCmd;
 		struct ComputeCmd;
 		struct TransferCmd;
 
-		using VirtualResWrite_t		= StaticArray< BaseCmd*, 1u << 16 >;
-		using VirtualResUsage_t		= StaticArray< EVirtualResourceUsage, 1u << 16 >;
+		using VirtualResWrite_t		= HashMap< GfxResourceID, BaseCmd* >;
+		using VirtualResUsage_t		= HashMap< GfxResourceID, EVirtualResourceUsage >;
 		using CtxPerQueue_t			= StaticArray< UniquePtr<GraphicsContext>, uint(EQueueType::_Count) >;
 		
-		enum class ExeOrderIndex : uint {
-			Initial	= 0,
-			Unknown = ~0u
-		};
+		using SubmittedBatches_t	= Array< CmdBatchID >;	// TODO: ring buffer
+		using CmdBatchPool_t		= Threading::LfIndexedPool< VCommandBatch, uint, 32, 16 >;
 
 
 	// variables
@@ -47,11 +45,14 @@ namespace AE::Graphics
 		LinearAllocator<>		_allocator;
 
 		Mutex					_cmdGuard;
-		Array<BaseCmd *>		_commands;
-		VirtualResWrite_t		_resWriteCmd;
+		Array<BaseCmd *>		_commands;			// TODO: use LfIndexedPool + UnassignAll()
+		VirtualResWrite_t		_resWriteCmd;		// TODO: lock-free ?
 		VirtualResUsage_t		_resUsage;
 
 		CtxPerQueue_t			_contexts;
+
+		CmdBatchPool_t			_cmdBatchPool;
+		SubmittedBatches_t		_submitted;
 
 		VResourceManager &		_resMngr;
 		
@@ -93,7 +94,12 @@ namespace AE::Graphics
 				  TransferCommandFn_t&&		pass,
 				  StringView				dbgName) override;
 		
-		bool Flush () override;
+		CmdBatchID Submit () override;
+		
+		bool  Wait (ArrayView<CmdBatchID> ids) override;
+		bool  WaitIdle () override;
+		
+		bool  IsComplete (ArrayView<CmdBatchID> batches) override;
 
 
 	private:
@@ -106,6 +112,13 @@ namespace AE::Graphics
 		ND_ VLogicalRenderPass*  _CreateLogicalPass (const RenderPassDesc &desc);
 
 		bool  _CreateRenderPass (ArrayView<VLogicalRenderPass*> passes);
+
+		void  _ResolveDependencies ();
+		void  _SortCommands (OUT Array<BaseCmd*> &ordered);
+		void  _MergeRenderPasses ();
+		bool  _AcquireNextBatch (OUT CmdBatchID &, OUT VCommandBatch* &batch);
+		void  _ExecuteCommands (ArrayView<BaseCmd*> ordered, VCommandBatch *batch);
+		void  _RecycleCmdBatches ();
 	};
 
 

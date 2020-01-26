@@ -14,7 +14,7 @@ namespace AE::Graphics
 	// Vulkan Command Pool
 	//
 
-	class VCommandPool
+	class VCommandPool final
 	{
 	// types
 	private:
@@ -28,7 +28,7 @@ namespace AE::Graphics
 		CmdBufStorage_t		_freePrimaries;
 		CmdBufStorage_t		_freeSecondaries;
 		
-		RWDataRaceCheck		_drCheck;
+		RWDataRaceCheck		_drCheck;	// command pool must be externally synchronized, so check it
 
 
 	// methods
@@ -39,8 +39,8 @@ namespace AE::Graphics
 		bool  Create (const VDevice &dev, VQueuePtr queue, VkCommandPoolCreateFlags flags = 0, StringView dbgName = Default);
 		void  Destroy (const VDevice &dev);
 		
-		ND_ VkCommandBuffer	AllocPrimary (const VDevice &dev);
-		ND_ VkCommandBuffer	AllocSecondary (const VDevice &dev);
+		ND_ VkCommandBuffer  AllocPrimary (const VDevice &dev);
+		ND_ VkCommandBuffer  AllocSecondary (const VDevice &dev);
 
 		void  Deallocate (const VDevice &dev, VkCommandBuffer cmd);
 

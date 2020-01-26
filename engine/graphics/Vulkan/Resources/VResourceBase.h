@@ -28,13 +28,13 @@ namespace AE::Graphics
 
 		using Self			= VResourceBase< ResType >;
 		using Resource_t	= ResType;
-		using Generation_t	= MemoryID::Generation_t;
+		using Generation_t	= GfxResourceID::Generation_t;
 
 
 	// variables
 	private:
 		// instance counter used to detect deprecated handles
-		Atomic<uint>			_instanceId	= 0;
+		Atomic<uint>			_generation	= 0;
 
 		Atomic<EState>			_state		= EState::Initial;
 
@@ -76,7 +76,7 @@ namespace AE::Graphics
 		ND_ bool			IsCreated ()		const	{ return _GetState() == EState::Created; }
 		ND_ bool			IsDestroyed ()		const	{ return _GetState() <= EState::Failed; }
 
-		ND_ Generation_t	GetGeneration ()	const	{ return Generation_t(_instanceId.load( EMemoryOrder::Relaxed )); }
+		ND_ Generation_t	GetGeneration ()	const	{ return Generation_t(_generation.load( EMemoryOrder::Relaxed )); }
 		ND_ int				GetRefCount ()		const	{ return _refCounter.load( EMemoryOrder::Relaxed ); }
 		//ND_ uint			GetLastUsage ()		const	{ return _lastUsage.load( EMemoryOrder::Relaxed ); }
 
@@ -113,10 +113,18 @@ namespace AE::Graphics
 
 			_data.Destroy( std::forward<Args &&>( args )... );
 			
-			// update atomics and flush cache
+			// flush cache
+			ThreadFence( EMemoryOrder::Release );
+
+			// update atomics
 			_refCounter.store( 0, EMemoryOrder::Relaxed );
 			_state.store( EState::Initial, EMemoryOrder::Relaxed );
-			_instanceId.fetch_add( 1, EMemoryOrder::Release );
+			
+			constexpr uint	max_gen = GfxResourceID::MaxGeneration();
+
+			for (uint exp = _generation.load( EMemoryOrder::Relaxed);
+				 not _generation.compare_exchange_weak( INOUT exp, (exp < max_gen ? exp + 1 : 0), EMemoryOrder::Relaxed );)
+			{}
 		}
 
 	private:

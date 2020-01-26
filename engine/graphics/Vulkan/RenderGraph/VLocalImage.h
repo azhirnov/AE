@@ -4,10 +4,10 @@ namespace AE::Graphics
 {
 
 	//
-	// Local Image
+	// Vulkan Local Image
 	//
 
-	class VRenderGraph::LocalImage
+	class VLocalImage
 	{
 	// variables
 	private:
@@ -16,10 +16,14 @@ namespace AE::Graphics
 
 	// methods
 	public:
-		LocalImage () {}
+		VLocalImage () {}
 
 		bool Create (const VImage *buf);
 		
+		void AddPendingState (EResourceState state, ExeOrderIndex order) const;
+		void ResetState (VBarrierManager &) const;
+		void CommitBarrier (VBarrierManager &) const;
+
 		ND_ bool				IsMutable ()	const	{ return true; } // TODO
 		ND_ VkImage				Handle ()		const	{ return _imageData->Handle(); }
 		ND_ VImage const*		ToGlobal ()		const	{ return _imageData.get(); }
@@ -33,9 +37,28 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool  VRenderGraph::LocalImage::Create (const VImage *buf)
+	bool  VLocalImage::Create (const VImage *buf)
 	{
 		return true;
 	}
+	
+/*
+=================================================
+	ResetState
+=================================================
+*/
+	void  VLocalImage::ResetState (VBarrierManager &) const
+	{
+	}
+	
+/*
+=================================================
+	CommitBarrier
+=================================================
+*/
+	void  VLocalImage::CommitBarrier (VBarrierManager &) const
+	{
+	}
+
 
 }	// AE::Graphics

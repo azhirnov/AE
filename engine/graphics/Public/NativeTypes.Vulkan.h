@@ -7,19 +7,22 @@
 namespace AE::Graphics
 {
 	
-	using CommandBufferVk_t		= struct __VkCommandBufferType *;
-	enum BufferVk_t				: uint64_t {};
-	enum FramebufferVk_t		: uint64_t {};
-	enum ImageVk_t				: uint64_t {};
-	enum RenderPassVk_t			: uint64_t {};
+	using CommandBufferVk_t			= struct __VkCommandBufferType *;
+	enum BufferVk_t					: uint64_t {};
+	enum FramebufferVk_t			: uint64_t {};
+	enum ImageVk_t					: uint64_t {};
+	enum RenderPassVk_t				: uint64_t {};
+	enum AccelerationStructureVk_t	: uint64_t {};
+	enum DeviceMemoryVk_t			: uint64_t {};
 	
-	enum FormatVk_t				: uint {};
-	enum BufferUsageFlagsVk_t	: uint {};
-	enum ImageUsageVk_t			: uint {};
-	enum ImageLayoutVk_t		: uint {};
-	enum ImageTypeVk_t			: uint {};
-	enum ImageFlagsVk_t			: uint {};
-	enum SampleCountFlagBitsVk_t: uint {};
+	enum FormatVk_t					: uint {};
+	enum BufferUsageFlagsVk_t		: uint {};
+	enum ImageUsageVk_t				: uint {};
+	enum ImageLayoutVk_t			: uint {};
+	enum ImageTypeVk_t				: uint {};
+	enum ImageFlagsVk_t				: uint {};
+	enum SampleCountFlagBitsVk_t	: uint {};
+	enum MemoryPropertyFlagsVk_t	: uint {};
 	//using QueueFamilyIndicesVk_t = FixedArray< uint8_t, 8 >;
 
 
@@ -86,6 +89,20 @@ namespace AE::Graphics
 	struct VulkanContext
 	{
 		CommandBufferVk_t	cmdBuffer		= null;
+	};
+
+
+
+	//
+	// Vulkan Memory Object Info
+	//
+	struct VulkanMemoryObjInfo
+	{
+		DeviceMemoryVk_t		memory		= {};
+		MemoryPropertyFlagsVk_t	flags		= {};
+		BytesU					offset;
+		BytesU					size;
+		void *					mappedPtr	= null;
 	};
 
 

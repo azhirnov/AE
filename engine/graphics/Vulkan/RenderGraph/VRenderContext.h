@@ -15,7 +15,6 @@ namespace AE::Graphics
 
 		GraphicsContext &			_graphicsCtx;
 		VLogicalRenderPass const&	_logicalRP;
-		VResourceManager const&		_resMngr;
 
 		// cached states
 		VkPipelineLayout			_curLayout		= VK_NULL_HANDLE;
@@ -27,7 +26,7 @@ namespace AE::Graphics
 
 	// methods
 	public:
-		RenderContext (GraphicsContext &gctx, const VLogicalRenderPass &logicalRP, const VResourceManager &resMngr);
+		RenderContext (GraphicsContext &gctx, const VLogicalRenderPass &logicalRP);
 
 	// IRenderContext
 		NativeContext_t    GetNativeContext () override;
@@ -71,11 +70,11 @@ namespace AE::Graphics
 	constructor
 =================================================
 */
-	VRenderGraph::RenderContext::RenderContext (GraphicsContext &gctx, const VLogicalRenderPass &logicalRP, const VResourceManager &resMngr) :
+	VRenderGraph::RenderContext::RenderContext (GraphicsContext &gctx, const VLogicalRenderPass &logicalRP) :
 		_cmdbuf{ gctx.GetCommandBuffer() },
-		_graphicsCtx{ gctx }, _logicalRP{ logicalRP }, _resMngr{ resMngr }
+		_graphicsCtx{ gctx }, _logicalRP{ logicalRP }
 	{
-		VulkanDeviceFn_Init( _resMngr.GetDevice() );
+		VulkanDeviceFn_Init( _graphicsCtx.GetDevice() );
 	}
 	
 /*
@@ -85,8 +84,8 @@ namespace AE::Graphics
 */
 	IRenderContext::NativeContext_t  VRenderGraph::RenderContext::GetNativeContext ()
 	{
-		auto*	render_pass	= _resMngr.GetResource( _logicalRP.GetRenderPass() );	// TODO: acquire ref
-		auto*	framebuffer	= _resMngr.GetResource( _logicalRP.GetFramebuffer() );
+		auto*	render_pass	= _graphicsCtx.AcquireResource( _logicalRP.GetRenderPass() );
+		auto*	framebuffer	= _graphicsCtx.AcquireResource( _logicalRP.GetFramebuffer() );
 		CHECK_ERR( render_pass and framebuffer );
 
 		VulkanRenderContext	vctx;
@@ -131,7 +130,7 @@ namespace AE::Graphics
 */
 	void VRenderGraph::RenderContext::BindPipeline (GraphicsPipelineID ppln)
 	{
-		auto*	gppln = _resMngr.GetResource( ppln );	// TODO: acquire ref
+		auto*	gppln = _graphicsCtx.AcquireResource( ppln );
 		CHECK_ERR( gppln, void());
 
 		if ( _curPipeline == gppln->Handle() )
@@ -149,7 +148,7 @@ namespace AE::Graphics
 */
 	void VRenderGraph::RenderContext::BindPipeline (MeshPipelineID ppln)
 	{
-		auto*	mppln = _resMngr.GetResource( ppln );	// TODO: acquire ref
+		auto*	mppln = _graphicsCtx.AcquireResource( ppln );
 		CHECK_ERR( mppln, void());
 
 		if ( _curPipeline == mppln->Handle() )
@@ -409,6 +408,8 @@ namespace AE::Graphics
 */
 	void VRenderGraph::RenderContext::DrawIndirectCount (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride)
 	{
+		CHECK_ERR( _graphicsCtx.GetDevice().GetFeatures().drawIndirectCount, void());
+
 		auto*	ibuf = _graphicsCtx.ToLocalBuffer( buffer );
 		auto*	cbuf = _graphicsCtx.ToLocalBuffer( countBuffer );
 		CHECK_ERR( ibuf and cbuf, void());
@@ -430,6 +431,8 @@ namespace AE::Graphics
 */
 	void VRenderGraph::RenderContext::DrawIndexedIndirectCount (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride)
 	{
+		CHECK_ERR( _graphicsCtx.GetDevice().GetFeatures().drawIndirectCount, void());
+
 		auto*	ibuf = _graphicsCtx.ToLocalBuffer( buffer );
 		auto*	cbuf = _graphicsCtx.ToLocalBuffer( countBuffer );
 		CHECK_ERR( ibuf and cbuf, void());
@@ -451,9 +454,16 @@ namespace AE::Graphics
 */
 	void VRenderGraph::RenderContext::DrawMeshTasksNV (uint taskCount, uint firstTask)
 	{
-		_graphicsCtx._CommitBarriers();
+	#ifdef VK_NV_mesh_shader
+		CHECK_ERR( _graphicsCtx.GetDevice().IsMeshShaderEnabled(), void());
 
+		_graphicsCtx._CommitBarriers();
+		
 		vkCmdDrawMeshTasksNV( _cmdbuf, taskCount, firstTask );
+
+	#else
+		AE_LOGE( "mesh shader is not supported!" );
+	#endif
 	}
 	
 /*
@@ -463,6 +473,9 @@ namespace AE::Graphics
 */
 	void VRenderGraph::RenderContext::DrawMeshTasksIndirectNV (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride)
 	{
+	#ifdef VK_NV_mesh_shader
+		CHECK_ERR( _graphicsCtx.GetDevice().IsMeshShaderEnabled(), void());
+
 		auto*	buf = _graphicsCtx.ToLocalBuffer( buffer );
 		CHECK_ERR( buf, void());
 		
@@ -472,6 +485,10 @@ namespace AE::Graphics
 		_graphicsCtx._CommitBarriers();
 
 		vkCmdDrawMeshTasksIndirectNV( _cmdbuf, buf->Handle(), VkDeviceSize(offset), drawCount, CheckCast<uint>(stride) );
+
+	#else
+		AE_LOGE( "mesh shader is not supported!" );
+	#endif
 	}
 	
 /*
@@ -481,6 +498,9 @@ namespace AE::Graphics
 */
 	void VRenderGraph::RenderContext::DrawMeshTasksIndirectCountNV (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride)
 	{
+	#ifdef VK_NV_mesh_shader
+		CHECK_ERR( _graphicsCtx.GetDevice().IsMeshShaderEnabled(), void());
+
 		auto*	ibuf = _graphicsCtx.ToLocalBuffer( buffer );
 		auto*	cbuf = _graphicsCtx.ToLocalBuffer( countBuffer );
 		CHECK_ERR( ibuf and cbuf, void());
@@ -493,6 +513,10 @@ namespace AE::Graphics
 		_graphicsCtx._CommitBarriers();
 
 		vkCmdDrawMeshTasksIndirectCountNV( _cmdbuf, ibuf->Handle(), VkDeviceSize(offset), cbuf->Handle(), VkDeviceSize(countBufferOffset), maxDrawCount, CheckCast<uint>(stride) );
+
+	#else
+		AE_LOGE( "mesh shader is not supported!" );
+	#endif
 	}
 
 

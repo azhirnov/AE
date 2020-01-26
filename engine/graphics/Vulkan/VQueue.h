@@ -18,17 +18,9 @@ namespace AE::Graphics
 		Unknown		= Ignored,
 	};
 
-	// TODO: remove ?
-	enum class EQueueFamilyMask : uint
-	{
-		All			= ~0u,
-		Unknown		= 0,
-	};
-	AE_BIT_OPERATORS( EQueueFamilyMask );
-	
-
-	using DebugName_t	= FixedString<64>;
-	using VQueuePtr		= Ptr< const struct VQueue >;
+	using DebugName_t			= FixedString<64>;
+	using VQueuePtr				= Ptr< const struct VQueue >;
+	using VQueueFamilyIndices_t	= FixedArray< uint, uint(EQueueType::_Count) >;
 
 
 
@@ -43,7 +35,7 @@ namespace AE::Graphics
 		VkQueue				handle			= VK_NULL_HANDLE;
 		EQueueType			type			= Default;
 		EQueueFamily		familyIndex		= Default;
-		VkQueueFlags		familyFlags		= {};
+		VkQueueFlagBits		familyFlags		= VkQueueFlagBits(0);
 		uint				queueIndex		= UMax;
 		float				priority		= 0.0f;
 		uint3				minImageTransferGranularity;
@@ -59,19 +51,6 @@ namespace AE::Graphics
 		{}
 	};
 	
-
-	
-	forceinline EQueueFamilyMask&  operator |= (EQueueFamilyMask &lhs, EQueueFamily rhs)
-	{
-		ASSERT( uint(rhs) < 32 );
-		return lhs = BitCast<EQueueFamilyMask>( uint(lhs) | SafeLeftBitShift( 1u, uint(rhs) ));
-	}
-
-	forceinline EQueueFamilyMask   operator |  (EQueueFamilyMask lhs, EQueueFamily rhs)
-	{
-		ASSERT( uint(rhs) < 32 );
-		return BitCast<EQueueFamilyMask>( uint(lhs) | SafeLeftBitShift( 1u, uint(rhs) ));
-	}
 
 }	// AE::Graphics
 

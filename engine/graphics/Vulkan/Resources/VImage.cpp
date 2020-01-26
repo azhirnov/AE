@@ -3,34 +3,21 @@
 #ifdef AE_ENABLE_VULKAN
 
 # include "graphics/Vulkan/Resources/VImage.h"
-# include "graphics/Vulkan/Resources/VMemoryObj.h"
 # include "graphics/Vulkan/VEnumCast.h"
 # include "graphics/Private/EnumUtils.h"
 # include "graphics/Vulkan/VResourceManager.h"
 
 namespace AE::Graphics
 {
-
-/*
-=================================================
-	destructor
-=================================================
-*/
-	VImage::~VImage ()
-	{
-		ASSERT( _image == VK_NULL_HANDLE );
-		ASSERT( _viewMap.empty() );
-		ASSERT( not _memoryId );
-	}
-	
+namespace {
 /*
 =================================================
 	_ChooseAspect
 =================================================
 */
-	ND_ static VkImageAspectFlags  ChooseAspect (EPixelFormat format)
+	ND_ static VkImageAspectFlagBits  ChooseAspect (EPixelFormat format)
 	{
-		VkImageAspectFlags	result = 0;
+		VkImageAspectFlagBits	result = VkImageAspectFlagBits(0);
 
 		if ( EPixelFormat_IsColor( format ))
 			result |= VK_IMAGE_ASPECT_COLOR_BIT;
@@ -77,7 +64,7 @@ namespace AE::Graphics
 =================================================
 	GetAllImageAccessMasks
 =================================================
-*/
+*
 	ND_ static VkAccessFlags  GetAllImageAccessMasks (VkImageUsageFlags usage)
 	{
 		VkAccessFlags	result = 0;
@@ -105,6 +92,21 @@ namespace AE::Graphics
 			END_ENUM_CHECKS();
 		}
 		return result;
+	}*/
+}
+//-----------------------------------------------------------------------------
+
+
+
+/*
+=================================================
+	destructor
+=================================================
+*/
+	VImage::~VImage ()
+	{
+		ASSERT( _image == VK_NULL_HANDLE );
+		ASSERT( _viewMap.empty() );
 	}
 
 /*
@@ -112,17 +114,17 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool VImage::Create (VResourceManager &resMngr, const ImageDesc &desc, MemoryID memId, VMemoryObj &memObj,  EResourceState defaultState, StringView dbgName)
+	bool VImage::Create (VResourceManager &resMngr, const ImageDesc &desc, GfxMemAllocatorPtr allocator, EResourceState defaultState, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( _image == VK_NULL_HANDLE );
-		CHECK_ERR( not _memoryId );
+		CHECK_ERR( allocator );
 		
-		auto&		dev			= resMngr.GetDevice();
-		const bool	opt_tiling	= not EnumAny(memObj.MemoryType(), EMemoryType::_HostVisible);
+		_desc = desc;
+		_desc.Validate();
 
-		_desc		= desc;		_desc.Validate();
-		_memoryId	= UniqueID<MemoryID>{ memId };
+		auto&		dev			= resMngr.GetDevice();
+		const bool	opt_tiling	= not EnumAny( _desc.memType, EMemoryType::_HostVisible );
 		
 		// create image
 		VkImageCreateInfo	info = {};
@@ -154,7 +156,7 @@ namespace AE::Graphics
 		}
 
 		// reset to exclusive mode
-		if ( info.queueFamilyIndexCount < 2 )
+		if ( info.queueFamilyIndexCount <= 1 )
 		{
 			info.sharingMode			= VK_SHARING_MODE_EXCLUSIVE;
 			info.pQueueFamilyIndices	= null;
@@ -166,14 +168,15 @@ namespace AE::Graphics
 
 		VK_CHECK( dev.vkCreateImage( dev.GetVkDevice(), &info, null, OUT &_image ));
 
-		CHECK_ERR( memObj.AllocateForImage( resMngr.GetMemoryManager(), _image ));
+		CHECK_ERR( allocator->AllocForImage( BitCast<ImageVk_t>(_image), _desc, INOUT _memStorage ));
 		
 		if ( not dbgName.empty() )
 		{
 			dev.SetObjectName( BitCast<uint64_t>(_image), dbgName, VK_OBJECT_TYPE_IMAGE );
 		}
 
-		_readAccessMask		= GetAllImageAccessMasks( info.usage );
+		_memAllocator		= std::move(allocator);
+		//_readAccessMask	= GetAllImageAccessMasks( info.usage );
 		_aspectMask			= ChooseAspect( _desc.format );
 		_defaultLayout		= ChooseDefaultLayout( _desc.usage, EResourceState_ToImageLayout( defaultState, _aspectMask ));
 		_debugName			= dbgName;
@@ -239,27 +242,48 @@ namespace AE::Graphics
 			dev.vkDestroyImageView( dev.GetVkDevice(), view.second, null );
 		}
 		
-		//if ( _onRelease ) {
-		//	_onRelease( BitCast<ImageVk_t>(_image) );
-		//}
-		//else
 		if ( _image ) {
 			dev.vkDestroyImage( dev.GetVkDevice(), _image, null );
 		}
 
-		if ( _memoryId ) {
-			resMngr.ReleaseResource( _memoryId );
+		if ( _memAllocator ) {
+			CHECK( _memAllocator->Dealloc( INOUT _memStorage ));
 		}
 		
 		_viewMap.clear();
 		_debugName.clear();
+
+		_memAllocator	= null;
 		_image			= VK_NULL_HANDLE;
-		_memoryId		= Default;
 		_desc			= Default;
-		_aspectMask		= 0;
+		_aspectMask		= VkImageAspectFlagBits(0);
 		_defaultLayout	= VK_IMAGE_LAYOUT_MAX_ENUM;
 	}
 	
+/*
+=================================================
+	GetMemoryInfo
+=================================================
+*/
+	bool VImage::GetMemoryInfo (OUT VResourceMemoryInfo &outInfo) const
+	{
+		SHAREDLOCK( _drCheck );
+		CHECK_ERR( _memAllocator );
+
+		IGfxMemAllocator::NativeMemInfo_t	info;
+		CHECK_ERR( _memAllocator->GetInfo( _memStorage, OUT info ));
+		
+		auto*	vk_info = UnionGetIf<VulkanMemoryObjInfo>( &info );
+		CHECK_ERR( vk_info );
+
+		outInfo.memory		= BitCast<VkDeviceMemory>( vk_info->memory );
+		outInfo.flags		= BitCast<VkMemoryPropertyFlagBits>( vk_info->flags );
+		outInfo.offset		= vk_info->offset;
+		outInfo.size		= vk_info->size;
+		outInfo.mappedPtr	= vk_info->mappedPtr;
+		return true;
+	}
+
 /*
 =================================================
 	GetView
@@ -362,15 +386,15 @@ namespace AE::Graphics
 	
 /*
 =================================================
-	GetApiSpecificDescription
+	GetNativeDescription
 =================================================
-*
-	VulkanImageDesc  VImage::GetApiSpecificDescription () const
+*/
+	VulkanImageDesc  VImage::GetNativeDescription () const
 	{
 		VulkanImageDesc		desc;
 		desc.image			= BitCast<ImageVk_t>( _image );
-		desc.imageType		= BitCast<ImageTypeVk_t>( GetImageType( _desc.imageType ));
-		desc.flags			= BitCast<ImageFlagsVk_t>( GetImageFlags( _desc.imageType ));
+		//desc.imageType		= BitCast<ImageTypeVk_t>( GetImageType( _desc.imageType ));	// TODO
+		//desc.flags			= BitCast<ImageFlagsVk_t>( GetImageFlags( _desc.flags ));
 		desc.usage			= BitCast<ImageUsageVk_t>( VEnumCast( _desc.usage ));
 		desc.format			= BitCast<FormatVk_t>( VEnumCast( _desc.format ));
 		desc.currentLayout	= BitCast<ImageLayoutVk_t>( _defaultLayout );	// TODO
@@ -379,11 +403,78 @@ namespace AE::Graphics
 		desc.dimension		= _desc.dimension;
 		desc.arrayLayers	= _desc.arrayLayers.Get();
 		desc.maxLevels		= _desc.maxLevel.Get();
-		desc.queueFamily	= VK_QUEUE_FAMILY_IGNORED;
+		//desc.queueFamily	= VK_QUEUE_FAMILY_IGNORED;
 		//desc.queueFamilyIndices	// TODO
 		return desc;
 	}
-	*/
+	
+/*
+=================================================
+	IsSupported
+=================================================
+*/
+	bool  VImage::IsSupported (const VDevice &dev, const ImageDesc &desc)
+	{
+		VkFormatProperties	props = {};
+		vkGetPhysicalDeviceFormatProperties( dev.GetVkPhysicalDevice(), VEnumCast( desc.format ), OUT &props );
+		
+		const bool					opt_tiling	= not EnumAny( desc.memType, EMemoryType::_HostVisible );
+		const VkFormatFeatureFlags	dev_flags	= opt_tiling ? props.optimalTilingFeatures : props.linearTilingFeatures;
+		VkFormatFeatureFlags		img_flags	= 0;
+
+		for (EImageUsage t = EImageUsage(1); t <= desc.usage; t = EImageUsage(uint(t) << 1))
+		{
+			if ( not EnumEq( desc.usage, t ))
+				continue;
+
+			BEGIN_ENUM_CHECKS();
+			switch ( t )
+			{
+				case EImageUsage::TransferSrc :				img_flags |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT | VK_FORMAT_FEATURE_BLIT_SRC_BIT;	break;
+				case EImageUsage::TransferDst :				img_flags |= VK_FORMAT_FEATURE_TRANSFER_DST_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;	break;
+				case EImageUsage::Sampled :					img_flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;	break;
+				case EImageUsage::Storage :					img_flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;			break;
+				case EImageUsage::ColorAttachment :			img_flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;		break;
+				case EImageUsage::DepthStencilAttachment :	img_flags |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;	break;
+				case EImageUsage::TransientAttachment :		break;
+				case EImageUsage::InputAttachment :			break;
+				case EImageUsage::ShadingRate :				break;
+				
+				#ifdef VK_EXT_fragment_density_map
+				case EImageUsage::FragmentDensityMap :		img_flags |= VK_FORMAT_FEATURE_FRAGMENT_DENSITY_MAP_BIT_EXT;	break;
+				#else
+				case EImageUsage::FragmentDensityMap :		ASSERT(false);	break;
+				#endif
+
+				case EImageUsage::_Last :
+				case EImageUsage::All :
+				case EImageUsage::Transfer :
+				case EImageUsage::Unknown :
+				default :									ASSERT(false);	break;
+			}
+			END_ENUM_CHECKS();
+		}
+
+		return (dev_flags & img_flags);
+	}
+	
+/*
+=================================================
+	IsSupported
+=================================================
+*/
+	bool  VImage::IsSupported (const VDevice &, const ImageViewDesc &desc) const
+	{
+		SHAREDLOCK( _drCheck );
+
+		// TODO: mutable format
+
+		if ( desc.format != Default and desc.format != _desc.format )
+			return false;
+
+		return true;
+	}
+
 
 }	// AE::Graphics
 

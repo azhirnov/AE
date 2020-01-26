@@ -6,8 +6,7 @@
 #include "graphics/Public/BufferDesc.h"
 #include "graphics/Public/EResourceState.h"
 #include "graphics/Public/PipelineDesc.h"
-#include "graphics/Public/NativeTypes.OpenGL.h"
-#include "graphics/Public/NativeTypes.Vulkan.h"
+#include "graphics/Public/GfxMemAllocator.h"
 
 namespace AE::Graphics
 {
@@ -30,19 +29,17 @@ namespace AE::Graphics
 	public:
 		virtual ~IResourceManager () {}
 
-		// TODO: implement
-		// TODO: return error codes ?
-		//ND_ virtual bool						IsSupported (const BufferDesc &desc) const = 0;
-		//ND_ virtual bool						IsSupported (const ImageDesc &desc) const = 0;
-		//ND_ virtual bool						IsSupported (GfxResourceID buffer, const BufferViewDesc &desc) const = 0;
-		//ND_ virtual bool						IsSupported (GfxResourceID image, const ImageViewDesc &desc) const = 0;
+		ND_ virtual bool						IsSupported (const BufferDesc &desc) const = 0;
+		ND_ virtual bool						IsSupported (const ImageDesc &desc) const = 0;
+		ND_ virtual bool						IsSupported (GfxResourceID buffer, const BufferViewDesc &desc) const = 0;
+		ND_ virtual bool						IsSupported (GfxResourceID image, const ImageViewDesc &desc) const = 0;
 
 		ND_ virtual UniqueID<GfxResourceID>		CreateDependency (StringView dbgName = Default) = 0;
 		ND_ virtual UniqueID<GfxResourceID>		CreateImage (const VirtualImageDesc &desc, StringView dbgName = Default) = 0;
 		ND_ virtual UniqueID<GfxResourceID>		CreateBuffer (const VirtualBufferDesc &desc, StringView dbgName = Default) = 0;
 
-		ND_ virtual UniqueID<GfxResourceID>		CreateImage (const ImageDesc &desc, EResourceState defaultState = Default, StringView dbgName = Default) = 0;
-		ND_ virtual UniqueID<GfxResourceID>		CreateBuffer (const BufferDesc &desc, StringView dbgName = Default) = 0;
+		ND_ virtual UniqueID<GfxResourceID>		CreateImage (const ImageDesc &desc, EResourceState defaultState = Default, StringView dbgName = Default, const GfxMemAllocatorPtr &allocator = null) = 0;
+		ND_ virtual UniqueID<GfxResourceID>		CreateBuffer (const BufferDesc &desc, StringView dbgName = Default, const GfxMemAllocatorPtr &allocator = null) = 0;
 		
 		// TODO
 		//ND_ virtual UniqueID<GfxResourceID>		CreateImage (const NativeImageDesc_t &desc, StringView dbgName = Default) = 0;
@@ -62,12 +59,11 @@ namespace AE::Graphics
 		ND_ virtual bool						IsResourceAlive (GfxResourceID id) const = 0;
 
 			virtual bool						ReleaseResource (UniqueID<GfxResourceID> &id) = 0;
-			virtual bool						ReleaseResource (UniqueID<MemoryID> &id) = 0;
 			virtual bool						ReleaseResource (UniqueID<PipelinePackID> &id) = 0;
 
 		// returned reference is valid until resource is alive
-		//ND_ virtual BufferDesc const&			GetBufferDescription (GfxResourceID id) const = 0;
-		//ND_ virtual ImageDesc const&			GetImageDescription (GfxResourceID id) const = 0;
+		ND_ virtual BufferDesc const&			GetBufferDescription (GfxResourceID id) const = 0;
+		ND_ virtual ImageDesc const&			GetImageDescription (GfxResourceID id) const = 0;
 
 		//ND_ virtual NativeBufferDesc_t		GetBufferNativeDesc (GfxResourceID id) const = 0;
 		//ND_ virtual NativeImageDesc_t			GetImageNativeDesc (GfxResourceID id) const = 0;

@@ -2,7 +2,7 @@
 
 #ifdef AE_ENABLE_VULKAN
 
-# include "graphics/Vulkan/VCommandPool.h"
+# include "graphics/Vulkan/RenderGraph/VCommandPool.h"
 # include "graphics/Vulkan/VDevice.h"
 
 namespace AE::Graphics
@@ -85,8 +85,9 @@ namespace AE::Graphics
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( IsCreated(), void());
+		CHECK_ERR( dev.GetFeatures().commandPoolTrim, void());
 
-		dev.vkTrimCommandPool( dev.GetVkDevice(), _pool, flags );
+		dev.vkTrimCommandPoolKHR( dev.GetVkDevice(), _pool, flags );
 	}
 
 /*
@@ -109,7 +110,7 @@ namespace AE::Graphics
 */
 	void  VCommandPool::RecyclePrimary (const VDevice &dev, VkCommandBuffer cmd)
 	{
-		if ( not _freePrimaries.Append( cmd ))
+		if ( not _freePrimaries.Put( cmd ))
 		{
 			Deallocate( dev, cmd );
 		}
@@ -117,7 +118,7 @@ namespace AE::Graphics
 	
 	void  VCommandPool::RecycleSecondary (const VDevice &dev, VkCommandBuffer cmd)
 	{
-		if ( not _freeSecondaries.Append( cmd ))
+		if ( not _freeSecondaries.Put( cmd ))
 		{
 			Deallocate( dev, cmd );
 		}
@@ -130,7 +131,6 @@ namespace AE::Graphics
 */
 	VkCommandBuffer  VCommandPool::AllocPrimary (const VDevice &dev)
 	{
-		SHAREDLOCK( _drCheck );
 		CHECK_ERR( IsCreated(), VK_NULL_HANDLE );
 		
 		// use cache
@@ -139,6 +139,8 @@ namespace AE::Graphics
 			if ( _freePrimaries.Extract( OUT cmd ))
 				return cmd;
 		}
+
+		EXLOCK( _drCheck );
 
 		VkCommandBufferAllocateInfo	info = {};
 		info.sType				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -159,7 +161,6 @@ namespace AE::Graphics
 *
 	VkCommandBuffer  VCommandPool::AllocSecondary (const VDevice &dev)
 	{
-		SHAREDLOCK( _drCheck );
 		CHECK_ERR( IsCreated(), VK_NULL_HANDLE );
 
 		// use cache
@@ -168,6 +169,8 @@ namespace AE::Graphics
 			if ( _freeSecondaries.Extract( OUT cmd ))
 				return cmd;
 		}
+		
+		EXLOCK( _drCheck );
 
 		VkCommandBufferAllocateInfo	info = {};
 		info.sType				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -188,7 +191,7 @@ namespace AE::Graphics
 */
 	void  VCommandPool::Deallocate (const VDevice &dev, VkCommandBuffer cmd)
 	{
-		SHAREDLOCK( _drCheck );
+		EXLOCK( _drCheck );
 		CHECK_ERR( IsCreated(), void());
 
 		dev.vkFreeCommandBuffers( dev.GetVkDevice(), _pool, 1, &cmd );

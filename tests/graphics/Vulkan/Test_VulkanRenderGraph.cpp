@@ -24,6 +24,9 @@ VRGTest::VRGTest () :
 	_vulkan{},
 	_swapchain{ _vulkan }
 {
+	//_tests.emplace_back( &VRGTest::Test_Buffer );
+	//_tests.emplace_back( &VRGTest::Test_Image );
+	_tests.emplace_back( &VRGTest::Test_CopyBuffer );
 }
 
 /*
@@ -120,6 +123,5 @@ void VRGTest::_Destroy ()
 	CHECK( _vulkan.DestroyLogicalDevice() );
 	CHECK( _vulkan.DestroyInstance() );
 }
-
 
 #endif	// AE_ENABLE_VULKAN

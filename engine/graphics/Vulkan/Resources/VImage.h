@@ -5,9 +5,11 @@
 #ifdef AE_ENABLE_VULKAN
 
 # include "graphics/Public/ImageDesc.h"
+# include "graphics/Public/GfxMemAllocator.h"
 # include "graphics/Public/EResourceState.h"
 # include "graphics/Public/IDs.h"
 # include "graphics/Vulkan/VQueue.h"
+# include "graphics/Public/NativeTypes.Vulkan.h"
 
 namespace AE::Graphics
 {
@@ -18,12 +20,10 @@ namespace AE::Graphics
 
 	class VImage final
 	{
-		friend class VImageUnitTest;
-
 	// types
 	public:
 		using ImageViewMap_t	= HashMap< ImageViewDesc, VkImageView >;
-		//using OnRelease_t		= IFrameGraph::OnExternalImageReleased_t;
+		using MemStorage_t		= IGfxMemAllocator::Storage_t;
 
 
 	// variables
@@ -33,11 +33,13 @@ namespace AE::Graphics
 
 		mutable SharedMutex			_viewMapLock;
 		mutable ImageViewMap_t		_viewMap;
-
-		UniqueID<MemoryID>			_memoryId;
-		VkImageAspectFlags			_aspectMask			= 0;
+		
+		VkImageAspectFlagBits		_aspectMask			= VkImageAspectFlagBits(0);
 		VkImageLayout				_defaultLayout		= VK_IMAGE_LAYOUT_MAX_ENUM;
-		VkAccessFlags				_readAccessMask		= 0;
+		//VkAccessFlags				_readAccessMask		= 0;
+		
+		GfxMemAllocatorPtr			_memAllocator;
+		MemStorage_t				_memStorage;
 
 		DebugName_t					_debugName;
 
@@ -49,24 +51,22 @@ namespace AE::Graphics
 		VImage () {}
 		~VImage ();
 
-		bool Create (VResourceManager &, const ImageDesc &desc, MemoryID memId, VMemoryObj &memObj,
-					 EResourceState defaultState, StringView dbgName);
-
-		//bool Create (const VDevice &dev, const VulkanImageDesc &desc, StringView dbgName, OnRelease_t &&onRelease);
+		bool Create (VResourceManager &, const ImageDesc &desc, GfxMemAllocatorPtr allocator, EResourceState defaultState, StringView dbgName);
+		bool Create (const VDevice &dev, const VulkanImageDesc &desc, StringView dbgName);
 
 		void Destroy (VResourceManager &);
-
-		//ND_ VulkanImageDesc		GetApiSpecificDescription () const;
+		
+		bool GetMemoryInfo (OUT VResourceMemoryInfo &) const;
 
 		ND_ VkImageView			GetView (const VDevice &, const ImageViewDesc &) const;
 		ND_ VkImageView			GetView (const VDevice &, bool isDefault, INOUT ImageViewDesc &) const;
+
+		ND_ VulkanImageDesc		GetNativeDescription () const;
 		
 		ND_ bool				IsReadOnly ()			const;
 		ND_ bool				IsOwnsHandle ()			const;
 
 		ND_ VkImage				Handle ()				const	{ SHAREDLOCK( _drCheck );  return _image; }
-		ND_ MemoryID			GetMemoryID ()			const	{ SHAREDLOCK( _drCheck );  return _memoryId; }
-
 		ND_ ImageDesc const&	Description ()			const	{ SHAREDLOCK( _drCheck );  return _desc; }
 		ND_ VkImageAspectFlags	AspectMask ()			const	{ SHAREDLOCK( _drCheck );  return _aspectMask; }
 		ND_ uint3 const			Dimension ()			const	{ SHAREDLOCK( _drCheck );  return _desc.dimension; }
@@ -81,10 +81,14 @@ namespace AE::Graphics
 		ND_ EImage				ImageType ()			const	{ SHAREDLOCK( _drCheck );  return _desc.imageType; }
 		ND_ uint const			Samples ()				const	{ SHAREDLOCK( _drCheck );  return _desc.samples.Get(); }
 		
-		ND_ VkAccessFlags		GetAllReadAccessMask ()	const	{ SHAREDLOCK( _drCheck );  return _readAccessMask; }
+		//ND_ VkAccessFlags		GetAllReadAccessMask ()	const	{ SHAREDLOCK( _drCheck );  return _readAccessMask; }
 
 		ND_ bool				IsExclusiveSharing ()	const	{ SHAREDLOCK( _drCheck );  return _desc.queues == Default; }
 		ND_ StringView			GetDebugName ()			const	{ SHAREDLOCK( _drCheck );  return _debugName; }
+
+
+		ND_ static bool	IsSupported (const VDevice &dev, const ImageDesc &desc);
+		ND_ bool		IsSupported (const VDevice &dev, const ImageViewDesc &desc) const;
 
 
 	private:
