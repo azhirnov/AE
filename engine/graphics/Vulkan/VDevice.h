@@ -49,6 +49,11 @@ namespace AE::Graphics
 			bool	renderPass2				: 1;
 			bool	depthStencilResolve		: 1;
 			bool	drawIndirectCount		: 1;
+			bool	spirv14					: 1;
+			// window extensions
+			bool	surface					: 1;
+			bool	surfaceCaps2			: 1;
+			bool	swapchain				: 1;
 			// extensions
 			bool	debugUtils				: 1;
 			bool	meshShaderNV			: 1;
@@ -62,37 +67,37 @@ namespace AE::Graphics
 
 		struct DeviceProperties
 		{
-			VkPhysicalDeviceProperties						properties;
-			VkPhysicalDeviceFeatures						features;
-			VkPhysicalDeviceMemoryProperties				memoryProperties;
+			VkPhysicalDeviceProperties							properties;
+			VkPhysicalDeviceFeatures							features;
+			VkPhysicalDeviceMemoryProperties					memoryProperties;
 			#ifdef VK_NV_mesh_shader
-			VkPhysicalDeviceMeshShaderFeaturesNV			meshShaderFeatures;
-			VkPhysicalDeviceMeshShaderPropertiesNV			meshShaderProperties;
+			VkPhysicalDeviceMeshShaderFeaturesNV				meshShaderFeatures;
+			VkPhysicalDeviceMeshShaderPropertiesNV				meshShaderProperties;
 			#endif
 			#ifdef VK_NV_shading_rate_image
-			VkPhysicalDeviceShadingRateImageFeaturesNV		shadingRateImageFeatures;
-			VkPhysicalDeviceShadingRateImagePropertiesNV	shadingRateImageProperties;
+			VkPhysicalDeviceShadingRateImageFeaturesNV			shadingRateImageFeatures;
+			VkPhysicalDeviceShadingRateImagePropertiesNV		shadingRateImageProperties;
 			#endif
 			#ifdef VK_NV_ray_tracing
-			VkPhysicalDeviceRayTracingPropertiesNV			rayTracingProperties;
+			VkPhysicalDeviceRayTracingPropertiesNV				rayTracingProperties;
 			#endif
 			#ifdef VK_KHR_shader_clock
-			VkPhysicalDeviceShaderClockFeaturesKHR			shaderClock;
+			VkPhysicalDeviceShaderClockFeaturesKHR				shaderClock;
 			#endif
-			#if defined(VK_VERSION_1_2) or defined(VK_KHR_timeline_semaphore)
-			VkPhysicalDeviceTimelineSemaphoreProperties		timelineSemaphoreProps;
+			#ifdef VK_KHR_timeline_semaphore
+			VkPhysicalDeviceTimelineSemaphorePropertiesKHR		timelineSemaphoreProps;
 			#endif
 			#ifdef VK_VERSION_1_2
-			VkPhysicalDeviceVulkan12Properties				properties120;
+			VkPhysicalDeviceVulkan12Properties					properties120;
 			#endif
 			#ifdef VK_KHR_buffer_device_address
-			VkPhysicalDeviceBufferDeviceAddressFeatures		bufferDeviceAddress;
+			VkPhysicalDeviceBufferDeviceAddressFeaturesKHR		bufferDeviceAddress;
 			#endif
 			#ifdef VK_KHR_depth_stencil_resolve
-			VkPhysicalDeviceDepthStencilResolveProperties	depthStencilResolve;
+			VkPhysicalDeviceDepthStencilResolvePropertiesKHR	depthStencilResolve;
 			#endif
 			#ifdef VK_KHR_shader_atomic_int64
-			VkPhysicalDeviceShaderAtomicInt64Features		shaderAtomicInt64;
+			VkPhysicalDeviceShaderAtomicInt64FeaturesKHR		shaderAtomicInt64;
 			#endif
 		};
 
@@ -116,11 +121,11 @@ namespace AE::Graphics
 		VkInstance				_vkInstance;
 		InstanceVersion			_vkVersion;
 		
-		EnabledFeatures			_supported;
+		EnabledFeatures			_features;
 
 		VulkanDeviceFnTable		_deviceFnTable;
 		
-		DeviceProperties		_deviceInfo;
+		DeviceProperties		_properties;
 		
 		ExtensionSet_t			_instanceExtensions;
 		ExtensionSet_t			_deviceExtensions;
@@ -131,8 +136,8 @@ namespace AE::Graphics
 		VDevice ();
 		~VDevice ();
 		
-		ND_ EnabledFeatures const&	GetFeatures ()					const	{ return _supported; }
-		ND_ DeviceProperties const&	GetProperties ()				const	{ return _deviceInfo; }
+		ND_ EnabledFeatures const&	GetFeatures ()					const	{ return _features; }
+		ND_ DeviceProperties const&	GetProperties ()				const	{ return _properties; }
 
 		ND_ VkDevice				GetVkDevice ()					const	{ return _vkLogicalDevice; }
 		ND_ VkPhysicalDevice		GetVkPhysicalDevice ()			const	{ return _vkPhysicalDevice; }
@@ -205,6 +210,7 @@ namespace AE::Graphics
 		bool _SetupQueues (ArrayView<QueueCreateInfo> queue);
 		bool _ChooseQueueIndex (ArrayView<VkQueueFamilyProperties> props, INOUT VkQueueFlagBits &flags, OUT uint &index) const;
 		bool _InitDeviceFeatures ();
+		void _UpdateInstanceVersion (uint ver);
 
 		bool _SetupQueueTypes ();
 		bool _AddGraphicsQueue ();

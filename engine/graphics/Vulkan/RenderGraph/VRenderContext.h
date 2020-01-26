@@ -455,7 +455,7 @@ namespace AE::Graphics
 	void VRenderGraph::RenderContext::DrawMeshTasksNV (uint taskCount, uint firstTask)
 	{
 	#ifdef VK_NV_mesh_shader
-		CHECK_ERR( _graphicsCtx.GetDevice().IsMeshShaderEnabled(), void());
+		CHECK_ERR( _graphicsCtx.GetDevice().GetFeatures().meshShaderNV, void());
 
 		_graphicsCtx._CommitBarriers();
 		
@@ -474,7 +474,7 @@ namespace AE::Graphics
 	void VRenderGraph::RenderContext::DrawMeshTasksIndirectNV (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride)
 	{
 	#ifdef VK_NV_mesh_shader
-		CHECK_ERR( _graphicsCtx.GetDevice().IsMeshShaderEnabled(), void());
+		CHECK_ERR( _graphicsCtx.GetDevice().GetFeatures().meshShaderNV, void());
 
 		auto*	buf = _graphicsCtx.ToLocalBuffer( buffer );
 		CHECK_ERR( buf, void());
@@ -499,7 +499,7 @@ namespace AE::Graphics
 	void VRenderGraph::RenderContext::DrawMeshTasksIndirectCountNV (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride)
 	{
 	#ifdef VK_NV_mesh_shader
-		CHECK_ERR( _graphicsCtx.GetDevice().IsMeshShaderEnabled(), void());
+		CHECK_ERR( _graphicsCtx.GetDevice().GetFeatures().meshShaderNV, void());
 
 		auto*	ibuf = _graphicsCtx.ToLocalBuffer( buffer );
 		auto*	cbuf = _graphicsCtx.ToLocalBuffer( countBuffer );

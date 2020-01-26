@@ -255,7 +255,8 @@ namespace
 			"#extension GL_ARB_separate_shader_objects : require\n"
 			"#extension GL_ARB_shading_language_420pack : require\n"
 			"#extension GL_GOOGLE_include_directive : require\n"
-			"#extension GL_EXT_control_flow_attributes : require\n";
+			"#extension GL_EXT_control_flow_attributes : require\n"
+			"#extension GL_KHR_memory_scope_semantics : require\n";
 
 		BEGIN_ENUM_CHECKS();
 		switch ( info.type )

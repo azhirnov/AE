@@ -36,7 +36,8 @@ namespace AE::Graphics
 		_vkPhysicalDevice{ VK_NULL_HANDLE },
 		_vkInstance{ VK_NULL_HANDLE }
 	{
-		std::memset( &_supported, 0, sizeof(_supported) );
+		std::memset( &_features, 0, sizeof(_features) );
+		std::memset( &_properties, 0, sizeof(_properties) );
 
 		VulkanDeviceFn_Init( &_deviceFnTable );
 	}
@@ -82,7 +83,7 @@ namespace AE::Graphics
 		if ( name.empty() or id == VK_NULL_HANDLE )
 			return false;
 
-		if ( _supported.debugUtils )
+		if ( _features.debugUtils )
 		{
 			VkDebugUtilsObjectNameInfoEXT	info = {};
 			info.sType			= VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
@@ -185,7 +186,7 @@ namespace AE::Graphics
 			_instanceExtensions.insert( inst );
 		}
 
-		_vkVersion = { VK_VERSION_MAJOR(vk_ver), VK_VERSION_MINOR(vk_ver) };
+		_UpdateInstanceVersion( vk_ver );
 		return true;
 	}
 	
@@ -210,7 +211,7 @@ namespace AE::Graphics
 		
 		uint	vk_ver = VK_MAKE_VERSION( 1, 2, 0 );
 		_ValidateInstanceVersion( INOUT vk_ver );
-		_vkVersion = { VK_VERSION_MAJOR(vk_ver), VK_VERSION_MINOR(vk_ver) };
+		_UpdateInstanceVersion( vk_ver );
 
 		return true;
 	}
@@ -461,15 +462,15 @@ namespace {
 		#endif
 		
 		#ifdef VK_KHR_shader_float16_int8
-		VkPhysicalDeviceShaderFloat16Int8Features				shaderFloat16Int8;
+		VkPhysicalDeviceShaderFloat16Int8FeaturesKHR			shaderFloat16Int8;
 		#endif
 
 		#ifdef VK_KHR_timeline_semaphore
-		VkPhysicalDeviceTimelineSemaphoreFeatures				timelineSemaphore;
+		VkPhysicalDeviceTimelineSemaphoreFeaturesKHR			timelineSemaphore;
 		#endif
 		
 		#ifdef VK_KHR_buffer_device_address
-		VkPhysicalDeviceBufferDeviceAddressFeatures				bufferDeviceAddress;
+		VkPhysicalDeviceBufferDeviceAddressFeaturesKHR			bufferDeviceAddress;
 		#endif
 		
 		#ifdef VK_KHR_shader_atomic_int64
@@ -667,7 +668,7 @@ namespace {
 		{
 			*next_feat	= *nextExt			= &features.shaderFloat16Int8;
 			next_feat	= nextExt			= &features.shaderFloat16Int8.pNext;
-			features.shaderFloat16Int8.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES;
+			features.shaderFloat16Int8.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR;
 		}
 		#endif
 		#ifdef VK_KHR_timeline_semaphore
@@ -675,7 +676,7 @@ namespace {
 		{
 			*next_feat	= *nextExt			= &features.timelineSemaphore;
 			next_feat	= nextExt			= &features.timelineSemaphore.pNext;
-			features.timelineSemaphore.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+			features.timelineSemaphore.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR;
 		}
 		#endif
 		#ifdef VK_KHR_buffer_device_address
@@ -683,7 +684,7 @@ namespace {
 		{
 			*next_feat	= *nextExt			= &features.bufferDeviceAddress;
 			next_feat	= nextExt			= &features.bufferDeviceAddress.pNext;
-			features.bufferDeviceAddress.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+			features.bufferDeviceAddress.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
 		}
 		#endif
 		#ifdef VK_KHR_shader_atomic_int64
@@ -848,6 +849,38 @@ namespace {
 		AE_LOGD( "Destroyed Vulkan logical device" );
 		return true;
 	}
+	
+/*
+=================================================
+	_UpdateInstanceVersion
+=================================================
+*/
+	void  VDeviceInitializer::_UpdateInstanceVersion (uint ver)
+	{
+		_vkVersion = { VK_VERSION_MAJOR(ver), VK_VERSION_MINOR(ver) };
+
+		// Vulkan loader has backward compatibility for some extensions for example:
+		// VK_KHR_get_physical_device_properties2 extension added to core 1.1 and function vkGetPhysicalDeviceFeatures2KHR may be removed in 1.1+ so you need to use vkGetPhysicalDeviceFeatures2 function
+		// But engine uses only vkGetPhysicalDeviceFeatures2KHR and in vulkan loaded pointer to vkGetPhysicalDeviceFeatures2 setted into vkGetPhysicalDeviceFeatures2KHR.
+		// The problem is if you use headers for 1.0 and actual version is 1.1 then vkGetPhysicalDeviceFeatures2 is not presented in headers and backward compatibility has no effect.
+		bool	problem_detected = false;
+
+	#if defined(VK_VERSION_1_2)
+		if ( _vkVersion > InstanceVersion{1,2} )
+			problem_detected = true;
+
+	#elif defined(VK_VERSION_1_1)
+		if ( _vkVersion > InstanceVersion{1,1} )
+			problem_detected = true;
+
+	#else
+		if ( _vkVersion > InstanceVersion{1,0} )
+			problem_detected = true;
+	#endif
+
+		if ( problem_detected )
+			AE_LOGI( "Current Vulkan version is greater than headers version, some extensions may be missed" );
+	}
 
 /*
 =================================================
@@ -856,56 +889,61 @@ namespace {
 */
 	bool  VDeviceInitializer::_InitDeviceFeatures ()
 	{
-		std::memset( &_deviceInfo, 0, sizeof(_deviceInfo) );
-		vkGetPhysicalDeviceFeatures( _vkPhysicalDevice, OUT &_deviceInfo.features );
-		vkGetPhysicalDeviceProperties( _vkPhysicalDevice, OUT &_deviceInfo.properties );
-		vkGetPhysicalDeviceMemoryProperties( _vkPhysicalDevice, OUT &_deviceInfo.memoryProperties );
+		vkGetPhysicalDeviceFeatures( _vkPhysicalDevice, OUT &_properties.features );
+		vkGetPhysicalDeviceProperties( _vkPhysicalDevice, OUT &_properties.properties );
+		vkGetPhysicalDeviceMemoryProperties( _vkPhysicalDevice, OUT &_properties.memoryProperties );
 
 		// get api version
 		{
-			_vkVersion.major = VK_VERSION_MAJOR( _deviceInfo.properties.apiVersion );
-			_vkVersion.minor = VK_VERSION_MINOR( _deviceInfo.properties.apiVersion );
+			_vkVersion.major = VK_VERSION_MAJOR( _properties.properties.apiVersion );
+			_vkVersion.minor = VK_VERSION_MINOR( _properties.properties.apiVersion );
 		}
 		
-		_supported.debugUtils				= HasInstanceExtension( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
-		_supported.bindMemory2				= _vkVersion >= InstanceVersion{1,1} or (HasDeviceExtension( VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME ) and HasDeviceExtension( VK_KHR_BIND_MEMORY_2_EXTENSION_NAME ));
-		_supported.dedicatedAllocation		= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME );
-		_supported.descriptorUpdateTemplate	= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME );
-		_supported.imageViewUsage			= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE2_EXTENSION_NAME );
-		_supported.create2DArrayCompatible	= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE1_EXTENSION_NAME );
-		_supported.commandPoolTrim			= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE1_EXTENSION_NAME );
-		_supported.dispatchBase				= _vkVersion >= InstanceVersion{1,1};
-		_supported.renderPass2				= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME );
-		_supported.samplerMirrorClamp		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME );
-		_supported.descriptorIndexing		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME );
-		_supported.drawIndirectCount		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME );
+		_features.surface					= HasInstanceExtension( VK_KHR_SURFACE_EXTENSION_NAME );
+		_features.surfaceCaps2				= HasInstanceExtension( VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME );
+		_features.swapchain					= HasDeviceExtension( VK_KHR_SWAPCHAIN_EXTENSION_NAME );
+		_features.debugUtils				= HasInstanceExtension( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+		_features.bindMemory2				= _vkVersion >= InstanceVersion{1,1} or (HasDeviceExtension( VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME ) and HasDeviceExtension( VK_KHR_BIND_MEMORY_2_EXTENSION_NAME ));
+		_features.dedicatedAllocation		= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME );
+		_features.descriptorUpdateTemplate	= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME );
+		_features.imageViewUsage			= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE2_EXTENSION_NAME );
+		_features.create2DArrayCompatible	= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE1_EXTENSION_NAME );
+		_features.commandPoolTrim			= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE1_EXTENSION_NAME );
+		_features.dispatchBase				= _vkVersion >= InstanceVersion{1,1};
+		_features.renderPass2				= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME );
+		_features.samplerMirrorClamp		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME );
+		_features.descriptorIndexing		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME );
+		_features.drawIndirectCount			= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME );
 		
 		#ifdef VK_NV_mesh_shader
-		_supported.meshShaderNV				= HasDeviceExtension( VK_NV_MESH_SHADER_EXTENSION_NAME );
+		_features.meshShaderNV				= HasDeviceExtension( VK_NV_MESH_SHADER_EXTENSION_NAME );
 		#endif
 		#ifdef VK_NV_ray_tracing
-		_supported.rayTracingNV				= HasDeviceExtension( VK_NV_RAY_TRACING_EXTENSION_NAME );
+		_features.rayTracingNV				= HasDeviceExtension( VK_NV_RAY_TRACING_EXTENSION_NAME );
 		#endif
 		#ifdef VK_NV_shading_rate_image
-		_supported.shadingRateImageNV		= HasDeviceExtension( VK_NV_SHADING_RATE_IMAGE_EXTENSION_NAME );
+		_features.shadingRateImageNV		= HasDeviceExtension( VK_NV_SHADING_RATE_IMAGE_EXTENSION_NAME );
 		#endif
 		#ifdef VK_KHR_shader_clock
-		_supported.shaderClock				= HasDeviceExtension( VK_KHR_SHADER_CLOCK_EXTENSION_NAME );
+		_features.shaderClock				= HasDeviceExtension( VK_KHR_SHADER_CLOCK_EXTENSION_NAME );
 		#endif
 		#ifdef VK_KHR_shader_float16_int8
-		_supported.float16Arithmetic		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME );
+		_features.float16Arithmetic			= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME );
 		#endif
 		#ifdef VK_KHR_timeline_semaphore
-		_supported.timelineSemaphore		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME ),
+		_features.timelineSemaphore			= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME ),
 		#endif
 		#ifdef VK_KHR_buffer_device_address
-		_supported.bufferAddress			= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME ),
+		_features.bufferAddress				= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME ),
 		#endif
 		#ifdef VK_KHR_depth_stencil_resolve
-		_supported.depthStencilResolve		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME );
+		_features.depthStencilResolve		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME );
 		#endif
 		#ifdef VK_KHR_shader_atomic_int64
-		_supported.shaderAtomicInt64		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME );
+		_features.shaderAtomicInt64			= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_spirv_1_4
+		_features.spirv14					= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SPIRV_1_4_EXTENSION_NAME );
 		#endif
 
 		// load extensions
@@ -916,61 +954,61 @@ namespace {
 			feat2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 			
 			#ifdef VK_NV_mesh_shader
-			if ( _supported.meshShaderNV )
+			if ( _features.meshShaderNV )
 			{
-				*next_feat	= &_deviceInfo.meshShaderFeatures;
-				next_feat	= &_deviceInfo.meshShaderFeatures.pNext;
-				_deviceInfo.meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+				*next_feat	= &_properties.meshShaderFeatures;
+				next_feat	= &_properties.meshShaderFeatures.pNext;
+				_properties.meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
 			}
 			#endif
 			#ifdef VK_NV_shading_rate_image
-			if ( _supported.shadingRateImageNV )
+			if ( _features.shadingRateImageNV )
 			{
-				*next_feat	= &_deviceInfo.shadingRateImageFeatures;
-				next_feat	= &_deviceInfo.shadingRateImageFeatures.pNext;
-				_deviceInfo.shadingRateImageFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_FEATURES_NV;
+				*next_feat	= &_properties.shadingRateImageFeatures;
+				next_feat	= &_properties.shadingRateImageFeatures.pNext;
+				_properties.shadingRateImageFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_FEATURES_NV;
 			}
 			#endif
 			#ifdef VK_KHR_shader_clock
-			if ( _supported.shaderClock )
+			if ( _features.shaderClock )
 			{
-				*next_feat	= &_deviceInfo.shaderClock;
-				next_feat	= &_deviceInfo.shaderClock.pNext;
-				_deviceInfo.shaderClock.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR;
+				*next_feat	= &_properties.shaderClock;
+				next_feat	= &_properties.shaderClock.pNext;
+				_properties.shaderClock.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR;
 			}
 			#endif
 			#ifdef VK_KHR_shader_float16_int8
-			VkPhysicalDeviceShaderFloat16Int8Features	shader_float16_int8_feat = {};
-			if ( _supported.float16Arithmetic )
+			VkPhysicalDeviceShaderFloat16Int8FeaturesKHR	shader_float16_int8_feat = {};
+			if ( _features.float16Arithmetic )
 			{
 				*next_feat	= &shader_float16_int8_feat;
 				next_feat	= &shader_float16_int8_feat.pNext;
-				shader_float16_int8_feat.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES;
+				shader_float16_int8_feat.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR;
 			}
 			#endif
 			#ifdef VK_KHR_timeline_semaphore
-			VkPhysicalDeviceTimelineSemaphoreFeatures	timeline_sem_feat = {};
-			if ( _supported.timelineSemaphore )
+			VkPhysicalDeviceTimelineSemaphoreFeaturesKHR	timeline_sem_feat = {};
+			if ( _features.timelineSemaphore )
 			{
 				*next_feat	= &timeline_sem_feat;
 				next_feat	= &timeline_sem_feat.pNext;
-				timeline_sem_feat.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+				timeline_sem_feat.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR;
 			}
 			#endif
 			#ifdef VK_KHR_buffer_device_address
-			if ( _supported.bufferAddress )
+			if ( _features.bufferAddress )
 			{
-				*next_feat	= &_deviceInfo.bufferDeviceAddress;
-				next_feat	= &_deviceInfo.bufferDeviceAddress.pNext;
-				_deviceInfo.bufferDeviceAddress.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+				*next_feat	= &_properties.bufferDeviceAddress;
+				next_feat	= &_properties.bufferDeviceAddress.pNext;
+				_properties.bufferDeviceAddress.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
 			}
 			#endif
 			#ifdef VK_KHR_shader_atomic_int64
-			if ( _supported.shaderAtomicInt64 )
+			if ( _features.shaderAtomicInt64 )
 			{
-				*next_feat	= &_deviceInfo.shaderAtomicInt64;
-				next_feat	= &_deviceInfo.shaderAtomicInt64.pNext;
-				_deviceInfo.shaderAtomicInt64.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES;
+				*next_feat	= &_properties.shaderAtomicInt64;
+				next_feat	= &_properties.shaderAtomicInt64.pNext;
+				_properties.shaderAtomicInt64.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES_KHR;
 			}
 			#endif
 			Unused( next_feat );
@@ -978,25 +1016,25 @@ namespace {
 			vkGetPhysicalDeviceFeatures2KHR( GetVkPhysicalDevice(), OUT &feat2 );
 			
 			#ifdef VK_NV_mesh_shader
-			_supported.meshShaderNV			&= (_deviceInfo.meshShaderFeatures.meshShader or _deviceInfo.meshShaderFeatures.taskShader);
+			_features.meshShaderNV			&= (_properties.meshShaderFeatures.meshShader or _properties.meshShaderFeatures.taskShader);
 			#endif
 			#ifdef VK_NV_shading_rate_image
-			_supported.shadingRateImageNV	&= (_deviceInfo.shadingRateImageFeatures.shadingRateImage == VK_TRUE);
+			_features.shadingRateImageNV	&= (_properties.shadingRateImageFeatures.shadingRateImage == VK_TRUE);
 			#endif
 			#ifdef VK_KHR_shader_clock
-			_supported.shaderClock			&= !!(_deviceInfo.shaderClock.shaderDeviceClock | _deviceInfo.shaderClock.shaderSubgroupClock);
+			_features.shaderClock			&= !!(_properties.shaderClock.shaderDeviceClock | _properties.shaderClock.shaderSubgroupClock);
 			#endif
 			#ifdef VK_KHR_shader_float16_int8
-			_supported.float16Arithmetic	&= (shader_float16_int8_feat.shaderFloat16 == VK_TRUE);
+			_features.float16Arithmetic		&= (shader_float16_int8_feat.shaderFloat16 == VK_TRUE);
 			#endif
 			#ifdef VK_KHR_timeline_semaphore
-			_supported.timelineSemaphore	&= (timeline_sem_feat.timelineSemaphore == VK_TRUE);
+			_features.timelineSemaphore		&= (timeline_sem_feat.timelineSemaphore == VK_TRUE);
 			#endif
 			#ifdef VK_KHR_buffer_device_address
-			_supported.bufferAddress		&= (_deviceInfo.bufferDeviceAddress.bufferDeviceAddress == VK_TRUE);
+			_features.bufferAddress			&= (_properties.bufferDeviceAddress.bufferDeviceAddress == VK_TRUE);
 			#endif
 			#ifdef VK_KHR_shader_atomic_int64
-			_supported.shaderAtomicInt64	&= (_deviceInfo.shaderAtomicInt64.shaderBufferInt64Atomics == VK_TRUE);
+			_features.shaderAtomicInt64		&= (_properties.shaderAtomicInt64.shaderBufferInt64Atomics == VK_TRUE);
 			#endif
 
 			VkPhysicalDeviceProperties2	props2		= {};
@@ -1004,51 +1042,51 @@ namespace {
 			props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 			
 			#ifdef VK_NV_mesh_shader
-			if ( _supported.meshShaderNV )
+			if ( _features.meshShaderNV )
 			{
-				*next_props	= &_deviceInfo.meshShaderProperties;
-				next_props	= &_deviceInfo.meshShaderProperties.pNext;
-				_deviceInfo.meshShaderProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
+				*next_props	= &_properties.meshShaderProperties;
+				next_props	= &_properties.meshShaderProperties.pNext;
+				_properties.meshShaderProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
 			}
 			#endif
 			#ifdef VK_NV_shading_rate_image
-			if ( _supported.shadingRateImageNV )
+			if ( _features.shadingRateImageNV )
 			{
-				*next_props	= &_deviceInfo.shadingRateImageProperties;
-				next_props	= &_deviceInfo.shadingRateImageProperties.pNext;
-				_deviceInfo.shadingRateImageProperties.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_PROPERTIES_NV;
+				*next_props	= &_properties.shadingRateImageProperties;
+				next_props	= &_properties.shadingRateImageProperties.pNext;
+				_properties.shadingRateImageProperties.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_PROPERTIES_NV;
 			}
 			#endif
 			#ifdef VK_NV_ray_tracing
-			if ( _supported.rayTracingNV )
+			if ( _features.rayTracingNV )
 			{
-				*next_props	= &_deviceInfo.rayTracingProperties;
-				next_props	= &_deviceInfo.rayTracingProperties.pNext;
-				_deviceInfo.rayTracingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV;
+				*next_props	= &_properties.rayTracingProperties;
+				next_props	= &_properties.rayTracingProperties.pNext;
+				_properties.rayTracingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV;
 			}
 			#endif
 			#ifdef VK_KHR_timeline_semaphore
-			if ( _supported.timelineSemaphore )
+			if ( _features.timelineSemaphore )
 			{
-				*next_props	= &_deviceInfo.timelineSemaphoreProps;
-				next_props	= &_deviceInfo.timelineSemaphoreProps.pNext;
-				_deviceInfo.timelineSemaphoreProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_PROPERTIES;
+				*next_props	= &_properties.timelineSemaphoreProps;
+				next_props	= &_properties.timelineSemaphoreProps.pNext;
+				_properties.timelineSemaphoreProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_PROPERTIES_KHR;
 			}
 			#endif
 			#ifdef VK_KHR_depth_stencil_resolve
-			if ( _supported.depthStencilResolve )
+			if ( _features.depthStencilResolve )
 			{
-				*next_props	= &_deviceInfo.depthStencilResolve;
-				next_props	= &_deviceInfo.depthStencilResolve.pNext;
-				_deviceInfo.depthStencilResolve.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_STENCIL_RESOLVE_PROPERTIES;
+				*next_props	= &_properties.depthStencilResolve;
+				next_props	= &_properties.depthStencilResolve.pNext;
+				_properties.depthStencilResolve.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_STENCIL_RESOLVE_PROPERTIES_KHR;
 			}
 			#endif
 			#ifdef VK_VERSION_1_2
 			if ( _vkVersion >= InstanceVersion{1,2} )
 			{
-				*next_props	= &_deviceInfo.properties120;
-				next_props	= &_deviceInfo.properties120.pNext;
-				_deviceInfo.properties120.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
+				*next_props	= &_properties.properties120;
+				next_props	= &_properties.properties120.pNext;
+				_properties.properties120.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
 			}
 			#endif
 			Unused( next_props );
@@ -1056,15 +1094,15 @@ namespace {
 			vkGetPhysicalDeviceProperties2KHR( GetVkPhysicalDevice(), OUT &props2 );
 		}
 
-		AE_LOGI( "Created vulkan device on GPU: "s << _deviceInfo.properties.deviceName
+		AE_LOGI( "Created vulkan device on GPU: "s << _properties.properties.deviceName
 			<< "\n  version:             " << ToString(_vkVersion.major) << '.' << ToString(_vkVersion.minor)
-			<< "\n  debug_utils:         " << ToString( _supported.debugUtils )
-			<< "\n  mesh_shader:         " << ToString( _supported.meshShaderNV )
-			<< "\n  ray_tracing:         " << ToString( _supported.rayTracingNV )
-			<< "\n  shading_rate_image:  " << ToString( _supported.shadingRateImageNV )
-			<< "\n  descriptor_indexing: " << ToString( _supported.descriptorIndexing )
-			<< "\n  shader_clock:        " << ToString( _supported.shaderClock )
-			<< "\n  buffer address:      " << ToString(  _supported.bufferAddress )
+			<< "\n  debug_utils:         " << ToString( _features.debugUtils )
+			<< "\n  mesh_shader:         " << ToString( _features.meshShaderNV )
+			<< "\n  ray_tracing:         " << ToString( _features.rayTracingNV )
+			<< "\n  shading_rate_image:  " << ToString( _features.shadingRateImageNV )
+			<< "\n  descriptor_indexing: " << ToString( _features.descriptorIndexing )
+			<< "\n  shader_clock:        " << ToString( _features.shaderClock )
+			<< "\n  buffer address:      " << ToString( _features.bufferAddress )
 		);
 
 		return true;
@@ -1590,6 +1628,9 @@ namespace {
 			#ifdef VK_KHR_surface
 				VK_KHR_SURFACE_EXTENSION_NAME,
 			#endif
+			#ifdef VK_KHR_get_surface_capabilities2
+				VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME,
+			#endif
 			#ifdef VK_EXT_debug_utils
 				VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 			#endif
@@ -1609,6 +1650,9 @@ namespace {
 			#ifdef VK_KHR_surface
 				VK_KHR_SURFACE_EXTENSION_NAME,
 			#endif
+			#ifdef VK_KHR_get_surface_capabilities2
+				VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME,
+			#endif
 			#ifdef VK_EXT_debug_utils
 				VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 			#endif
@@ -1625,8 +1669,9 @@ namespace {
 	{
 		static const char *	device_extensions[] =
 		{
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-
+			#ifdef VK_KHR_swapchain
+				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			#endif
 			#ifdef VK_KHR_get_memory_requirements2
 				VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
 			#endif
@@ -1636,6 +1681,15 @@ namespace {
 			#ifdef VK_KHR_dedicated_allocation
 				VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
 			#endif
+			#ifdef VK_KHR_multiview
+				VK_KHR_MULTIVIEW_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_maintenance1
+				VK_KHR_MAINTENANCE1_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_maintenance2
+				VK_KHR_MAINTENANCE2_EXTENSION_NAME,
+			#endif
 			#ifdef VK_KHR_create_renderpass2
 				VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME,
 			#endif
@@ -1644,12 +1698,6 @@ namespace {
 			#endif
 			#ifdef VK_KHR_descriptor_update_template
 				VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME,
-			#endif
-			#ifdef VK_KHR_maintenance1
-				VK_KHR_MAINTENANCE1_EXTENSION_NAME,
-			#endif
-			#ifdef VK_KHR_maintenance2
-				VK_KHR_MAINTENANCE2_EXTENSION_NAME,
 			#endif
 		};
 		return device_extensions;
@@ -1664,8 +1712,9 @@ namespace {
 	{
 		static const char *	device_extensions[] =
 		{
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-
+			#ifdef VK_KHR_swapchain
+				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			#endif
 			#ifdef VK_KHR_create_renderpass2
 				VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME,
 			#endif
@@ -1674,9 +1723,6 @@ namespace {
 			#endif
 			#ifdef VK_KHR_8bit_storage
 				VK_KHR_8BIT_STORAGE_EXTENSION_NAME,
-			#endif
-			#ifdef VK_EXT_conservative_rasterization
-				VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME,
 			#endif
 			#ifdef VK_EXT_sample_locations
 				VK_EXT_SAMPLE_LOCATIONS_EXTENSION_NAME,
@@ -1718,6 +1764,7 @@ namespace {
 				VK_KHR_PERFORMANCE_QUERY_EXTENSION_NAME,
 			#endif
 			#ifdef VK_EXT_filter_cubic
+				VK_IMG_FILTER_CUBIC_EXTENSION_NAME,
 				VK_EXT_FILTER_CUBIC_EXTENSION_NAME,
 			#endif
 			#ifdef VK_KHR_spirv_1_4
@@ -1769,10 +1816,36 @@ namespace {
 	{
 		static const char *	device_extensions[] =
 		{
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-			
+			#ifdef VK_KHR_swapchain
+				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_sample_locations
+				VK_EXT_SAMPLE_LOCATIONS_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_push_descriptor
+				VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_blend_operation_advanced
+				VK_EXT_BLEND_OPERATION_ADVANCED_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_inline_uniform_block
+				VK_EXT_INLINE_UNIFORM_BLOCK_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_memory_budget
+				VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
+			#endif
 			#ifdef VK_KHR_shader_clock
 				VK_KHR_SHADER_CLOCK_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_subgroup_size_control
+				VK_EXT_SUBGROUP_SIZE_CONTROL_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_performance_query
+				VK_KHR_PERFORMANCE_QUERY_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_filter_cubic
+				VK_IMG_FILTER_CUBIC_EXTENSION_NAME,
+				VK_EXT_FILTER_CUBIC_EXTENSION_NAME,
 			#endif
 
 			// Vendor specific extensions

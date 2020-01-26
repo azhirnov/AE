@@ -176,12 +176,12 @@ namespace {
 		// for backward compatibility
 #		ifdef VK_VERSION_1_1
 		// VK_KHR_maintenance1
-			_var_vkTrimCommandPoolKHR	= _var_vkTrimCommandPool;
+			table._var_vkTrimCommandPoolKHR	= table._var_vkTrimCommandPool;
 #		endif
 #		ifdef VK_VERSION_1_2
 		// VK_KHR_draw_indirect_count
-			_var_vkCmdDrawIndirectCountKHR			= _var_vkCmdDrawIndirectCount;
-			_var_vkCmdDrawIndexedIndirectCountKHR	= _var_vkCmdDrawIndexedIndirectCountKHR;
+			table._var_vkCmdDrawIndirectCountKHR		= table._var_vkCmdDrawIndirectCount;
+			table._var_vkCmdDrawIndexedIndirectCountKHR	= table._var_vkCmdDrawIndexedIndirectCountKHR;
 
 #		endif
 	}

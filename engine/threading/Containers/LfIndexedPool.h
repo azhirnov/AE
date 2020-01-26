@@ -65,7 +65,7 @@ namespace AE::Threading
 		using BitfieldArray_t	= StaticArray< Atomic<Bitfield_t>, AtomicsCount * MaxChunks >;
 		
 		using ValueChunk_t		= StaticArray< Value_t, ChunkSize >;
-		using ValueChunks_t		= StaticArray< Atomic<ValueChunk_t *>, MaxChunks >;
+		using ValueChunks_t		= StaticArray< Atomic< ValueChunk_t *>, MaxChunks >;
 
 		STATIC_ASSERT( BitfieldArray_t::value_type::is_always_lock_free );
 		STATIC_ASSERT( ValueChunks_t::value_type::is_always_lock_free );

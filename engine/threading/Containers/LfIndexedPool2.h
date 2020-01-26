@@ -73,9 +73,10 @@ namespace AE::Threading
 		using ChunkData_t		= StaticArray< Atomic< ValueChunk_t *>, MaxChunks >;
 		using TopLevelBits_t	= Conditional< (MaxChunks <= 32), uint, uint64_t >;
 
-		STATIC_ASSERT( Atomic< LowLevelBits_t >::is_always_lock_free );
-		STATIC_ASSERT( Atomic< HiLevelBits_t >::is_always_lock_free );
-		STATIC_ASSERT( Atomic< ValueChunk_t *>::is_always_lock_free );
+		STATIC_ASSERT( LowLevels_t::value_type::is_always_lock_free );
+		STATIC_ASSERT( decltype(ChunkInfo::hiLevel)::is_always_lock_free );
+		STATIC_ASSERT( ChunkData_t::value_type::is_always_lock_free );
+		STATIC_ASSERT( Atomic< TopLevelBits_t >::is_always_lock_free );
 		
 		static constexpr HiLevelBits_t	MaxHighLevel		= (HiLevelBits_t(1) << HiLevel_Count) - 1;
 		static constexpr HiLevelBits_t	InitialHighLevel	= ~MaxHighLevel;

@@ -37,7 +37,11 @@ namespace AE::Threading
 	private:
 		using ChunkBits_t	= Atomic< Conditional< (MaxChunks > 32), uint64_t, uint32_t >>;
 		using ChunkData_t	= StaticArray< Atomic<void *>, MaxChunks >;
-		using ChunkOffset_t	= StaticArray< Atomic<BytesU>, MaxChunks >;
+		using ChunkOffset_t	= StaticArray< Atomic<size_t>, MaxChunks >;
+		
+		STATIC_ASSERT( ChunkBits_t::is_always_lock_free );
+		STATIC_ASSERT( ChunkData_t::value_type::is_always_lock_free );
+		STATIC_ASSERT( ChunkOffset_t::value_type::is_always_lock_free );
 
 
 	// variables
@@ -58,7 +62,7 @@ namespace AE::Threading
 		{
 			for (size_t i = 0; i < MaxChunks; ++i) {
 				_chunks[i].store( null, EMemoryOrder::Relaxed );
-				_offsets[i].store( 0_b, EMemoryOrder::Relaxed );
+				_offsets[i].store( 0, EMemoryOrder::Relaxed );
 			}
 			_lockedForAlloc.store( 0, EMemoryOrder::Relaxed );
 			ThreadFence( EMemoryOrder::Release );
@@ -92,14 +96,14 @@ namespace AE::Threading
 				if ( void* ptr = _chunks[i].load( EMemoryOrder::Relaxed ))
 				{
 					// find available space
-					for (BytesU off = _offsets[i].load( EMemoryOrder::Relaxed );;)
+					for (size_t off = _offsets[i].load( EMemoryOrder::Relaxed );;)
 					{
-						BytesU	aligned_off = AlignToLarger( size_t(ptr) + off, align ) - size_t(ptr);
+						BytesU	aligned_off = AlignToLarger( size_t(ptr) + BytesU{off}, align ) - size_t(ptr);
 						
 						if ( size > (_capacity - aligned_off) )
 							break;
 
-						if ( _offsets[i].compare_exchange_weak( INOUT off, aligned_off + size, EMemoryOrder::Relaxed ))
+						if ( _offsets[i].compare_exchange_weak( INOUT off, size_t(aligned_off + size), EMemoryOrder::Relaxed ))
 							return ptr + aligned_off;
 					}
 				}

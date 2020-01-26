@@ -22,7 +22,9 @@ extern int Test_Platform (IApplication &app, IWindow &wnd)
 
 	UniquePtr<IApplication::IAppListener>  AE_OnAppCreated ()
 	{
-		Test_GLFW();
+		#ifndef AE_CI_BUILD
+			Test_GLFW();
+		#endif
 
 		AE_LOGI( "Tests.Platform finished" );
 		std::exit(0);

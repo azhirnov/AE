@@ -259,7 +259,7 @@ namespace {
 		{
 			VkPipelineStageFlagBits	rt_flags =
 				#ifdef VK_NV_ray_tracing
-					_device.IsRayTracingEnabled() ? VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV | VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV : VkPipelineStageFlagBits(0);
+					_device.GetFeatures().rayTracingNV ? VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV | VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV : VkPipelineStageFlagBits(0);
 				#else
 					VkPipelineStageFlagBits(0);
 				#endif

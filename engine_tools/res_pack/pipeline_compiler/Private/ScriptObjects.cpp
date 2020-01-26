@@ -246,8 +246,8 @@ namespace {
 			dst->second.uid   = ppln_storage.AddDescriptorSetLayout( std::move(_dsLayouts[i]) );
 		}
 
-		//_dsLayouts.fill({});
-		//_dsLayoutNames.fill({});
+		_dsLayouts.fill({});
+		_dsLayoutNames.fill({});
 
 		return ppln_storage.AddPipelineLayout( std::move(desc) );
 	}

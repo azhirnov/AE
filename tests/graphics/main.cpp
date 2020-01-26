@@ -68,7 +68,7 @@ extern int Test_Platform (IApplication &app, IWindow &wnd)
 		void OnStart (IApplication &app) override
 		{
 			UnitTest_GfxResourceID();
-			//Test_VulkanDevice();	// temp
+			Test_VulkanDevice();
 
 			#ifdef AE_CI_BUILD
 				app.Terminate();

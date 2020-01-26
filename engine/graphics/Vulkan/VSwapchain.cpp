@@ -121,6 +121,7 @@ namespace AE::Graphics
 		#ifdef PLATFORM_WINDOWS
 			CHECK_ERR( _device.GetVkInstance() and window.hinstance and window.hwnd );
 			CHECK_ERR( not _vkSurface );
+			CHECK_ERR( _device.GetFeatures().surface );
 
 			VkWin32SurfaceCreateInfoKHR		surface_info = {};
 
@@ -311,6 +312,7 @@ namespace AE::Graphics
 										StringView							dbgName)
 	{
 		CHECK_ERR( _device.GetVkPhysicalDevice() and _device.GetVkDevice() and _vkSurface );
+		CHECK_ERR( _device.GetFeatures().swapchain );
 		CHECK_ERR( not IsImageAcquired() );
 
 		VkSurfaceCapabilitiesKHR	surf_caps;
@@ -597,6 +599,9 @@ namespace AE::Graphics
 		if ( presentMode == VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR	or
 			 presentMode == VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR )
 		{
+			if ( not _device.GetFeatures().surfaceCaps2 )
+				return false;
+			
 			VkPhysicalDeviceSurfaceInfo2KHR	surf_info = {};
 			surf_info.sType		= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR;
 			surf_info.surface	= _vkSurface;
@@ -605,8 +610,8 @@ namespace AE::Graphics
 			VK_CALL( vkGetPhysicalDeviceSurfaceCapabilities2KHR( _device.GetVkPhysicalDevice(), &surf_info, OUT &surf_caps2 ) );
 
 			for (VkBaseInStructure const *iter = reinterpret_cast<VkBaseInStructure const *>(&surf_caps2);
-				 iter != null;
-				 iter = iter->pNext)
+					iter != null;
+					iter = iter->pNext)
 			{
 				if ( iter->sType == VK_STRUCTURE_TYPE_SHARED_PRESENT_SURFACE_CAPABILITIES_KHR )
 				{
@@ -617,7 +622,6 @@ namespace AE::Graphics
 		}
 		else
 		{
-			//RETURN_ERR( "unsupported presentMode, can't choose imageUsage!" );
 			return false;
 		}
 

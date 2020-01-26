@@ -62,11 +62,11 @@ namespace AE::Graphics
 			VK1_CASE_ERR( VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT )
 			#endif
 
-			#ifdef VK_EXT_buffer_device_address
-			VK1_CASE_ERR( VK_ERROR_INVALID_DEVICE_ADDRESS_KHR )
+			#ifdef VK_KHR_buffer_device_address
+			VK1_CASE_ERR( VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS_KHR )
 			#endif
 
-			#ifdef VK_EXT_full_screen_exclusive
+			#ifdef VK_VERSION_1_1
 			VK1_CASE_ERR( VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT )
 			#endif
 

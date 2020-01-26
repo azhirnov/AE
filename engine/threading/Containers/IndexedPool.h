@@ -48,6 +48,8 @@ namespace AE::Threading
 		using IndexChunks_t		= StaticArray< IndexChunk*, MaxChunks >;
 		using ValueChunks_t		= StaticArray< Atomic<ValueChunk *>, MaxChunks >;
 
+		STATIC_ASSERT( ValueChunks_t::value_type::is_always_lock_free );
+
 
 	// variables
 	private:
