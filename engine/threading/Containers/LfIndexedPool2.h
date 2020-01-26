@@ -1,4 +1,14 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+/*
+	This lock-free container has some limitations:
+	- write access by same index must be externally synchronized.
+	- read access is safe after flush & invalidation (synchronization).
+	- Release() must be externally synchronized with all other read and write accesses.
+	- Unassign() must be externally synchronized with all other read and write accesses to the 'index'.
+	- custom allocator must be thread safe (use mutex or lock-free algorithms).
+
+	This lock-free container designed for large number of data.
+*/
 
 #pragma once
 
@@ -38,13 +48,13 @@ namespace AE::Threading
 		using Value_t			= ValueType;
 		using Allocator_t		= AllocatorType;
 
-	//private:
+	private:
 		static constexpr size_t	ChunkSize		= ChunkSize_v;
 		static constexpr size_t	MaxChunks		= MaxChunks_v;
 		static constexpr size_t	LowLevel_Count	= (ChunkSize <= 32 ? 32 : 64);
 		static constexpr size_t	HiLevel_Count	= Max( 1u, (ChunkSize + LowLevel_Count - 1) / LowLevel_Count );
-		static constexpr uint	TopWaitCount	= 2;
-		static constexpr uint	HiWaitCount		= 2;
+		static constexpr uint	TopWaitCount	= 8;
+		static constexpr uint	HighWaitCount	= 8;
 
 		using LowLevelBits_t	= Conditional< (LowLevel_Count <= 32), uint, uint64_t >;
 		using LowLevels_t		= StaticArray< Atomic< LowLevelBits_t >, HiLevel_Count >;
@@ -157,6 +167,8 @@ namespace AE::Threading
 /*
 =================================================
 	Release
+----
+	Must be externally synchronized
 =================================================
 */
 	template <typename V, typename I, size_t CS, size_t MC, typename A>
@@ -217,17 +229,15 @@ namespace AE::Threading
 	{
 		for (uint j = 0; j < TopWaitCount; ++j)
 		{
-			TopLevelBits_t	available = _topLevel.load( EMemoryOrder::Relaxed );
+			TopLevelBits_t	available	= _topLevel.load( EMemoryOrder::Relaxed );
+			int				idx			= BitScanForward( ~available );
 
-			for (int i = BitScanForward( ~available ); i >= 0;)
+			if ( idx >= 0 )
 			{
-				ASSERT( i < _chunkInfo.size() );
+				ASSERT( idx < _chunkInfo.size() );
 
-				if ( _AssignInChunk( OUT outIndex, i, ctor ))
+				if ( _AssignInChunk( OUT outIndex, idx, ctor ))
 					return true;
-
-				available |= (TopLevelBits_t(1) << i);
-				i = BitScanForward( ~available );
 			}
 		}
 		return false;
@@ -265,19 +275,17 @@ namespace AE::Threading
 		}
 			
 		// find available index
-		for (uint j = 0; j < HiWaitCount; ++j)
+		for (uint j = 0; j < HighWaitCount; ++j)
 		{
 			HiLevelBits_t	available	= info.hiLevel.load( EMemoryOrder::Relaxed );
-			
-			for (int i = BitScanForward( ~available ); i >= 0;)
+			int				idx			= BitScanForward( ~available );
+
+			if ( idx >= 0 )
 			{
-				ASSERT( i < info.lowLevel.size() );
+				ASSERT( idx < info.lowLevel.size() );
 
-				if ( _AssignInLowLevel( OUT outIndex, chunkIndex, i, *data, ctor ))
+				if ( _AssignInLowLevel( OUT outIndex, chunkIndex, idx, *data, ctor ))
 					return true;
-
-				available |= (HiLevelBits_t(1) << i);
-				i = BitScanForward( ~available );
 			}
 		}
 		return false;
@@ -416,7 +424,7 @@ namespace AE::Threading
 =================================================
 	operator []
 ----
-	you must invalidate cache reading data
+	you must invalidate cache before reading data
 	and flush cache after writing
 =================================================
 */

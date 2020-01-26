@@ -14,6 +14,8 @@
 	   Usually you will use mutex or other default sync primitive that automaticaly updates cache when share 'index' with other threads.
 	   If you use lock-free algorithm use 'release' memory order after writing to 'index' and use 'acquire' memory order before reading from 'index'.
 	4. Wait until all threads finish reading from 'index' then you may call Unassign( index ).
+	
+	This lock-free container designed for small number of data.
 */
 
 #pragma once
@@ -36,7 +38,7 @@ namespace AE::Threading
 	template <typename ValueType,
 			  typename IndexType,
 			  size_t ChunkSize = 32,
-			  size_t MaxChunks = 16,
+			  size_t MaxChunks = 8,
 			  typename AllocatorType = UntypedAlignedAllocator
 			 >
 	struct LfIndexedPool final
@@ -112,7 +114,7 @@ namespace AE::Threading
 		// Must be externally synchronized.
 		// It is unsafe to call destructor for a value that can be used in another thread.
 		template <typename FN>
-		void Release (FN &&dtor)
+		void  Release (FN &&dtor)
 		{
 			// invalidate cache 
 			ThreadFence( EMemoryOrder::Acquire );
@@ -147,6 +149,38 @@ namespace AE::Threading
 		void Release ()
 		{
 			return Release([] (Value_t& value) { value.~Value_t(); });
+		}
+
+		
+		// Must be externally synchronized.
+		// Visit each assigned element and then unassign.
+		template <typename FN>
+		void  UnassignAll (FN &&visitor)
+		{
+			// invalidate cache 
+			ThreadFence( EMemoryOrder::Acquire );
+			
+			for (size_t i = 0; i < MaxChunks; ++i)
+			{
+				ValueChunk_t*	chunk = _values[i].load( null, EMemoryOrder::Relaxed );
+				
+				if ( not chunk )
+					continue;
+				
+				for (size_t k = 0, j = i * AtomicsCount; k < AtomicsCount; ++k, ++j)
+				{
+					Bitfield_t	assigned = _assignedBits[j].exchange( 0, EMemoryOrder::Relaxed );
+					
+					for (size_t c = 0; c < AtomicSize; ++c)
+					{
+						if ( not (assigned & (Bitfield_t(1) << c)) )
+							visitor( (*chunk)[c + k*AtomicSize] );
+					}
+				}
+			}
+
+			// flush cache 
+			ThreadFence( EMemoryOrder::Release );
 		}
 
 

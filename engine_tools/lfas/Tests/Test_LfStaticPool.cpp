@@ -16,7 +16,7 @@ namespace
 	
 	enum class EAction
 	{
-		Append,
+		Put,
 		Extract,
 	};
 
@@ -32,7 +32,7 @@ namespace
 		{
 			struct PerThread
 			{
-				EAction		act		= EAction::Append;
+				EAction		act		= EAction::Put;
 				size_t		count	= 32;
 			};
 
@@ -59,11 +59,11 @@ namespace
 				BEGIN_ENUM_CHECKS();
 				switch ( pt->act )
 				{
-					case EAction::Append :
+					case EAction::Put :
 					{
 						for (size_t i = 0; i < pt->count; ++i)
 						{
-							if ( not g->pool.Append( TS{T(int(i))} ))
+							if ( not g->pool.Put( TS{T(int(i))} ))
 								break;
 						}
 						vm.CheckForUncommitedChanges();
@@ -84,7 +84,7 @@ namespace
 						}
 						vm.CheckForUncommitedChanges();
 
-						pt->act = EAction::Append;
+						pt->act = EAction::Put;
 						break;
 					}
 				}

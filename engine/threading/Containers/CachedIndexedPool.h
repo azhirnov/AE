@@ -32,7 +32,7 @@ namespace AE::Threading
 
 		using Pool_t		= IndexedPool< Value_t, IndexType, ChunkSize, MaxChunks, AllocatorType >;
 		using StdAlloc_t	= typename AllocatorType::template StdAllocator_t<Pair< Value_t const* const, Index_t >>;
-		using Cache_t		= std::unordered_map< Value_t const*, Index_t, THash, TEqual, StdAlloc_t >;
+		using Cache_t		= std::unordered_map< Value_t const*, Index_t, THash, TEqual/*, StdAlloc_t*/ >;
 
 
 	// variables
@@ -64,7 +64,8 @@ namespace AE::Threading
 
 		void  Swap (Self &other)
 		{
-			// TODO: use '_cacheGuard'
+			std::scoped_lock	lock{ _cacheGuard, other._cacheGuard };
+
 			_pool.Swap( other._pool );
 			_cache.swap( other._cache );
 		}

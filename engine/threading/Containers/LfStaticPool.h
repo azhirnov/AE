@@ -1,8 +1,8 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	This class uses lock-free algorithm to put and exteract values without any order (but not really in random order).
-	You can use 'Append', 'Extract' methods without any syncs.
-	'Clear' method must be synchronized with 'Append' and 'Extract' methods.
+	You can use 'Put', 'Extract' methods without any syncs.
+	'Clear' method must be synchronized with 'Put' and 'Extract' methods.
 */
 
 #pragma once
@@ -74,8 +74,14 @@ namespace AE::Threading
 		Self&  operator = (const Self &) = delete;
 		Self&  operator = (Self &&) = delete;
 
-
+		
 		void Clear ()
+		{
+			return Clear( [](T &value) { value.~T(); });
+		}
+
+		template <typename FN>
+		void Clear (FN &&fn)
 		{
 			// invalidate cache before calling value destructor
 			ThreadFence( EMemoryOrder::Acquire );
@@ -87,7 +93,7 @@ namespace AE::Threading
 
 				for (int j = BitScanForward( bits ); j >= 0;)
 				{
-					_values[ Index_t(j) | (Index_t(i) * Level2_Count) ].~T();
+					fn( _values[ Index_t(j) | (Index_t(i) * Level2_Count) ] );
 
 					bits ^= (Bitfield_t(1) << j);
 					j	  = BitScanForward( bits );
@@ -105,7 +111,8 @@ namespace AE::Threading
 		}
 
 
-		ND_ bool  Append (Value_t&& value)
+		template <typename V>
+		ND_ bool  Put (V&& value)
 		{
 			for (uint k = 0; k < WaitCount; ++k)
 			{
@@ -123,7 +130,7 @@ namespace AE::Threading
 							uint	idx = Index_t(j) | (Index_t(i) * Level2_Count);
 
 							ASSERT( idx < Count );
-							PlacementNew<T>( &_values[idx], std::move(value) );
+							PlacementNew<T>( &_values[idx], std::forward<V>(value) );
 							
 							// flush cache after writing and set availability bit
 							Bitfield_t	old_available = _availableBits[i].fetch_xor( mask, EMemoryOrder::Release );	// 1 -> 0
@@ -140,15 +147,9 @@ namespace AE::Threading
 			}
 			return false;
 		}
-		
-		
-		ND_ bool  Append (const Value_t &value)
-		{
-			return Append( Value_t{value} );
-		}
 
 
-		bool Extract (OUT Value_t &outValue)
+		bool  Extract (OUT Value_t &outValue)
 		{
 			for (uint k = 0; k < WaitCount; ++k)
 			{

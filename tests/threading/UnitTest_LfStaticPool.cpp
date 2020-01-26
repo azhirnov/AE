@@ -16,7 +16,7 @@ namespace
 
 			for (uint i = 0; i < 20; ++i)
 			{
-				TEST( storage.Append( T(i) ));
+				TEST( storage.Put( T(i) ));
 			}
 		
 			BitSet<20>	bits{ ~0u };
@@ -50,9 +50,9 @@ namespace
 			for (uint i = 0; i < 5*64; ++i)
 			{
 				if ( i < 4*64 )
-					TEST( storage.Append( T(0) ))
+					TEST( storage.Put( T(0) ))
 				else
-					TEST( not storage.Append( T(1) ));
+					TEST( not storage.Put( T(1) ));
 			}
 
 			for (uint i = 0; i < 5*64; ++i)
@@ -80,9 +80,9 @@ namespace
 			for (uint i = 0; i < 5*64; ++i)
 			{
 				if ( i < 4*64 )
-					TEST( storage.Append( T(0) ))
+					TEST( storage.Put( T(0) ))
 				else
-					TEST( not storage.Append( T(1) ));
+					TEST( not storage.Put( T(1) ));
 			}
 
 			for (uint i = 0; i < 64; ++i)

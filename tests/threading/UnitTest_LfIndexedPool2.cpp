@@ -15,9 +15,6 @@ namespace
 		{
 			Pool_t	pool;
 
-			STATIC_ASSERT( Pool_t::LowLevel_Count == 64 );
-			STATIC_ASSERT( Pool_t::HiLevel_Count == 8 );
-
 			for (uint i = 0; i < 8*64*8*10; ++i)
 			{
 				uint	index;
