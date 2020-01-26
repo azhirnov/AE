@@ -22,19 +22,19 @@ namespace AE::Graphics
 	StencilFaceFlags
 =================================================
 */
-	ND_ inline VkStencilFaceFlags  VEnumCast (EStencilFace value)
+	ND_ inline VkStencilFaceFlagBits  VEnumCast (EStencilFace value)
 	{
 		BEGIN_ENUM_CHECKS();
 		switch ( value )
 		{
 			case EStencilFace::Front :			return VK_STENCIL_FACE_FRONT_BIT;
 			case EStencilFace::Back :			return VK_STENCIL_FACE_BACK_BIT;
-			case EStencilFace::FrontAndBack :	return VK_STENCIL_FACE_FRONT_AND_BACK;
+			case EStencilFace::FrontAndBack :	return VK_STENCIL_FACE_FRONT_BIT | VK_STENCIL_FACE_BACK_BIT;
 			case EStencilFace::Unknown :
 			default :							break;
 		}
 		END_ENUM_CHECKS();
-		RETURN_ERR( "unknown stencil face", VK_STENCIL_FACE_FLAG_BITS_MAX_ENUM );
+		RETURN_ERR( "unknown stencil face", VkStencilFaceFlagBits(0) );
 	}
 	
 /*
@@ -273,15 +273,29 @@ namespace AE::Graphics
 			case EShader::Fragment :		return VK_SHADER_STAGE_FRAGMENT_BIT;
 			case EShader::Compute :			return VK_SHADER_STAGE_COMPUTE_BIT;
 				
+			#ifdef VK_NV_mesh_shader
 			case EShader::MeshTask :		return VK_SHADER_STAGE_TASK_BIT_NV;
 			case EShader::Mesh :			return VK_SHADER_STAGE_MESH_BIT_NV;
+			#else
+			case EShader::MeshTask :
+			case EShader::Mesh :			break;
+			#endif
 				
+			#ifdef VK_NV_ray_tracing
 			case EShader::RayGen :			return VK_SHADER_STAGE_RAYGEN_BIT_NV;
 			case EShader::RayAnyHit :		return VK_SHADER_STAGE_ANY_HIT_BIT_NV;
 			case EShader::RayClosestHit :	return VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
 			case EShader::RayMiss :			return VK_SHADER_STAGE_MISS_BIT_NV;
 			case EShader::RayIntersection :	return VK_SHADER_STAGE_INTERSECTION_BIT_NV;
 			case EShader::RayCallable :		return VK_SHADER_STAGE_CALLABLE_BIT_NV;
+			#else
+			case EShader::RayGen :
+			case EShader::RayAnyHit :
+			case EShader::RayClosestHit :
+			case EShader::RayMiss :
+			case EShader::RayIntersection :
+			case EShader::RayCallable :		break;
+			#endif
 
 			case EShader::Unknown :
 			case EShader::_Count :			break;
@@ -295,7 +309,7 @@ namespace AE::Graphics
 	ShaderStages
 =================================================
 */
-	ND_ inline VkShaderStageFlags  VEnumCast (EShaderStages values)
+	ND_ inline VkShaderStageFlagBits  VEnumCast (EShaderStages values)
 	{
 		if ( values == EShaderStages::AllGraphics )
 			return VK_SHADER_STAGE_ALL_GRAPHICS;
@@ -303,7 +317,7 @@ namespace AE::Graphics
 		if ( values == EShaderStages::All )
 			return VK_SHADER_STAGE_ALL;
 
-		VkShaderStageFlags	flags = 0;
+		VkShaderStageFlagBits	flags = VkShaderStageFlagBits(0);
 		for (EShaderStages t = EShaderStages(1); t <= values; t = EShaderStages(uint(t) << 1)) 
 		{
 			if ( not EnumEq( values, t ))
@@ -318,20 +332,37 @@ namespace AE::Graphics
 				case EShaderStages::Geometry :			flags |= VK_SHADER_STAGE_GEOMETRY_BIT;					break;
 				case EShaderStages::Fragment :			flags |= VK_SHADER_STAGE_FRAGMENT_BIT;					break;
 				case EShaderStages::Compute :			flags |= VK_SHADER_STAGE_COMPUTE_BIT;					break;
+				
+				#ifdef VK_NV_mesh_shader
 				case EShaderStages::MeshTask :			flags |= VK_SHADER_STAGE_TASK_BIT_NV;					break;
 				case EShaderStages::Mesh :				flags |= VK_SHADER_STAGE_MESH_BIT_NV;					break;
+				#else
+				case EShaderStages::MeshTask :
+				case EShaderStages::Mesh :				RETURN_ERR( "mesh shaders are not supported!", VkShaderStageFlagBits(0) );
+				#endif
+				
+				#ifdef VK_NV_ray_tracing
 				case EShaderStages::RayGen :			flags |= VK_SHADER_STAGE_RAYGEN_BIT_NV;					break;
 				case EShaderStages::RayAnyHit :			flags |= VK_SHADER_STAGE_ANY_HIT_BIT_NV;				break;
 				case EShaderStages::RayClosestHit :		flags |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;			break;
 				case EShaderStages::RayMiss :			flags |= VK_SHADER_STAGE_MISS_BIT_NV;					break;
 				case EShaderStages::RayIntersection :	flags |= VK_SHADER_STAGE_INTERSECTION_BIT_NV;			break;
 				case EShaderStages::RayCallable :		flags |= VK_SHADER_STAGE_CALLABLE_BIT_NV;				break;
+				#else
+				case EShaderStages::RayGen :
+				case EShaderStages::RayAnyHit :
+				case EShaderStages::RayClosestHit :
+				case EShaderStages::RayMiss :
+				case EShaderStages::RayIntersection :
+				case EShaderStages::RayCallable :		RETURN_ERR( "ray tracing shaders are not supported!", VkShaderStageFlagBits(0) );
+				#endif
+
 				case EShaderStages::_Last :
 				case EShaderStages::Unknown :
 				case EShaderStages::AllGraphics :
 				case EShaderStages::AllRayTracing :
 				case EShaderStages::All :				// to shutup warnings	
-				default :								RETURN_ERR( "unknown shader type!", VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM );
+				default :								RETURN_ERR( "unknown shader type!", VkShaderStageFlagBits(0) );
 			}
 			END_ENUM_CHECKS();
 		}
@@ -353,7 +384,13 @@ namespace AE::Graphics
 			case EPipelineDynamicState::StencilCompareMask:	return VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK;
 			case EPipelineDynamicState::StencilWriteMask :	return VK_DYNAMIC_STATE_STENCIL_WRITE_MASK;
 			case EPipelineDynamicState::StencilReference :	return VK_DYNAMIC_STATE_STENCIL_REFERENCE;
+
+			#ifdef VK_NV_shading_rate_image
 			case EPipelineDynamicState::ShadingRatePalette:	return VK_DYNAMIC_STATE_VIEWPORT_SHADING_RATE_PALETTE_NV;
+			#else
+			case EPipelineDynamicState::ShadingRatePalette:	break;
+			#endif
+
 			case EPipelineDynamicState::Unknown :
 			case EPipelineDynamicState::All :
 			case EPipelineDynamicState::Default :
@@ -491,9 +528,9 @@ namespace AE::Graphics
 	ImageCreateFlags
 =================================================
 */
-	ND_ inline VkImageCreateFlags  VEnumCast (EImageFlags values)
+	ND_ inline VkImageCreateFlagBits  VEnumCast (EImageFlags values)
 	{
-		VkImageCreateFlags	result = 0;
+		VkImageCreateFlagBits	result = VkImageCreateFlagBits(0);
 
 		for (EImageFlags t = EImageFlags(1); t <= values; t = EImageFlags(uint(t) << 1)) 
 		{
@@ -506,7 +543,7 @@ namespace AE::Graphics
 				case EImageFlags::CubeCompatibple :		result |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;	break;
 				case EImageFlags::_Last :
 				case EImageFlags::Unknown :
-				default :								RETURN_ERR( "unknown image flag", VK_IMAGE_CREATE_FLAG_BITS_MAX_ENUM );
+				default :								RETURN_ERR( "unknown image flag", VkImageCreateFlagBits(0) );
 			}
 			END_ENUM_CHECKS();
 		}
@@ -580,8 +617,19 @@ namespace AE::Graphics
 				case EImageUsage::DepthStencilAttachment	: flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;	break;
 				case EImageUsage::TransientAttachment		: flags |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;		break;
 				case EImageUsage::InputAttachment			: flags |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;			break;
+				
+				#ifdef VK_NV_shading_rate_image
 				case EImageUsage::ShadingRate				: flags |= VK_IMAGE_USAGE_SHADING_RATE_IMAGE_BIT_NV;	break;
+				#else
+				case EImageUsage::ShadingRate				: RETURN_ERR( "shading rate image is not supported", VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM );
+				#endif
+
+				#ifdef VK_EXT_fragment_density_map
 				case EImageUsage::FragmentDensityMap		: flags |= VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT;	break;
+				#else
+				case EImageUsage::FragmentDensityMap		: RETURN_ERR( "fragment density is not supported", VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM );
+				#endif
+
 				case EImageUsage::_Last						:
 				case EImageUsage::Unknown					:
 				case EImageUsage::Transfer					:
@@ -598,9 +646,9 @@ namespace AE::Graphics
 	ImageAspectFlags
 =================================================
 */
-	ND_ inline VkImageAspectFlags  VEnumCast (EImageAspect values)
+	ND_ inline VkImageAspectFlagBits  VEnumCast (EImageAspect values)
 	{
-		VkImageAspectFlags	flags = 0;
+		VkImageAspectFlagBits	flags = VkImageAspectFlagBits(0);
 		
 		for (EImageAspect t = EImageAspect(1); t <= values; t = EImageAspect(uint(t) << 1)) 
 		{
@@ -618,7 +666,7 @@ namespace AE::Graphics
 				case EImageAspect::Auto			:
 				case EImageAspect::DepthStencil	:
 				case EImageAspect::Unknown		: // to shutup warnings
-				default							: RETURN_ERR( "invalid image aspect type", VK_IMAGE_ASPECT_FLAG_BITS_MAX_ENUM );
+				default							: RETURN_ERR( "invalid image aspect type", VkImageAspectFlagBits(0) );
 			}
 			END_ENUM_CHECKS();
 		}
@@ -678,13 +726,24 @@ namespace AE::Graphics
 				case EBufferUsage::Index		:	result |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;					break;
 				case EBufferUsage::Vertex		:	result |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;				break;
 				case EBufferUsage::Indirect		:	result |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;				break;
+					
+				#ifdef VK_NV_ray_tracing
 				case EBufferUsage::RayTracing	:	result |= VK_BUFFER_USAGE_RAY_TRACING_BIT_NV;				break;
-				case EBufferUsage::ShaderAddress:	result |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_EXT;	break;
+				#else
+				case EBufferUsage::RayTracing	:	RETURN_ERR( "ray tracing is not supported", VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM );
+				#endif
+
+				#ifdef VK_KHR_buffer_device_address
+				case EBufferUsage::ShaderAddress:	result |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;	break;
+				#else
+				case EBufferUsage::ShaderAddress:	RETURN_ERR( "buffer address is not supported", VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM );
+				#endif
+
 				case EBufferUsage::_Last		:
 				case EBufferUsage::Transfer		:
 				case EBufferUsage::Unknown		:
 				case EBufferUsage::All			:	// to shutup warnings
-				default							:	RETURN_ERR( "invalid buffer usage", 0 );
+				default							:	RETURN_ERR( "invalid buffer usage", VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM );
 			}
 			END_ENUM_CHECKS();
 		}
@@ -831,7 +890,7 @@ namespace AE::Graphics
 	EResourceState_ToPipelineStages
 =================================================
 */
-	ND_ inline VkPipelineStageFlags  EResourceState_ToPipelineStages (EResourceState value)
+	ND_ inline VkPipelineStageFlagBits  EResourceState_ToPipelineStages (EResourceState value)
 	{
 		switch ( value & EResourceState::_AccessMask )
 		{								  
@@ -846,36 +905,46 @@ namespace AE::Graphics
 			case EResourceState::_Access_VertexBuffer :			return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 			case EResourceState::_Access_ConditionalRendering :	return VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
 			case EResourceState::_Access_CommandProcess :		return VK_PIPELINE_STAGE_COMMAND_PROCESS_BIT_NVX;
+
+			#ifdef VK_NV_shading_rate_image
 			case EResourceState::_Access_ShadingRateImage :		return VK_PIPELINE_STAGE_SHADING_RATE_IMAGE_BIT_NV;
+			#endif
+			
+			#ifdef VK_NV_ray_tracing
 			case EResourceState::_Access_BuildRayTracingAS :
 			case EResourceState::_Access_RTASBuildingBuffer :	return VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV;
+			#endif
 
 			case EResourceState::_Access_ShaderStorage :
 			case EResourceState::_Access_Uniform :
 			case EResourceState::_Access_ShaderSample : {
 				ASSERT( EnumAny( value, EResourceState::_ShaderMask ));
-				VkPipelineStageFlags	result = 0;
+				VkPipelineStageFlagBits		result = VkPipelineStageFlagBits(0);
 				if ( EnumEq( value, EResourceState::_VertexShader ) )			result |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
 				if ( EnumEq( value, EResourceState::_TessControlShader ) )		result |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
 				if ( EnumEq( value, EResourceState::_TessEvaluationShader ) )	result |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
 				if ( EnumEq( value, EResourceState::_GeometryShader ) )			result |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
 				if ( EnumEq( value, EResourceState::_FragmentShader ) )			result |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 				if ( EnumEq( value, EResourceState::_ComputeShader ) )			result |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+				#ifdef VK_NV_mesh_shader
 				if ( EnumEq( value, EResourceState::_MeshTaskShader ) )			result |= VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV;
 				if ( EnumEq( value, EResourceState::_MeshShader ) )				result |= VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV;
+				#endif
+				#ifdef VK_NV_ray_tracing
 				if ( EnumEq( value, EResourceState::_RayTracingShader ) )		result |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV;
+				#endif
 				return result;
 			}
 
 			case EResourceState::_Access_DepthStencilAttachment : {
 				ASSERT( EnumAny( value, EResourceState::EarlyFragmentTests | EResourceState::LateFragmentTests ));
-				VkPipelineStageFlags	result = 0;
+				VkPipelineStageFlagBits		result = VkPipelineStageFlagBits(0);
 				if ( EnumEq( value, EResourceState::EarlyFragmentTests ) )		result |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 				if ( EnumEq( value, EResourceState::LateFragmentTests ) )		result |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 				return result;
 			}
 		}
-		RETURN_ERR( "unknown resource state!" );
+		RETURN_ERR( "unknown resource state!", VkPipelineStageFlagBits(0) );
 	}
 	
 /*
@@ -883,11 +952,11 @@ namespace AE::Graphics
 	EResourceState_ToAccess
 =================================================
 */
-	ND_ inline VkAccessFlags  EResourceState_ToAccess (EResourceState value)
+	ND_ inline VkAccessFlagBits  EResourceState_ToAccess (EResourceState value)
 	{
 		switch ( value & EResourceState::_StateMask )
 		{
-			case EResourceState::Unknown :							return 0;
+			case EResourceState::Unknown :							return VkAccessFlagBits(0);
 			case EResourceState::UniformRead :						return VK_ACCESS_UNIFORM_READ_BIT;
 			case EResourceState::ShaderSample :
 			case EResourceState::ShaderRead :						return VK_ACCESS_SHADER_READ_BIT;
@@ -909,15 +978,22 @@ namespace AE::Graphics
 			case EResourceState::IndexBuffer :						return VK_ACCESS_INDEX_READ_BIT;
 			case EResourceState::VertexBuffer :						return VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 			//case EResourceState::TransientAttachment
-			case EResourceState::PresentImage :						return 0;
+			case EResourceState::PresentImage :						return VkAccessFlagBits(0);
+				
+			#ifdef VK_NV_ray_tracing
 			case EResourceState::BuildRayTracingStructRead :		return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV;
 			case EResourceState::BuildRayTracingStructWrite :		return VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NV;
 			case EResourceState::BuildRayTracingStructReadWrite :	return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NV;
+			#endif
+
 			case EResourceState::RTASBuildingBufferRead :
-			case EResourceState::RTASBuildingBufferReadWrite :		return 0;	// ceche invalidation is not needed for buffers
+			case EResourceState::RTASBuildingBufferReadWrite :		return VkAccessFlagBits(0);	// ceche invalidation is not needed for buffers
+				
+			#ifdef VK_NV_shading_rate_image
 			case EResourceState::ShadingRateImageRead :				return VK_ACCESS_SHADING_RATE_IMAGE_READ_BIT_NV;
+			#endif
 		}
-		RETURN_ERR( "unknown resource state!" );
+		RETURN_ERR( "unknown resource state!", VkAccessFlagBits(0) );
 	}
 	
 /*
@@ -967,6 +1043,7 @@ namespace AE::Graphics
 	ShadingRatePaletteEntry
 =================================================
 */
+#ifdef VK_NV_shading_rate_image
 	ND_ inline VkShadingRatePaletteEntryNV  VEnumCast (EShadingRatePalette value)
 	{
 		BEGIN_ENUM_CHECKS();
@@ -989,6 +1066,7 @@ namespace AE::Graphics
 		END_ENUM_CHECKS();
 		RETURN_ERR( "unknown shading rate palette value", VK_SHADING_RATE_PALETTE_ENTRY_MAX_ENUM_NV );
 	}
+#endif
 
 /*
 =================================================

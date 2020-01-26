@@ -268,25 +268,25 @@ namespace AE::Graphics
 	IsSupported
 =================================================
 */
-	bool VSwapchainInitializer::IsSupported (const VkSampleCountFlags samples, const VkPresentModeKHR presentMode,
-											 const VkFormat colorFormat, const VkImageUsageFlags colorImageUsage) const
+	bool VSwapchainInitializer::IsSupported (const VkSampleCountFlagBits samples, const VkPresentModeKHR presentMode,
+											 const VkFormat colorFormat, const VkImageUsageFlagBits colorImageUsage) const
 	{
 		CHECK_ERR( _device.GetVkPhysicalDevice() and _vkSurface );
 
 		VkSurfaceCapabilitiesKHR	surf_caps;
 		VK_CHECK( vkGetPhysicalDeviceSurfaceCapabilitiesKHR( _device.GetVkPhysicalDevice(), _vkSurface, OUT &surf_caps ));
 		
-		VkImageUsageFlags	image_usage = 0;
+		VkImageUsageFlags	image_usage;
 		_GetImageUsage( OUT image_usage, presentMode, colorFormat, surf_caps );
 
-		if ( not EnumEq( image_usage, colorImageUsage ) )
+		if ( not EnumEq( image_usage, colorImageUsage ))
 			return false;
 
 		VkImageFormatProperties	image_props = {};
 		VK_CALL( vkGetPhysicalDeviceImageFormatProperties( _device.GetVkPhysicalDevice(), colorFormat, VK_IMAGE_TYPE_2D,
 														   VK_IMAGE_TILING_OPTIMAL, colorImageUsage, 0, OUT &image_props ));
 
-		if ( not EnumEq( image_props.sampleCounts, samples ) )
+		if ( not EnumEq( image_props.sampleCounts, samples ))
 			return false;
 
 		//if ( imageArrayLayers < image_props.maxArrayLayers )
@@ -307,7 +307,7 @@ namespace AE::Graphics
 										const VkPresentModeKHR				presentMode,
 										const VkSurfaceTransformFlagBitsKHR	transform,
 										const VkCompositeAlphaFlagBitsKHR	compositeAlpha,
-										const VkImageUsageFlags				colorImageUsage,
+										const VkImageUsageFlagBits			colorImageUsage,
 										StringView							dbgName)
 	{
 		CHECK_ERR( _device.GetVkPhysicalDevice() and _device.GetVkDevice() and _vkSurface );
@@ -360,7 +360,7 @@ namespace AE::Graphics
 		_preTransform		= swapchain_info.preTransform;
 		_presentMode		= swapchain_info.presentMode;
 		_compositeAlpha		= swapchain_info.compositeAlpha;
-		_colorImageUsage	= swapchain_info.imageUsage;
+		_colorImageUsage	= BitCast<VkImageUsageFlagBits>( swapchain_info.imageUsage );
 		_surfaceSize.x		= swapchain_info.imageExtent.width;
 		_surfaceSize.y		= swapchain_info.imageExtent.height;
 		
@@ -407,7 +407,7 @@ namespace AE::Graphics
 		_preTransform		= VK_SURFACE_TRANSFORM_FLAG_BITS_MAX_ENUM_KHR;
 		_presentMode		= VK_PRESENT_MODE_MAX_ENUM_KHR;
 		_compositeAlpha		= VK_COMPOSITE_ALPHA_FLAG_BITS_MAX_ENUM_KHR;
-		_colorImageUsage	= 0;
+		_colorImageUsage	= VkImageUsageFlagBits(0);
 	}
 
 /*

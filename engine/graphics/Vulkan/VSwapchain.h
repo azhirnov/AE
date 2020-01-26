@@ -22,7 +22,7 @@ namespace AE::Graphics
 	{
 	// types
 	public:
-		static constexpr VkImageUsageFlags	DefaultImageUsage	=
+		static constexpr VkImageUsageFlagBits	DefaultImageUsage	=
 			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
 			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 
@@ -51,7 +51,7 @@ namespace AE::Graphics
 		VkSurfaceTransformFlagBitsKHR	_preTransform		= VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 		VkPresentModeKHR				_presentMode		= VK_PRESENT_MODE_FIFO_KHR;
 		VkCompositeAlphaFlagBitsKHR		_compositeAlpha		= VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-		VkImageUsageFlags				_colorImageUsage	= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		VkImageUsageFlagBits			_colorImageUsage	= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		
 
 	// methods
@@ -80,7 +80,7 @@ namespace AE::Graphics
 		ND_ uint						GetCurretImageIndex ()			const	{ return _currImageIndex; }
 		ND_ bool						IsImageAcquired ()				const	{ return GetCurretImageIndex() < GetSwapchainLength(); }
 
-		ND_ VkImageUsageFlags			GetImageUsage ()				const	{ return _colorImageUsage; }
+		ND_ VkImageUsageFlagBits		GetImageUsage ()				const	{ return _colorImageUsage; }
 		ND_ VkImage						GetCurrentImage ()				const;
 	};
 
@@ -99,8 +99,8 @@ namespace AE::Graphics
 		bool CreateSurface (const App::NativeWindow &, StringView dbgName = {});
 		void DestroySurface ();
 
-		ND_ bool IsSupported (VkSampleCountFlags samples, VkPresentModeKHR presentMode,
-							  VkFormat colorFormat, VkImageUsageFlags colorImageUsage) const;
+		ND_ bool IsSupported (VkSampleCountFlagBits samples, VkPresentModeKHR presentMode,
+							  VkFormat colorFormat, VkImageUsageFlagBits colorImageUsage) const;
 		
 		bool ChooseColorFormat (INOUT VkFormat &colorFormat, INOUT VkColorSpaceKHR &colorSpace) const;
 
@@ -112,7 +112,7 @@ namespace AE::Graphics
 					 const VkPresentModeKHR					presentMode			= VK_PRESENT_MODE_FIFO_KHR,
 					 const VkSurfaceTransformFlagBitsKHR	transform			= VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
 					 const VkCompositeAlphaFlagBitsKHR		compositeAlpha		= VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-					 const VkImageUsageFlags				colorImageUsage		= DefaultImageUsage,
+					 const VkImageUsageFlagBits				colorImageUsage		= DefaultImageUsage,
 					 StringView								dbgName				= {});
 		void Destroy ();
 
