@@ -12,12 +12,6 @@
 #	define DRC_CHECK( ... )	CHECK_ERR( __VA_ARGS__ )
 #endif
 
-#ifdef PLATFORM_ANDROID
-#	define DRC_CHECK( ... )	CHECK_FATAL( __VA_ARGS__ )
-#else
-#	define DRC_CHECK( ... )	CHECK_ERR( __VA_ARGS__ )
-#endif
-
 namespace AE::Threading
 {
 

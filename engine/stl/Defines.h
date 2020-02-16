@@ -371,7 +371,6 @@
 		{if ( !(_expr_) ) { \
 			AE_LOGI( AE_PRIVATE_TOSTRING( _expr_ )); \
 			AE_PRIVATE_EXIT(); \
-			return (_ret_); \
 		}}
 
 #	undef  CHECK_FATAL
@@ -385,7 +384,6 @@
 #	define AE_PRIVATE_RETURN_ERR( _text_, _ret_ ) \
 		{AE_LOGI( _text_ ); \
 		 AE_PRIVATE_EXIT(); \
-		 return (_ret_); \
 		}
 
 #	include <cassert>

@@ -8,7 +8,7 @@
 #include "stl/Common.h"
 
 #ifdef AE_ENABLE_GFS
-#  include "ghc/filesystem.hpp"
+#  include "filesystem.hpp"
 	namespace _ae_fs_ = ghc::filesystem;
 #else
 #  include <filesystem>

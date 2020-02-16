@@ -48,6 +48,7 @@ extern int Test_Graphics (IApplication &app, IWindow &wnd)
 
 		void OnSurfaceCreated (IWindow &wnd) override
 		{
+			Test_VulkanDevice();
 			Test_VulkanSwapchain( _app, wnd );
 			Test_VulkanRenderGraph( _app, wnd );
 
@@ -68,7 +69,6 @@ extern int Test_Graphics (IApplication &app, IWindow &wnd)
 		void OnStart (IApplication &app) override
 		{
 			UnitTest_GfxResourceID();
-			Test_VulkanDevice();
 
 			#ifdef AE_CI_BUILD
 				// CI can't create window and does not support vulkan
