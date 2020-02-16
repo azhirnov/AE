@@ -13,6 +13,7 @@ extern void UnitTest_FileSystem ();
 extern void UnitTest_LinearAllocator ();
 extern void UnitTest_StackAllocator ();
 extern void UnitTest_Math ();
+extern void UnitTest_Math_BitMath ();
 extern void UnitTest_Math_Vec ();
 extern void UnitTest_Math_Matrix ();
 extern void UnitTest_Math_Transformation ();
@@ -46,6 +47,7 @@ int main ()
 	UnitTest_StackAllocator();
 	
 	UnitTest_Math();
+	UnitTest_Math_BitMath();
 	UnitTest_Math_Vec();
 	UnitTest_Math_Matrix();
 	UnitTest_Math_Transformation();

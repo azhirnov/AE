@@ -50,8 +50,9 @@ namespace AE::Threading
 
 				if ( not processed and _sleepOnIdle.count() )
 				{
-					idle_counter = Max( 4u, idle_counter+1 );
+					idle_counter = Min( 4u, idle_counter );
 					std::this_thread::sleep_for( _sleepOnIdle * idle_counter );
+					++idle_counter;
 				}
 				else
 					idle_counter = 0;

@@ -25,6 +25,11 @@ namespace AE::Threading
 	public:
 		SpinLock ()
 		{}
+		
+		~SpinLock ()
+		{
+			ASSERT( _flag.load() == 0 );
+		}
 
 		ND_ forceinline bool try_lock ()
 		{
@@ -39,7 +44,7 @@ namespace AE::Threading
 			uint	exp = 0;
 			for (uint i = 0; not _flag.compare_exchange_weak( INOUT exp, 1, EMemoryOrder::Acquire, EMemoryOrder::Relaxed ); ++i)
 			{
-				if ( i > 100 ) {
+				if ( i > 1000 ) {
 					i = 0;
 					std::this_thread::yield();
 				}
@@ -49,9 +54,11 @@ namespace AE::Threading
 
 		forceinline void unlock ()
 		{
-			uint	old = _flag.exchange( 0, EMemoryOrder::Release );
-			ASSERT( old == 1 );
-			Unused( old );
+		#ifdef AE_DEBUG
+			ASSERT( _flag.exchange( 0, EMemoryOrder::Release ) == 1 );
+		#else
+			_flag.store( 0, EMemoryOrder::Release );
+		#endif
 		}
 	};
 
@@ -70,12 +77,18 @@ namespace AE::Threading
 
 	// methods
 	public:
-		SpinLockRelaxed () {}
+		SpinLockRelaxed ()
+		{}
+
+		~SpinLockRelaxed ()
+		{
+			ASSERT( _flag.load() == 0 );
+		}
 
 		ND_ forceinline bool try_lock ()
 		{
 			uint	exp = 0;
-			return _flag.compare_exchange_strong( INOUT exp, 1, EMemoryOrder::Relaxed, EMemoryOrder::Relaxed );
+			return _flag.compare_exchange_weak( INOUT exp, 1, EMemoryOrder::Relaxed, EMemoryOrder::Relaxed );
 		}
 
 
@@ -85,7 +98,7 @@ namespace AE::Threading
 			uint	exp = 0;
 			for (uint i = 0; not _flag.compare_exchange_weak( INOUT exp, 1, EMemoryOrder::Relaxed, EMemoryOrder::Relaxed ); ++i)
 			{
-				if ( i > 100 ) {
+				if ( i > 1000 ) {
 					i = 0;
 					std::this_thread::yield();
 				}
@@ -95,9 +108,11 @@ namespace AE::Threading
 
 		forceinline void unlock ()
 		{
-			uint	old = _flag.exchange( 0, EMemoryOrder::Relaxed );
-			ASSERT( old == 1 );
-			Unused( old );
+		#ifdef AE_DEBUG
+			ASSERT( _flag.exchange( 0, EMemoryOrder::Relaxed ) == 1 );
+		#else
+			_flag.store( 0, EMemoryOrder::Relaxed );
+		#endif
 		}
 	};
 

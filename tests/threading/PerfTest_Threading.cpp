@@ -71,10 +71,10 @@ namespace
 
 			if ( _level < max_levels )
 			{
-				Scheduler().Run<LargeTask1>( _cell * 2 + uint2(0,0), _level+1 );
-				Scheduler().Run<LargeTask1>( _cell * 2 + uint2(0,1), _level+1 );
-				Scheduler().Run<LargeTask1>( _cell * 2 + uint2(1,0), _level+1 );
-				Scheduler().Run<LargeTask1>( _cell * 2 + uint2(1,1), _level+1 );
+				Scheduler().Run<LargeTask1>( Tuple{_cell * 2 + uint2(0,0), _level+1} );
+				Scheduler().Run<LargeTask1>( Tuple{_cell * 2 + uint2(0,1), _level+1} );
+				Scheduler().Run<LargeTask1>( Tuple{_cell * 2 + uint2(1,0), _level+1} );
+				Scheduler().Run<LargeTask1>( Tuple{_cell * 2 + uint2(1,1), _level+1} );
 			}
 			else
 			{
@@ -96,34 +96,35 @@ namespace
 
 		const size_t		num_threads = std::thread::hardware_concurrency()-1;
 		LocalTaskScheduler	scheduler	{num_threads};
-
-		for (size_t i = 0; i < num_threads; ++i) {
-			scheduler->AddThread( MakeShared<WorkerThread>(
-				WorkerThread::ThreadMask{}.set(uint(WorkerThread::EThread::Worker)),
-				WorkerThread::Milliseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
-			));
-		}
-
-		const auto	start_time = TimePoint_t::clock::now();
-		
-		Unused(
-			scheduler->Run<LargeTask1>( uint2{0,0}, 0 ),
-			scheduler->Run<LargeTask1>( uint2{0,1}, 0 ),
-			scheduler->Run<LargeTask1>( uint2{1,0}, 0 ),
-			scheduler->Run<LargeTask1>( uint2{1,1}, 0 )
-		);
-
-		const uint64_t	required = 4 * (4ull << max_levels);
-
-		for (;;)
 		{
-			if ( task_complete.load( EMemoryOrder::Relaxed ) >= required )
-				break;
+			for (size_t i = 0; i < num_threads; ++i) {
+				scheduler->AddThread( MakeShared<WorkerThread>(
+					WorkerThread::ThreadMask{}.set(uint(WorkerThread::EThread::Worker)),
+					WorkerThread::Milliseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
+				));
+			}
 
-			std::this_thread::yield();
+			const auto	start_time = TimePoint_t::clock::now();
+		
+			Unused(
+				scheduler->Run<LargeTask1>( Tuple{uint2{0,0}, 0} ),
+				scheduler->Run<LargeTask1>( Tuple{uint2{0,1}, 0} ),
+				scheduler->Run<LargeTask1>( Tuple{uint2{1,0}, 0} ),
+				scheduler->Run<LargeTask1>( Tuple{uint2{1,1}, 0} )
+			);
+
+			const uint64_t	required = 1ull << (2 + 2 * max_levels);
+
+			for (;;)
+			{
+				if ( task_complete.load( EMemoryOrder::Relaxed ) >= required )
+					break;
+
+				std::this_thread::yield();
+			}
+
+			AE_LOGI( "Total time: "s << ToString( TimePoint_t::clock::now() - start_time ) << ", final jobs: " << ToString( required ) );
 		}
-
-		AE_LOGI( "Total time: "s << ToString( TimePoint_t::clock::now() - start_time ) << ", final jobs: " << ToString( required ) );
 	}
 }
 
@@ -158,10 +159,10 @@ namespace
 
 			if ( _level < max_levels )
 			{
-				auto	t0 = Scheduler().Run<LargeTask2>( _cell * 2 + uint2(0,0), _level+1 );
-				auto	t1 = Scheduler().Run<LargeTask2>( StrongDeps{t0}, _cell * 2 + uint2(0,1), _level+1 );
-				auto	t2 = Scheduler().Run<LargeTask2>( StrongDeps{t0, t1}, _cell * 2 + uint2(1,0), _level+1 );
-				auto	t3 = Scheduler().Run<LargeTask2>( StrongDeps{t0, t1, t2}, _cell * 2 + uint2(1,1), _level+1 );
+				auto	t0 = Scheduler().Run<LargeTask2>( Tuple{_cell * 2 + uint2(0,0), _level+1} );
+				auto	t1 = Scheduler().Run<LargeTask2>( Tuple{_cell * 2 + uint2(0,1), _level+1}, Tuple{t0} );
+				auto	t2 = Scheduler().Run<LargeTask2>( Tuple{_cell * 2 + uint2(1,0), _level+1}, Tuple{t0, t1} );
+				auto	t3 = Scheduler().Run<LargeTask2>( Tuple{_cell * 2 + uint2(1,1), _level+1}, Tuple{t0, t1, t2} );
 				Unused( t3 );
 			}
 			else
@@ -184,34 +185,35 @@ namespace
 		
 		const size_t		num_threads = std::thread::hardware_concurrency()-1;
 		LocalTaskScheduler	scheduler	{num_threads};
-
-		for (size_t i = 0; i < num_threads; ++i) {
-			scheduler->AddThread( MakeShared<WorkerThread>(
-				WorkerThread::ThreadMask{}.set(uint(WorkerThread::EThread::Worker)),
-				WorkerThread::Milliseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
-			));
-		}
-
-		const auto	start_time = TimePoint_t::clock::now();
-		
-		Unused(
-			scheduler->Run<LargeTask2>( uint2{0,0}, 0 ),
-			scheduler->Run<LargeTask2>( uint2{0,1}, 0 ),
-			scheduler->Run<LargeTask2>( uint2{1,0}, 0 ),
-			scheduler->Run<LargeTask2>( uint2{1,1}, 0 )
-		);
-
-		const uint64_t	required = 4 * (4ull << max_levels);
-
-		for (;;)
 		{
-			if ( task_complete.load( EMemoryOrder::Relaxed ) >= required )
-				break;
+			for (size_t i = 0; i < num_threads; ++i) {
+				scheduler->AddThread( MakeShared<WorkerThread>(
+					WorkerThread::ThreadMask{}.set(uint(WorkerThread::EThread::Worker)),
+					WorkerThread::Milliseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
+				));
+			}
 
-			std::this_thread::yield();
+			const auto	start_time = TimePoint_t::clock::now();
+		
+			Unused(
+				scheduler->Run<LargeTask2>( Tuple{uint2{0,0}, 0} ),
+				scheduler->Run<LargeTask2>( Tuple{uint2{0,1}, 0} ),
+				scheduler->Run<LargeTask2>( Tuple{uint2{1,0}, 0} ),
+				scheduler->Run<LargeTask2>( Tuple{uint2{1,1}, 0} )
+			);
+			
+			const uint64_t	required = 1ull << (2 + 2 * max_levels);
+
+			for (;;)
+			{
+				if ( task_complete.load( EMemoryOrder::Relaxed ) >= required )
+					break;
+
+				std::this_thread::yield();
+			}
+
+			AE_LOGI( "Total time: "s << ToString( TimePoint_t::clock::now() - start_time ) << ", final jobs: " << ToString( required ) );
 		}
-
-		AE_LOGI( "Total time: "s << ToString( TimePoint_t::clock::now() - start_time ) << ", final jobs: " << ToString( required ) );
 	}
 }
 

@@ -10,10 +10,16 @@
 #include <thread>
 
 
-#ifdef AE_DEBUG
-#	define AE_ENABLE_DATA_RACE_CHECK
+#if not defined(AE_ENABLE_DATA_RACE_CHECK) and (defined(AE_DEBUG) or defined(AE_CI_BUILD))
+#	define AE_ENABLE_DATA_RACE_CHECK	1
 #else
-//#	define AE_OPTIMAL_MEMORY_ORDER
+#	define AE_ENABLE_DATA_RACE_CHECK	0
+#endif
+
+#if not defined(AE_OPTIMAL_MEMORY_ORDER) and not defined(AE_DEBUG)
+#	define AE_OPTIMAL_MEMORY_ORDER		1
+#else
+#	define AE_OPTIMAL_MEMORY_ORDER		0
 #endif
 
 
@@ -41,7 +47,7 @@ namespace AE::Threading
 	using SharedMutex	= std::shared_mutex;
 
 
-#	ifdef AE_OPTIMAL_MEMORY_ORDER
+#	if AE_OPTIMAL_MEMORY_ORDER
 	struct EMemoryOrder
 	{
 		static constexpr std::memory_order	Acquire			= std::memory_order_acquire;
@@ -92,13 +98,13 @@ namespace AE::Threading
 // check definitions
 #ifdef AE_CPP_DETECT_MISSMATCH
 
-#  ifdef AE_OPTIMAL_MEMORY_ORDER
+#  if AE_OPTIMAL_MEMORY_ORDER
 #	pragma detect_mismatch( "AE_OPTIMAL_MEMORY_ORDER", "1" )
 #  else
 #	pragma detect_mismatch( "AE_OPTIMAL_MEMORY_ORDER", "0" )
 #  endif
 
-#  ifdef AE_ENABLE_DATA_RACE_CHECK
+#  if AE_ENABLE_DATA_RACE_CHECK
 #	pragma detect_mismatch( "AE_ENABLE_DATA_RACE_CHECK", "1" )
 #  else
 #	pragma detect_mismatch( "AE_ENABLE_DATA_RACE_CHECK", "0" )

@@ -43,18 +43,44 @@ namespace AE::Networking
 
 		ND_ bool  HasSSL () const;
 		
-		Request  Send (RequestDesc &&desc, StrongDeps &&dependsOn);
-		Request  Send (const RequestDesc &desc, StrongDeps &&dependsOn);
-
-		Request  Send (RequestDesc &&desc, WeakDeps &&dependsOn = Default);
-		Request  Send (const RequestDesc &desc, WeakDeps &&dependsOn = Default);
+		template <typename ...Deps>
+		Request  Send (RequestDesc &&desc, const Tuple<Deps...> &dependsOn = Default);
+		
+		template <typename ...Deps>
+		Request  Send (const RequestDesc &desc, const Tuple<Deps...> &dependsOn = Default);
 
 		ND_ Promise<Array<uint8_t>>	Download (String url);
 
 	private:
 		NetworkManager ();
 		~NetworkManager ();
+
+		Request  _CreateTask (RequestDesc &&desc);
+		Request  _CreateTask (const RequestDesc &desc);
 	};
+	
+
+
+/*
+=================================================
+	Send
+=================================================
+*/
+	template <typename ...Deps>
+	inline Request  NetworkManager::Send (RequestDesc &&desc, const Tuple<Deps...> &dependsOn)
+	{
+		Request	req = _CreateTask( std::move(desc) );
+		Scheduler().Run( req, dependsOn );
+		return req;
+	}
+		
+	template <typename ...Deps>
+	inline Request  NetworkManager::Send (const RequestDesc &desc, const Tuple<Deps...> &dependsOn)
+	{
+		Request	req = _CreateTask( desc );
+		Scheduler().Run( req, dependsOn );
+		return req;
+	}
 
 
 }	// AE::Networking

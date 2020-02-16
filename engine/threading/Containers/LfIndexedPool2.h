@@ -7,7 +7,7 @@
 	- Unassign() must be externally synchronized with all other read and write accesses to the 'index'.
 	- custom allocator must be thread safe (use mutex or lock-free algorithms).
 
-	This lock-free container designed for large number of data.
+	This lock-free container designed for large number of elements.
 */
 
 #pragma once
@@ -78,10 +78,10 @@ namespace AE::Threading
 		STATIC_ASSERT( ChunkData_t::value_type::is_always_lock_free );
 		STATIC_ASSERT( Atomic< TopLevelBits_t >::is_always_lock_free );
 		
-		static constexpr HiLevelBits_t	MaxHighLevel		= (HiLevelBits_t(1) << HiLevel_Count) - 1;
+		static constexpr HiLevelBits_t	MaxHighLevel		= ToBitMask<HiLevelBits_t>( HiLevel_Count );
 		static constexpr HiLevelBits_t	InitialHighLevel	= ~MaxHighLevel;
 
-		static constexpr TopLevelBits_t	MaxTopLevel			= (TopLevelBits_t(1) << MaxChunks) - 1;
+		static constexpr TopLevelBits_t	MaxTopLevel			= ToBitMask<TopLevelBits_t>( MaxChunks );
 		static constexpr TopLevelBits_t	InitialTopLevel		= ~MaxTopLevel;
 
 
@@ -105,15 +105,15 @@ namespace AE::Threading
 		
 
 		explicit LfIndexedPool2 (const Allocator_t &alloc = Default);
-		~LfIndexedPool2 ()													{ Release(); }
+		~LfIndexedPool2 ()												{ Release(); }
 	
 		template <typename FN>
-		void Release (FN &&dtor);
-		void Release ()														{ return Release([] (Value_t& value) { value.~Value_t(); }); }
+		void Release (FN &&dtor, bool checkForAssigned);
+		void Release (bool checkForAssigned = true)						{ return Release( [](Value_t& value) { value.~Value_t(); }, checkForAssigned ); }
 		
 		template <typename FN>
 		ND_ bool  Assign (OUT Index_t &outIndex, FN &&ctor);
-		ND_ bool  Assign (OUT Index_t &outIndex)							{ return Assign( OUT outIndex, [](Value_t* ptr, Index_t) { PlacementNew<Value_t>( ptr ); }); }
+		ND_ bool  Assign (OUT Index_t &outIndex)						{ return Assign( OUT outIndex, [](Value_t* ptr, Index_t) { PlacementNew<Value_t>( ptr ); }); }
 
 			bool  Unassign (Index_t index);
 	
@@ -121,7 +121,7 @@ namespace AE::Threading
 
 		ND_ Value_t&  operator [] (Index_t index);
 		
-		ND_ static constexpr size_t  Capacity ()							{ return ChunkSize * MaxChunks; }
+		ND_ static constexpr size_t  Capacity ()						{ return ChunkSize * MaxChunks; }
 
 
 	private:
@@ -174,14 +174,15 @@ namespace AE::Threading
 */
 	template <typename V, typename I, size_t CS, size_t MC, typename A>
 	template <typename FN>
-	inline void  LfIndexedPool2<V,I,CS,MC,A>::Release (FN &&dtor)
+	inline void  LfIndexedPool2<V,I,CS,MC,A>::Release (FN &&dtor, bool checkForAssigned)
 	{
 		EXLOCK( _topLevelGuard );
 		ThreadFence( EMemoryOrder::Acquire );
 
 		TopLevelBits_t	old_top_level = _topLevel.exchange( InitialTopLevel, EMemoryOrder::Relaxed );
-		Unused( old_top_level );
-		ASSERT( old_top_level == InitialTopLevel );
+		
+		if ( checkForAssigned )
+			CHECK( old_top_level == InitialTopLevel );	// some items is still assigned
 
 		for (size_t i = 0; i < MaxChunks; ++i)
 		{
@@ -194,14 +195,16 @@ namespace AE::Threading
 			EXLOCK( info.guard );	// TODO: may be deadlock
 
 			HiLevelBits_t	old_hi_level = info.hiLevel.exchange( InitialHighLevel, EMemoryOrder::Relaxed );
-			Unused( old_hi_level );
-			ASSERT( old_hi_level == InitialHighLevel );
+			
+			if ( checkForAssigned )
+				CHECK( old_hi_level == InitialHighLevel );	// some items is still assigned
 
 			for (size_t j = 0; j < HiLevel_Count; ++j)
 			{
 				LowLevelBits_t	old_low_level = info.lowLevel[j].exchange( 0, EMemoryOrder::Relaxed );
-				Unused( old_low_level );
-				ASSERT( old_low_level == 0 );
+				
+				if ( checkForAssigned )
+					CHECK( old_low_level == 0 );	// some items is still assigned
 
 				LowLevelBits_t	ctor_bits = info.created[j].exchange( 0, EMemoryOrder::Relaxed );
 
@@ -235,7 +238,7 @@ namespace AE::Threading
 
 			if ( idx >= 0 )
 			{
-				ASSERT( idx < _chunkInfo.size() );
+				ASSERT( size_t(idx) < _chunkInfo.size() );
 
 				if ( _AssignInChunk( OUT outIndex, idx, ctor ))
 					return true;
@@ -257,7 +260,7 @@ namespace AE::Threading
 		ValueChunk_t*	data = _chunkData[ chunkIndex ].load( EMemoryOrder::Relaxed );
 			
 		// allocate
-		if ( data == null )
+		if_unlikely( data == null )
 		{
 			data = Cast<ValueChunk_t>(_allocator.Allocate( SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> ));
 
@@ -283,7 +286,7 @@ namespace AE::Threading
 
 			if ( idx >= 0 )
 			{
-				ASSERT( idx < info.lowLevel.size() );
+				ASSERT( size_t(idx) < info.lowLevel.size() );
 
 				if ( _AssignInLowLevel( OUT outIndex, chunkIndex, idx, *data, ctor ))
 					return true;
@@ -312,7 +315,7 @@ namespace AE::Threading
 
 			if ( level.compare_exchange_weak( INOUT available, available | mask, EMemoryOrder::Acquire, EMemoryOrder::Relaxed ))	// 0 -> 1
 			{
-				if ( available == ~mask )
+				if_unlikely( available == ~mask )
 					_UpdateHiLevel( chunkIndex, hiLevelIndex );
 
 				outIndex = Index_t(i) | (Index_t(hiLevelIndex) * LowLevel_Count) | (Index_t(chunkIndex) * ChunkSize);
@@ -343,14 +346,14 @@ namespace AE::Threading
 		EXLOCK( info.guard );
 				
 		// update high level
-		if ( level.load( EMemoryOrder::Relaxed ) == UMax )
+		if_unlikely( level.load( EMemoryOrder::Relaxed ) == UMax )
 		{
 			const auto	hi_bit = (HiLevelBits_t(1) << hiLevelIndex);
 
 			EXLOCK( _topLevelGuard );
 
 			// update top level
-			if ( info.hiLevel.fetch_or( hi_bit, EMemoryOrder::Relaxed ) == ~hi_bit )	// 0 -> 1
+			if_unlikely( info.hiLevel.fetch_or( hi_bit, EMemoryOrder::Relaxed ) == ~hi_bit )	// 0 -> 1
 			{
 				_topLevel.fetch_or( (TopLevelBits_t(1) << chunkIndex), EMemoryOrder::Relaxed );	// 0 -> 1
 			}
@@ -380,18 +383,18 @@ namespace AE::Threading
 			return false;
 
 		// update high level bits
-		if ( old_bits == UMax )
+		if_unlikely( old_bits == UMax )
 		{
 			EXLOCK( info.guard );
 
-			if ( level.load( EMemoryOrder::Relaxed ) != UMax )
+			if_unlikely( level.load( EMemoryOrder::Relaxed ) != UMax )
 			{
 				const auto	hi_bit = (HiLevelBits_t(1) << hi_lvl_idx);
 
 				EXLOCK( _topLevelGuard );
 				
 				// update top level
-				if ( info.hiLevel.fetch_and( ~hi_bit, EMemoryOrder::Relaxed ) == (hi_bit | InitialHighLevel) )	// 1 -> 0
+				if_unlikely( info.hiLevel.fetch_and( ~hi_bit, EMemoryOrder::Relaxed ) == (hi_bit | InitialHighLevel) )	// 1 -> 0
 				{
 					_topLevel.fetch_and( ~(TopLevelBits_t(1) << chunk_idx), EMemoryOrder::Relaxed );	// 1 -> 0
 				}

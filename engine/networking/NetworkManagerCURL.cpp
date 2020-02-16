@@ -855,38 +855,20 @@ namespace AE::Networking
 
 /*
 =================================================
-	Send
+	_CreateTask
 =================================================
 */
-	Request  NetworkManager::Send (RequestDesc &&desc, StrongDeps &&dependsOn)
+	Request  NetworkManager::_CreateTask (RequestDesc &&desc)
 	{
 		CHECK_ERR( _impl );
-		return Cast<Request::element_type>( Scheduler().Run<CurlRequestTask>( std::move(dependsOn), std::move(desc), _impl->settings ));
+		return MakeShared< CurlRequestTask >( desc, _impl->settings );
 	}
 	
-	Request  NetworkManager::Send (const RequestDesc &desc, StrongDeps &&dependsOn)
+	Request  NetworkManager::_CreateTask (const RequestDesc &desc)
 	{
 		CHECK_ERR( _impl );
 		CHECK_ERR( not desc._content );	// can't move const value
-		return Cast<Request::element_type>( Scheduler().Run<CurlRequestTask>( std::move(dependsOn), desc, _impl->settings ));
-	}
-
-/*
-=================================================
-	Send
-=================================================
-*/
-	Request  NetworkManager::Send (RequestDesc &&desc, WeakDeps &&dependsOn)
-	{
-		CHECK_ERR( _impl );
-		return Cast<Request::element_type>( Scheduler().Run<CurlRequestTask>( std::move(dependsOn), std::move(desc), _impl->settings ));
-	}
-	
-	Request  NetworkManager::Send (const RequestDesc &desc, WeakDeps &&dependsOn)
-	{
-		CHECK_ERR( _impl );
-		CHECK_ERR( not desc._content );	// can't move const value
-		return Cast<Request::element_type>( Scheduler().Run<CurlRequestTask>( std::move(dependsOn), desc, _impl->settings ));
+		return MakeShared< CurlRequestTask >( desc, _impl->settings );
 	}
 
 /*
@@ -909,8 +891,8 @@ namespace AE::Networking
 								}
 								return PromiseNullResult();
 							},
-							StrongDeps{req}
-							//IAsyncTask::EThread::Network
+							//IAsyncTask::EThread::Network,
+							Tuple{StrongDep{req}}
 						);
 	}
 

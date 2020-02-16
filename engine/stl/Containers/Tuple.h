@@ -96,8 +96,8 @@ namespace AE::STL
 	template <typename ...Types>
 	ND_ forceinline constexpr auto  MakeTuple (Types&& ...args)
 	{
-		// TODO: reference_wrapper
-		return Tuple< std::decay_t<Types>... >{ std::forward<Types>(args)... };
+		using Result_t = Tuple< Unreference< std::decay_t< Types >>... >;
+		return Result_t{ std::forward<Types>(args)... };
 	}
 
 }	// AE::STL

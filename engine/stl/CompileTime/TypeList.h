@@ -68,6 +68,24 @@ namespace _ae_stl_hidden_
 	struct TL_PopBack< TL, T0 > {
 		using type = TL;
 	};
+	
+
+	template <template <typename...> class Templ, size_t I, typename TL>
+	struct TL_GetFirstSpecializationOf;
+
+	template <template <typename...> class Templ, size_t I>
+	struct TL_GetFirstSpecializationOf< Templ, I, Tuple<> >
+	{
+		inline static constexpr size_t	value = UMax;
+	};
+
+	template <template <typename...> class Templ, size_t I, typename Head, typename... Tail>
+	struct TL_GetFirstSpecializationOf< Templ, I, Tuple<Head, Tail...> >
+	{
+		inline static constexpr size_t	value = Conditional< IsSpecializationOf< Head, Templ >,
+													std::integral_constant<size_t, I>,
+													TL_GetFirstSpecializationOf< Templ, I+1, Tuple<Tail...> > >::value;
+	};
 
 }	// _ae_stl_hidden_
 
@@ -87,6 +105,9 @@ namespace _ae_stl_hidden_
 		
 		template <typename T>
 		inline static constexpr size_t	LastIndex	= _ae_stl_hidden_::TL_GetLastIndex< T, 0, AsTuple >::value;
+
+		template <template <typename...> class Templ>
+		inline static constexpr size_t	FirstSpecializationOf = _ae_stl_hidden_::TL_GetFirstSpecializationOf< Templ, 0, AsTuple >::value;
 		
 		template <typename T>
 		inline static constexpr size_t	Index	= FirstIndex<T>;

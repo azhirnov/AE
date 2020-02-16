@@ -124,18 +124,21 @@ namespace AE::Threading
 		explicit operator AsyncTask () const	{ return _impl; }
 		
 	private:
-		template <typename Fn, typename Deps>
-		auto  _Then (Fn &&fn, Deps &&dependsOn, EThread thread);
+		template <typename Fn, typename ...Deps>
+		auto  _Then (Fn &&fn, EThread thread, const Tuple<Deps...> &dependsOn);
 
-		template <typename Fn, typename Deps>
-		Promise (Fn &&fn, bool except, Deps &&dependsOn, EThread thread);
+		template <typename Fn, typename ...Deps>
+		Promise (Fn &&fn, bool except, EThread thread, const Tuple<Deps...> &dependsOn);
 
-		template <typename Fn, typename Deps>
-		friend auto  MakePromise (Fn &&fn, Deps &&dependsOn, IAsyncTask::EThread thread);
-
-		template <typename ...Types>
-		friend auto  MakePromiseFromTuple (const Tuple<Types...> &t, IAsyncTask::EThread thread);
+		template <typename Fn, typename ...Deps>
+		friend auto  MakePromise (Fn &&fn, EThread thread, const Tuple<Deps...> &dependsOn);
 		
+		template <typename Fn, typename ...Deps>
+		friend auto  MakePromise (Fn &&fn, const Tuple<Deps...> &dependsOn);
+		
+		template <typename ...Types>
+		friend auto  MakePromiseFromTuple (const Tuple<Types...> &t, EThread thread);
+
 		template <typename B>
 		friend class Promise;
 	};
@@ -275,9 +278,9 @@ namespace _ae_threading_hidden_
 =================================================
 */
 	template <typename T>
-	template <typename Fn, typename Deps>
-	inline Promise<T>::Promise (Fn &&fn, bool except, Deps &&dependsOn, EThread thread) :
-		_impl{ Cast<_InternalImpl>( Scheduler().Run<_InternalImpl>( std::move(dependsOn), std::forward<Fn>(fn), except, thread ))}
+	template <typename Fn, typename ...Deps>
+	inline Promise<T>::Promise (Fn &&fn, bool except, EThread thread, const Tuple<Deps...> &dependsOn) :
+		_impl{ Cast<_InternalImpl>( Scheduler().Run<_InternalImpl>( Tuple{std::forward<Fn>(fn), except, thread}, dependsOn ))}
 	{}
 
 /*
@@ -290,9 +293,9 @@ namespace _ae_threading_hidden_
 	inline auto  Promise<T>::Then (Fn &&fn, EThread thread)
 	{
 		if ( _impl->IsExcept() )
-			return _Then( std::forward<Fn>(fn), WeakDeps{_impl}, thread );
+			return _Then( std::forward<Fn>(fn), thread, Tuple{WeakDep{_impl}} );
 		else
-			return _Then( std::forward<Fn>(fn), StrongDeps{_impl}, thread );
+			return _Then( std::forward<Fn>(fn), thread, Tuple{StrongDep{_impl}} );
 	}
 	
 /*
@@ -301,8 +304,8 @@ namespace _ae_threading_hidden_
 =================================================
 */
 	template <typename T>
-	template <typename Fn, typename Deps>
-	inline auto  Promise<T>::_Then (Fn &&fn, Deps &&dependsOn, EThread thread)
+	template <typename Fn, typename ...Deps>
+	inline auto  Promise<T>::_Then (Fn &&fn, EThread thread, const Tuple<Deps...> &dependsOn)
 	{
 		using FI		= FunctionInfo< Fn >;
 		using Result	= typename _ae_threading_hidden_::ResultToPromise< typename FI::result >::type;
@@ -316,15 +319,15 @@ namespace _ae_threading_hidden_
 								return PromiseResult<void>{};
 							},
 							false,
-							std::move(dependsOn),
-							thread };
+							thread,
+							dependsOn };
 		}
 		else
 		if constexpr( IsVoid<T> )
 		{
 			STATIC_ASSERT( FI::args::Count == 0 );
 		
-			return Result{ std::forward<Fn>(fn), false, std::move(dependsOn), thread };
+			return Result{ std::forward<Fn>(fn), false, thread, dependsOn };
 		}
 		else
 		if constexpr( IsVoid< typename FI::result > )
@@ -337,8 +340,8 @@ namespace _ae_threading_hidden_
 								return PromiseResult<void>{};
 							},
 							false,
-							std::move(dependsOn),
-							thread };
+							thread,
+							dependsOn };
 		}
 		else
 		{
@@ -349,8 +352,8 @@ namespace _ae_threading_hidden_
 								return fn( in->Result() );
 							},
 							false,
-							std::move(dependsOn),
-							thread };
+							thread,
+							dependsOn };
 		}
 	}
 
@@ -375,12 +378,12 @@ namespace _ae_threading_hidden_
 								return PromiseResult<void>{};
 							},
 							true,
-							StrongDeps{_impl},
-							thread };
+							thread,
+							Tuple{StrongDep{_impl}} };
 		}
 		else
 		{
-			return Result{ std::forward<Fn>(fn), true, StrongDeps{_impl} };
+			return Result{ std::forward<Fn>(fn), true, thread, Tuple{StrongDep{_impl}} };
 		}
 	}
 	
@@ -456,8 +459,8 @@ namespace _ae_threading_hidden_
 	MakePromise
 =================================================
 */
-	template <typename Fn, typename Deps = StrongDeps>
-	forceinline auto  MakePromise (Fn &&fn, Deps &&dependsOn = Default, IAsyncTask::EThread thread = IAsyncTask::EThread::Worker)
+	template <typename Fn, typename ...Deps>
+	forceinline auto  MakePromise (Fn &&fn, IAsyncTask::EThread thread, const Tuple<Deps...> &dependsOn = Default)
 	{
 		STATIC_ASSERT( std::is_invocable_v<Fn> );
 
@@ -471,34 +474,38 @@ namespace _ae_threading_hidden_
 								return PromiseResult<void>{};
 							},
 							false,
-							std::move(dependsOn),
-							thread };
+							thread,
+							dependsOn };
 		}
 		else
 		{
-			return Result{ std::forward<Fn>(fn), false, std::move(dependsOn), thread };
+			return Result{ std::forward<Fn>(fn), false, thread, dependsOn };
 		}
 	}
 	
+	template <typename Fn, typename ...Deps>
+	ND_ forceinline auto  MakePromise (Fn &&fn, const Tuple<Deps...> &dependsOn = Default)
+	{
+		return MakePromise( std::forward<Fn>(fn), IAsyncTask::EThread::Worker, dependsOn );
+	}
+
 /*
 =================================================
 	MakePromiseFromTuple
 =================================================
 */
 	template <typename ...Types>
-	forceinline auto  MakePromiseFromTuple (const Tuple<Types...> &t, IAsyncTask::EThread thread = IAsyncTask::EThread::Worker)
+	ND_ forceinline auto  MakePromiseFromTuple (const Tuple<Types...> &t, IAsyncTask::EThread thread = IAsyncTask::EThread::Worker)
 	{
-		return MakePromise(
-			[t] () {
-				return	t.Apply( [] (auto&& ...args) {
-							return MakeTuple( args._impl->Result() ... );
-						});
-			},
-			t.Apply( [] (auto&& ...args) {
-					return StrongDeps{ AsyncTask{std::forward<decltype(args)>( args )}... };
-				}),
-			thread
-		);
+		return	MakePromise(
+					[t] () {
+						return	t.Apply( [] (auto&& ...args) {
+									return MakeTuple( args._impl->Result() ... );
+								});
+					},
+					thread,
+					t.Apply( [] (auto&& ...args) { return MakeTuple( AsyncTask{args}... ); })
+				);
 	}
 
 }	// AE::Threading

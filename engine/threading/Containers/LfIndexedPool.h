@@ -15,7 +15,7 @@
 	   If you use lock-free algorithm use 'release' memory order after writing to 'index' and use 'acquire' memory order before reading from 'index'.
 	4. Wait until all threads finish reading from 'index' then you may call Unassign( index ).
 	
-	This lock-free container designed for small number of data.
+	This lock-free container designed for small number of elements.
 */
 
 #pragma once
@@ -114,7 +114,7 @@ namespace AE::Threading
 		// Must be externally synchronized.
 		// It is unsafe to call destructor for a value that can be used in another thread.
 		template <typename FN>
-		void  Release (FN &&dtor)
+		void  Release (FN &&dtor, bool checkForAssigned)
 		{
 			// invalidate cache 
 			ThreadFence( EMemoryOrder::Acquire );
@@ -131,8 +131,8 @@ namespace AE::Threading
 					Bitfield_t	ctor_bits	= _createdBits[j].exchange( UMax, EMemoryOrder::Relaxed );
 					Bitfield_t	assigned	= _assignedBits[j].exchange( 0, EMemoryOrder::Relaxed );
 
-					Unused( assigned );
-					ASSERT( assigned == UMax );
+					if ( checkForAssigned )
+						CHECK( assigned == UMax );	// some items is still assigned
 
 					// call destructor
 					for (size_t c = 0; c < AtomicSize; ++c)
@@ -146,9 +146,9 @@ namespace AE::Threading
 			}
 		}
 
-		void Release ()
+		void Release (bool checkForAssigned = true)
 		{
-			return Release([] (Value_t& value) { value.~Value_t(); });
+			return Release( [](Value_t& value) { value.~Value_t(); }, checkForAssigned );
 		}
 
 		

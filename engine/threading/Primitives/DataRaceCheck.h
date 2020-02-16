@@ -4,13 +4,13 @@
 
 #include "threading/Common.h"
 
-#include <shared_mutex>
+#if AE_ENABLE_DATA_RACE_CHECK
 
-#ifdef AE_ENABLE_DATA_RACE_CHECK
-
-#include <atomic>
-#include <mutex>
-#include <thread>
+#if defined(PLATFORM_ANDROID) or defined(AE_CI_BUILD)
+#	define DRC_CHECK( ... )	CHECK_FATAL( __VA_ARGS__ )
+#else
+#	define DRC_CHECK( ... )	CHECK_ERR( __VA_ARGS__ )
+#endif
 
 #ifdef PLATFORM_ANDROID
 #	define DRC_CHECK( ... )	CHECK_FATAL( __VA_ARGS__ )

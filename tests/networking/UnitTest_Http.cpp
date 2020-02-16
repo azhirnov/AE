@@ -162,7 +162,7 @@ namespace
 			TEST( p1_ok );
 		}
 		
-		{
+		/*{
 			Atomic<bool>	p1_ok = false;
 			Atomic<bool>	p2_ok = false;
 			Atomic<bool>	p3_ok = false;
@@ -179,7 +179,7 @@ namespace
 			TEST( not p1_ok );
 			TEST( p2_ok );
 			TEST( p3_ok );
-		}
+		}*/
 	}
 }
 

@@ -2,10 +2,39 @@
 
 #include "threading/TaskSystem/TaskScheduler.h"
 #include "stl/Algorithms/StringUtils.h"
+#include "threading/Containers/LfIndexedPool2.h"
 
 namespace AE::Threading
 {
+DEBUG_ONLY(
+	Atomic<int64_t>	asyncTaskCounter {0};
+)
+
+/*
+=================================================
+	OutputChunk::Init
+=================================================
+*/
+	void  IAsyncTask::OutputChunk::Init (uint idx)
+	{
+		next		= null;
+		selfIndex	= idx;
+		tasks.clear();
+	}
 	
+/*
+=================================================
+	OutputChunk::_GetPool
+=================================================
+*/
+	inline auto&  IAsyncTask::OutputChunk::_GetPool ()
+	{
+		static LfIndexedPool2< OutputChunk, uint, (1u<<12), 64 >  pool;
+		return pool;
+	}
+//-----------------------------------------------------------------------------
+
+
 /*
 =================================================
 	constructor
@@ -13,14 +42,27 @@ namespace AE::Threading
 */
 	IAsyncTask::IAsyncTask (EThread type) :
 		_threadType{type}
-	{}
+	{
+		DEBUG_ONLY( ++asyncTaskCounter );
+	}
 	
+/*
+=================================================
+	destructor
+=================================================
+*/
+	IAsyncTask::~IAsyncTask ()
+	{
+		ASSERT( _output == null );
+		DEBUG_ONLY( --asyncTaskCounter );
+	}
+
 /*
 =================================================
 	_SetCancellationState
 =================================================
 */
-	bool IAsyncTask::_SetCancellationState ()
+	bool  IAsyncTask::_SetCancellationState ()
 	{
 		for (EStatus expected = EStatus::Pending;
 			 not _status.compare_exchange_weak( INOUT expected, EStatus::Cancellation, EMemoryOrder::Relaxed );)
@@ -37,7 +79,7 @@ namespace AE::Threading
 	OnFailure
 =================================================
 */
-	bool IAsyncTask::OnFailure ()
+	bool  IAsyncTask::OnFailure ()
 	{
 		for (EStatus expected = EStatus::InProgress;
 			 not _status.compare_exchange_weak( INOUT expected, EStatus::Failed, EMemoryOrder::Relaxed );)
@@ -48,6 +90,9 @@ namespace AE::Threading
 
 			ASSERT( expected != EStatus::Cancellation );	// TODO: Failed or Canceled ?
 		}
+		
+		EXLOCK( _outputGuard );
+		_FreeOutputChunks( true );
 		return true;
 	}
 
@@ -56,24 +101,28 @@ namespace AE::Threading
 	_OnFinish
 =================================================
 */
-	void IAsyncTask::_OnFinish ()
+	void  IAsyncTask::_OnFinish ()
 	{
 		EStatus	expected = EStatus::InProgress;
 	
+		EXLOCK( _outputGuard );
+		ASSERT( _waitBits.load() == 0 );
+		
 		// try to set completed state	
 		if ( _status.compare_exchange_strong( INOUT expected, EStatus::Completed, EMemoryOrder::Relaxed ) or expected == EStatus::Failed )
 		{
-			// flush cache
-			ThreadFence( EMemoryOrder::Release );
+			_FreeOutputChunks( false );
 			return;
 		}
 
+		// cancel
 		if ( expected == EStatus::Cancellation )
 		{
 			OnCancel();
 
-			// set canceled state and flush cache
-			_status.compare_exchange_strong( INOUT expected, EStatus::Canceled, EMemoryOrder::Release, EMemoryOrder::Relaxed );
+			_status.store( EStatus::Canceled, EMemoryOrder::Relaxed );
+
+			_FreeOutputChunks( true );
 			return;
 		}
 
@@ -85,15 +134,79 @@ namespace AE::Threading
 	_Cancel
 =================================================
 */
-	void IAsyncTask::_Cancel ()
+	void  IAsyncTask::_Cancel ()
 	{
+		EXLOCK( _outputGuard );
+
 		// Pending/InProgress -> Cancellation
 		_SetCancellationState();
 
 		OnCancel();
 
-		// set canceled state and flush cache
-		CHECK( _status.exchange( EStatus::Canceled, EMemoryOrder::Release ) == EStatus::Cancellation );
+		// set canceled state
+		CHECK( _status.exchange( EStatus::Canceled, EMemoryOrder::Relaxed ) == EStatus::Cancellation );
+
+		_FreeOutputChunks( true );
+	}
+	
+/*
+=================================================
+	_FreeOutputChunks
+=================================================
+*/
+	void  IAsyncTask::_FreeOutputChunks (bool isCanceled)
+	{
+		auto&	chunk_pool = OutputChunk::_GetPool();
+
+		for (OutputChunk* chunk = _output; chunk;)
+		{
+			for (auto&[dep, idx, is_strong] : chunk->tasks)
+			{
+				if ( isCanceled and is_strong )
+					dep->_canceledDepsCount.fetch_add( 1, EMemoryOrder::Relaxed );
+
+				dep->_waitBits.fetch_and( ~(1ull << idx), EMemoryOrder::Relaxed );
+			}
+			chunk->tasks.clear();
+
+			OutputChunk*	old_chunk = chunk;
+
+			chunk			= old_chunk->next;
+			old_chunk->next = null;
+			chunk_pool.Unassign( old_chunk->selfIndex );
+		}
+
+		_output = null;
+	}
+	
+/*
+=================================================
+	_ResetState
+=================================================
+*/
+	bool  IAsyncTask::_ResetState ()
+	{
+		EXLOCK( _outputGuard );
+
+		for (EStatus expected = EStatus::Completed;
+			 not _status.compare_exchange_weak( INOUT expected, EStatus::Initial, EMemoryOrder::Relaxed );)
+		{
+			if ( expected == EStatus::Completed	or
+				 expected == EStatus::Failed	or
+				 expected == EStatus::Canceled )
+				continue;
+
+			RETURN_ERR( "can't reset task that is not finished" );
+		}
+
+		_waitBits.store( UMax, EMemoryOrder::Relaxed );
+		_canceledDepsCount.store( 0, EMemoryOrder::Relaxed );
+		ASSERT( _output == null );
+
+		ASSERT( not _interlockDep );
+		_interlockDep.Clear();
+
+		return true;
 	}
 //-----------------------------------------------------------------------------
 	
@@ -103,7 +216,7 @@ namespace AE::Threading
 	_RunTask
 =================================================
 */
-	void IThread::_RunTask (const AsyncTask &task)
+	void  IThread::_RunTask (const AsyncTask &task)
 	{
 		using EStatus = IAsyncTask::EStatus;
 
@@ -111,6 +224,8 @@ namespace AE::Threading
 		task->Run();
 		task->_OnFinish();
 		AE_VTUNE( __itt_task_end( Scheduler().GetVTuneDomain() ));
+		
+		CHECK( task->_interlockDep.Unlock() );
 	}
 	
 /*
@@ -118,9 +233,26 @@ namespace AE::Threading
 	_OnTaskFinish
 =================================================
 */
-	void IThread::_OnTaskFinish (const AsyncTask &task)
+	void  IThread::_OnTaskFinish (const AsyncTask &task)
 	{
 		task->_OnFinish();
+
+		CHECK( task->_interlockDep.Unlock() );
+	}
+//-----------------------------------------------------------------------------
+	
+
+/*
+=================================================
+	_SetDependencyCompletionStatus
+=================================================
+*/
+	void  ITaskDependencyManager::_SetDependencyCompletionStatus (const AsyncTask &task, uint depIndex, bool cancel)
+	{
+		if ( cancel )
+			task->_canceledDepsCount.fetch_add( 1, EMemoryOrder::Relaxed );
+
+		task->_waitBits.fetch_and( ~(1ull << depIndex), EMemoryOrder::Relaxed );
 	}
 //-----------------------------------------------------------------------------
 
@@ -182,6 +314,7 @@ namespace AE::Threading
 		// call 'Release' before destroy
 		EXLOCK( _threadGuard );
 		CHECK( _threads.empty() );
+		ASSERT( asyncTaskCounter == 0 );
 	}
 	
 /*
@@ -189,7 +322,7 @@ namespace AE::Threading
 	Setup
 =================================================
 */
-	bool TaskScheduler::Setup (size_t maxWorkerThreads)
+	bool  TaskScheduler::Setup (size_t maxWorkerThreads)
 	{
 		{
 			EXLOCK( _threadGuard );
@@ -210,7 +343,7 @@ namespace AE::Threading
 	Release
 =================================================
 */
-	void TaskScheduler::Release ()
+	void  TaskScheduler::Release ()
 	{
 		// detach threads
 		{
@@ -232,6 +365,14 @@ namespace AE::Threading
 			if ( _vtuneDomain )
 				_vtuneDomain->flags = 0;
 		)
+
+		// free dependency managers
+		{
+			EXLOCK( _taskDepsMngrsGuard );
+			_taskDepsMngrs.clear();
+		}
+		
+		ASSERT( asyncTaskCounter == 0 );
 	}
 
 /*
@@ -239,7 +380,7 @@ namespace AE::Threading
 	AddThread
 =================================================
 */
-	bool TaskScheduler::AddThread (const ThreadPtr &thread)
+	bool  TaskScheduler::AddThread (const ThreadPtr &thread)
 	{
 		EXLOCK( _threadGuard );
 
@@ -255,7 +396,7 @@ namespace AE::Threading
 	ProcessTask
 =================================================
 */
-	bool TaskScheduler::ProcessTask (EThread type, uint seed)
+	bool  TaskScheduler::ProcessTask (EThread type, uint seed)
 	{
 		BEGIN_ENUM_CHECKS();
 		switch ( type )
@@ -316,35 +457,14 @@ namespace AE::Threading
 			// find task
 			for (auto iter = q.tasks.begin(); iter != q.tasks.end();)
 			{
-				bool	ready	= true;
-				bool	cancel	= ((*iter)->Status() == EStatus::Cancellation);
+				auto&	curr  = *iter;
+				bool	ready = false;
 
 				// check input dependencies
-				for (size_t i = 0, cnt = (*iter)->_dependsOn.size(); (i < cnt) & ready & (not cancel); ++i)
+				if ( curr->_canceledDepsCount.load( EMemoryOrder::Relaxed ) > 0 or
+					 curr->_waitBits.load( EMemoryOrder::Relaxed ) == 0 )
 				{
-					const auto&	dep = (*iter)->_dependsOn[i];
-					
-					if ( not dep )
-						continue;
-
-					const EStatus	status = dep->Status();
-
-					ready	&= (status > EStatus::_Finished);
-					cancel	|= (status > EStatus::_Interropted);
-				}
-				
-				cancel &= (*iter)->_canBeCanceledByDeps;
-
-				if ( ready | cancel ) {
-					(*iter)->_dependsOn.clear();
-				}
-
-				// cancel task if one of dependencies has been canceled
-				if ( cancel )
-				{
-					(*iter)->_Cancel();
-					iter = q.tasks.erase( iter );
-					continue;
+					ready = true;
 				}
 
 				// input dependencies is not complete
@@ -354,8 +474,15 @@ namespace AE::Threading
 					continue;
 				}
 
+				// try lock
+				if ( curr->_interlockDep and not curr->_interlockDep.TryLock() )
+				{
+					// failed to lock
+					continue;
+				}
+
 				// remove task
-				task = *iter;
+				task = curr;
 				q.tasks.erase( iter );
 				break;
 			}
@@ -366,6 +493,15 @@ namespace AE::Threading
 
 			if ( not task )
 				continue;
+			
+			// cancel task if one of dependencies has been canceled
+			if ( (task->Status() == EStatus::Cancellation) or
+				 (task->_canceledDepsCount.load( EMemoryOrder::Relaxed ) > 0) )
+			{
+				task->_Cancel();
+				--j; // try same queue
+				continue;
+			}
 
 			// try to start task
 			EStatus	expected = EStatus::Pending;
@@ -380,6 +516,8 @@ namespace AE::Threading
 			else
 			{
 				ASSERT( expected == EStatus::Cancellation );
+				
+				CHECK( task->_interlockDep.Unlock() );
 				task->_Cancel();
 			}
 		}
@@ -409,6 +547,8 @@ namespace AE::Threading
 			task->_OnFinish();
 			AE_VTUNE( __itt_task_end( _vtuneDomain ));
 				
+			CHECK( task->_interlockDep.Unlock() );
+
 			AE_SCHEDULER_PROFILING(
 				tq._workTime += (TimePoint_t::clock::now() - start_time).count();
 			)
@@ -435,7 +575,7 @@ namespace AE::Threading
 			{
 				if ( i > 2000 )
 				{
-					std::this_thread::yield();
+					std::this_thread::sleep_for( std::chrono::microseconds{100} );
 					i = 0;
 
 					const Nanoseconds	dt = TimePoint_t::clock::now() - start_time;
@@ -463,13 +603,86 @@ namespace AE::Threading
 	
 /*
 =================================================
+	_AddTaskDependencies
+=================================================
+*/
+	bool  TaskScheduler::_AddTaskDependencies (const AsyncTask &task, const AsyncTask &dep, bool isStrong, INOUT uint &bitIndex)
+	{
+		CHECK_ERR( bitIndex + 1 < sizeof(IAsyncTask::WaitBits_t)*8 );
+
+		EXLOCK( dep->_outputGuard );	// TODO: optimize
+
+		// if we have lock and task is not finished then we can add output dependency
+		// even if status has been changed in another thread
+		const EStatus	status	= dep->Status();
+
+		// add to output
+		if ( status < EStatus::_Finished )
+		{
+			for (OutputChunk_t** chunk_ref = &dep->_output;;)
+			{
+				if ( not *chunk_ref )
+				{
+					auto&	chunk_pool = OutputChunk_t::_GetPool();
+
+					uint	idx;
+					CHECK_ERR( chunk_pool.Assign( OUT idx ));
+
+					*chunk_ref = &chunk_pool[ idx ];
+					(*chunk_ref)->Init( idx );
+				}
+
+				if ( (*chunk_ref)->next )
+				{
+					chunk_ref = &(*chunk_ref)->next;
+					continue;
+				}
+
+				if ( (*chunk_ref)->tasks.try_push_back({ task, bitIndex, uint(isStrong) }))
+				{
+					++bitIndex;
+					break;
+				}
+
+				chunk_ref = &(*chunk_ref)->next;
+			}
+		}
+
+		// cancel current task
+		if ( isStrong and status > EStatus::_Interropted )
+		{
+			task->_Cancel();
+			return true;
+		}
+
+		return true;
+	}
+	
+/*
+=================================================
+	_SetInterlockDependency
+=================================================
+*/
+	bool  TaskScheduler::_SetInterlockDependency (const AsyncTask &task, const InterlockDependency &dep)
+	{
+		CHECK_ERR( not task->_interlockDep );
+
+		task->_interlockDep = dep;
+		return true;
+	}
+
+/*
+=================================================
 	_InsertTask
 =================================================
 */
-	AsyncTask  TaskScheduler::_InsertTask (const AsyncTask &task, Array<AsyncTask> &&dependsOn, bool canBeCanceledByDeps)
+	AsyncTask  TaskScheduler::_InsertTask (const AsyncTask &task, uint bitIndex)
 	{
-		task->_canBeCanceledByDeps	= canBeCanceledByDeps;
-		task->_dependsOn			= std::move(dependsOn);
+		// some dependencies may complete so merge bit mask with current
+		task->_waitBits.fetch_and( ToBitMask<uint64_t>( bitIndex ), EMemoryOrder::Relaxed );
+
+		EStatus  old_status = task->_status.exchange( EStatus::Pending, EMemoryOrder::Relaxed );
+		CHECK_ERR( old_status == EStatus::Initial );
 
 		BEGIN_ENUM_CHECKS();
 		switch ( task->Type() )

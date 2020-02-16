@@ -60,6 +60,12 @@ namespace AE::STL
 	template <typename T>
 	static constexpr bool	IsEmpty				= std::is_empty_v<T>;
 
+	template <typename From, typename To>
+	static constexpr bool	IsConvertible		= std::is_convertible_v<From, To>;
+
+	template <typename T>
+	static constexpr bool	IsArithmetic		= std::is_arithmetic_v<T>;
+
 	
 	template <typename T>	using InPlaceType	= std::in_place_type_t<T>;
 	template <typename T>	constexpr InPlaceType<T> InPlaceObj {};
@@ -105,6 +111,12 @@ namespace AE::STL
 
 		template <template <typename...> class Templ, typename... Args>
 		struct is_specialization_of< Templ<Args...>, Templ > : std::bool_constant<true> {};
+		
+		template <template <typename ...> class Left, template <typename ...> class Right>
+		struct IsSameTemplates			{ static const bool  value = false; };
+
+		template <template <typename ...> class T>
+		struct IsSameTemplates< T, T >	{ static const bool  value = true; };
 
 	}	// _ae_stl_hidden_
 
@@ -112,5 +124,8 @@ namespace AE::STL
 	template <typename T, template <typename...> class Templ>
 	static constexpr bool	IsSpecializationOf = _ae_stl_hidden_::is_specialization_of< T, Templ >::value;
 	
+	template <template <typename ...> class Left, template <typename ...> class Right>
+	static constexpr bool	IsSameTemplates = _ae_stl_hidden_::IsSameTemplates< Left, Right >::value;
+
 
 }	// AE::STL

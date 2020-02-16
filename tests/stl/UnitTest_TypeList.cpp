@@ -108,6 +108,12 @@ extern void UnitTest_TypeList ()
 		constexpr size_t	val5	= TL::ForEach_Min< TypeSize >();
 		STATIC_ASSERT( val5 == 1 );
 	}
+	{
+		using TL = TypeList< int, float, Pair<int, float>, Tuple<int, float>, Pair<float, int> >;
+
+		STATIC_ASSERT( TL::FirstSpecializationOf< std::pair > == 2 );
+		STATIC_ASSERT( TL::FirstSpecializationOf< Tuple > == 3 );
+	}
 
 	AE_LOGI( "UnitTest_TypeList - passed" );
 }
