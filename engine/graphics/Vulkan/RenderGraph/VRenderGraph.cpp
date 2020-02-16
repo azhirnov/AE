@@ -33,7 +33,9 @@ namespace AE::Graphics
 # include "graphics/Vulkan/RenderGraph/VLocalBuffer.h"
 # include "graphics/Vulkan/RenderGraph/VLocalImage.h"
 # include "graphics/Vulkan/RenderGraph/VGraphicsContext.h"
+# include "graphics/Vulkan/RenderGraph/VIndirectGraphicsContext.h"
 # include "graphics/Vulkan/RenderGraph/VRenderContext.h"
+# include "graphics/Vulkan/RenderGraph/VCmdBatchDepsManager.h"
 
 namespace AE::Graphics
 {
@@ -86,8 +88,11 @@ namespace AE::Graphics
 =================================================
 */
 	VRenderGraph::VRenderGraph (VResourceManager &resMngr) :
-		_resMngr{ resMngr }
-	{}
+		_resMngr{ resMngr },
+		_taskDepsMngr{ MakeShared<VCmdBatchDepsManager>() }
+	{
+		Threading::Scheduler().RegisterDependency< CmdBatchDep >( _taskDepsMngr );
+	}
 	
 /*
 =================================================
@@ -98,9 +103,13 @@ namespace AE::Graphics
 	{
 		EXLOCK( _drCheck );
 
-		for (auto& ctx : _contexts) {
-			CHECK( not ctx );
+		for (auto& ctx : _contexts)
+		{
+			CHECK( not ctx.direct );
+			CHECK( not ctx.indirect );
 		}
+
+		Threading::Scheduler().UnregisterDependency< CmdBatchDep >();
 	}
 
 /*
@@ -118,8 +127,10 @@ namespace AE::Graphics
 			if ( not q )
 				continue;
 
-			_contexts[i] = MakeUnique<GraphicsContext>( _resMngr, q );
-			CHECK_ERR( _contexts[i]->Create() );
+			_contexts[i].direct = MakeUnique<GraphicsContext>( _resMngr, q );
+			CHECK_ERR( _contexts[i].direct->Create() );
+
+			// TODO: create indirect ctx
 		}
 
 		return true;
@@ -134,10 +145,13 @@ namespace AE::Graphics
 	{
 		EXLOCK( _drCheck );
 
-		_cmdBatchPool.Release();
+		CHECK( WaitIdle() );
+
+		_cmdBatchPool.Release( /*checkForAssigned*/false );
 
 		for (auto& ctx : _contexts) {
-			ctx.reset();
+			ctx.direct.reset();
+			ctx.indirect.reset();
 		}
 	}
 	
@@ -176,7 +190,7 @@ namespace AE::Graphics
 		cmd->input			= input.size()   ? _allocator.Alloc<GfxResourceID>( input.size() )  : null;
 		cmd->output			= output.size()  ? _allocator.Alloc<GfxResourceID>( output.size() ) : null;
 		cmd->inputCmd		= input.size()   ? _allocator.Alloc<BaseCmd*>( input.size() )       : null;
-		cmd->dbgName		= dbgName.size() ? _allocator.Alloc<char>( dbgName.length()+1 )     : "";
+		cmd->dbgName		= dbgName.size() ? _allocator.Alloc<char>( dbgName.length()+1 )     : null;
 
 		for (size_t i = 0; i < input.size(); ++i)
 		{
@@ -355,7 +369,7 @@ namespace AE::Graphics
 		VCommandBatch*	batch;
 		if ( _AcquireNextBatch( OUT batch_id, OUT batch ))
 		{
-			_ExecuteCommands( ordered, batch );
+			CHECK_ERR( _ExecuteCommands( ordered, batch, batch_id ));
 			_RecycleCmdBatches();
 		}
 
@@ -485,15 +499,15 @@ namespace AE::Graphics
 	_ExecuteCommands
 =================================================
 */
-	void  VRenderGraph::_ExecuteCommands (ArrayView<BaseCmd*> ordered, VCommandBatch* batch)
+	bool  VRenderGraph::_ExecuteCommands (ArrayView<BaseCmd*> ordered, VCommandBatch* batch, CmdBatchID batchId)
 	{
-		_contexts[uint(EQueueType::Graphics)]->Begin( batch );
+		CHECK_ERR( _contexts[uint(EQueueType::Graphics)].direct->Begin( batch, batchId ));
 
 		for (auto* cmd : ordered)
 		{
 			ASSERT( cmd->state == BaseCmd::EState::Pending );
 			
-			CHECK( cmd->pass( *_contexts[uint(EQueueType::Graphics)] ));
+			CHECK( cmd->pass( *_contexts[uint(EQueueType::Graphics)].direct ));
 
 			/*
 			ASSERT( cmd->queue < EQueueType::_Count );
@@ -512,10 +526,12 @@ namespace AE::Graphics
 
 		for (auto& ctx : _contexts)
 		{
-			if ( ctx ) {
-				CHECK( ctx->Submit() );
+			if ( ctx.direct ) {
+				CHECK_ERR( ctx.direct->Submit() );
 			}
 		}
+
+		return true;
 	}
 	
 /*
@@ -544,6 +560,8 @@ namespace AE::Graphics
 
 			++iter;
 		}
+
+		_taskDepsMngr->Update( *this );
 	}
 
 /*

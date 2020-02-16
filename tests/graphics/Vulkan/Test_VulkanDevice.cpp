@@ -9,7 +9,7 @@ extern void Test_VulkanDevice ()
 	{
 		VDeviceInitializer	dev;
 
-		CHECK_FATAL( dev.CreateInstance( "TestApp", "AE", dev.GetRecomendedInstanceLayers(), dev.GetInstanceExtensions_v110(), {1,1} ));
+		CHECK_FATAL( dev.CreateInstance( "TestApp", "AE", dev.GetRecomendedInstanceLayers() ));
 		CHECK_FATAL( dev.ChooseHighPerformanceDevice() );
 		CHECK_FATAL( dev.CreateLogicalDevice( Default, Default ));
 

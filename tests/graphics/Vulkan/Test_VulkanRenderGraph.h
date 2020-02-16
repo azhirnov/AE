@@ -66,7 +66,7 @@ private:
 template <typename Arg0, typename ...Args>
 inline void  VRGTest::DeleteResources (Arg0 &arg0, Args& ...args)
 {
-	_resourceMngr->ReleaseResource( INOUT arg0 );
+	CHECK( _resourceMngr->ReleaseResource( INOUT arg0 ));	// must be released
 		
 	if constexpr ( CountOf<Args...>() )
 		DeleteResources( std::forward<Args&>( args )... );

@@ -190,6 +190,24 @@ namespace AE::Math
 		using Unsigned_t = ToUnsignedInteger<T>;
 		return BitCast<T>( _ae_math_hidden_::_BitRotateRight( BitCast<Unsigned_t>(x), shift ));
 	}
-
+	
+/*
+=================================================
+	ToBitMask
+=================================================
+*/
+	template <typename T>
+	ND_ inline constexpr EnableIf< IsUnsignedInteger<T>, T >  ToBitMask (uint count)
+	{
+		return	count >= sizeof(T)*8 ?
+					~T(0) :
+					(T(1) << count) - 1;
+	}
+	
+	template <typename T>
+	ND_ inline constexpr EnableIf< IsUnsignedInteger<T>, T >  ToBitMask (uint firstBit, uint count)
+	{
+		return SafeLeftBitShift( ToBitMask<T>( count ), firstBit );
+	}
 
 }	// AE::Math

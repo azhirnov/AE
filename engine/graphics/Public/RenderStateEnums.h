@@ -26,10 +26,10 @@ namespace AE::Graphics
 		OneMinusConstAlpha,			// 1 - cc.a
 		SrcAlphaSaturate,			// rgb * min( src.a, dst.a ), a * 1
 
-		Src1Color,					// 
-		OneMinusSrc1Color,			// 
-		Src1Alpha,					// 
-		OneMinusSrc1Alpha,			// 
+		Src1Color,					// src1
+		OneMinusSrc1Color,			// 1 - src1
+		Src1Alpha,					// src1.a
+		OneMinusSrc1Alpha,			// 1 - src1.a
 
 		Unknown	= ~0u,
 	};

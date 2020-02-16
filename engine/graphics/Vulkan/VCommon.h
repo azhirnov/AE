@@ -26,6 +26,7 @@ namespace AE::Graphics
 	using AE::Threading::RWDataRaceCheck;
 	using AE::Threading::EMemoryOrder;
 	using AE::Threading::ThreadFence;
+	using AE::Threading::AsyncTask;
 
 	class VDevice;
 	class VResourceManager;
@@ -98,6 +99,8 @@ namespace AE::Graphics
 	VULKAN_ENUM_BIT_OPERATORS( VkImageUsageFlagBits );
 	VULKAN_ENUM_BIT_OPERATORS( VkSampleCountFlagBits );
 	
+#	undef VULKAN_ENUM_BIT_OPERATORS
+
 
 }	// AE::Graphics
 

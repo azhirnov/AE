@@ -41,9 +41,11 @@ namespace AE::Graphics
 			static constexpr uint		IndexOffset			= 0;
 			static constexpr uint		GenerationOffset	= 16;
 			static constexpr uint		ResTypeOffset		= 32;
-			static constexpr uint64_t	IndexMask			= (1ull << IndexOffset) - 1;
-			static constexpr uint64_t	GenerationMask		= (1ull << GenerationOffset) - 1;
-			static constexpr uint64_t	ResTypeMask			= (1ull << ResTypeOffset) - 1;
+			static constexpr uint64_t	IndexMask			= 0xFFFF;
+			static constexpr uint64_t	GenerationMask		= 0xFFFF;
+			static constexpr uint64_t	ResTypeMask			= 0xFF;
+
+			STATIC_ASSERT( ((IndexMask << IndexOffset) | (GenerationMask << GenerationOffset) | (ResTypeMask << ResTypeOffset)) == 0xFF'FFFF'FFFFull );
 
 		// variables
 			uint64_t	value	= UMax;

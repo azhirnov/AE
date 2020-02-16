@@ -12,8 +12,8 @@ target_include_directories( "Graphics" PUBLIC "../../engine_tools/res_pack" )
 
 if (${AE_ENABLE_VULKAN})
 	#target_link_libraries( "Graphics" PUBLIC "Vulkan-120-lib" )
-	#target_link_libraries( "Graphics" PUBLIC "Vulkan-110-lib" )
-	target_link_libraries( "Graphics" PUBLIC "Vulkan-100-lib" )
+	target_link_libraries( "Graphics" PUBLIC "Vulkan-110-lib" )
+	#target_link_libraries( "Graphics" PUBLIC "Vulkan-100-lib" )
 endif ()
 
 if (${AE_ENABLE_VMA})

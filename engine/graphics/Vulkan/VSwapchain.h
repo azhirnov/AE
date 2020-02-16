@@ -117,7 +117,8 @@ namespace AE::Graphics
 		void Destroy ();
 
 		bool Recreate (const uint2 &size);
-
+		
+		ND_ static ArrayView<const char*>  GetInstanceExtensions ();
 
 	private:
 		bool _CreateColorAttachment ();

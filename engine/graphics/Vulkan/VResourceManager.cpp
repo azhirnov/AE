@@ -148,13 +148,13 @@ namespace {
 		BEGIN_ENUM_CHECKS();
 		switch ( id.ResourceType() )
 		{
-			case EType::Unknown :				return _ReleaseResource( VDependencyID{ id.Index(), id.Generation() });
-			case EType::Buffer :				return _ReleaseResource( VBufferID{ id.Index(), id.Generation() });
-			case EType::Image :					return _ReleaseResource( VImageID{ id.Index(), id.Generation() });
-			case EType::RayTracingGeometry :	break; //return _ReleaseResource( VRayTracingGeometryID{ id.Index(), id.Generation() });
-			case EType::RayTracingScene :		break; //return _ReleaseResource( VRayTracingSceneID{ id.Index(), id.Generation() });
-			case EType::VirtualBuffer :			return _ReleaseResource( VVirtualBufferID{ id.Index(), id.Generation() });
-			case EType::VirtualImage :			return _ReleaseResource( VVirtualImageID{ id.Index(), id.Generation() });
+			case EType::Unknown :				return _ReleaseResource( VDependencyID{ id.Index(), id.Generation() }) == 0;
+			case EType::Buffer :				return _ReleaseResource( VBufferID{ id.Index(), id.Generation() }) == 0;
+			case EType::Image :					return _ReleaseResource( VImageID{ id.Index(), id.Generation() }) == 0;
+			case EType::RayTracingGeometry :	break; //return _ReleaseResource( VRayTracingGeometryID{ id.Index(), id.Generation() }) == 0;
+			case EType::RayTracingScene :		break; //return _ReleaseResource( VRayTracingSceneID{ id.Index(), id.Generation() }) == 0;
+			case EType::VirtualBuffer :			return _ReleaseResource( VVirtualBufferID{ id.Index(), id.Generation() }) == 0;
+			case EType::VirtualImage :			return _ReleaseResource( VVirtualImageID{ id.Index(), id.Generation() }) == 0;
 			case EType::_Count :				break;
 		}
 		END_ENUM_CHECKS();

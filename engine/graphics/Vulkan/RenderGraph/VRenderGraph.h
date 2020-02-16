@@ -13,6 +13,7 @@
 namespace AE::Graphics
 {
 	class VCommandBatch;
+	class VCmdBatchDepsManager;
 
 
 	//
@@ -24,6 +25,7 @@ namespace AE::Graphics
 	// types
 	private:
 		class GraphicsContext;
+		class IndirectGraphicsContext;
 		class RenderContext;
 
 		struct BaseCmd;
@@ -32,12 +34,20 @@ namespace AE::Graphics
 		struct ComputeCmd;
 		struct TransferCmd;
 
+		struct CtxPerQueue
+		{
+			UniquePtr<GraphicsContext>			direct;		// direct write to vulkan command buffer
+			UniquePtr<IndirectGraphicsContext>	indirect;	// writes to software command buffer and then to vulkan cmdbuf
+		};
+
 		using VirtualResWrite_t		= HashMap< GfxResourceID, BaseCmd* >;
 		using VirtualResUsage_t		= HashMap< GfxResourceID, EVirtualResourceUsage >;
-		using CtxPerQueue_t			= StaticArray< UniquePtr<GraphicsContext>, uint(EQueueType::_Count) >;
+		using CtxPerQueue_t			= StaticArray< CtxPerQueue, uint(EQueueType::_Count) >;
 		
 		using SubmittedBatches_t	= Array< CmdBatchID >;	// TODO: ring buffer
 		using CmdBatchPool_t		= Threading::LfIndexedPool< VCommandBatch, uint, 32, 16 >;
+
+		using TaskDepsMngr_t		= SharedPtr< VCmdBatchDepsManager >;
 
 
 	// variables
@@ -55,6 +65,8 @@ namespace AE::Graphics
 		SubmittedBatches_t		_submitted;
 
 		VResourceManager &		_resMngr;
+
+		TaskDepsMngr_t			_taskDepsMngr;
 		
 		RWDataRaceCheck			_drCheck;
 
@@ -117,7 +129,7 @@ namespace AE::Graphics
 		void  _SortCommands (OUT Array<BaseCmd*> &ordered);
 		void  _MergeRenderPasses ();
 		bool  _AcquireNextBatch (OUT CmdBatchID &, OUT VCommandBatch* &batch);
-		void  _ExecuteCommands (ArrayView<BaseCmd*> ordered, VCommandBatch *batch);
+		bool  _ExecuteCommands (ArrayView<BaseCmd*> ordered, VCommandBatch *batch, CmdBatchID batchId);
 		void  _RecycleCmdBatches ();
 	};
 

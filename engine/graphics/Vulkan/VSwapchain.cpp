@@ -76,7 +76,7 @@ namespace AE::Graphics
 	Present
 =================================================
 */
-	VkResult VSwapchain::Present (VQueuePtr queue, ArrayView<VkSemaphore> renderFinished)
+	VkResult  VSwapchain::Present (VQueuePtr queue, ArrayView<VkSemaphore> renderFinished)
 	{
 		CHECK_ERR( _vkSwapchain and queue, VK_RESULT_MAX_ENUM );
 		CHECK_ERR( IsImageAcquired(), VK_RESULT_MAX_ENUM );
@@ -116,7 +116,7 @@ namespace AE::Graphics
 	CreateSurface
 =================================================
 */
-	bool VSwapchainInitializer::CreateSurface (const App::NativeWindow &window, StringView dbgName)
+	bool  VSwapchainInitializer::CreateSurface (const App::NativeWindow &window, StringView dbgName)
 	{
 		#ifdef PLATFORM_WINDOWS
 			CHECK_ERR( _device.GetVkInstance() and window.hinstance and window.hwnd );
@@ -165,10 +165,28 @@ namespace AE::Graphics
 	
 /*
 =================================================
+	GetInstanceExtensions
+=================================================
+*/
+	ArrayView<const char*>  VSwapchainInitializer::GetInstanceExtensions ()
+	{
+		static const char*	extensions[] = {
+			#ifdef PLATFORM_WINDOWS
+				VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+			#endif
+			#ifdef PLATFORM_ANDROID
+				VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
+			#endif
+		};
+		return extensions;
+	}
+
+/*
+=================================================
 	DestroySurface
 =================================================
 */
-	void VSwapchainInitializer::DestroySurface ()
+	void  VSwapchainInitializer::DestroySurface ()
 	{
 		CHECK( not _vkSwapchain );
 
@@ -186,7 +204,7 @@ namespace AE::Graphics
 	ChooseColorFormat
 =================================================
 */
-	bool VSwapchainInitializer::ChooseColorFormat (INOUT VkFormat &colorFormat, INOUT VkColorSpaceKHR &colorSpace) const
+	bool  VSwapchainInitializer::ChooseColorFormat (INOUT VkFormat &colorFormat, INOUT VkColorSpaceKHR &colorSpace) const
 	{
 		CHECK_ERR( _device.GetVkPhysicalDevice() and _vkSurface );
 
@@ -269,8 +287,8 @@ namespace AE::Graphics
 	IsSupported
 =================================================
 */
-	bool VSwapchainInitializer::IsSupported (const VkSampleCountFlagBits samples, const VkPresentModeKHR presentMode,
-											 const VkFormat colorFormat, const VkImageUsageFlagBits colorImageUsage) const
+	bool  VSwapchainInitializer::IsSupported (const VkSampleCountFlagBits samples, const VkPresentModeKHR presentMode,
+											  const VkFormat colorFormat, const VkImageUsageFlagBits colorImageUsage) const
 	{
 		CHECK_ERR( _device.GetVkPhysicalDevice() and _vkSurface );
 
@@ -301,15 +319,15 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool VSwapchainInitializer::Create (const uint2							&viewSize,
-										const VkFormat						colorFormat,
-										const VkColorSpaceKHR				colorSpace,
-										const uint							minImageCount,
-										const VkPresentModeKHR				presentMode,
-										const VkSurfaceTransformFlagBitsKHR	transform,
-										const VkCompositeAlphaFlagBitsKHR	compositeAlpha,
-										const VkImageUsageFlagBits			colorImageUsage,
-										StringView							dbgName)
+	bool  VSwapchainInitializer::Create (const uint2							&viewSize,
+										 const VkFormat							colorFormat,
+										 const VkColorSpaceKHR					colorSpace,
+										 const uint								minImageCount,
+										 const VkPresentModeKHR					presentMode,
+										 const VkSurfaceTransformFlagBitsKHR	transform,
+										 const VkCompositeAlphaFlagBitsKHR		compositeAlpha,
+										 const VkImageUsageFlagBits				colorImageUsage,
+										 StringView								dbgName)
 	{
 		CHECK_ERR( _device.GetVkPhysicalDevice() and _device.GetVkDevice() and _vkSurface );
 		CHECK_ERR( _device.GetFeatures().swapchain );
@@ -382,7 +400,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void VSwapchainInitializer::Destroy ()
+	void  VSwapchainInitializer::Destroy ()
 	{
 		CHECK( not IsImageAcquired() );
 
@@ -420,7 +438,7 @@ namespace AE::Graphics
 	that used swapchain images!
 =================================================
 */
-	bool VSwapchainInitializer::Recreate (const uint2 &size)
+	bool  VSwapchainInitializer::Recreate (const uint2 &size)
 	{
 		CHECK_ERR( Create( size, _colorFormat, _colorSpace, _minImageCount, _presentMode,
 						   _preTransform, _compositeAlpha, _colorImageUsage ));
@@ -433,7 +451,7 @@ namespace AE::Graphics
 	_CreateColorAttachment
 =================================================
 */
-	bool VSwapchainInitializer::_CreateColorAttachment ()
+	bool  VSwapchainInitializer::_CreateColorAttachment ()
 	{
 		CHECK_ERR( _images.empty() );
 		
@@ -452,8 +470,8 @@ namespace AE::Graphics
 	_GetCompositeAlpha
 =================================================
 */
-	bool VSwapchainInitializer::_GetCompositeAlpha (INOUT VkCompositeAlphaFlagBitsKHR &compositeAlpha,
-													const VkSurfaceCapabilitiesKHR &surfaceCaps) const
+	bool  VSwapchainInitializer::_GetCompositeAlpha (INOUT VkCompositeAlphaFlagBitsKHR &compositeAlpha,
+													 const VkSurfaceCapabilitiesKHR &surfaceCaps) const
 	{
 		const VkCompositeAlphaFlagBitsKHR		composite_alpha_flags[] = {
 			VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
@@ -484,8 +502,8 @@ namespace AE::Graphics
 	_GetSwapChainExtent
 =================================================
 */
-	void VSwapchainInitializer::_GetSwapChainExtent (INOUT VkExtent2D &extent,
-													 const VkSurfaceCapabilitiesKHR &surfaceCaps) const
+	void  VSwapchainInitializer::_GetSwapChainExtent (INOUT VkExtent2D &extent,
+													  const VkSurfaceCapabilitiesKHR &surfaceCaps) const
 	{
 		if ( surfaceCaps.currentExtent.width  == UMax and
 			 surfaceCaps.currentExtent.height == UMax )
@@ -504,7 +522,7 @@ namespace AE::Graphics
 	_GetPresentMode
 =================================================
 */
-	void VSwapchainInitializer::_GetPresentMode (INOUT VkPresentModeKHR &presentMode) const
+	void  VSwapchainInitializer::_GetPresentMode (INOUT VkPresentModeKHR &presentMode) const
 	{
 		uint						count		= 0;
 		Array< VkPresentModeKHR >	present_modes;
@@ -546,7 +564,7 @@ namespace AE::Graphics
 	_GetSurfaceImageCount
 =================================================
 */
-	void VSwapchainInitializer::_GetSurfaceImageCount (INOUT uint &minImageCount, const VkSurfaceCapabilitiesKHR &surfaceCaps) const
+	void  VSwapchainInitializer::_GetSurfaceImageCount (INOUT uint &minImageCount, const VkSurfaceCapabilitiesKHR &surfaceCaps) const
 	{
 		if ( minImageCount < surfaceCaps.minImageCount )
 		{
@@ -564,8 +582,8 @@ namespace AE::Graphics
 	_GetSurfaceTransform
 =================================================
 */
-	void VSwapchainInitializer::_GetSurfaceTransform (INOUT VkSurfaceTransformFlagBitsKHR &transform,
-													  const VkSurfaceCapabilitiesKHR &surfaceCaps) const
+	void  VSwapchainInitializer::_GetSurfaceTransform (INOUT VkSurfaceTransformFlagBitsKHR &transform,
+													   const VkSurfaceCapabilitiesKHR &surfaceCaps) const
 	{
 		if ( EnumEq( surfaceCaps.supportedTransforms, transform ) )
 			return;	// keep current
@@ -585,8 +603,8 @@ namespace AE::Graphics
 	_GetImageUsage
 =================================================
 */
-	bool VSwapchainInitializer::_GetImageUsage (OUT VkImageUsageFlags &imageUsage, const VkPresentModeKHR presentMode,
-												const VkFormat colorFormat, const VkSurfaceCapabilitiesKHR &surfaceCaps) const
+	bool  VSwapchainInitializer::_GetImageUsage (OUT VkImageUsageFlags &imageUsage, const VkPresentModeKHR presentMode,
+												 const VkFormat colorFormat, const VkSurfaceCapabilitiesKHR &surfaceCaps) const
 	{
 		if ( presentMode == VK_PRESENT_MODE_IMMEDIATE_KHR	or
 			 presentMode == VK_PRESENT_MODE_MAILBOX_KHR		or

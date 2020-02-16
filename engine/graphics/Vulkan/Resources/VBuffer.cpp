@@ -291,7 +291,7 @@ namespace AE::Graphics
 	{
 		VulkanBufferDesc	desc;
 		desc.buffer			= BitCast<BufferVk_t>( _buffer );
-		desc.usage			= BitCast<BufferUsageFlagsVk_t>( VEnumCast( _desc.usage ));
+		desc.usage			= BitCast<BufferUsageVk_t>( VEnumCast( _desc.usage ));
 		desc.size			= _desc.size;
 		//desc.queueFamily	= VK_QUEUE_FAMILY_IGNORED;
 		//desc.queueFamilyIndices	// TODO

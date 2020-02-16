@@ -63,6 +63,7 @@ namespace AE::Graphics
 		//	bool	inlineUniformBlock		: 1;
 			bool	shaderClock				: 1;
 			bool	timelineSemaphore		: 1;
+			bool	pushDescriptor			: 1;
 		};
 
 		struct DeviceProperties
@@ -87,9 +88,6 @@ namespace AE::Graphics
 			#ifdef VK_KHR_timeline_semaphore
 			VkPhysicalDeviceTimelineSemaphorePropertiesKHR		timelineSemaphoreProps;
 			#endif
-			#ifdef VK_VERSION_1_2
-			VkPhysicalDeviceVulkan12Properties					properties120;
-			#endif
 			#ifdef VK_KHR_buffer_device_address
 			VkPhysicalDeviceBufferDeviceAddressFeaturesKHR		bufferDeviceAddress;
 			#endif
@@ -98,6 +96,10 @@ namespace AE::Graphics
 			#endif
 			#ifdef VK_KHR_shader_atomic_int64
 			VkPhysicalDeviceShaderAtomicInt64FeaturesKHR		shaderAtomicInt64;
+			#endif
+			#ifdef VK_VERSION_1_2
+			VkPhysicalDeviceVulkan11Properties					properties110;
+			VkPhysicalDeviceVulkan12Properties					properties120;
 			#endif
 		};
 
@@ -181,7 +183,7 @@ namespace AE::Graphics
 		ND_ InstanceVersion  GetInstanceVersion () const;
 
 		bool CreateInstance (NtStringView appName, NtStringView engineName, ArrayView<const char*> instanceLayers,
-							 ArrayView<const char*> instanceExtensions, InstanceVersion version, uint appVer = 0, uint engineVer = 0);
+							 ArrayView<const char*> instanceExtensions = {}, InstanceVersion version = {1,2}, uint appVer = 0, uint engineVer = 0);
 		bool SetInstance (VkInstance value, ArrayView<const char*> instanceExtensions = {});
 		bool DestroyInstance ();
 
@@ -189,11 +191,14 @@ namespace AE::Graphics
 		bool ChooseHighPerformanceDevice ();
 		bool SetPhysicalDevice (VkPhysicalDevice value);
 		
-		bool CreateLogicalDevice (ArrayView<QueueCreateInfo> queues, ArrayView<const char*> extensions);
+		bool CreateLogicalDevice (ArrayView<QueueCreateInfo> queues, ArrayView<const char*> extensions = {});
 		bool SetLogicalDevice (VkDevice value, ArrayView<const char*> extensions = {});
 		bool DestroyLogicalDevice ();
 		
 		ND_ static ArrayView<const char*>	GetRecomendedInstanceLayers ();
+
+
+	private:
 		ND_ static ArrayView<const char*>	GetInstanceExtensions_v100 ();
 		ND_ static ArrayView<const char*>	GetInstanceExtensions_v110 ();
 		ND_ static ArrayView<const char*>	GetInstanceExtensions_v120 ();
@@ -201,7 +206,9 @@ namespace AE::Graphics
 		ND_ static ArrayView<const char*>	GetDeviceExtensions_v110 ();
 		ND_ static ArrayView<const char*>	GetDeviceExtensions_v120 ();
 
-	private:
+		ND_ static ArrayView<const char*>	_GetInstanceExtensions (InstanceVersion ver);
+		ND_ static ArrayView<const char*>	_GetDeviceExtensions (InstanceVersion ver);
+
 		void _ValidateInstanceVersion (INOUT uint &version) const;
 		void _ValidateInstanceLayers (INOUT Array<const char*> &layers) const;
 		void _ValidateInstanceExtensions (INOUT Array<const char*> &ext) const;
@@ -216,6 +223,9 @@ namespace AE::Graphics
 		bool _AddGraphicsQueue ();
 		bool _AddAsyncComputeQueue ();
 		bool _AddAsyncTransferQueue ();
+
+		void _SetupInstanceBackwardCompatibility ();
+		void _SetupDeviceBackwardCompatibility ();
 	};
 
 

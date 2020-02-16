@@ -13,7 +13,7 @@ namespace AE::Graphics
 	private:
 		VkCommandBuffer				_cmdbuf			= VK_NULL_HANDLE;
 
-		GraphicsContext &			_graphicsCtx;
+		GraphicsContext &		_graphicsCtx;
 		VLogicalRenderPass const&	_logicalRP;
 
 		// cached states
@@ -280,16 +280,16 @@ namespace AE::Graphics
 		auto*	buf = _graphicsCtx.ToLocalBuffer( buffer );
 		CHECK_ERR( buf, void());
 
+		if ( _graphicsCtx._enableBarriers ) {
+			_graphicsCtx._CheckBufferAccess( buf, EResourceState::IndexBuffer, VkDeviceSize(offset), VkDeviceSize(buf->Size() - offset) );
+		}
+
 		if ( (_indexBuffer == buf->Handle()) & (_indexOffset == offset) )
 			return;
 
 		_indexBuffer	= buf->Handle();
 		_indexOffset	= offset;
 		vkCmdBindIndexBuffer( _cmdbuf, _indexBuffer, VkDeviceSize(_indexOffset), VEnumCast(indexType) );
-
-		if ( _graphicsCtx._enableBarriers ) {
-			_graphicsCtx._CheckBufferAccess( buf, EResourceState::IndexBuffer, VkDeviceSize(offset), VkDeviceSize(buf->Size() - offset) );
-		}
 	}
 	
 /*
@@ -301,15 +301,15 @@ namespace AE::Graphics
 	{
 		auto*	buf = _graphicsCtx.ToLocalBuffer( buffer );
 		CHECK_ERR( buf, void());
+		
+		if ( _graphicsCtx._enableBarriers ) {
+			_graphicsCtx._CheckBufferAccess( buf, EResourceState::VertexBuffer, VkDeviceSize(offset), VkDeviceSize(buf->Size() - offset) );
+		}
 
 		const VkBuffer		handle	= buf->Handle();
 		const VkDeviceSize	off		= VkDeviceSize(offset);
 
 		vkCmdBindVertexBuffers( _cmdbuf, index, 1, &handle, &off );
-		
-		if ( _graphicsCtx._enableBarriers ) {
-			_graphicsCtx._CheckBufferAccess( buf, EResourceState::VertexBuffer, VkDeviceSize(offset), VkDeviceSize(buf->Size() - offset) );
-		}
 	}
 		
 /*
@@ -348,8 +348,6 @@ namespace AE::Graphics
 */
 	void VRenderGraph::RenderContext::Draw (uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance)
 	{
-		_graphicsCtx._CommitBarriers();
-
 		vkCmdDraw( _cmdbuf, vertexCount, instanceCount, firstVertex, firstInstance );
 	}
 	
@@ -360,8 +358,6 @@ namespace AE::Graphics
 */
 	void VRenderGraph::RenderContext::DrawIndexed (uint indexCount, uint instanceCount, uint firstIndex, int vertexOffset, uint firstInstance)
 	{
-		_graphicsCtx._CommitBarriers();
-
 		vkCmdDrawIndexed( _cmdbuf, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance );
 	}
 	
@@ -378,7 +374,6 @@ namespace AE::Graphics
 		if ( _graphicsCtx._enableBarriers ) {
 			_graphicsCtx._CheckBufferAccess( buf, EResourceState::IndirectBuffer, VkDeviceSize(offset), VkDeviceSize(stride) * drawCount );
 		}
-		_graphicsCtx._CommitBarriers();
 
 		vkCmdDrawIndirect( _cmdbuf, buf->Handle(), VkDeviceSize(offset), drawCount, CheckCast<uint>(stride) );
 	}
@@ -396,7 +391,6 @@ namespace AE::Graphics
 		if ( _graphicsCtx._enableBarriers ) {
 			_graphicsCtx._CheckBufferAccess( buf, EResourceState::IndirectBuffer, VkDeviceSize(offset), VkDeviceSize(stride) * drawCount );
 		}
-		_graphicsCtx._CommitBarriers();
 
 		vkCmdDrawIndexedIndirect( _cmdbuf, buf->Handle(), VkDeviceSize(offset), drawCount, CheckCast<uint>(stride) );
 	}
@@ -419,7 +413,6 @@ namespace AE::Graphics
 			_graphicsCtx._CheckBufferAccess( ibuf, EResourceState::IndirectBuffer, VkDeviceSize(offset), VkDeviceSize(stride) * maxDrawCount );
 			_graphicsCtx._CheckBufferAccess( cbuf, EResourceState::IndirectBuffer, VkDeviceSize(countBufferOffset), sizeof(uint) );
 		}
-		_graphicsCtx._CommitBarriers();
 
 		vkCmdDrawIndirectCountKHR( _cmdbuf, ibuf->Handle(), VkDeviceSize(offset), cbuf->Handle(), VkDeviceSize(countBufferOffset), maxDrawCount, CheckCast<uint>(stride) );
 	}
@@ -442,7 +435,6 @@ namespace AE::Graphics
 			_graphicsCtx._CheckBufferAccess( ibuf, EResourceState::IndirectBuffer, VkDeviceSize(offset), VkDeviceSize(stride) * maxDrawCount );
 			_graphicsCtx._CheckBufferAccess( cbuf, EResourceState::IndirectBuffer, VkDeviceSize(countBufferOffset), sizeof(uint) );
 		}
-		_graphicsCtx._CommitBarriers();
 
 		vkCmdDrawIndexedIndirectCountKHR( _cmdbuf, ibuf->Handle(), VkDeviceSize(offset), cbuf->Handle(), VkDeviceSize(countBufferOffset), maxDrawCount, CheckCast<uint>(stride) );
 	}
@@ -456,8 +448,6 @@ namespace AE::Graphics
 	{
 	#ifdef VK_NV_mesh_shader
 		CHECK_ERR( _graphicsCtx.GetDevice().GetFeatures().meshShaderNV, void());
-
-		_graphicsCtx._CommitBarriers();
 		
 		vkCmdDrawMeshTasksNV( _cmdbuf, taskCount, firstTask );
 
@@ -482,7 +472,6 @@ namespace AE::Graphics
 		if ( _graphicsCtx._enableBarriers ) {
 			_graphicsCtx._CheckBufferAccess( buf, EResourceState::IndirectBuffer, VkDeviceSize(offset), VkDeviceSize(stride) * drawCount );
 		}
-		_graphicsCtx._CommitBarriers();
 
 		vkCmdDrawMeshTasksIndirectNV( _cmdbuf, buf->Handle(), VkDeviceSize(offset), drawCount, CheckCast<uint>(stride) );
 
@@ -510,7 +499,6 @@ namespace AE::Graphics
 			_graphicsCtx._CheckBufferAccess( ibuf, EResourceState::IndirectBuffer, VkDeviceSize(offset), VkDeviceSize(stride) * maxDrawCount );
 			_graphicsCtx._CheckBufferAccess( cbuf, EResourceState::IndirectBuffer, VkDeviceSize(countBufferOffset), sizeof(uint) );
 		}
-		_graphicsCtx._CommitBarriers();
 
 		vkCmdDrawMeshTasksIndirectCountNV( _cmdbuf, ibuf->Handle(), VkDeviceSize(offset), cbuf->Handle(), VkDeviceSize(countBufferOffset), maxDrawCount, CheckCast<uint>(stride) );
 

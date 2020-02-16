@@ -274,7 +274,7 @@ namespace {
 		auto&	info = outInfo.emplace<VulkanMemoryObjInfo>();
 
 		info.memory		= BitCast<DeviceMemoryVk_t>( alloc_info.deviceMemory );
-		info.flags		= BitCast<MemoryPropertyFlagsVk_t>( mem_props.memoryTypes[ alloc_info.memoryType ].propertyFlags );
+		info.flags		= BitCast<MemoryPropertyVk_t>( mem_props.memoryTypes[ alloc_info.memoryType ].propertyFlags );
 		info.offset		= BytesU(alloc_info.offset);
 		info.size		= BytesU(alloc_info.size);
 		info.mappedPtr	= alloc_info.pMappedData;

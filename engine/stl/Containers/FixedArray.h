@@ -186,6 +186,17 @@ namespace AE::STL
 		}
 
 
+		constexpr bool  try_push_back (const T &value)
+		{
+			if ( _count < capacity() )
+			{
+				PlacementNew<T>( data() + (_count++), value );
+				return true;
+			}
+			return false;
+		}
+
+
 		constexpr void  insert (size_t pos, T &&value)
 		{
 			ASSERT( _count < capacity() );

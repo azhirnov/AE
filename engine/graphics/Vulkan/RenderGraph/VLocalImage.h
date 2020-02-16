@@ -19,9 +19,9 @@ namespace AE::Graphics
 		VLocalImage () {}
 
 		bool Create (const VImage *buf);
+		void Destroy (VBarrierManager &);
 		
 		void AddPendingState (EResourceState state, ExeOrderIndex order) const;
-		void ResetState (VBarrierManager &) const;
 		void CommitBarrier (VBarrierManager &) const;
 
 		ND_ bool				IsMutable ()	const	{ return true; } // TODO
@@ -44,10 +44,10 @@ namespace AE::Graphics
 	
 /*
 =================================================
-	ResetState
+	Destroy
 =================================================
 */
-	void  VLocalImage::ResetState (VBarrierManager &) const
+	void  VLocalImage::Destroy (VBarrierManager &)
 	{
 	}
 	

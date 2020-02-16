@@ -7,6 +7,7 @@
 namespace AE::Graphics
 {
 	
+# ifndef VULKAN_CORE_H_
 	using CommandBufferVk_t			= struct __VkCommandBufferType *;
 	enum BufferVk_t					: uint64_t {};
 	enum FramebufferVk_t			: uint64_t {};
@@ -16,14 +17,33 @@ namespace AE::Graphics
 	enum DeviceMemoryVk_t			: uint64_t {};
 	
 	enum FormatVk_t					: uint {};
-	enum BufferUsageFlagsVk_t		: uint {};
+	enum BufferUsageVk_t			: uint {};
 	enum ImageUsageVk_t				: uint {};
 	enum ImageLayoutVk_t			: uint {};
 	enum ImageTypeVk_t				: uint {};
 	enum ImageFlagsVk_t				: uint {};
-	enum SampleCountFlagBitsVk_t	: uint {};
-	enum MemoryPropertyFlagsVk_t	: uint {};
-	//using QueueFamilyIndicesVk_t = FixedArray< uint8_t, 8 >;
+	enum SampleCountVk_t			: uint {};
+	enum MemoryPropertyVk_t			: uint {};
+
+# else
+	using CommandBufferVk_t			= VkCommandBuffer;
+	using BufferVk_t				= VkBuffer;
+	using FramebufferVk_t			= VkFramebuffer;
+	using ImageVk_t					= VkImage;
+	using RenderPassVk_t			= VkRenderPass;
+	using AccelerationStructureVk_t	= VkAccelerationStructureNV;
+	using DeviceMemoryVk_t			= VkDeviceMemory;
+	
+	using FormatVk_t				= VkFormat;
+	using BufferUsageVk_t			= VkBufferUsageFlags;
+	using ImageUsageVk_t			= VkImageUsageFlags;
+	using ImageLayoutVk_t			= VkImageLayout;
+	using ImageTypeVk_t				= VkImageType;
+	using ImageFlagsVk_t			= VkImageCreateFlags;
+	using SampleCountVk_t			= VkSampleCountFlagBits;
+	using MemoryPropertyVk_t		= VkMemoryPropertyFlags;
+
+# endif	// VULKAN_CORE_H_
 
 
 
@@ -39,7 +59,7 @@ namespace AE::Graphics
 		FormatVk_t				format			= {};
 		ImageLayoutVk_t			currentLayout	= {};
 		ImageLayoutVk_t			defaultLayout	= ImageLayoutVk_t(0x7FFFFFFF);
-		SampleCountFlagBitsVk_t	samples			= {};
+		SampleCountVk_t			samples			= {};
 		uint3					dimension;
 		uint					arrayLayers		= 0;
 		uint					maxLevels		= 0;
@@ -58,7 +78,7 @@ namespace AE::Graphics
 	struct VulkanBufferDesc
 	{
 		BufferVk_t				buffer		= {};
-		BufferUsageFlagsVk_t	usage		= {};
+		BufferUsageVk_t			usage		= {};
 		BytesU					size;
 		
 		//uint					queueFamily	= UMax;		// queue family that owns buffer, you must specify this correctly
@@ -99,7 +119,7 @@ namespace AE::Graphics
 	struct VulkanMemoryObjInfo
 	{
 		DeviceMemoryVk_t		memory		= {};
-		MemoryPropertyFlagsVk_t	flags		= {};
+		MemoryPropertyVk_t		flags		= {};
 		BytesU					offset;
 		BytesU					size;
 		void *					mappedPtr	= null;

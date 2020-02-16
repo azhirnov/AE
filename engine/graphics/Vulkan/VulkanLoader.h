@@ -48,7 +48,7 @@ namespace AE::Graphics
 		friend class VulkanDeviceFn;
 
 	// variables
-	private:
+	public:
 #		define VKLOADER_STAGE_FNPOINTER
 #		 include "vulkan_loader/fn_vulkan_dev.h"
 #		undef  VKLOADER_STAGE_FNPOINTER
@@ -73,7 +73,7 @@ namespace AE::Graphics
 	class VulkanDeviceFn
 	{
 	// variables
-	private:
+	protected:
 		VulkanDeviceFnTable *		_table;
 
 	// methods

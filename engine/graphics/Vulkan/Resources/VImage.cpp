@@ -399,7 +399,7 @@ namespace {
 		desc.format			= BitCast<FormatVk_t>( VEnumCast( _desc.format ));
 		desc.currentLayout	= BitCast<ImageLayoutVk_t>( _defaultLayout );	// TODO
 		desc.defaultLayout	= desc.currentLayout;
-		desc.samples		= BitCast<SampleCountFlagBitsVk_t>( VEnumCast( _desc.samples ));
+		desc.samples		= BitCast<SampleCountVk_t>( VEnumCast( _desc.samples ));
 		desc.dimension		= _desc.dimension;
 		desc.arrayLayers	= _desc.arrayLayers.Get();
 		desc.maxLevels		= _desc.maxLevel.Get();

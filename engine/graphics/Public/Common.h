@@ -15,11 +15,14 @@
 #include "stl/CompileTime/Math.h"
 #include "stl/Stream/Stream.h"
 
+# include "threading/TaskSystem/Promise.h"
+
 namespace AE::Graphics
 {
 	using namespace AE::STL;
 	using namespace AE::Math;
 
+	using Threading::Promise;
 
 	struct GraphicsConfig
 	{

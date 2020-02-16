@@ -4,7 +4,7 @@ namespace AE::Graphics
 {
 
 	//
-	// Graphics Context
+	// Direct Graphics Context
 	//
 
 	class VRenderGraph::GraphicsContext final : public VulkanDeviceFn, public IGraphicsContext
@@ -52,6 +52,7 @@ namespace AE::Graphics
 		VQueuePtr					_queue;
 		VCommandPool				_cmdPool;
 		Ptr<VCommandBatch>			_cmdBatch;
+		CmdBatchID					_cmdBatchId;
 
 		VkPipelineStageFlagBits		_allSrcStages			= VkPipelineStageFlagBits(0);
 		VkPipelineStageFlagBits		_allDstStages			= VkPipelineStageFlagBits(0);
@@ -85,7 +86,7 @@ namespace AE::Graphics
 		ND_ VLocalImage  const*	ToLocalImage (GfxResourceID id);
 
 		bool  Create ();
-		bool  Begin (VCommandBatch *);
+		bool  Begin (VCommandBatch *, CmdBatchID);
 		bool  Submit ();
 
 
@@ -104,8 +105,8 @@ namespace AE::Graphics
 		bool UpdateHostBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint> data) override;
 		bool MapHostBuffer (GfxResourceID buffer, BytesU offset, INOUT BytesU &size, OUT void* &mapped) override;
 		
-		bool ReadBuffer (GfxResourceID buffer, BytesU offset, BytesU size, const Function<void (BufferView)> &fn) override;
-		bool ReadImage (GfxResourceID image, const Function<void (ImageView)> &fn) override;
+		Promise<BufferView>  ReadBuffer (GfxResourceID buffer, BytesU offset, BytesU size) override;
+		Promise<ImageView>   ReadImage (GfxResourceID image) override;
 
 		void CopyBuffer (GfxResourceID srcBuffer, GfxResourceID dstBuffer, ArrayView<BufferCopy> ranges) override;
 		void CopyImage (GfxResourceID srcImage, GfxResourceID dstImage, ArrayView<ImageCopy> ranges) override;
@@ -301,12 +302,13 @@ namespace {
 	Begin
 =================================================
 */
-	bool  VRenderGraph::GraphicsContext::Begin (VCommandBatch *batch)
+	bool  VRenderGraph::GraphicsContext::Begin (VCommandBatch *batch, CmdBatchID batchId)
 	{
 		CHECK_ERR( not _cmdbuf );
 		CHECK_ERR( not _cmdBatch );
 
-		_cmdBatch = batch;
+		_cmdBatch	= batch;
+		_cmdBatchId	= batchId;
 
 		_cmdbuf = _cmdPool.AllocPrimary( _device );
 		CHECK_ERR( _cmdbuf );
@@ -344,8 +346,10 @@ namespace {
 		{
 			VK_CHECK( vkEndCommandBuffer( _cmdbuf ));
 			_cmdPool.RecyclePrimary( _device, _cmdbuf );
+
 			_cmdbuf		= VK_NULL_HANDLE;
 			_cmdBatch	= null;
+			_cmdBatchId	= Default;
 			return true;
 		}
 
@@ -382,6 +386,7 @@ namespace {
 		_cmdBatch->AddCmdBuffer( &_cmdPool, _cmdbuf );
 
 		_cmdBatch	= null;
+		_cmdBatchId	= Default;		
 		_cmdbuf		= VK_NULL_HANDLE;
 		_cmdCounter	= 0;
 		return true;
@@ -416,9 +421,9 @@ namespace {
 	{
 		for (auto&[global_idx, local_idx] : localRes.toLocal)
 		{
-			auto&	res = localRes.pool[ local_idx ].Data();
+			auto&	res = localRes.pool[ local_idx ];
 
-			res.ResetState( _barrierMngr );
+			res.Destroy( _barrierMngr );
 			localRes.pool.Unassign( local_idx );
 		}
 
@@ -794,10 +799,15 @@ namespace {
 	ReadBuffer
 =================================================
 */
-	bool  VRenderGraph::GraphicsContext::ReadBuffer (GfxResourceID buffer, BytesU offset, BytesU size, const Function<void (BufferView)> &fn)
+	Promise<BufferView>  VRenderGraph::GraphicsContext::ReadBuffer (GfxResourceID buffer, BytesU offset, BytesU size)
 	{
-		// TODO
-		return false;
+		return	Threading::MakePromise(
+					[] ()
+					{
+						return BufferView{};
+					},
+					Tuple{CmdBatchDep{_cmdBatchId}}
+				);
 	}
 	
 /*
@@ -805,10 +815,15 @@ namespace {
 	ReadImage
 =================================================
 */
-	bool  VRenderGraph::GraphicsContext::ReadImage (GfxResourceID image, const Function<void (ImageView)> &fn)
+	Promise<ImageView>  VRenderGraph::GraphicsContext::ReadImage (GfxResourceID image)
 	{
-		// TODO
-		return false;
+		return	Threading::MakePromise(
+					[] ()
+					{
+						return ImageView{};
+					},
+					Tuple{CmdBatchDep{_cmdBatchId}}
+				);
 	}
 
 /*

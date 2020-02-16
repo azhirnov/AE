@@ -29,11 +29,12 @@
 #include <optional>
 #include <string_view>
 #include <typeindex>
+#include <type_traits>
 
 #include "stl/Log/Log.h"
 #include "stl/Algorithms/Hash.h"
 #include "stl/CompileTime/TypeTraits.h"
-#include "stl/CompileTime/UMax.h"
+#include "stl/CompileTime/Constants.h"
 #include "stl/CompileTime/DefaultType.h"
 #include "stl/Containers/Tuple.h"
 

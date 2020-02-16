@@ -1,6 +1,7 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "Test_VulkanRenderGraph.h"
+#ifdef AE_ENABLE_VULKAN
+# include "Test_VulkanRenderGraph.h"
 
 using BufferCopy = ITransferContext::BufferCopy;
 
@@ -64,7 +65,7 @@ bool VRGTest::Test_CopyBuffer ()
 			ctx.CopyBuffer( buf_2, buf_3, { BufferCopy{ 0_b, 0_b, buf_size } });
 
 			BytesU	size = buf_size;
-			CHECK( ctx.MapHostBuffer( buf_3, 0_b, INOUT size, OUT mapped_buf_3 ));
+			CHECK( ctx.MapHostBuffer( buf_3, 0_b, INOUT size, OUT mapped_buf_3 ));	// TODO
 		});
 
 	CmdBatchID	batch = _renderGraph->Submit();
@@ -79,3 +80,5 @@ bool VRGTest::Test_CopyBuffer ()
 	AE_LOGI( TEST_NAME << " - passed" );
 	return true;
 }
+
+#endif	// AE_ENABLE_VULKAN

@@ -44,9 +44,9 @@ namespace AE::Graphics
 		VLocalBuffer () {}
 
 		bool Create (const VBuffer *buf);
+		void Destroy (VBarrierManager &);
 		
 		void AddPendingState (EResourceState state, ExeOrderIndex order) const;
-		void ResetState (VBarrierManager &) const;
 		void CommitBarrier (VBarrierManager &) const;
 		
 		ND_ bool				IsMutable ()		const	{ return _isMutable; }
@@ -155,10 +155,10 @@ namespace AE::Graphics
 	
 /*
 =================================================
-	ResetState
+	Destroy
 =================================================
 */
-	void  VLocalBuffer::ResetState (VBarrierManager &barrierMngr) const
+	void  VLocalBuffer::Destroy (VBarrierManager &barrierMngr)
 	{
 		ASSERT( _isMutable );
 		

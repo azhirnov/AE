@@ -150,15 +150,18 @@ namespace AE::Graphics
 		CHECK_ERR( not _vkInstance );
 		CHECK_ERR( VulkanLoader::Initialize() );
 		
+		uint	vk_ver = VK_MAKE_VERSION( version.major, version.minor, 0 );
+		_ValidateInstanceVersion( INOUT vk_ver );
+		_UpdateInstanceVersion( vk_ver );
+
 		Array< const char* >	instance_layers;
 		instance_layers.assign( layers.begin(), layers.end() );
 
 		Array< const char* >	instance_extensions;
-		instance_extensions.assign( extensions.begin(), extensions.end() );
+		ArrayView<const char*>	default_inst_ext = _GetInstanceExtensions( _vkVersion );
+		instance_extensions.assign( default_inst_ext.begin(), default_inst_ext.end() );
+		instance_extensions.insert( instance_extensions.end(), extensions.begin(), extensions.end() );
 
-		uint	vk_ver = VK_MAKE_VERSION( version.major, version.minor, 0 );
-
-		_ValidateInstanceVersion( INOUT vk_ver );
 		_ValidateInstanceLayers( INOUT instance_layers );
 		_ValidateInstanceExtensions( INOUT instance_extensions );
 		
@@ -170,7 +173,7 @@ namespace AE::Graphics
 		app_info.pEngineName		= engineName.c_str();
 		app_info.engineVersion		= engineVer;
 
-		VkInstanceCreateInfo			instance_create_info = {};
+		VkInstanceCreateInfo	instance_create_info = {};
 		instance_create_info.sType						= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		instance_create_info.pApplicationInfo			= &app_info;
 		instance_create_info.enabledExtensionCount		= uint(instance_extensions.size());
@@ -186,7 +189,7 @@ namespace AE::Graphics
 			_instanceExtensions.insert( inst );
 		}
 
-		_UpdateInstanceVersion( vk_ver );
+		_SetupInstanceBackwardCompatibility();
 		return true;
 	}
 	
@@ -213,6 +216,7 @@ namespace AE::Graphics
 		_ValidateInstanceVersion( INOUT vk_ver );
 		_UpdateInstanceVersion( vk_ver );
 
+		_SetupInstanceBackwardCompatibility();
 		return true;
 	}
 	
@@ -724,7 +728,9 @@ namespace {
 
 		// setup extensions
 		Array<const char *>		device_extensions;
-		device_extensions.assign( extensions.begin(), extensions.end() );
+		ArrayView<const char*>	default_dev_ext = _GetDeviceExtensions( _vkVersion );
+		device_extensions.assign( default_dev_ext.begin(), default_dev_ext.end() );
+		device_extensions.insert( device_extensions.end(), extensions.begin(), extensions.end() );
 
 		_ValidateDeviceExtensions( INOUT device_extensions );
 
@@ -909,12 +915,12 @@ namespace {
 		_features.imageViewUsage			= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE2_EXTENSION_NAME );
 		_features.create2DArrayCompatible	= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE1_EXTENSION_NAME );
 		_features.commandPoolTrim			= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE1_EXTENSION_NAME );
-		_features.dispatchBase				= _vkVersion >= InstanceVersion{1,1};
+		_features.dispatchBase				= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_DEVICE_GROUP_EXTENSION_NAME );
 		_features.renderPass2				= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME );
 		_features.samplerMirrorClamp		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME );
 		_features.descriptorIndexing		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME );
 		_features.drawIndirectCount			= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME );
-		
+
 		#ifdef VK_NV_mesh_shader
 		_features.meshShaderNV				= HasDeviceExtension( VK_NV_MESH_SHADER_EXTENSION_NAME );
 		#endif
@@ -944,6 +950,9 @@ namespace {
 		#endif
 		#ifdef VK_KHR_spirv_1_4
 		_features.spirv14					= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SPIRV_1_4_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_push_descriptor
+		_features.pushDescriptor			= HasDeviceExtension( VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME );
 		#endif
 
 		// load extensions
@@ -1087,6 +1096,10 @@ namespace {
 				*next_props	= &_properties.properties120;
 				next_props	= &_properties.properties120.pNext;
 				_properties.properties120.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
+
+				*next_props	= &_properties.properties110;
+				next_props	= &_properties.properties110.pNext;
+				_properties.properties110.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
 			}
 			#endif
 			Unused( next_props );
@@ -1105,6 +1118,7 @@ namespace {
 			<< "\n  buffer address:      " << ToString( _features.bufferAddress )
 		);
 
+		_SetupDeviceBackwardCompatibility();
 		return true;
 	}
 	
@@ -1560,6 +1574,127 @@ namespace {
 				++iter;
 		}
 	}
+	
+/*
+=================================================
+	_SetupInstanceBackwardCompatibility
+=================================================
+*/
+	void  VDeviceInitializer::_SetupInstanceBackwardCompatibility ()
+	{
+	#ifdef VK_VERSION_1_1
+		if ( _vkVersion >= InstanceVersion{1,1} )
+		{
+		// VK_KHR_get_physical_device_properties2
+			_var_vkGetPhysicalDeviceFeatures2KHR					= _var_vkGetPhysicalDeviceFeatures2;
+			_var_vkGetPhysicalDeviceProperties2KHR					= _var_vkGetPhysicalDeviceProperties2;
+			_var_vkGetPhysicalDeviceFormatProperties2KHR			= _var_vkGetPhysicalDeviceFormatProperties2;
+			_var_vkGetPhysicalDeviceImageFormatProperties2KHR		= _var_vkGetPhysicalDeviceImageFormatProperties2;
+			_var_vkGetPhysicalDeviceQueueFamilyProperties2KHR		= _var_vkGetPhysicalDeviceQueueFamilyProperties2;
+			_var_vkGetPhysicalDeviceMemoryProperties2KHR			= _var_vkGetPhysicalDeviceMemoryProperties2;
+			_var_vkGetPhysicalDeviceSparseImageFormatProperties2KHR	= _var_vkGetPhysicalDeviceSparseImageFormatProperties2;
+		}
+	#endif
+	#ifdef VK_VERSION_1_2
+		if ( _vkVersion >= InstanceVersion{1,2} )
+		{
+		}
+	#endif
+	}
+	
+/*
+=================================================
+	_SetupDeviceBackwardCompatibility
+=================================================
+*/
+	void  VDeviceInitializer::_SetupDeviceBackwardCompatibility ()
+	{
+		// for backward compatibility
+	#ifdef VK_VERSION_1_1
+		if ( _vkVersion >= InstanceVersion{1,1} )
+		{
+		// VK_KHR_maintenance1
+			_table->_var_vkTrimCommandPoolKHR	= _table->_var_vkTrimCommandPool;
+
+		// VK_KHR_bind_memory2
+			_table->_var_vkBindBufferMemory2KHR	= _table->_var_vkBindBufferMemory2;
+			_table->_var_vkBindImageMemory2KHR	= _table->_var_vkBindImageMemory2;
+
+		// VK_KHR_get_memory_requirements2
+			_table->_var_vkGetImageMemoryRequirements2KHR		= _table->_var_vkGetImageMemoryRequirements2;
+			_table->_var_vkGetBufferMemoryRequirements2KHR		= _table->_var_vkGetBufferMemoryRequirements2;
+			_table->_var_vkGetImageSparseMemoryRequirements2KHR	= _table->_var_vkGetImageSparseMemoryRequirements2;
+
+		// VK_KHR_sampler_ycbcr_conversion
+			_table->_var_vkCreateSamplerYcbcrConversionKHR	= _table->_var_vkCreateSamplerYcbcrConversion;
+			_table->_var_vkDestroySamplerYcbcrConversionKHR	= _table->_var_vkDestroySamplerYcbcrConversion;
+
+		// VK_KHR_descriptor_update_template
+			_table->_var_vkCreateDescriptorUpdateTemplateKHR	= _table->_var_vkCreateDescriptorUpdateTemplate;
+			_table->_var_vkDestroyDescriptorUpdateTemplateKHR	= _table->_var_vkDestroyDescriptorUpdateTemplate;
+			_table->_var_vkUpdateDescriptorSetWithTemplateKHR	= _table->_var_vkUpdateDescriptorSetWithTemplate;
+			
+		// VK_KHR_device_group
+			_table->_var_vkCmdDispatchBaseKHR	= _table->_var_vkCmdDispatchBase;
+		}
+	#endif
+	#ifdef VK_VERSION_1_2
+		if ( _vkVersion >= InstanceVersion{1,2} )
+		{
+		// VK_KHR_draw_indirect_count
+			_table._var_vkCmdDrawIndirectCountKHR			= _table->_var_vkCmdDrawIndirectCount;
+			_table._var_vkCmdDrawIndexedIndirectCountKHR	= _table->_var_vkCmdDrawIndexedIndirectCountKHR;
+
+		// VK_KHR_create_renderpass2
+			_table._var_vkCreateRenderPass2KHR		= _table._var_vkCreateRenderPass2;
+			_table._var_vkCmdBeginRenderPass2KHR	= _table._var_vkCmdBeginRenderPass2;
+			_table._var_vkCmdNextSubpass2KHR		= _table._var_vkCmdNextSubpass2;
+			_table._var_vkCmdEndRenderPass2KHR		= _table._var_vkCmdEndRenderPass2;
+
+		// VK_KHR_timeline_semaphore
+			_table._var_vkGetSemaphoreCounterValueKHR	= _table._var_vkGetSemaphoreCounterValue;
+			_table._var_vkWaitSemaphoresKHR				= _table._var_vkWaitSemaphores;
+			_table._var_vkSignalSemaphoreKHR			= _table._var_vkSignalSemaphore;
+
+		// VK_KHR_buffer_device_address
+			_table._var_vkGetBufferDeviceAddressKHR					= _table._var_vkGetBufferDeviceAddress;
+			_table._var_vkGetBufferOpaqueCaptureAddressKHR			= _table._var_vkGetBufferOpaqueCaptureAddress;
+			_table._var_vkGetDeviceMemoryOpaqueCaptureAddressKHR	= _table._var_vkGetDeviceMemoryOpaqueCaptureAddress;
+		}
+	#endif
+	}
+
+/*
+=================================================
+	_GetInstanceExtensions
+=================================================
+*/
+	ArrayView<const char*>  VDeviceInitializer::_GetInstanceExtensions (InstanceVersion ver)
+	{
+		if ( ver >= InstanceVersion{1,2} )
+			return GetInstanceExtensions_v120();
+
+		if ( ver == InstanceVersion{1,1} )
+			return GetInstanceExtensions_v110();
+
+		return GetInstanceExtensions_v100();
+	}
+	
+/*
+=================================================
+	_GetDeviceExtensions
+=================================================
+*/
+	ArrayView<const char*>  VDeviceInitializer::_GetDeviceExtensions (InstanceVersion ver)
+	{
+		if ( ver >= InstanceVersion{1,2} )
+			return GetDeviceExtensions_v120();
+
+		if ( ver == InstanceVersion{1,1} )
+			return GetDeviceExtensions_v110();
+
+		return GetDeviceExtensions_v100();
+	}
 
 /*
 =================================================
@@ -1699,6 +1834,16 @@ namespace {
 			#ifdef VK_KHR_descriptor_update_template
 				VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME,
 			#endif
+			#ifdef VK_KHR_device_group
+				VK_KHR_DEVICE_GROUP_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_depth_range_unrestricted
+				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_filter_cubic
+				VK_IMG_FILTER_CUBIC_EXTENSION_NAME,
+				VK_EXT_FILTER_CUBIC_EXTENSION_NAME,
+			#endif
 		};
 		return device_extensions;
 	}
@@ -1773,6 +1918,12 @@ namespace {
 			#ifdef VK_KHR_depth_stencil_resolve
 				VK_KHR_DEPTH_STENCIL_RESOLVE_EXTENSION_NAME,
 			#endif
+			#ifdef VK_KHR_buffer_device_address
+				VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_depth_range_unrestricted
+				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
+			#endif
 
 			// Vendor specific extensions
 			#ifdef VK_NV_mesh_shader
@@ -1846,6 +1997,9 @@ namespace {
 			#ifdef VK_EXT_filter_cubic
 				VK_IMG_FILTER_CUBIC_EXTENSION_NAME,
 				VK_EXT_FILTER_CUBIC_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_depth_range_unrestricted
+				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
 			#endif
 
 			// Vendor specific extensions

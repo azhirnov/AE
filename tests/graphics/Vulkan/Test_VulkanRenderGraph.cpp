@@ -52,13 +52,11 @@ bool VRGTest::Run (IApplication &app, IWindow &wnd)
 */
 bool VRGTest::_Create (IApplication &app, IWindow &wnd)
 {
-	Array<const char*>		instance_ext	{ _vulkan.GetInstanceExtensions_v110() };
-	ArrayView<const char*>	window_ext		= app.GetVulkanInstanceExtensions();
-	instance_ext.insert( instance_ext.end(), window_ext.begin(), window_ext.end() );
+	ArrayView<const char*>	window_ext = app.GetVulkanInstanceExtensions();
 
-	CHECK_ERR( _vulkan.CreateInstance( "TestApp", "AE", _vulkan.GetRecomendedInstanceLayers(), instance_ext, {1,1} ));
+	CHECK_ERR( _vulkan.CreateInstance( "TestApp", "AE", _vulkan.GetRecomendedInstanceLayers(), window_ext ));
 	CHECK_ERR( _vulkan.ChooseHighPerformanceDevice() );
-	CHECK_ERR( _vulkan.CreateLogicalDevice( Default, _vulkan.GetDeviceExtensions_v110() ));
+	CHECK_ERR( _vulkan.CreateLogicalDevice( Default ));
 	
 	CHECK_ERR( _swapchain.CreateSurface( wnd.GetNative() ));
 	CHECK_ERR( _swapchain.Create( wnd.GetSurfaceSize() ));

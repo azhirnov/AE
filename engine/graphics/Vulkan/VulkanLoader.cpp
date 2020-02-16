@@ -13,7 +13,11 @@
 namespace AE::Graphics
 {
 
-#	define VK_LOG	AE_LOGD
+#  if 1
+#	define VK_LOG( _msg_ )	static struct VkLogCallOnce { VkLogCallOnce() { AE_LOGD( _msg_ ); } } log
+#  else
+#	define VK_LOG( _msg_ )	AE_LOGD( _msg_ )
+#  endif
 
 #	define VKLOADER_STAGE_FNPOINTER
 #	 include "vulkan_loader/fn_vulkan_lib.h"
@@ -132,22 +136,6 @@ namespace {
 #		define VKLOADER_STAGE_GETADDRESS
 #		 include "vulkan_loader/fn_vulkan_inst.h"
 #		undef  VKLOADER_STAGE_GETADDRESS
-
-
-		// for backward compatibility
-#		ifdef VK_VERSION_1_1
-		// VK_KHR_get_physical_device_properties2
-			_var_vkGetPhysicalDeviceFeatures2KHR					= _var_vkGetPhysicalDeviceFeatures2;
-			_var_vkGetPhysicalDeviceProperties2KHR					= _var_vkGetPhysicalDeviceProperties2;
-			_var_vkGetPhysicalDeviceFormatProperties2KHR			= _var_vkGetPhysicalDeviceFormatProperties2;
-			_var_vkGetPhysicalDeviceImageFormatProperties2KHR		= _var_vkGetPhysicalDeviceImageFormatProperties2;
-			_var_vkGetPhysicalDeviceQueueFamilyProperties2KHR		= _var_vkGetPhysicalDeviceQueueFamilyProperties2;
-			_var_vkGetPhysicalDeviceMemoryProperties2KHR			= _var_vkGetPhysicalDeviceMemoryProperties2;
-			_var_vkGetPhysicalDeviceSparseImageFormatProperties2KHR	= _var_vkGetPhysicalDeviceSparseImageFormatProperties2;
-#		endif
-#		ifdef VK_VERSION_1_2
-			
-#		endif
 	}
 	
 /*
@@ -171,19 +159,6 @@ namespace {
 #		define VKLOADER_STAGE_GETADDRESS
 #		 include "vulkan_loader/fn_vulkan_dev.h"
 #		undef  VKLOADER_STAGE_GETADDRESS
-
-
-		// for backward compatibility
-#		ifdef VK_VERSION_1_1
-		// VK_KHR_maintenance1
-			table._var_vkTrimCommandPoolKHR	= table._var_vkTrimCommandPool;
-#		endif
-#		ifdef VK_VERSION_1_2
-		// VK_KHR_draw_indirect_count
-			table._var_vkCmdDrawIndirectCountKHR		= table._var_vkCmdDrawIndirectCount;
-			table._var_vkCmdDrawIndexedIndirectCountKHR	= table._var_vkCmdDrawIndexedIndirectCountKHR;
-
-#		endif
 	}
 	
 /*
