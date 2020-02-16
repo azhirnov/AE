@@ -45,7 +45,7 @@ namespace AE::STL
 
 	
 
-	inline bool  Library::Load (StringView libName)
+	inline bool  Library::Load (NtStringView libName)
 	{
 		CHECK_ERR( _handle == null );
 		_handle = ::dlopen( libName.c_str(), RTLD_NOW | RTLD_LOCAL );

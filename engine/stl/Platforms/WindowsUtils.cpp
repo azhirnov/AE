@@ -7,6 +7,7 @@
 #ifdef PLATFORM_WINDOWS
 # include "stl/Platforms/WindowsLibrary.h"
 # include <processthreadsapi.h>
+# include <thread>
 
 namespace AE::STL
 {
@@ -165,6 +166,33 @@ namespace
 		GetCurrentThreadName10( OUT name );
 		return name;
 	}
+	
+/*
+=================================================
+	SetThreadAffinity
+=================================================
+*/
+	bool  WindowsUtils::SetThreadAffinity (const std::thread::native_handle_type &handle, uint cpuCore)
+	{
+		DWORD_PTR	mask;
+		
+		ASSERT( cpuCore < std::thread::hardware_concurrency() );
+
+		#if PLATFORM_BITS == 64
+		{
+			ASSERT( cpuCore < 64 );
+			mask = 1ull << (cpuCore & 63);
+		}
+		#elif PLATFORM_BITS == 32
+		{
+			ASSERT( cpuCore < 32 );
+			mask = 1u << (cpuCore & 31);
+		}
+		#endif
+
+		return ::SetThreadAffinityMask( handle, mask ) != 0;
+	}
+
 
 }	// AE::STL
 

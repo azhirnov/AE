@@ -4,17 +4,17 @@
 
 #include "stl/Containers/NtStringView.h"
 
-#ifdef PLATFORM_ANDROID
+#ifdef PLATFORM_LINUX
 # include <thread>
 
 namespace AE::STL
 {
 
 	//
-	// Android Utils
+	// Linux Utils
 	//
 
-	struct AndroidUtils final
+	struct LinuxUtils final
 	{
 			static void		SetThreadName (NtStringView name);
 		ND_ static String	GetThreadName ();
@@ -24,4 +24,4 @@ namespace AE::STL
 
 }	// AE::STL
 
-#endif	// PLATFORM_ANDROID
+#endif	// PLATFORM_LINUX

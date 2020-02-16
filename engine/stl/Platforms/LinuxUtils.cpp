@@ -1,11 +1,13 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "stl/Platforms/AndroidUtils.h"
+#include "stl/Platforms/LinuxUtils.h"
 #include "stl/Algorithms/ArrayUtils.h"
 
-#ifdef PLATFORM_ANDROID
+#ifdef PLATFORM_LINUX
+# undef  _GNU_SOURCE
+# define _GNU_SOURCE 1
 # include <sys/prctl.h>
-# include <sched.h>
+# include <pthread.h>
 
 namespace AE::STL
 {
@@ -15,10 +17,10 @@ namespace AE::STL
 	SetCurrentThreadName
 =================================================
 */
-	void AndroidUtils::SetThreadName (NtStringView name)
+	void LinuxUtils::SetThreadName (NtStringView name)
 	{
 		ASSERT( name.length() <= 16 );
-		int	res = ::prctl( PR_SET_NAME, (unsigned long) name.c_str(), 0, 0, 0 );
+		int	res = prctl( PR_SET_NAME, (unsigned long) name.c_str(), 0, 0, 0 );
 		ASSERT( res == 0 );
 	}
 	
@@ -27,10 +29,10 @@ namespace AE::STL
 	GetThreadName
 =================================================
 */
-	String  AndroidUtils::GetThreadName ()
+	String  LinuxUtils::GetThreadName ()
 	{
 		char	buf [16];
-		int		res = ::prctl( PR_GET_NAME, buf, 0, 0, 0 );
+		int		res = prctl( PR_GET_NAME, buf, 0, 0, 0 );
 		ASSERT( res == 0 );
 		return String{buf};
 	}
@@ -40,18 +42,15 @@ namespace AE::STL
 	SetThreadAffinity
 =================================================
 */
-	bool  AndroidUtils::SetThreadAffinity (const std::thread::native_handle_type &handle, uint cpuCore)
+	bool  LinuxUtils::SetThreadAffinity (const std::thread::native_handle_type &handle, uint cpuCore)
 	{
-		ASSERT( cpuCore < std::thread::hardware_concurrency() );
-
-		::cpu_set_t  cpuset;
+		cpu_set_t cpuset;
 		CPU_ZERO( &cpuset );
 		CPU_SET( cpuCore, &cpuset );
-
-		return ::sched_setaffinity( 0, sizeof(cpu_set_t), &cpuset ) == 0;
+		return pthread_setaffinity_np(handle, sizeof(cpu_set_t), &cpuset) == 0;
 	}
 
 
 }	// AE::STL
 
-#endif	// PLATFORM_ANDROID
+#endif	// PLATFORM_LINUX
