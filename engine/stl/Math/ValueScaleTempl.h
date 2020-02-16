@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "stl/Common.h"
+#include "stl/Math/Vec.h"
 
 namespace AE::Math
 {

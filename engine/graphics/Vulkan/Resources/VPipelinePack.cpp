@@ -226,7 +226,14 @@ namespace AE::Graphics
 			PipelineCompiler::RenderPassInfo	info;
 			CHECK_ERR( des( OUT info ));
 
-			_renderPassOutputs[i].Set( resMngr.CreateRenderPassOutput( info.fragmentOutputs ));
+			VRenderPassOutput::Output_t		frag_outputs;
+			CHECK_ERR( info.fragmentOutputs.size() <= frag_outputs.capacity() );
+
+			for (auto& item : info.fragmentOutputs) {
+				frag_outputs.insert( item );
+			}
+
+			_renderPassOutputs[i].Set( resMngr.CreateRenderPassOutput( frag_outputs ));
 			CHECK_ERR( _renderPassOutputs[i] );
 		}
 		

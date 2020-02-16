@@ -338,28 +338,54 @@ namespace AE::Math
 		}
 		return res;
 	}
-	
+
 /*
 =================================================
 	Min
 =================================================
 */
 	template <typename T, int I>
-	ND_ forceinline Vec<T,I>  Min (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	ND_ forceinline GLM_CONSTEXPR Vec<T,I>  Min (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
 	{
 		return glm::min( lhs, rhs );
 	}
 	
-	template <typename T, int I>
-	ND_ inline constexpr Vec<T,I>  Min (const Vec<T,I> &lhs, const T &rhs)
+	template <typename T, int I, typename S,
+			  typename = EnableIf<IsScalar<S>>
+			 >
+	ND_ inline GLM_CONSTEXPR Vec<T,I>  Min (const Vec<T,I> &lhs, const S &rhs)
 	{
-		return Min( lhs, Vec<T,I>(rhs) );
+		return Min( lhs, Vec<T,I>{rhs} );
 	}
 
-	template <typename T, int I>
-	ND_ inline constexpr Vec<T,I>  Min (const T &lhs, const Vec<T,I> &rhs)
+	template <typename T, int I, typename S,
+			  typename = EnableIf<IsScalar<S>>
+			 >
+	ND_ inline GLM_CONSTEXPR Vec<T,I>  Min (const S &lhs, const Vec<T,I> &rhs)
 	{
-		return Min( Vec<T,I>(lhs), rhs );
+		return Min( Vec<T,I>{lhs}, rhs );
+	}
+
+	template <typename LT, typename RT,
+			  typename = EnableIf<not IsVec<LT> and not IsVec<RT>>
+			 >
+	ND_ forceinline constexpr auto  Min (const LT &lhs, const RT &rhs)
+	{
+		if constexpr( IsSameTypes<LT, RT> )
+		{
+			return lhs > rhs ? rhs : lhs;
+		}
+		else
+		{
+			using T = decltype(lhs + rhs);
+			return lhs > rhs ? T(rhs) : T(lhs);
+		}
+	}
+	
+	template <typename T0, typename T1, typename T2, typename ...Types>
+	ND_ forceinline constexpr auto  Min (const T0 &arg0, const T1 &arg1, const T2 &arg2, const Types& ...args)
+	{
+		return Min( arg0, Min( arg1, arg2, args... ));
 	}
 	
 /*
@@ -368,21 +394,47 @@ namespace AE::Math
 =================================================
 */
 	template <typename T, int I>
-	ND_ forceinline Vec<T,I>  Max (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	ND_ forceinline GLM_CONSTEXPR Vec<T,I>  Max (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
 	{
 		return glm::max( lhs, rhs );
 	}
 	
-	template <typename T, uint I>
-	ND_ inline constexpr Vec<T,I>  Max (const Vec<T,I> &lhs, const T &rhs)
+	template <typename T, uint I, typename S,
+			  typename = EnableIf<IsScalar<S>>
+			 >
+	ND_ inline GLM_CONSTEXPR Vec<T,I>  Max (const Vec<T,I> &lhs, const S &rhs)
 	{
-		return Max( lhs, Vec<T,I>(rhs) );
+		return Max( lhs, Vec<T,I>{rhs} );
 	}
 
-	template <typename T, uint I>
-	ND_ inline constexpr Vec<T,I>  Max (const T &lhs, const Vec<T,I> &rhs)
+	template <typename T, uint I, typename S,
+			  typename = EnableIf<IsScalar<S>>
+			 >
+	ND_ inline GLM_CONSTEXPR auto  Max (const S &lhs, const Vec<T,I> &rhs)
 	{
-		return Max( Vec<T,I>(lhs), rhs );
+		return Max( Vec<T,I>{lhs}, rhs );
+	}
+	
+	template <typename LT, typename RT,
+			  typename = EnableIf<not IsVec<LT> and not IsVec<RT>>
+			 >
+	ND_ forceinline constexpr auto  Max (const LT &lhs, const RT &rhs)
+	{
+		if constexpr( IsSameTypes<LT, RT> )
+		{
+			return lhs > rhs ? lhs : rhs;
+		}
+		else
+		{
+			using T = decltype(lhs + rhs);
+			return lhs > rhs ? T(lhs) : T(rhs);
+		}
+	}
+
+	template <typename T0, typename T1, typename T2, typename ...Types>
+	ND_ forceinline constexpr auto  Max (const T0 &arg0, const T1 &arg1, const T2 &arg2, const Types& ...args)
+	{
+		return Max( arg0, Max( arg1, arg2, args... ));
 	}
 
 /*
@@ -401,6 +453,13 @@ namespace AE::Math
 	{
 		return glm::clamp( value, Vec<T,I>{minVal}, Vec<T,I>{maxVal} );
 	}
+	
+	template <typename ValT, typename MinT, typename MaxT>
+	ND_ forceinline constexpr auto  Clamp (const ValT &value, const MinT &minVal, const MaxT &maxVal)
+	{
+		ASSERT(All( minVal <= maxVal ));
+		return Min( maxVal, Max( value, minVal ) );
+	}
 
 /*
 =================================================
@@ -415,6 +474,21 @@ namespace AE::Math
 			res[i] = Wrap( v[i], minValue, maxValue );
 		}
 		return res;
+	}
+	
+	template <typename T>
+	forceinline EnableIf<IsFloatPoint<T>, T>  Wrap (const T& value, const T& minValue, const T& maxValue)
+	{
+		// check for NaN
+		if ( minValue >= maxValue )
+			return minValue;
+
+		T	result = T( minValue + std::fmod( value - minValue, maxValue - minValue ));
+		
+		if ( result < minValue )
+			result += (maxValue - minValue);
+
+		return result;
 	}
 
 /*

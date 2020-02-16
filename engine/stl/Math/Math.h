@@ -100,68 +100,6 @@ namespace AE::Math
 	{
 		return value;
 	}
-
-/*
-=================================================
-	Max
-=================================================
-*/
-	template <typename LT, typename RT>
-	ND_ forceinline constexpr auto  Max (const LT &lhs, const RT &rhs)
-	{
-		if constexpr( IsSameTypes<LT, RT> )
-		{
-			return lhs > rhs ? lhs : rhs;
-		}
-		else
-		{
-			using T = Conditional< IsSameTypes<LT, RT>, LT, decltype(lhs + rhs) >;
-			return lhs > rhs ? T(lhs) : T(rhs);
-		}
-	}
-
-	template <typename T1, typename ...Types>
-	ND_ forceinline constexpr auto  Max (const T1 &arg0, const Types& ...args)
-	{
-		return Max( arg0, Max( args... ));
-	}
-	
-/*
-=================================================
-	Min
-=================================================
-*/
-	template <typename LT, typename RT>
-	ND_ forceinline constexpr auto  Min (const LT &lhs, const RT &rhs)
-	{
-		if constexpr( IsSameTypes<LT, RT> )
-		{
-			return lhs > rhs ? rhs : lhs;
-		}
-		else
-		{
-			using T = Conditional< IsSameTypes<LT, RT>, LT, decltype(lhs + rhs) >;
-			return lhs > rhs ? T(rhs) : T(lhs);
-		}
-	}
-
-	template <typename T1, typename ...Types>
-	ND_ forceinline constexpr auto  Min (const T1 &arg0, const Types& ...args)
-	{
-		return Min( arg0, Min( args... ));
-	}
-	
-/*
-=================================================
-	Clamp
-=================================================
-*/
-	template <typename ValT, typename MinT, typename MaxT>
-	ND_ forceinline constexpr auto  Clamp (const ValT &value, const MinT &minVal, const MaxT &maxVal)
-	{
-		ASSERT(All( minVal <= maxVal ));
-		return Min( maxVal, Max( value, minVal ) );
-	}
 	
 /*
 =================================================
@@ -446,26 +384,6 @@ namespace AE::Math
 	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  ExpMinus1 (const T& x)
 	{
 		return std::expm1( x );
-	}
-
-/*
-=================================================
-	Wrap
-=================================================
-*/
-	template <typename T>
-	forceinline EnableIf<IsFloatPoint<T>, T>  Wrap (const T& value, const T& minValue, const T& maxValue)
-	{
-		// check for NaN
-		if ( minValue >= maxValue )
-			return minValue;
-
-		T	result = T( minValue + std::fmod( value - minValue, maxValue - minValue ));
-		
-		if ( result < minValue )
-			result += (maxValue - minValue);
-
-		return result;
 	}
 
 /*

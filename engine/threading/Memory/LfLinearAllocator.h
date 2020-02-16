@@ -2,10 +2,13 @@
 
 #pragma once
 
-#include "threading/Common.h"
-#include "stl/Math/BitMath.h"
-#include "stl/Math/Bytes.h"
-#include "stl/Memory/UntypedAllocator.h"
+#ifndef AE_LFAS_ENABLED
+# include "threading/Common.h"
+# include "stl/Math/BitMath.h"
+# include "stl/Math/Bytes.h"
+# include "stl/Math/Math.h"
+# include "stl/Memory/UntypedAllocator.h"
+#endif
 
 namespace AE::Threading
 {
@@ -109,8 +112,10 @@ namespace AE::Threading
 				}
 				else
 				{
+					auto exp = _lockedForAlloc.load( EMemoryOrder::Relaxed );
+
 					// lock
-					for (ChunkBits_t::value_type exp = _lockedForAlloc.load( EMemoryOrder::Relaxed ), j = 0;
+					for (uint j = 0;
 						 not _lockedForAlloc.compare_exchange_weak( INOUT exp, exp | (ChunkBits_t(1) << i), EMemoryOrder::Relaxed );
 						 ++j)
 					{
@@ -131,7 +136,7 @@ namespace AE::Threading
 					}
 
 					// unlock
-					for (auto exp = _lockedForAlloc.load( EMemoryOrder::Relaxed );
+					for (exp = _lockedForAlloc.load( EMemoryOrder::Relaxed );
 						 not _lockedForAlloc.compare_exchange_weak( INOUT exp, exp & ~(ChunkBits_t(1) << i), EMemoryOrder::Relaxed );)
 					{}
 

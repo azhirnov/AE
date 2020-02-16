@@ -21,6 +21,7 @@ namespace AE::ECS
 		DEBUG_ONLY(		
 			class IComponentDbgView {
 			public:
+				virtual ~IComponentDbgView () {}
 				ND_ virtual UniquePtr<IComponentDbgView>  ElementView (size_t index) const = 0;
 			};
 

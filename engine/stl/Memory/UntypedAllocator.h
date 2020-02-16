@@ -86,6 +86,9 @@ namespace AE::STL
 	struct StdAllocator final : std::allocator<T>
 	{
 		StdAllocator () {}
+		StdAllocator (const StdAllocator &) = default;
+		StdAllocator (StdAllocator &&) = default;
+
 		StdAllocator (const UntypedAllocator &) {}
 		StdAllocator (const UntypedAlignedAllocator &) {}
 	};

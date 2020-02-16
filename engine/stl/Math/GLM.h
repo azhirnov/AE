@@ -11,12 +11,13 @@
 #define GLM_FORCE_RADIANS
 #define GLM_ENABLE_EXPERIMENTAL
 #define GLM_FORCE_CXX17
-#define GLM_FORCE_VEC_EQUAL_OP
+#define GLM_FORCE_VEC_EQUAL_OP	// special for AE
 //#define GLM_FORCE_EXPLICIT_CTOR
 //#define GLM_FORCE_XYZW_ONLY
 //#define GLM_FORCE_SWIZZLE
 #define GLM_FORCE_CTOR_INIT
 #define GLM_FORCE_INLINE
+#define GLM_FORCE_ALIGNED_GENTYPES
 
 #ifdef AE_RELEASE
 #	define GLM_FORCE_INTRINSICS
@@ -26,7 +27,7 @@
 #if defined(PLATFORM_WINDOWS) or defined(PLATFORM_LINUX)
 #	define GLM_FORCE_SSE42	// TODO: check is SSE 4.2 supported
 #endif
-#if defined(PLATFORM_ANDROID)
+#if defined(PLATFORM_ANDROID) && defined(__ARM_NEON)
 #	define GLM_FORCE_NEON	// TODO: check is NEON supported
 #endif
 
@@ -175,8 +176,14 @@
 
 namespace AE::Math
 {
+# if defined(GLM_FORCE_SSE42)
+	static constexpr auto	GLMQuialifier	= glm::qualifier::aligned_highp;
+# else
+	static constexpr auto	GLMQuialifier	= glm::qualifier::highp;
+# endif
+
 	template <typename T, uint I>
-	using Vec = glm::vec< I, T, glm::qualifier::aligned_highp >;
+	using Vec = glm::vec< I, T, GLMQuialifier >;
 	
 	template <typename T>
 	struct Quat;
@@ -212,6 +219,18 @@ namespace AE::Math
 #	pragma detect_mismatch( "GLM_FORCE_CTOR_INIT", "1" )
 #  else
 #	pragma detect_mismatch( "GLM_FORCE_CTOR_INIT", "0" )
+#  endif
+
+#  if GLM_CONFIG_CLIP_CONTROL == GLM_CLIP_CONTROL_LH_ZO
+#	pragma detect_mismatch( "GLM_CONFIG_CLIP_CONTROL", "1" )
+#  elif GLM_CONFIG_CLIP_CONTROL == GLM_CLIP_CONTROL_RH_ZO
+#	pragma detect_mismatch( "GLM_CONFIG_CLIP_CONTROL", "2" )
+#  elif GLM_CONFIG_CLIP_CONTROL == GLM_CLIP_CONTROL_LH_NO
+#	pragma detect_mismatch( "GLM_CONFIG_CLIP_CONTROL", "3" )
+#  elif GLM_CONFIG_CLIP_CONTROL == GLM_CLIP_CONTROL_RH_NO
+#	pragma detect_mismatch( "GLM_CONFIG_CLIP_CONTROL", "4" )
+#  else
+#	pragma detect_mismatch( "GLM_CONFIG_CLIP_CONTROL", "0" )
 #  endif
 
 #endif	// AE_CPP_DETECT_MISSMATCH

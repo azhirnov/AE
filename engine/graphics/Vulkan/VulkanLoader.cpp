@@ -72,13 +72,13 @@ namespace {
 
 #	ifdef PLATFORM_WINDOWS
 		if ( not lib.module )
-			lib.module.Load( "vulkan-1.dll" );
+			lib.module.Load( NtStringView{ "vulkan-1.dll" });
 #	else
 		if ( not lib.module )
-			lib.module.Load( "libvulkan.so" );
+			lib.module.Load( NtStringView{ "libvulkan.so" });
 		
 		if ( not lib.module )
-			lib.module.Load( "libvulkan.so.1" );
+			lib.module.Load( NtStringView{ "libvulkan.so.1" });
 #	endif
 		
 		if ( not lib.module  )

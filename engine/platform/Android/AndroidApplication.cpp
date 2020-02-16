@@ -5,12 +5,7 @@
 #ifdef PLATFORM_ANDROID
 
 # include "threading/TaskSystem/TaskScheduler.h"
-
-# ifdef AE_ENABLE_VULKAN
-#	define VK_NO_PROTOTYPES
-#	include <vulkan/vulkan.h>
-#	include <vulkan/vulkan_android.h>
-# endif
+# include "graphics/Vulkan/VSwapchain.h"
 
 namespace AE::App
 {
@@ -120,8 +115,8 @@ namespace {
 */
 	ArrayView<const char*>  AndroidApplication::GetVulkanInstanceExtensions ()
 	{
-		static const char* extensions[] = {
-			VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
+		static const char*	extensions[] = {
+			"VK_KHR_android_surface"
 		};
 		return extensions;
 	}

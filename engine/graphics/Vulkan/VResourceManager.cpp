@@ -1094,13 +1094,11 @@ namespace {
 =================================================
 */
 	template <typename PplnTemplType, typename DescType, typename ID>
-	bool  VResourceManager::_AddPipelineToCache (PplnTemplType* tmpl, const DescType &, HashVal descHash, ID id) const
+	void  VResourceManager::_AddPipelineToCache (PplnTemplType* tmpl, const DescType &, HashVal descHash, ID id) const
 	{
 		EXLOCK( tmpl->_pipelineMapGuard );
 
 		tmpl->_pipelineMap.insert({ descHash, id });
-
-		return true;
 	}
 
 /*

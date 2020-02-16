@@ -68,7 +68,7 @@ inline void  VRGTest::DeleteResources (Arg0 &arg0, Args& ...args)
 {
 	CHECK( _resourceMngr->ReleaseResource( INOUT arg0 ));	// must be released
 		
-	if constexpr ( CountOf<Args...>() )
+	if constexpr ( CountOf<Args...>() > 0 )
 		DeleteResources( std::forward<Args&>( args )... );
 }
 	

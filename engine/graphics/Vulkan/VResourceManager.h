@@ -285,7 +285,7 @@ namespace AE::Graphics
 		ND_ auto  _FindPipelineInCache (PplnTemplType* tmpl, const DescType &desc, HashVal hash) const;
 		
 		template <typename PplnTemplType, typename DescType, typename ID>
-		ND_ bool  _AddPipelineToCache (PplnTemplType* tmpl, const DescType &desc, HashVal hash, ID id) const;
+		void  _AddPipelineToCache (PplnTemplType* tmpl, const DescType &desc, HashVal hash, ID id) const;
 
 		template <typename NameType, typename ValueType, typename ID, typename PplnTemplType>
 		ND_ bool  _FindPipelineTemplate (const PipelineName &name, VPipelinePack::PipelineRefs::ItemsTmpl<NameType, ValueType> &items,

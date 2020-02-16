@@ -68,7 +68,7 @@ namespace AE::Graphics
 		ASSERT( format != Default );
 		ASSERT( imageType != Default );
 		
-		dimension = Max( dimension, 1u );
+		dimension = Max( dimension, uint3{1} );
 
 		BEGIN_ENUM_CHECKS();
 		switch ( imageType )

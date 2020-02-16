@@ -6,11 +6,18 @@
 #pragma once
 
 #include "stl/Common.h"
-#include <filesystem>
+
+#ifdef AE_ENABLE_GFS
+#  include "ghc/filesystem.hpp"
+	namespace _ae_fs_ = ghc::filesystem;
+#else
+#  include <filesystem>
+	namespace _ae_fs_ = std::filesystem;
+#endif
 
 namespace AE::STL
 {
-	using Path = std::filesystem::path;
+	using Path = _ae_fs_::path;
 
 
 	//
@@ -57,7 +64,7 @@ namespace AE::STL
 		ND_ static Path  ToRelative (const Path &p, const Path &base);
 
 		// enumerate all files in directory
-		ND_ static std::filesystem::directory_iterator  Enum (const Path &p);
+		ND_ static _ae_fs_::directory_iterator  Enum (const Path &p);
 
 		
 	// utils
@@ -80,68 +87,68 @@ namespace AE::STL
 	inline bool  FileSystem::Remove (const Path &p)
 	{
 		std::error_code	ec;
-		return std::filesystem::remove( p, OUT ec );
+		return _ae_fs_::remove( p, OUT ec );
 	}
 	
 	inline std::uintmax_t  FileSystem::RemoveAll (const Path &p)
 	{
 		std::error_code	ec;
-		return std::filesystem::remove_all( p, OUT ec );
+		return _ae_fs_::remove_all( p, OUT ec );
 	}
 	
 	inline bool  FileSystem::CreateDirectory (const Path &p)
 	{
 		std::error_code	ec;
-		return std::filesystem::create_directory( p, OUT ec );
+		return _ae_fs_::create_directory( p, OUT ec );
 	}
 	
 	inline bool  FileSystem::CreateDirectories (const Path &p)
 	{
 		std::error_code	ec;
-		return std::filesystem::create_directories( p, OUT ec );
+		return _ae_fs_::create_directories( p, OUT ec );
 	}
 	
 	inline bool  FileSystem::SetCurrentPath (const Path &p)
 	{
 		std::error_code	ec;
-		std::filesystem::current_path( p, OUT ec );
+		_ae_fs_::current_path( p, OUT ec );
 		return ec == Default;
 	}
 		
 	inline bool  FileSystem::Exists (const Path &p)
 	{
 		std::error_code	ec;
-		return std::filesystem::exists( p, OUT ec );
+		return _ae_fs_::exists( p, OUT ec );
 	}
 	
 	inline bool  FileSystem::IsDirectory (const Path &p)
 	{
 		std::error_code	ec;
-		return std::filesystem::is_directory( p, OUT ec );
+		return _ae_fs_::is_directory( p, OUT ec );
 	}
 
 	inline Path  FileSystem::CurrentPath ()
 	{
 		std::error_code	ec;
-		return std::filesystem::current_path( OUT ec );
+		return _ae_fs_::current_path( OUT ec );
 	}
 	
 	inline Path  FileSystem::ToAbsolute (const Path &p)
 	{
 		std::error_code	ec;
-		return std::filesystem::absolute( p, OUT ec );
+		return _ae_fs_::absolute( p, OUT ec );
 	}
 	
 	inline Path  FileSystem::ToRelative (const Path &p, const Path &base)
 	{
 		std::error_code	ec;
-		return std::filesystem::relative( p, base, OUT ec );
+		return _ae_fs_::relative( p, base, OUT ec );
 	}
 	
-	inline std::filesystem::directory_iterator  FileSystem::Enum (const Path &p)
+	inline _ae_fs_::directory_iterator  FileSystem::Enum (const Path &p)
 	{
 		std::error_code	ec;
-		return std::filesystem::directory_iterator{ p, OUT ec };
+		return _ae_fs_::directory_iterator{ p, OUT ec };
 	}
 
 

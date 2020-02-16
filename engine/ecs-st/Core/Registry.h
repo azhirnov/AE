@@ -232,7 +232,7 @@ namespace AE::ECS
 			static void  _IncreaseStorageSize (ArchetypeStorage *, size_t addCount);
 			static void  _DecreaseStorageSize (ArchetypeStorage *);
 
-			template <typename ArgsList, size_t I = 0>
+			template <typename ArgsList, size_t I>
 		ND_ static bool  _IsArchetypeSupported (const Archetype &arch);
 
 			template <typename ...Args>
@@ -347,6 +347,7 @@ DEBUG_ONLY(
 
 		public:
 			ComponentDbgView (T const* ptr, size_t count) : _comps{ptr, count}, _type{typeid(T)} {}
+			~ComponentDbgView () override {}
 
 			UniquePtr<IComponentDbgView>  ElementView (size_t index) const override {
 				return MakeUnique<ComponentDbgView<T>>( _comps.section( index, 1 ).data(), 1 );
@@ -584,7 +585,7 @@ DEBUG_ONLY(
 		
 		if ( storage )
 		{
-			if constexpr( not TypeList<Types...>::ForEach_And<std::is_const>() )
+			if constexpr( not TypeList<Types...>::template ForEach_And<std::is_const>() )
 			{
 				ASSERT( not storage->IsLocked() );
 			}
@@ -1075,7 +1076,7 @@ DEBUG_ONLY(
 				
 		for (auto* ptr : q_data.archetypes)
 		{
-			ASSERT( _IsArchetypeSupported< CompOnly >( ptr->first ));
+			ASSERT( _IsArchetypeSupported< CompOnly, 0 >( ptr->first ));
 			
 			auto&	storage	= ptr->second;
 			storage->Lock();
@@ -1152,7 +1153,7 @@ DEBUG_ONLY(
 		{
 			template <typename ChunkType>
 			static decltype(auto)  Get (ChunkType &chunk, size_t i) {
-				return chunk.Get< typename MapCompType<T> >()[i];
+				return chunk.template Get< MapCompType<T> >()[i];
 			}
 		};
 		
@@ -1160,9 +1161,8 @@ DEBUG_ONLY(
 		struct GetStorageElement< T * >
 		{
 			template <typename ChunkType>
-			static T*  Get (ChunkType &chunk, size_t i)
-			{
-				auto&	arr = chunk.Get< typename MapCompType<T*> >();
+			static T*  Get (ChunkType &chunk, size_t i) {
+				auto&	arr = chunk.template Get< MapCompType<T*> >();
 				return arr ? &arr[i] : null;
 			}
 		};
@@ -1209,9 +1209,9 @@ DEBUG_ONLY(
 			{
 				for (auto& chunk : chunks)
 				{
-					for (size_t i = 0, cnt = chunk.Get<0>(); i < cnt; ++i)
+					for (size_t i = 0, cnt = chunk.template Get<0>(); i < cnt; ++i)
 					{
-						fn( _reg_detail_::GetStorageElement<Args>::Get( chunk, i )... );
+						fn( _reg_detail_::GetStorageElement<Args>::template Get( chunk, i )... );
 					}
 				}
 			});

@@ -2,7 +2,7 @@
 
 #ifdef AE_ENABLE_BROTLI
 
-# include "stl/stream/BrotliStream.h"
+# include "stl/Stream/BrotliStream.h"
 # include "brotli/decode.h"
 # include "brotli/encode.h"
 
@@ -140,7 +140,7 @@ namespace AE::STL
 		ASSERT( not BrotliEncoderIsFinished( static_cast<BrotliEncoderState *>(_instance) ));
 
 		size_t			available_in	= size_t(size);
-		const uint8_t*	next_in			= static_cast<uint8_t const *>(buffer);
+		uint8_t const*	next_in			= static_cast<uint8_t const *>(buffer);
 		size_t			available_out	= _buffer.size();
 		uint8_t*		next_out		= _buffer.data();
 

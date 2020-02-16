@@ -171,7 +171,7 @@ namespace AE::STL
 
 		ND_ bool  operator == (const Self &rhs) const
 		{
-			if ( this == &rs )
+			if ( this == &rhs )
 				return true;
 
 			if ( _count != rhs._count )
@@ -182,8 +182,8 @@ namespace AE::STL
 
 
 	private:
-		template <size_t I>		ND_ constexpr auto*	_Data () const	{ return &(*&_arrays.Get<I>())[0]; }
-		template <size_t I>		ND_ constexpr auto*	_Data ()		{ return &(*&_arrays.Get<I>())[0]; }
+		template <size_t I>		ND_ constexpr auto*	_Data () const	{ return &(*&_arrays.template Get<I>())[0]; }
+		template <size_t I>		ND_ constexpr auto*	_Data ()		{ return &(*&_arrays.template Get<I>())[0]; }
 
 
 		template <size_t I, typename Arg0, typename ...Args>

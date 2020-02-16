@@ -130,7 +130,7 @@ namespace AE::Graphics
 	inline RenderPassDesc&  RenderPassDesc::AddViewport (const Rectangle<T> &rect, float minDepth, float maxDepth)
 	{
 		ASSERT( rect.IsValid() );
-		viewports.push_back({ RectF{rect}, minDepth, maxDepth, palette });
+		viewports.push_back({ RectF{rect}, minDepth, maxDepth });
 		return *this;
 	}
 

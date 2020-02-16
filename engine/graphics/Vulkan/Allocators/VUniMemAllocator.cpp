@@ -5,7 +5,6 @@
 # include "graphics/Vulkan/Allocators/VUniMemAllocator.h"
 # include "graphics/Vulkan/VDevice.h"
 
-# define VMA_USE_STL_CONTAINERS				0
 # define VMA_STATIC_VULKAN_FUNCTIONS		0
 # define VMA_RECORDING_ENABLED				0
 # define VMA_DEDICATED_ALLOCATION			0	// TODO: set 0 to avoid crash on Intel
@@ -13,6 +12,12 @@
 # define VMA_DEBUG_ALWAYS_DEDICATED_MEMORY	0
 # define VMA_DEBUG_DETECT_CORRUPTION		0	// TODO: use for debugging ?
 # define VMA_DEBUG_GLOBAL_MUTEX				0	// will be externally synchronized
+
+# define VMA_USE_STL_CONTAINERS				1
+# define VMA_USE_STL_VECTOR					1
+# define VMA_USE_STL_UNORDERED_MAP			1
+# define VMA_USE_STL_LIST					1
+# define VMA_USE_STL_SHARED_MUTEX			1
 
 # define VMA_IMPLEMENTATION		1
 # define VMA_ASSERT(expr)		{}
@@ -22,11 +27,18 @@
 #	pragma warning (disable: 4701)
 #	pragma warning (disable: 4703)
 #endif
+#ifdef COMPILER_CLANG
+#	pragma clang diagnostic push
+#	pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#endif
 
 # include "vk_mem_alloc.h"
 
 #ifdef COMPILER_MSVC
 #	pragma warning (pop)
+#endif
+#ifdef COMPILER_CLANG
+#	pragma clang diagnostic pop
 #endif
 
 namespace AE::Graphics

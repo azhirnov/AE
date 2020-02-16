@@ -24,4 +24,4 @@ extern void Test_VulkanDevice ()
 extern void Test_VulkanDevice ()
 {}
 
-#endif
+#endif	// AE_ENABLE_VULKAN

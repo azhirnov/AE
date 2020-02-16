@@ -86,7 +86,7 @@ namespace AE::Graphics
 	{
 		auto*	render_pass	= _graphicsCtx.AcquireResource( _logicalRP.GetRenderPass() );
 		auto*	framebuffer	= _graphicsCtx.AcquireResource( _logicalRP.GetFramebuffer() );
-		CHECK_ERR( render_pass and framebuffer );
+		CHECK_ERR( render_pass and framebuffer, NativeContext_t{} );
 
 		VulkanRenderContext	vctx;
 		vctx.cmdBuffer		= BitCast<CommandBufferVk_t>(_cmdbuf);

@@ -38,7 +38,7 @@ namespace
 	QueryID  CreateQuery2 (Registry &reg, ArrayView<Tuple<Args...>> const*)
 	{
 		using A = TypeList< Args... >;
-		STATIC_ASSERT( IsSameTypes< A::Get<0>, size_t >);
+		STATIC_ASSERT(( IsSameTypes< typename A::template Get<0>, size_t > ));
 		using B = typename A::PopFront::type;
 
 		return CreateQuery1( reg, (B const*)null );
@@ -47,7 +47,7 @@ namespace
 	template <typename Fn>
 	void EnqueWithoutQuery (Registry &reg, Fn &&fn)
 	{
-		QueryID	q = CreateQuery2( reg, (FunctionInfo<Fn>::args::template Get<0> *)null );
+		QueryID	q = CreateQuery2( reg, (typename FunctionInfo<Fn>::args::template Get<0> *)null );
 
 		reg.Enque( q, std::forward<Fn>(fn) );
 	}

@@ -78,7 +78,7 @@ namespace AE::Serializing
 
 		bool res = _Deserialize( arg0 );
 
-		if constexpr( CountOf<Args...>() )
+		if constexpr( CountOf<Args...>() > 0 )
 			return res & _RecursiveDeserialize( args... );
 		else
 			return res;
@@ -98,7 +98,7 @@ namespace AE::Serializing
 	template <typename T>
 	inline bool  Deserializer::_Deserialize (INOUT Bytes<T> &value) const
 	{
-		T		val;
+		T		val	= {};
 		bool	res = _Deserialize( OUT val );
 		value = Bytes<T>{ val };
 		return res;
@@ -277,8 +277,8 @@ namespace AE::Serializing
 
 		for (uint i = 0; res & (i < count); ++i)
 		{
-			K	key;
-			V	value;
+			K	key		= {};
+			V	value	= {};
 			res &= (_Deserialize( OUT key ) and _Deserialize( OUT value ));
 			res &= map.insert_or_assign( std::move(key), std::move(value) ).second;
 		}
@@ -294,7 +294,7 @@ namespace AE::Serializing
 
 		for (uint i = 0; res & (i < count); ++i)
 		{
-			T	value;
+			T	value = {};
 			res &= _Deserialize( OUT value );
 			res &= set.insert( std::move(value) );
 		}
@@ -313,8 +313,8 @@ namespace AE::Serializing
 
 		for (uint i = 0; res & (i < count); ++i)
 		{
-			K	key;
-			V	value;
+			K	key		= {};
+			V	value	= {};
 			res &= (_Deserialize( OUT key ) and _Deserialize( OUT value ));
 			res &= map.insert_or_assign( std::move(key), std::move(value) ).second;
 		}
@@ -330,7 +330,7 @@ namespace AE::Serializing
 
 		if ( res & has_value )
 		{
-			value = T();
+			value = {};
 			return _Deserialize( INOUT *value );
 		}
 		return res;

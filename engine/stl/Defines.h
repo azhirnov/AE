@@ -186,16 +186,16 @@
 
 #ifndef AE_LOGI
 #	define AE_LOGI( ... ) \
-			AE_PRIVATE_LOGI(AE_PRIVATE_GETARG_0( __VA_ARGS__, "" ), \
-							AE_PRIVATE_GETARG_1( __VA_ARGS__, __FILE__ ), \
-							AE_PRIVATE_GETARG_2( __VA_ARGS__, __FILE__, __LINE__ ))
+			AE_PRIVATE_LOGI( AE_PRIVATE_GETARG_0( __VA_ARGS__, "" ), \
+							 AE_PRIVATE_GETARG_1( __VA_ARGS__, __FILE__ ), \
+							 AE_PRIVATE_GETARG_2( __VA_ARGS__, __FILE__, __LINE__ ))
 #endif
 
 #ifndef AE_LOGE
 #	define AE_LOGE( ... ) \
-			AE_PRIVATE_LOGE(AE_PRIVATE_GETARG_0( __VA_ARGS__, "" ), \
-							AE_PRIVATE_GETARG_1( __VA_ARGS__, __FILE__ ), \
-							AE_PRIVATE_GETARG_2( __VA_ARGS__, __FILE__, __LINE__ ))
+			AE_PRIVATE_LOGE( AE_PRIVATE_GETARG_0( __VA_ARGS__, "" ), \
+							 AE_PRIVATE_GETARG_1( __VA_ARGS__, __FILE__ ), \
+							 AE_PRIVATE_GETARG_2( __VA_ARGS__, __FILE__, __LINE__ ))
 #endif
 
 
@@ -207,8 +207,8 @@
 			AE_LOGE( _text_ ); \
 		}}
 
-#   define CHECK( _func_ ) \
-		AE_PRIVATE_CHECK( (_func_), AE_PRIVATE_TOSTRING( _func_ ) )
+#   define CHECK( ... ) \
+		AE_PRIVATE_CHECK( (__VA_ARGS__), AE_PRIVATE_TOSTRING( __VA_ARGS__ ) )
 #endif
 
 
@@ -250,8 +250,8 @@
 // compile time assert
 #ifndef STATIC_ASSERT
 #	define STATIC_ASSERT( ... ) \
-		static_assert(	AE_PRIVATE_GETRAW( AE_PRIVATE_GETARG_0( __VA_ARGS__ ) ), \
-						AE_PRIVATE_GETRAW( AE_PRIVATE_GETARG_1( __VA_ARGS__, AE_PRIVATE_TOSTRING(__VA_ARGS__) ) ) )
+		static_assert(	AE_PRIVATE_GETRAW( AE_PRIVATE_GETARG_0( __VA_ARGS__ )), \
+						AE_PRIVATE_GETRAW( AE_PRIVATE_GETARG_1( __VA_ARGS__, AE_PRIVATE_TOSTRING(__VA_ARGS__))) )
 #endif
 
 
@@ -390,8 +390,8 @@
 
 #	include <cassert>
 #	undef  assert
-#	define assert( _expr_ ) \
-		AE_PRIVATE_CHECK( (_expr_), AE_PRIVATE_TOSTRING( _expr_ ))
+#	define assert( ... ) \
+		AE_PRIVATE_CHECK( (__VA_ARGS__), AE_PRIVATE_TOSTRING( __VA_ARGS__ ))
 
 #endif
 

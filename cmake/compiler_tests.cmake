@@ -1,11 +1,12 @@
 include( CheckCXXSourceCompiles )
 
-if ( ${COMPILER_MSVC} )
-	set( CMAKE_REQUIRED_FLAGS "/std:c++latest" )
+if (${COMPILER_MSVC})
+	set( AE_DEFAULT_CPPFLAGS "/std:c++latest" )
 else()
-	set( CMAKE_REQUIRED_FLAGS "-std=c++17 -Werror=unknown-pragmas" )
+	set( AE_DEFAULT_CPPFLAGS "-std=c++17" )
 endif ()
 
+set( CMAKE_REQUIRED_FLAGS "${AE_DEFAULT_CPPFLAGS}" )
 message( STATUS "Run compiler tests with flags: ${CMAKE_REQUIRED_FLAGS}" )
 
 set( AE_COMPILER_DEFINITIONS "" )
@@ -16,6 +17,7 @@ check_cxx_source_compiles(
 	"#include <string_view>
 	int main () {
 		std::string_view str{\"1234\"};
+		(void)(str);
 		return 0;
 	}"
 	STD_STRINGVIEW_SUPPORTED )
@@ -30,7 +32,7 @@ endif ()
 check_cxx_source_compiles(
 	"#include <optional>
 	int main () {
-		std::optional<int> opt;
+		std::optional<int> opt = 1;
 		return opt.has_value() ? 0 : 1;
 	}"
 	STD_OPTIONAL_SUPPORTED )
@@ -47,6 +49,7 @@ check_cxx_source_compiles(
 	int main () {
 		std::variant<int, float> var;
 		var = 1.0f;
+		(void)(var);
 		return 0;
 	}"
 	STD_VARIANT_SUPPORTED )
@@ -58,28 +61,38 @@ else()
 endif ()
 
 #------------------------------------------------------------------------------
+if (${COMPILER_CLANG_ANDROID})
+	set( CMAKE_REQUIRED_LIBRARIES "libc++fs" )
+elseif (${COMPILER_CLANG} OR ${COMPILER_CLANG_APPLE} OR ${COMPILER_GCC})
+	set( CMAKE_REQUIRED_LIBRARIES "stdc++fs" )
+endif()
+
 check_cxx_source_compiles(
 	"#include <filesystem>
-	namespace fs = std::filesystem;
 	int main () {
+		(void)(std::filesystem::current_path());
 		return 0;
 	}"
 	STD_FILESYSTEM_SUPPORTED )
 
 if (STD_FILESYSTEM_SUPPORTED)
-	if (${COMPILER_CLANG} OR ${COMPILER_CLANG_APPLE} OR ${COMPILER_GCC})
+	if (${COMPILER_CLANG_ANDROID})
+		set( AE_LINK_LIBRARIES "${AE_LINK_LIBRARIES}" "libc++fs" )
+	elseif (${COMPILER_CLANG} OR ${COMPILER_CLANG_APPLE} OR ${COMPILER_GCC})
 		set( AE_LINK_LIBRARIES "${AE_LINK_LIBRARIES}" "stdc++fs" )
 	endif()
 	set( STD_FILESYSTEM_SUPPORTED ON CACHE INTERNAL "" FORCE )
 else()
 	set( STD_FILESYSTEM_SUPPORTED OFF CACHE INTERNAL "" FORCE )
 endif ()
+set( CMAKE_REQUIRED_LIBRARIES "" )
 
 #------------------------------------------------------------------------------
 check_cxx_source_compiles(
 	"#include <new>
 	static constexpr size_t Align = std::hardware_destructive_interference_size;
 	int main () {
+		(void)(Align);
 		return 0;
 	}"
 	STD_CACHELINESIZE_SUPPORTED )
@@ -104,6 +117,10 @@ if (STD_BARRIER_SUPPORTED)
 endif ()
 
 #------------------------------------------------------------------------------
+if (NOT ${COMPILER_MSVC})
+	set( CMAKE_REQUIRED_FLAGS "${AE_DEFAULT_CPPFLAGS} -Werror=unknown-pragmas" )
+endif ()
+
 check_cxx_source_compiles(
 	"#pragma detect_mismatch( \"AE_DEBUG\", \"1\" )
 	int main () {
@@ -114,6 +131,7 @@ check_cxx_source_compiles(
 if (CPP_DETECT_MISSMATCH_SUPPORTED)
 	set( AE_COMPILER_DEFINITIONS "${AE_COMPILER_DEFINITIONS}" "AE_CPP_DETECT_MISSMATCH" )
 endif ()
+set( CMAKE_REQUIRED_FLAGS "${AE_DEFAULT_CPPFLAGS}" )
 
 #------------------------------------------------------------------------------
 check_cxx_source_compiles(
@@ -160,6 +178,7 @@ endif ()
 #------------------------------------------------------------------------------
 
 set( CMAKE_REQUIRED_FLAGS "" )
+set( CMAKE_REQUIRED_LIBRARIES "" )
 set( AE_COMPILER_DEFINITIONS "${AE_COMPILER_DEFINITIONS}" CACHE INTERNAL "" FORCE )
 set( AE_LINK_LIBRARIES "${AE_LINK_LIBRARIES}" CACHE INTERNAL "" FORCE )
 

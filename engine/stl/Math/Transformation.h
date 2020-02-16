@@ -92,7 +92,7 @@ namespace AE::Math
 		Vec3_t		scale3;
 		Vec3_t		skew;
 		Vec<T,4>	perspective;
-		glm::decompose( mat._value, OUT scale3, OUT orientation._value, OUT position, OUT skew, OUT perspective );
+		Unused( glm::decompose( mat._value, OUT scale3, OUT orientation._value, OUT position, OUT skew, OUT perspective ));
 
 		ASSERT( Equals( scale3.x, scale3.y ) and Equals( scale3.x, scale3.z ) );
 		scale = scale3.x;

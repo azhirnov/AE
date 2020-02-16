@@ -41,9 +41,6 @@ namespace AE::ECS
 	template <typename Comp>
 	struct ComponentTypeInfo
 	{
-		//STATIC_ASSERT( not IsEmpty<Comp> );
-		//STATIC_ASSERT( std::is_standard_layout_v<Comp> );
-		//STATIC_ASSERT( std::is_trivially_copyable_v<Comp> );
 		STATIC_ASSERT( std::is_trivially_destructible_v<Comp> );
 		STATIC_ASSERT( std::is_nothrow_destructible_v<Comp> );
 

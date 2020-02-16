@@ -3,6 +3,7 @@
 #pragma once
 
 #include <tuple>
+#include "stl/CompileTime/TemplateUtils.h"
 
 namespace AE::STL
 {
@@ -12,7 +13,7 @@ namespace AE::STL
 	//
 
 	template <typename ...Types>
-	struct Tuple : std::tuple< Types... >
+	struct Tuple final : std::tuple< Types... >
 	{
 	// types
 		using Self		= Tuple< Types... >;
@@ -62,7 +63,7 @@ namespace AE::STL
 		template <size_t I>
 		ND_ constexpr decltype(auto)	Get ()	&&		{ return std::get<I>( std::move(*this) ); }
 
-		static constexpr size_t			Size	= sizeof... (Types);
+		ND_ constexpr size_t			Count () const	{ return sizeof... (Types); }
 
 		ND_ constexpr Base_t &			AsBase ()	&	{ return static_cast<Base_t &>(*this); }
 		ND_ constexpr Base_t &&			AsBase ()	&&	{ return static_cast<Base_t &&>( std::move(*this) ); }

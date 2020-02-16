@@ -10,6 +10,7 @@
 #ifndef AE_LFAS_ENABLED
 # include "threading/Common.h"
 # include "stl/Math/BitMath.h"
+# include "stl/Memory/MemUtils.h"
 #endif
 
 namespace AE::Threading

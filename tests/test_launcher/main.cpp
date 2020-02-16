@@ -1,6 +1,6 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "platform/App/Android/AndroidApplication.h"
+#include "platform/Android/AndroidApplication.h"
 using namespace AE::App;
 
 extern int Test_STL ();

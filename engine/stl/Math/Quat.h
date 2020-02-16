@@ -23,7 +23,7 @@ namespace AE::Math
 	public:
 		using Value_t		= T;
 		using Self			= Quat< T >;
-		using _GLM_Quat_t	= glm::qua< T, glm::qualifier::aligned_highp >;
+		using _GLM_Quat_t	= glm::qua< T, GLMQuialifier >;
 		using Vec3_t		= Vec< T, 3 >;
 		using Vec4_t		= Vec< T, 4 >;
 		using Rad_t			= RadiansTempl< T >;

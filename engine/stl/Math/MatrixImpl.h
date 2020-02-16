@@ -17,7 +17,7 @@ namespace AE::Math
 	public:
 		using Value_t		= T;
 		using Self			= Matrix< T, Columns, Rows >;
-		using _GLM_Mat_t	= glm::mat< glm::length_t(Columns), glm::length_t(Rows), T, glm::qualifier::aligned_highp >;
+		using _GLM_Mat_t	= glm::mat< glm::length_t(Columns), glm::length_t(Rows), T, GLMQuialifier >;
 		using Col_t			= typename _GLM_Mat_t::col_type;
 		using Row_t			= typename _GLM_Mat_t::row_type;
 		
@@ -67,7 +67,7 @@ namespace AE::Math
 		ND_ Self	Inversed ()						const	{ return Self{ glm::inverse( _value )}; }
 
 		ND_ static GLM_CONSTEXPR Self	Identity ()			{ return Self{ _GLM_Mat_t{ T(1) }}; }
-		ND_ Matrix<T,Rows,Columns>		Transpose () const;
+		ND_ Matrix<T,Rows,Columns>		Transpose () const	{ return Matrix<T,Rows,Columns>{ glm::transpose( _value )}; }
 
 		ND_ Self	operator + ()					const	{ return *this; }
 		ND_ Self	operator - ()					const	{ return Self{ -_value }; }

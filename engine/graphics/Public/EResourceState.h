@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "Graphics/Public/Common.h"
+#include "graphics/Public/Common.h"
 
 namespace AE::Graphics
 {

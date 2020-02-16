@@ -11,7 +11,7 @@ extern void Test_VulkanRenderGraph (IApplication &app, IWindow &wnd);
 
 
 #ifdef PLATFORM_ANDROID
-extern int Test_Platform (IApplication &app, IWindow &wnd)
+extern int Test_Graphics (IApplication &app, IWindow &wnd)
 {
 	UnitTest_GfxResourceID();
 
@@ -71,6 +71,7 @@ extern int Test_Platform (IApplication &app, IWindow &wnd)
 			Test_VulkanDevice();
 
 			#ifdef AE_CI_BUILD
+				// CI can't create window and does not support vulkan
 				app.Terminate();
 			#else
 				_window = app.CreateWindow( MakeUnique<WndListener>( app ), Default );

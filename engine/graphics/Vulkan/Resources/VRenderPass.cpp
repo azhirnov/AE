@@ -263,8 +263,7 @@ namespace AE::Graphics
 //-----------------------------------------------------------------------------
 
 
-namespace AE::STL
-{
+
 /*
 =================================================
 	operator ==
@@ -301,8 +300,8 @@ namespace AE::STL
 */
 	inline bool operator == (const VkSubpassDescription &lhs, const VkSubpassDescription &rhs)
 	{
-		using AttachView	= ArrayView< VkAttachmentReference >;
-		using PreserveView	= ArrayView< uint >;
+		using AttachView	= AE::STL::ArrayView< VkAttachmentReference >;
+		using PreserveView	= AE::STL::ArrayView< uint32_t >;
 
 		auto	lhs_resolve_attachments = lhs.pResolveAttachments ? AttachView{lhs.pResolveAttachments, lhs.colorAttachmentCount} : AttachView{};
 		auto	rhs_resolve_attachments = rhs.pResolveAttachments ? AttachView{rhs.pResolveAttachments, rhs.colorAttachmentCount} : AttachView{};
@@ -332,7 +331,6 @@ namespace AE::STL
 				lhs.dstAccessMask	== rhs.dstAccessMask	and
 				lhs.dependencyFlags	== rhs.dependencyFlags;
 	}
-}	// AE::STL
 //-----------------------------------------------------------------------------
 
 

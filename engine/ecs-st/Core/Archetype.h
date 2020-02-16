@@ -273,10 +273,13 @@ namespace AE::ECS
 			h = BitRotateLeft( h, 4 + i*4 ) ^ _bits[i];
 		}
 
-		if constexpr( sizeof(size_t) < sizeof(h) )
-			return HashVal{size_t( h ^ (h >> 32) )};
-		else
+		#if PLATFORM_BITS == 64
+			STATIC_ASSERT( sizeof(size_t) == sizeof(h) );
 			return HashVal{ h };
+		#else
+			STATIC_ASSERT( sizeof(size_t) != sizeof(h) );
+			return HashVal{size_t( h ^ (h >> 32) )};
+		#endif
 	}
 	
 /*

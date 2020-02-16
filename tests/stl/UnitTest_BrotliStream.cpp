@@ -4,6 +4,8 @@
 #include "stl/Stream/BrotliStream.h"
 #include "UnitTest_Common.h"
 
+#ifdef AE_ENABLE_BROTLI
+
 namespace
 {
 	void BrotliStream_Test1 ()
@@ -44,3 +46,10 @@ extern void UnitTest_BrotliStream ()
 
     AE_LOGI( "UnitTest_BrotliStream - passed" );
 }
+
+#else
+
+extern void UnitTest_BrotliStream ()
+{}
+
+#endif	// AE_ENABLE_BROTLI
