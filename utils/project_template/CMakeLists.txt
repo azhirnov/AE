@@ -13,6 +13,7 @@ endif()
 
 include( "${CMAKE_FOLDER}/compiler_tests.cmake" )
 include( "${CMAKE_FOLDER}/ci_build.cmake" )
+include( "${CMAKE_FOLDER}/version.cmake" )
 
 #----------------------------------------------------------
 
@@ -87,4 +88,4 @@ if (NOT ${STD_FILESYSTEM_SUPPORTED})
 	message( FATAL_ERROR "std::filesystem support required" )
 endif()
 
-target_compile_definitions( "ProjectTemplate" PUBLIC "AE_VERSION=AE::STL::MakeTuple(0,1,1)" )
+target_compile_definitions( "ProjectTemplate" PUBLIC "AE_VERSION=AE::STL::MakeTuple( 0, 1, 1, \"${AE_COMMIT_HASH}\" )" )
