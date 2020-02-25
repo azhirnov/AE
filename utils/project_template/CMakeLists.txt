@@ -4,6 +4,7 @@ cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
 
 set( CMAKE_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake" )
 set( DOCS_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/../../docs" )
+set( AE_ITERATOR_DEBUG_LEVEL 1 CACHE INTERNAL "" FORCE )
 
 if (${AE_ENABLE_SIMPLE_COMPILER_OPTIONS})
 	include( "${CMAKE_FOLDER}/compilers_minimal.cmake" )
