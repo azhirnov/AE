@@ -6,7 +6,7 @@
 
 namespace
 {
-	void LfLinearAllocator_Test1 ()
+	static void  LfLinearAllocator_Test1 ()
 	{
 		static constexpr uint	MaxThreads	= 8;
 		static constexpr uint	ElemSize	= 8;

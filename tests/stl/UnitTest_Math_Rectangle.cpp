@@ -6,7 +6,7 @@
 
 namespace
 {
-	void Rectangle_Test1 ()
+	static void  Rectangle_Test1 ()
 	{
 		RectF	rect{ 1.0f, 1.0f, 3.0f, 4.0f };
 	
@@ -17,7 +17,7 @@ namespace
 	}
 
 
-	void Rectangle_Test2 ()
+	static void  Rectangle_Test2 ()
 	{
 		RectF	rect{ 1.0f, 1.0f, 3.0f, 4.0f };
 
@@ -27,7 +27,7 @@ namespace
 	}
 	
 
-	void Rectangle_Test3 ()
+	static void  Rectangle_Test3 ()
 	{
 		RectI	rect{ -8, -8, 8, 8 };
 

@@ -11,7 +11,7 @@ namespace
 	using MilliSeconds	= RequestDesc::MilliSeconds;
 
 
-	void Http_Test1 ()
+	static void  Http_Test1 ()
 	{
 		LocalNetwork	network;
 
@@ -112,7 +112,7 @@ namespace
 	}
 
 
-	void Http_Test2 ()
+	static void  Http_Test2 ()
 	{
 		NetworkManager::Settings	settings;
 		settings.transferTimout = MilliSeconds(1000);
@@ -129,7 +129,7 @@ namespace
 	}
 	
 
-	void Http_Test3 ()
+	static void  Http_Test3 ()
 	{
 		NetworkManager::Settings	settings;
 		settings.responseDelay	= MilliSeconds(1000);
@@ -146,7 +146,7 @@ namespace
 	}
 
 
-	void Http_Test4 ()
+	static void  Http_Test4 ()
 	{
 		LocalNetwork	network;
 		Scheduler().AddThread( MakeShared<WorkerThread>() );

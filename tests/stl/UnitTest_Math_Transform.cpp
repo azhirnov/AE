@@ -8,7 +8,7 @@ namespace
 {
 	constexpr float	eps = 1.0e-4f;
 
-	void Transformation_Test1 ()
+	static void  Transformation_Test1 ()
 	{
 		QuatF		q = QuatF::RotateX( 45.0_deg );
 		float3		p = float3{10.0f, -3.0f, 2.5f};
@@ -29,7 +29,7 @@ namespace
 	}
 
 
-	void Transformation_Test2 ()
+	static void  Transformation_Test2 ()
 	{
 		const Transform	tr{ float3{1.0f, 2.0f, 3.0f},
 							QuatF::Rotate({ 45.0_deg, 0.0_deg, 10.0_deg }),
@@ -56,7 +56,7 @@ namespace
 	}
 
 
-	void Transformation_Test3 ()
+	static void  Transformation_Test3 ()
 	{
 		const Transform	tr1{ float3{1.0f, 2.0f, -3.0f},
 							 QuatF::Rotate({ 45.0_deg, 0.0_deg, 10.0_deg }),

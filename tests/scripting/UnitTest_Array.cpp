@@ -5,7 +5,7 @@
 
 namespace
 {
-	void ScriptArray_Test1 (const ScriptEnginePtr &se)
+	static void  ScriptArray_Test1 (const ScriptEnginePtr &se)
 	{
 		const char	script[] = R"#(
 			int main () {

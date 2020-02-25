@@ -21,7 +21,7 @@ namespace
 	struct Tag2 {};
 	
 	
-	void RegisterComponents_Test1 ()
+	static void  RegisterComponents_Test1 ()
 	{
 		Registry	reg;
 		reg.RegisterComponents< Comp1, Comp2, Tag1, Tag2 >();
@@ -53,7 +53,7 @@ namespace
 	}
 
 
-	void ArchetypeStorage_Test1 ()
+	static void  ArchetypeStorage_Test1 ()
 	{
 		ArchetypeDesc		desc;
 		desc.Add<Comp1>();
@@ -88,7 +88,7 @@ namespace
 	}
 
 
-	void ArchetypeDesc_Test1 ()
+	static void  ArchetypeDesc_Test1 ()
 	{
 		ArchetypeDesc	a1;
 		a1.Add<Comp1>();
@@ -192,7 +192,7 @@ namespace
 	}
 
 
-	void ArchetypeQuery_Test1 ()
+	static void  ArchetypeQuery_Test1 ()
 	{
 		ArchetypeDesc	a1;
 		a1.Add<Comp1>();

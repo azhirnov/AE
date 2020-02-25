@@ -5,7 +5,7 @@
 
 namespace
 {
-	void EntityPool_Test1 ()
+	static void  EntityPool_Test1 ()
 	{
 		constexpr uint		count = 1024;
 		EntityPool			pool;

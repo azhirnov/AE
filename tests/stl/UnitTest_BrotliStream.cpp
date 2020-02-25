@@ -8,7 +8,7 @@
 
 namespace
 {
-	void BrotliStream_Test1 ()
+	static void  BrotliStream_Test1 ()
 	{
 		const String	str1 = "12i12ienmqpwom12euj1029podmksjhjbjcnalsmoiiwujkcmsalsc,posaasjncsalkmxaz";
 

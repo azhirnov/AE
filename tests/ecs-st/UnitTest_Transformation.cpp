@@ -9,14 +9,14 @@ namespace
 	struct UpdateTransform {};
 	
 
-	void InitRegistry (Registry &reg)
+	static void  InitRegistry (Registry &reg)
 	{
 		using namespace ECS::Components;
 		reg.RegisterComponents< ParentID, LocalOffset, LocalRotation, LocalScale, GlobalTransformation >();
 	}
 
 
-	EntityID  CreateObj (Registry &reg, EntityID parent, const float3 &pos)
+	static EntityID  CreateObj (Registry &reg, EntityID parent, const float3 &pos)
 	{
 		EntityID	id  = reg.CreateEntity< Components::ParentID,
 											Components::LocalOffset,
@@ -36,7 +36,7 @@ namespace
 	}
 	
 
-	EntityID  CreateObj (Registry &reg, EntityID parent, const float3 &pos, const QuatF &rot)
+	static EntityID  CreateObj (Registry &reg, EntityID parent, const float3 &pos, const QuatF &rot)
 	{
 		EntityID	id  = reg.CreateEntity< Components::ParentID,
 											Components::LocalOffset,
@@ -61,7 +61,7 @@ namespace
 	}
 	
 
-	EntityID  CreateObj (Registry &reg, EntityID parent, const float3 &pos, const QuatF &rot, float scale)
+	static EntityID  CreateObj (Registry &reg, EntityID parent, const float3 &pos, const QuatF &rot, float scale)
 	{
 		EntityID	id  = reg.CreateEntity< Components::ParentID,
 											Components::LocalOffset,
@@ -91,7 +91,7 @@ namespace
 	}
 
 
-	void TransformationGraph_Test1 ()
+	static void  TransformationGraph_Test1 ()
 	{
 		Registry						reg;
 		Systems::TransformationGraph	sg{ reg };

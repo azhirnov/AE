@@ -6,7 +6,7 @@
 
 namespace
 {
-	void StructView_Test1 ()
+	static void  StructView_Test1 ()
 	{
 		const int		data[] = { 0, 1, 2, 3, 4, 5 };
 		StructView<int>	view{ data };
@@ -19,7 +19,7 @@ namespace
 	}
 
 
-	void StructView_Test2 ()
+	static void  StructView_Test2 ()
 	{
 		#pragma pack (push, 1)
 		struct Data {
@@ -45,7 +45,7 @@ namespace
 	}
 
 
-	void StructView_Test3 ()
+	static void  StructView_Test3 ()
 	{
 		struct Data {
 			int		field1;

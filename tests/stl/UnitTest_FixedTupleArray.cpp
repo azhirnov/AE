@@ -6,7 +6,7 @@
 
 namespace
 {
-	void FixedTupleArray_Test1 ()
+	static void  FixedTupleArray_Test1 ()
 	{
 		using T1 = DebugInstanceCounter< int, 1 >;
 		using T2 = DebugInstanceCounter< float, 1 >;
@@ -38,7 +38,7 @@ namespace
 	}
 
 
-	void FixedTupleArray_Test2 ()
+	static void  FixedTupleArray_Test2 ()
 	{
 		using T1 = DebugInstanceCounter< int, 2 >;
 		using T2 = DebugInstanceCounter< float, 2 >;
@@ -94,7 +94,7 @@ namespace
 	}
 
 
-	void FixedTupleArray_Test3 ()
+	static void  FixedTupleArray_Test3 ()
 	{
 		using T1 = DebugInstanceCounter< int, 3 >;
 		using T2 = DebugInstanceCounter< int, 4 >;
@@ -117,7 +117,7 @@ namespace
 	}
 
 
-	void FixedTupleArray_Test4 ()
+	static void  FixedTupleArray_Test4 ()
 	{
 		using T1 = DebugInstanceCounter< int, 4 >;
 		using T2 = DebugInstanceCounter< float, 4 >;

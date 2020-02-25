@@ -6,7 +6,7 @@
 
 namespace
 {
-	void FileSystem_SearchForward_Test ()
+	static void  FileSystem_SearchForward_Test ()
 	{
 		Path	res;
 		TEST( FileSystem::SearchForward( FileSystem::CurrentPath(), Path{"b1.txt"}, 3, OUT res ));
@@ -19,7 +19,7 @@ namespace
 	}
 	
 
-	void FileSystem_SearchBackward_Test ()
+	static void  FileSystem_SearchBackward_Test ()
 	{
 		Path	res;
 		TEST( FileSystem::SearchBackward( FileSystem::CurrentPath().append("a/aa"), Path{"b/b1.txt"}, 3, OUT res ));
@@ -31,7 +31,7 @@ namespace
 	}
 
 
-	void FileSystem_Search_Test ()
+	static void  FileSystem_Search_Test ()
 	{
 		Path	res;
 		TEST( FileSystem::Search( FileSystem::CurrentPath(),				Path{"b1.txt"}, 3, 3, OUT res ));

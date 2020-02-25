@@ -6,7 +6,7 @@
 
 namespace
 {
-	void LinearAllocator_Test1 ()
+	static void  LinearAllocator_Test1 ()
 	{
 		using T = DebugInstanceCounter<uint, 1>;
 	

@@ -7,7 +7,7 @@
 
 namespace
 {
-	void MatrixStorage_Test1 ()
+	static void  MatrixStorage_Test1 ()
 	{
 		using CMat4x2_t = MatrixStorage< float, 4, 2, EMatrixOrder::ColumnMajor >;
 		using RMat4x2_t = MatrixStorage< float, 4, 2, EMatrixOrder::RowMajor >;
@@ -22,7 +22,7 @@ namespace
 	};
 
 
-	void MatrixStorage_Test2 ()
+	static void  MatrixStorage_Test2 ()
 	{
 		using CMat4x2_t = MatrixStorage< float, 4, 2, EMatrixOrder::ColumnMajor, sizeof(float)*4 >;
 		using RMat4x2_t = MatrixStorage< float, 4, 2, EMatrixOrder::RowMajor, sizeof(float)*4 >;
@@ -37,7 +37,7 @@ namespace
 	};
 
 
-	void MatrixStorage_Test3 ()
+	static void  MatrixStorage_Test3 ()
 	{
 		using float3x4_t = MatrixStorage< float, 3, 4, EMatrixOrder::ColumnMajor >;
 
@@ -61,7 +61,7 @@ namespace
 	}
 
 
-	void MatrixStorage_Test4 ()
+	static void  MatrixStorage_Test4 ()
 	{
 		using float3x4_t = MatrixStorage< float, 3, 4, EMatrixOrder::RowMajor >;
 
@@ -89,7 +89,7 @@ namespace
 	}
 	
 
-	void MatrixStorage_Test5 ()
+	static void  MatrixStorage_Test5 ()
 	{
 		using cm_float3x4_t = MatrixStorage< float, 3, 4, EMatrixOrder::ColumnMajor >;
 		using rm_float3x4_t = MatrixStorage< float, 3, 4, EMatrixOrder::RowMajor >;

@@ -6,7 +6,7 @@ using namespace AE::Threading;
 
 namespace
 {
-	void LfIndexedPool2_Test1 ()
+	static void  LfIndexedPool2_Test1 ()
 	{
 		using T = DebugInstanceCounter< int, 1 >;
 		using Pool_t = LfIndexedPool2< T, uint, 8*64, 8 >;
@@ -29,7 +29,7 @@ namespace
 	}
 	
 
-	void LfIndexedPool2_Test2 ()
+	static void  LfIndexedPool2_Test2 ()
 	{
 		constexpr uint	count = 1024*16;
 

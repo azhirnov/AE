@@ -29,13 +29,13 @@ namespace
 
 	
 	template <typename ...Args>
-	QueryID  CreateQuery1 (Registry &reg, TypeList<Args...> const*)
+	static QueryID  CreateQuery1 (Registry &reg, TypeList<Args...> const*)
 	{
 		return reg.CreateQuery< Args... >();
 	}
 
 	template <typename ...Args>
-	QueryID  CreateQuery2 (Registry &reg, ArrayView<Tuple<Args...>> const*)
+	static QueryID  CreateQuery2 (Registry &reg, ArrayView<Tuple<Args...>> const*)
 	{
 		using A = TypeList< Args... >;
 		STATIC_ASSERT(( IsSameTypes< typename A::template Get<0>, size_t > ));
@@ -45,7 +45,7 @@ namespace
 	}
 
 	template <typename Fn>
-	void EnqueWithoutQuery (Registry &reg, Fn &&fn)
+	static void  EnqueWithoutQuery (Registry &reg, Fn &&fn)
 	{
 		QueryID	q = CreateQuery2( reg, (typename FunctionInfo<Fn>::args::template Get<0> *)null );
 
@@ -53,13 +53,13 @@ namespace
 	}
 
 
-	void InitRegistry (Registry &reg)
+	static void  InitRegistry (Registry &reg)
 	{
 		reg.RegisterComponents< Comp1, Comp2, Tag1 >();
 	}
 
 	
-	void ComponentValidator_Test1 ()
+	static void  ComponentValidator_Test1 ()
 	{
 	#ifdef AE_ECS_VALIDATE_SYSTEM_FN
 		{
@@ -105,7 +105,7 @@ namespace
 	}
 
 
-	void Entity_Test1 ()
+	static void  Entity_Test1 ()
 	{
 		Registry	reg;
 		InitRegistry( reg );
@@ -235,7 +235,7 @@ namespace
 	}
 
 	
-	void Entity_Test2 ()
+	static void  Entity_Test2 ()
 	{
 		Registry	reg;
 		InitRegistry( reg );
@@ -319,7 +319,7 @@ namespace
 	}
 
 
-	void SingleComponent_Test1 ()
+	static void  SingleComponent_Test1 ()
 	{
 		Registry	reg;
 		InitRegistry( reg );
@@ -345,7 +345,7 @@ namespace
 	}
 
 
-	void System_Test1 ()
+	static void  System_Test1 ()
 	{
 		Registry		reg;
 		const size_t	count = 100;
@@ -394,7 +394,7 @@ namespace
 	}
 	
 	
-	void System_Test2 ()
+	static void  System_Test2 ()
 	{
 		struct SingleComp1
 		{
@@ -476,7 +476,7 @@ namespace
 	}
 	
 	
-	void System_Test3 ()
+	static void  System_Test3 ()
 	{
 		Registry	reg;
 
@@ -517,7 +517,7 @@ namespace
 	}
 
 
-	void Events_Test1 ()
+	static void  Events_Test1 ()
 	{
 		Registry	reg;
 		Array<uint>	arr;
@@ -562,7 +562,7 @@ namespace
 	}
 
 
-	void Messages_Test1 ()
+	static void  Messages_Test1 ()
 	{
 		Registry		reg;
 		const size_t	count = 100;
@@ -600,7 +600,7 @@ namespace
 	}
 
 
-	void Messages_Test2 ()
+	static void  Messages_Test2 ()
 	{
 		Registry		reg;
 		const size_t	count = 100;

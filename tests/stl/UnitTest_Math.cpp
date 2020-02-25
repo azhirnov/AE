@@ -7,7 +7,7 @@
 
 namespace
 {
-	void IsIntersects_Test1 ()
+	static void  IsIntersects_Test1 ()
 	{
 		TEST( IsIntersects( 2, 6, 5, 8 ));
 		TEST( IsIntersects( 2, 6, 0, 3 ));
@@ -17,7 +17,7 @@ namespace
 	}
 
 
-	void Wrap_Test1 ()
+	static void  Wrap_Test1 ()
 	{
 		float b0 = Wrap( 1.0f, 2.0f, 5.0f );	TEST( Equals( b0, 4.0f ));
 		float b1 = Wrap( 6.0f, 2.0f, 5.0f );	TEST( Equals( b1, 3.0f ));

@@ -13,7 +13,7 @@ using namespace AE::STL;
 =================================================
 */
 namespace {
-	void ConsoleOutput (StringView message, StringView file, int line, bool isError)
+	static void  ConsoleOutput (StringView message, StringView file, int line, bool isError)
 	{
 		const String str = String{file} << '(' << ToString( line ) << "): " << message;
 
@@ -22,7 +22,8 @@ namespace {
 		else
 			std::cout << str << std::endl;
 	}
-}
+}	// namespace
+
 /*
 =================================================
 	

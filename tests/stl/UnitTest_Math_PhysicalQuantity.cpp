@@ -6,7 +6,7 @@
 
 namespace
 {
-	void PhysicalDimensions_Test1 ()
+	static void  PhysicalDimensions_Test1 ()
 	{
 		using Dim = DefaultPhysicalDimensions;
 	
@@ -17,7 +17,7 @@ namespace
 	}
 
 
-	void PhysicalQuantity_Test1 ()
+	static void  PhysicalQuantity_Test1 ()
 	{
 		using Meters			= DefaultPhysicalQuantity<float>::Meters;
 		using MetersPerSeconds	= DefaultPhysicalQuantity<float>::MetersPerSeconds;
@@ -32,7 +32,7 @@ namespace
 	}
 
 
-	void PhysicalQuantityVec_Test1 ()
+	static void  PhysicalQuantityVec_Test1 ()
 	{
 		using Meters			= DefaultPhysicalQuantity<float>::Meters;
 		using Seconds			= DefaultPhysicalQuantity<float>::Seconds;

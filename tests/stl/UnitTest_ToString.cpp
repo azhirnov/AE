@@ -6,7 +6,7 @@
 
 namespace
 {
-	void TimeToStringTest ()
+	static void  TimeToStringTest ()
 	{
 		String	s1 = ToString( std::chrono::seconds(10) );
 		TEST( s1 == "10.00 s" );

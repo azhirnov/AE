@@ -6,7 +6,7 @@
 
 namespace
 {
-	void NtStringView_Test1 ()
+	static void  NtStringView_Test1 ()
 	{
 		const auto	Func = [] (NtStringView str, const char* expected) -> bool {
 			return strcmp( str.c_str(), expected ) == 0;

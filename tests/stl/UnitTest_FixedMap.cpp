@@ -7,7 +7,7 @@
 
 namespace
 {
-	void FixedMap_Test1 ()
+	static void  FixedMap_Test1 ()
 	{
 		FixedMap<int, int, 16>	map;
 
@@ -25,7 +25,7 @@ namespace
 	}
 
 
-	void FixedMap_Test2 ()
+	static void  FixedMap_Test2 ()
 	{
 		FixedMap<int, int, 16>	map;
 
@@ -44,7 +44,7 @@ namespace
 	}
 
 
-	void FixedMap_Test3 ()
+	static void  FixedMap_Test3 ()
 	{
 		using T1 = DebugInstanceCounter< int, 1 >;
 		using T2 = DebugInstanceCounter< int, 2 >;
@@ -69,7 +69,7 @@ namespace
 	}
 
 
-	void FixedMap_Test4 ()
+	static void  FixedMap_Test4 ()
 	{
 		FixedMap<int, int, 32>	map;
 
@@ -83,7 +83,7 @@ namespace
 	}
 
 
-	void FixedMap_Test5 ()
+	static void  FixedMap_Test5 ()
 	{
 		FixedMap<int, int, 32>	map1;
 		FixedMap<int, int, 32>	map2;

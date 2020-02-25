@@ -128,7 +128,7 @@ AE_DECL_SCRIPT_OBJ_RC( Test8_CL, "Test8_CL" );
 
 namespace
 {
-	void ScriptClass_Test1 (const ScriptEnginePtr &se)
+	static void  ScriptClass_Test1 (const ScriptEnginePtr &se)
 	{
 		ClassBinder<Test1_CL> binder( se );
 
@@ -148,7 +148,7 @@ namespace
 	}
 
 
-	void ScriptClass_Test2 (const ScriptEnginePtr &se)
+	static void  ScriptClass_Test2 (const ScriptEnginePtr &se)
 	{
 		ClassBinder<Test2_Value>	binder{ se };
 
@@ -170,7 +170,7 @@ namespace
 	}
 
 
-	void ScriptClass_Test3 (const ScriptEnginePtr &se)
+	static void  ScriptClass_Test3 (const ScriptEnginePtr &se)
 	{
 		EnumBinder<EEnum>	binder{ se };
 
@@ -215,7 +215,7 @@ namespace
 	};
 	ScriptEnginePtr	ScriptCl::engine;
 
-	void ScriptClass_Test4 (const ScriptEnginePtr &se)
+	static void  ScriptClass_Test4 (const ScriptEnginePtr &se)
 	{
 		const char	script[] = R"#(
 			int main ()
@@ -239,7 +239,7 @@ namespace
 	}
 
 
-	void ScriptClass_Test5 (const ScriptEnginePtr &se)
+	static void  ScriptClass_Test5 (const ScriptEnginePtr &se)
 	{
 		ClassBinder<Test5_CL> binder( se );
 
@@ -260,7 +260,7 @@ namespace
 	}
 
 
-	void ScriptClass_Test6 (const ScriptEnginePtr &se)
+	static void  ScriptClass_Test6 (const ScriptEnginePtr &se)
 	{
 		ClassBinder<Test6_CL> binder( se );
 
@@ -283,7 +283,7 @@ namespace
 	}
 
 
-	void ScriptClass_Test7 (const ScriptEnginePtr &se)
+	static void  ScriptClass_Test7 (const ScriptEnginePtr &se)
 	{
 		ClassBinder<Test7_Value>	binder{ se };
 
@@ -305,7 +305,7 @@ namespace
 	}
 
 
-	void ScriptClass_Test8 (const ScriptEnginePtr &se)
+	static void  ScriptClass_Test8 (const ScriptEnginePtr &se)
 	{
 		using Test8_Ptr = AngelScriptHelper::SharedPtr<Test8_CL>;
 		ClassBinder<Test8_CL> binder( se );

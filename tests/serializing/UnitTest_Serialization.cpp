@@ -13,7 +13,7 @@ namespace
 		SerObj () {}
 	};
 
-	bool SerObj_Serialize (Serializer &ser, const void *ptr)
+	static bool  SerObj_Serialize (Serializer &ser, const void *ptr)
 	{
 		auto*	self = Cast<SerObj>(ptr);
 
@@ -21,7 +21,7 @@ namespace
 		return true;
 	}
 
-	bool SerObj_Deserialize (const Deserializer &deser, OUT void *ptr, bool create)
+	static bool  SerObj_Deserialize (const Deserializer &deser, OUT void *ptr, bool create)
 	{
 		auto*	self = create ? PlacementNew<SerObj>(ptr) : Cast<SerObj>(ptr);
 	
@@ -30,7 +30,7 @@ namespace
 	}
 
 
-	void Serialization_Test1 ()
+	static void  Serialization_Test1 ()
 	{
 		ObjectFactory	factory;
 		TEST( factory.Register<SerObj>( SerializedID{"Test1"}, SerObj_Serialize, SerObj_Deserialize ));

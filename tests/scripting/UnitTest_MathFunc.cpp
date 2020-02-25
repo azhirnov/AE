@@ -6,7 +6,7 @@
 
 namespace
 {
-	void ScriptMath_Test1 (const ScriptEnginePtr &se)
+	static void  ScriptMath_Test1 (const ScriptEnginePtr &se)
 	{
 		int script_res;
 		bool res = Run< int() >( se, R"#(
@@ -18,7 +18,7 @@ namespace
 	}
 
 
-	void ScriptMath_Test2 (const ScriptEnginePtr &se)
+	static void  ScriptMath_Test2 (const ScriptEnginePtr &se)
 	{
 		int script_res;
 		bool res = Run< int() >( se, R"#(

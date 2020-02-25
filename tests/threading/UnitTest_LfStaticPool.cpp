@@ -6,7 +6,7 @@ using namespace AE::Threading;
 
 namespace
 {
-	void LfStaticPool_Test1 ()
+	static void  LfStaticPool_Test1 ()
 	{
 		using T = DebugInstanceCounter< uint, 1 >;
 	
@@ -39,7 +39,7 @@ namespace
 	}
 
 	
-	void LfStaticPool_Test2 ()
+	static void  LfStaticPool_Test2 ()
 	{
 		using T = DebugInstanceCounter< uint, 2 >;
 	
@@ -69,7 +69,7 @@ namespace
 	}
 
 	
-	void LfStaticPool_Test3 ()
+	static void  LfStaticPool_Test3 ()
 	{
 		using T = DebugInstanceCounter< uint, 2 >;
 	

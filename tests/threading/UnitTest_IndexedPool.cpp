@@ -8,7 +8,7 @@ using namespace AE::Threading;
 
 namespace
 {
-	void IndexedPool_Test1 ()
+	static void  IndexedPool_Test1 ()
 	{
 		constexpr uint							count = 1024;
 		IndexedPool< int, uint, count/16, 16 >	pool;
@@ -27,7 +27,7 @@ namespace
 	}
 
 
-	void IndexedPool_Test2 ()
+	static void  IndexedPool_Test2 ()
 	{
 		constexpr uint							count = 1024;
 		IndexedPool< int, uint, count/16, 16 >	pool;
@@ -42,7 +42,7 @@ namespace
 	}
 
 
-	void IndexedPool_Test3 ()
+	static void  IndexedPool_Test3 ()
 	{
 		using T = DebugInstanceCounter< int, 1 >;
 	
@@ -67,7 +67,7 @@ namespace
 	}
 
 
-	void CachedIndexedPool_Test1 ()
+	static void  CachedIndexedPool_Test1 ()
 	{
 		CachedIndexedPool<uint, uint, 16, 16>	pool;
 

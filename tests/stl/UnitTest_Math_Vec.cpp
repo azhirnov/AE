@@ -7,7 +7,7 @@
 namespace
 {
 	template <typename T>
-	void TestVec2Align ()
+	static void  TestVec2Align ()
 	{
 		using Self = Vec<T,2>;
 		STATIC_ASSERT( offsetof(Self, x) + sizeof(T) == offsetof(Self, y) );
@@ -15,7 +15,7 @@ namespace
 	}
 	
 	template <typename T>
-	void TestVec3Align ()
+	static void  TestVec3Align ()
 	{
 		using Self = Vec<T,3>;
 		STATIC_ASSERT( offsetof(Self, x) + sizeof(T) == offsetof(Self, y) );
@@ -24,7 +24,7 @@ namespace
 	}
 	
 	template <typename T>
-	void TestVec4Align ()
+	static void  TestVec4Align ()
 	{
 		using Self = Vec<T,4>;
 		STATIC_ASSERT( offsetof(Self, x) + sizeof(T) == offsetof(Self, y) );
@@ -34,7 +34,7 @@ namespace
 	}
 
 	template <typename T>
-	void TestVecAlign ()
+	static void  TestVecAlign ()
 	{
 		// check is supported cast Vec to array
 		TestVec2Align<T>();
@@ -43,7 +43,7 @@ namespace
 	}
 
 	
-	void Vec_Test1 ()
+	static void  Vec_Test1 ()
 	{
 		TestVecAlign<float>();
 		TestVecAlign<int>();
@@ -53,7 +53,7 @@ namespace
 	}
 
 	
-	void Vec_Test2 ()
+	static void  Vec_Test2 ()
 	{
 		TEST(All( float2(1.1f, 2.2f) == float2(0.1f, 0.2f) + float2(1.0f, 2.0f) ));
 	}

@@ -59,7 +59,7 @@ namespace AE::STL
 =================================================
 */
 namespace {
-	bool  RecursiveSearchForward (const Path &curr, const Path &ref, uint depth, OUT Path &result)
+	static bool  RecursiveSearchForward (const Path &curr, const Path &ref, uint depth, OUT Path &result)
 	{
 		for (auto& dir : FileSystem::Enum( curr ))
 		{
@@ -81,7 +81,7 @@ namespace {
 		result.clear();
 		return false;
 	}
-}
+}	// namespace
 
 /*
 =================================================

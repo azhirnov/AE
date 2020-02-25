@@ -34,7 +34,7 @@ namespace
 		}
 	};
 
-	void TaskDeps_Test1 ()
+	static void  TaskDeps_Test1 ()
 	{
 		LocalTaskScheduler	scheduler {1};
 
@@ -92,7 +92,7 @@ namespace
 		}
 	};
 
-	void TaskDeps_Test2 ()
+	static void  TaskDeps_Test2 ()
 	{
 		LocalTaskScheduler	scheduler {1};
 
@@ -153,7 +153,7 @@ namespace
 		}
 	};
 	
-	void TaskDeps_Test3 ()
+	static void  TaskDeps_Test3 ()
 	{
 		LocalTaskScheduler	scheduler {1};
 
@@ -285,7 +285,7 @@ namespace
 		}
 	};
 
-	void TaskDeps_Test4 ()
+	static void  TaskDeps_Test4 ()
 	{
 		LocalTaskScheduler	scheduler	{1};
 		Atomic<bool>		flag		{false};
@@ -382,7 +382,7 @@ namespace
 		}
 	};
 
-	void TaskDeps_Test5 ()
+	static void  TaskDeps_Test5 ()
 	{
 		LocalTaskScheduler	scheduler	{2};
 		SharedMutex			rw_lock;

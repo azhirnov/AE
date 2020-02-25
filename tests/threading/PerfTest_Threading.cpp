@@ -15,7 +15,7 @@ using namespace AE::Threading;
 namespace
 {
 	static siv::PerlinNoise			noise;
-	static const uint				max_levels		= 6;
+	static const uint				max_levels		= 4;
 	static Atomic<uint64_t>			task_complete	{0};
 
 
@@ -88,7 +88,7 @@ namespace
 		}
 	};
 
-	void Threading_Test1 ()
+	static void  Threading_Test1 ()
 	{
 		using TimePoint_t = std::chrono::high_resolution_clock::time_point;
 
@@ -177,7 +177,7 @@ namespace
 		}
 	};
 
-	void Threading_Test2 ()
+	static void  Threading_Test2 ()
 	{
 		using TimePoint_t = std::chrono::high_resolution_clock::time_point;
 

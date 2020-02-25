@@ -8,7 +8,7 @@
 
 namespace
 {
-	void IntLog2_Test1 ()
+	static void  IntLog2_Test1 ()
 	{
 		int	val;
 		val = IntLog2( 0 );				TEST( val < 0 );
@@ -24,7 +24,7 @@ namespace
 	}
 
 
-	void BitScanForward_Test1 ()
+	static void  BitScanForward_Test1 ()
 	{
 		int	val;
 		val = BitScanForward( 0 );			TEST( val < 0 );
@@ -33,7 +33,7 @@ namespace
 	}
 
 
-	void SafeBitShift_Test1 ()
+	static void  SafeBitShift_Test1 ()
 	{
 		uint	c0 = SafeLeftBitShift( 1u,  1 );			TEST( c0 == 0x00000002 );
 		uint	c1 = SafeLeftBitShift( 1u, 16 );			TEST( c1 == 0x00010000 );
@@ -45,7 +45,7 @@ namespace
 	}
 
 
-	void BitRotate_Test1 ()
+	static void  BitRotate_Test1 ()
 	{
 		uint	d0 = BitRotateLeft( 1u,			1 );		TEST( d0 == 0x00000002 );
 		uint	d1 = BitRotateLeft( 1u << 31,	1 );		TEST( d1 == 0x00000001 );
@@ -59,7 +59,7 @@ namespace
 	}
 
 
-	void ToBitMask_Test1 ()
+	static void  ToBitMask_Test1 ()
 	{
 		uint	a0 = ToBitMask<uint>( 0 );		TEST( a0 == 0 );
 		uint	a1 = ToBitMask<uint>( 32 );		TEST( a1 == ~0u );
