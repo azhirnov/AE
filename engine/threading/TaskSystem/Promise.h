@@ -105,7 +105,7 @@ namespace AE::Threading
 
 	// methods
 	public:
-		Promise () = delete;
+		Promise () {}
 
 		Promise (Self &&) = default;
 		Promise (const Self &) = default;
@@ -129,6 +129,8 @@ namespace AE::Threading
 
 		template <typename Fn, typename ...Deps>
 		Promise (Fn &&fn, bool except, EThread thread, const Tuple<Deps...> &dependsOn);
+
+		ND_ T  _Result () const;
 
 		template <typename Fn, typename ...Deps>
 		friend auto  MakePromise (Fn &&fn, EThread thread, const Tuple<Deps...> &dependsOn);
@@ -292,10 +294,17 @@ namespace _ae_threading_hidden_
 	template <typename Fn>
 	inline auto  Promise<T>::Then (Fn &&fn, EThread thread)
 	{
-		if ( _impl->IsExcept() )
-			return _Then( std::forward<Fn>(fn), thread, Tuple{WeakDep{_impl}} );
-		else
-			return _Then( std::forward<Fn>(fn), thread, Tuple{StrongDep{_impl}} );
+		using FI		= FunctionInfo< Fn >;
+		using Result	= typename _ae_threading_hidden_::ResultToPromise< typename FI::result >::type;
+
+		if ( _impl )
+		{
+			if ( _impl->IsExcept() )
+				return _Then( std::forward<Fn>(fn), thread, Tuple{WeakDep{_impl}} );
+			else
+				return _Then( std::forward<Fn>(fn), thread, Tuple{StrongDep{_impl}} );
+		}
+		return Result{};
 	}
 	
 /*
@@ -371,20 +380,24 @@ namespace _ae_threading_hidden_
 		
 		STATIC_ASSERT( FI::args::Count == 0 );
 		
-		if constexpr( IsVoid< typename FI::result > )
+		if ( _impl )
 		{
-			return Result{	[fn = std::forward<Fn>(fn)] () {
-								fn();
-								return PromiseResult<void>{};
-							},
-							true,
-							thread,
-							Tuple{StrongDep{_impl}} };
+			if constexpr( IsVoid< typename FI::result > )
+			{
+				return Result{	[fn = std::forward<Fn>(fn)] () {
+									fn();
+									return PromiseResult<void>{};
+								},
+								true,
+								thread,
+								Tuple{StrongDep{_impl}} };
+			}
+			else
+			{
+				return Result{ std::forward<Fn>(fn), true, thread, Tuple{StrongDep{_impl}} };
+			}
 		}
-		else
-		{
-			return Result{ std::forward<Fn>(fn), true, thread, Tuple{StrongDep{_impl}} };
-		}
+		return Result{};
 	}
 	
 /*
@@ -396,6 +409,17 @@ namespace _ae_threading_hidden_
 	inline bool  Promise<T>::Cancel ()
 	{
 		return Scheduler().Cancel( _impl );
+	}
+	
+/*
+=================================================
+	_Result
+=================================================
+*/
+	template <typename T>
+	inline T  Promise<T>::_Result () const
+	{
+		return _impl ? _impl->Result() : Default;
 	}
 //-----------------------------------------------------------------------------
 
@@ -500,7 +524,7 @@ namespace _ae_threading_hidden_
 		return	MakePromise(
 					[t] () {
 						return	t.Apply( [] (auto&& ...args) {
-									return MakeTuple( args._impl->Result() ... );
+									return MakeTuple( args._Result() ... );
 								});
 					},
 					thread,

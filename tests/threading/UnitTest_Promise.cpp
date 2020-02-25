@@ -11,7 +11,7 @@ namespace
 
 
 	template <typename T>
-	void TestResult (Promise<T> &p, const T &expected)
+	static void  TestResult (Promise<T> &p, const T &expected)
 	{
 		auto	task = AsyncTask{ p.Then( [expected] (const T& res) { TEST( res == expected ); })};
 
@@ -20,7 +20,7 @@ namespace
 	}
 
 
-	void Promise_Test1 ()
+	static void  Promise_Test1 ()
 	{
 		LocalTaskScheduler	scheduler {1};
 		scheduler->AddThread( MakeShared<WorkerThread>() );
@@ -32,7 +32,7 @@ namespace
 	}
 	
 
-	void Promise_Test2 ()
+	static void  Promise_Test2 ()
 	{
 		LocalTaskScheduler	scheduler {1};
 		scheduler->AddThread( MakeShared<WorkerThread>() );
@@ -50,7 +50,7 @@ namespace
 	}
 
 
-	void Promise_Test3 ()
+	static void  Promise_Test3 ()
 	{
 		LocalTaskScheduler	scheduler {1};
 		scheduler->AddThread( MakeShared<WorkerThread>() );
@@ -76,6 +76,26 @@ namespace
 		TEST( AsyncTask(p4)->Status() == EStatus::Completed );
 		TEST( p4_ok );
 	}
+
+	
+	static void  Promise_Test4 ()
+	{
+		LocalTaskScheduler	scheduler {1};
+		scheduler->AddThread( MakeShared<WorkerThread>() );
+
+		Promise<int> pe;
+
+		auto p0 = MakePromise( [] () { return "a"s; });
+		auto p1 = MakePromise( [] () -> String { return "b"s; });
+		auto p2 = MakePromise( [] () { return 1u; });
+		auto p3 = MakePromiseFromTuple( MakeTuple( p0, p1, p2, pe ));
+
+		auto p4 = p3.Then( [] (const Tuple<String, String, uint, int> &in) {
+				return in.Get<0>()  + '.' + in.Get<1>() + '.' + ToString( in.Get<2>() ) + '.' + ToString( in.Get<3>() );
+			});
+
+		TestResult( p4, "a.b.1.0"s );
+	}
 }
 
 
@@ -84,6 +104,7 @@ extern void UnitTest_Promise ()
 	Promise_Test1();
 	Promise_Test2();
 	Promise_Test3();
+	Promise_Test4();
 
 	AE_LOGI( "UnitTest_Promise - passed" );
 }

@@ -42,9 +42,10 @@ namespace AE::Threading
 
 	template <typename T>	using Atomic	= std::atomic< T >;
 	
-	using Mutex			= std::mutex;
-	using ThreadID		= std::thread::id;
-	using SharedMutex	= std::shared_mutex;
+	using Mutex				= std::mutex;
+	using ThreadID			= std::thread::id;
+	using SharedMutex		= std::shared_mutex;
+	using RecursiveMutex	= std::recursive_mutex;
 
 
 #	if AE_OPTIMAL_MEMORY_ORDER

@@ -608,6 +608,9 @@ DEBUG_ONLY(
 */
 	bool  TaskScheduler::_AddTaskDependencies (const AsyncTask &task, const AsyncTask &dep, bool isStrong, INOUT uint &bitIndex)
 	{
+		if ( not dep )
+			return true;
+
 		CHECK_ERR( bitIndex + 1 < sizeof(IAsyncTask::WaitBits_t)*8 );
 
 		EXLOCK( dep->_outputGuard );	// TODO: optimize
