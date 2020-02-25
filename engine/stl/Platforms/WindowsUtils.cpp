@@ -5,7 +5,7 @@
 #include "stl/Algorithms/ArrayUtils.h"
 
 #ifdef PLATFORM_WINDOWS
-# include "stl/Platforms/WindowsLibrary.h"
+# include "stl/Platforms/PlatformUtils.h"
 # include <processthreadsapi.h>
 # include <thread>
 
@@ -192,7 +192,36 @@ namespace
 
 		return ::SetThreadAffinityMask( handle, mask ) != 0;
 	}
+	
+/*
+=================================================
+	CheckErrors
+=================================================
+*/
+	bool  WindowsUtils::CheckErrors (StringView file, int line)
+	{
+		DWORD	dw = ::GetLastError();
 
+		if ( dw == 0 )
+			return true;
+		
+		char	buf[128] = {};
+		DWORD	dw_count = ::FormatMessageA(
+									FORMAT_MESSAGE_FROM_SYSTEM |
+									FORMAT_MESSAGE_IGNORE_INSERTS,
+									null,
+									dw,
+									MAKELANGID( LANG_ENGLISH, SUBLANG_DEFAULT ),
+									LPTSTR(buf),
+									uint(CountOf(buf)),
+									null );
+		
+		String	str("WinAPI error: ");
+		str += StringView{ buf, dw_count-2 };
+
+		AE_LOGE( str, file, line );
+		return false;
+	}
 
 }	// AE::STL
 

@@ -19,7 +19,7 @@ namespace AE::STL
 	// Dynamic Library
 	//
 
-	class Library final : public Noncopyable
+	class PosixLibrary final : public Noncopyable
 	{
 	// variables
 	private:
@@ -28,8 +28,8 @@ namespace AE::STL
 
 	// methods
 	public:
-		Library ()		{}
-		~Library ()		{ Unload(); }
+		PosixLibrary ()		{}
+		~PosixLibrary ()	{ Unload(); }
 
 		bool  Load (NtStringView libName);
 		bool  Load (const Path &libName);
@@ -45,21 +45,21 @@ namespace AE::STL
 
 	
 
-	inline bool  Library::Load (NtStringView libName)
+	inline bool  PosixLibrary::Load (NtStringView libName)
 	{
 		CHECK_ERR( _handle == null );
 		_handle = ::dlopen( libName.c_str(), RTLD_NOW | RTLD_LOCAL );
 		return _handle != null;
 	}
 
-	inline bool  Library::Load (const Path &libName)
+	inline bool  PosixLibrary::Load (const Path &libName)
 	{
 		CHECK_ERR( _handle == null );
 		_handle = ::dlopen( libName.c_str(), RTLD_NOW | RTLD_LOCAL );	// TODO
 		return _handle != null;
 	}
 
-	inline void  Library::Unload ()
+	inline void  PosixLibrary::Unload ()
 	{
 		if ( _handle ) {
 			::dlclose( _handle );
@@ -68,13 +68,13 @@ namespace AE::STL
 	}
 	
 	template <typename T>
-	inline bool  Library::GetProcAddr (NtStringView name, OUT T &result) const
+	inline bool  PosixLibrary::GetProcAddr (NtStringView name, OUT T &result) const
 	{
 		result = BitCast<T>( ::dlsym( _handle, name.c_str() ));
 		return result != null;
 	}
 	
-	inline Path  Library::GetPath () const
+	inline Path  PosixLibrary::GetPath () const
 	{
 #	ifndef PLATFORM_ANDROID
 		CHECK_ERR( _handle );

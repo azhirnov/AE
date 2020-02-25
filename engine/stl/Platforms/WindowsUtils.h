@@ -20,6 +20,8 @@ namespace AE::STL
 		ND_ static String	GetThreadName ();
 
 			static bool		SetThreadAffinity (const std::thread::native_handle_type &handle, uint cpuCore);
+
+			static bool		CheckErrors (StringView file, int line);
 	};
 
 }	// AE::STL

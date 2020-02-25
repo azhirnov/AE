@@ -5,6 +5,7 @@
 #ifdef PLATFORM_WINDOWS
 
 # include "stl/Platforms/WindowsHeader.h"
+# include "stl/Platforms/WindowsUtils.h"
 # include "stl/Types/Noncopyable.h"
 # include "stl/Containers/NtStringView.h"
 # include "stl/Types/FileSystem.h"
@@ -17,7 +18,7 @@ namespace AE::STL
 	// Dynamic Library
 	//
 
-	class Library final : public Noncopyable
+	class WindowsLibrary final : public Noncopyable
 	{
 	// variables
 	private:
@@ -26,8 +27,8 @@ namespace AE::STL
 
 	// methods
 	public:
-		Library ()		{}
-		~Library ()		{ Unload(); }
+		WindowsLibrary ()		{}
+		~WindowsLibrary ()		{ Unload(); }
 
 		bool  Load (HMODULE lib);
 		bool  Load (NtStringView libName);
@@ -46,28 +47,36 @@ namespace AE::STL
 
 
 	
-	inline bool  Library::Load (HMODULE lib)
+	inline bool  WindowsLibrary::Load (HMODULE lib)
 	{
 		CHECK_ERR( _handle == null and lib != null );
 		_handle = lib;
 		return true;
 	}
 
-	inline bool  Library::Load (NtStringView libName)
+	inline bool  WindowsLibrary::Load (NtStringView libName)
 	{
 		CHECK_ERR( _handle == null );
 		_handle = ::LoadLibraryA( libName.c_str() );
+		
+		if ( not _handle )
+			WindowsUtils::CheckErrors( __FILE__, __LINE__ );
+
 		return _handle != null;
 	}
 
-	inline bool  Library::Load (const Path &libName)
+	inline bool  WindowsLibrary::Load (const Path &libName)
 	{
 		CHECK_ERR( _handle == null );
 		_handle = ::LoadLibraryW( libName.c_str() );
+		
+		if ( not _handle )
+			WindowsUtils::CheckErrors( __FILE__, __LINE__ );
+
 		return _handle != null;
 	}
 
-	inline void  Library::Unload ()
+	inline void  WindowsLibrary::Unload ()
 	{
 		if ( _handle ) {
 			::FreeLibrary( _handle );
@@ -76,13 +85,13 @@ namespace AE::STL
 	}
 	
 	template <typename T>
-	inline bool  Library::GetProcAddr (NtStringView name, OUT T &result) const
+	inline bool  WindowsLibrary::GetProcAddr (NtStringView name, OUT T &result) const
 	{
 		result = BitCast<T>( ::GetProcAddress( _handle, name.c_str() ));
 		return result != null;
 	}
 	
-	inline Path  Library::GetPath () const
+	inline Path  WindowsLibrary::GetPath () const
 	{
 		CHECK_ERR( _handle );
 
