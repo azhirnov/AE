@@ -1,7 +1,6 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "stl/Platforms/WindowsLibrary.h"
-#include "stl/Platforms/PosixLibrary.h"
+#include "stl/Platforms/PlatformUtils.h"
 #include "stl/Stream/FileStream.h"
 #include "serializing/Deserializer.h"
 #include "serializing/ObjectFactory.h"
@@ -17,10 +16,11 @@ namespace
 {
 	decltype(&CompilePipelines)		compile_pipelines = null;
 
-	using EMarker	= PipelineStorage::EMarker;
+	using EMarker			= PipelineStorage::EMarker;
+	using TopologyBits_t	= GraphicsPipelineDesc::TopologyBits_t;
 
 
-	void PipelineCompiler_Test1 ()
+	static void  PipelineCompiler_Test1 ()
 	{
 		const wchar_t*	pipeline_folder[]	= { L"pipelines" };
 		const wchar_t*	shader_folder[]		= { L"shaders" };
@@ -164,10 +164,49 @@ namespace
 		TEST( render_pass_names[0].second == RenderPassUID(0) );
 
 		TEST( spirv_shaders.size() == 4 );
-		TEST( gpipelines.size() == 1 );
-		TEST( mpipelines.size() == 1 );
-		TEST( cpipelines.size() == 1 );
 		TEST( rt_count == 0 );
+
+		TEST( gpipelines.size() == 1 );
+		TEST( gpipelines[0].layout == PipelineLayoutUID(0) );
+		TEST( gpipelines[0].renderPass == RenderPassUID(0) );
+		TEST( gpipelines[0].supportedTopology == TopologyBits_t{}.set(uint(EPrimitive::Point))
+																 .set(uint(EPrimitive::LineList))
+																 .set(uint(EPrimitive::LineStrip))
+																 .set(uint(EPrimitive::TriangleList))
+																 .set(uint(EPrimitive::TriangleStrip))
+																 .set(uint(EPrimitive::TriangleFan)) );
+		TEST( gpipelines[0].shaders.size() == 2 );
+		TEST( gpipelines[0].vertexAttribs.size() == 2 );
+		TEST( gpipelines[0].vertexAttribs[0].id == VertexName{"in_Position"} );
+		TEST( gpipelines[0].vertexAttribs[0].index == 0 );
+		TEST( gpipelines[0].vertexAttribs[0].type == EVertexType::Float3 );
+		TEST( gpipelines[0].vertexAttribs[1].id == VertexName{"in_Texcoord"} );
+		TEST( gpipelines[0].vertexAttribs[1].index == 1 );
+		TEST( gpipelines[0].vertexAttribs[1].type == EVertexType::Float2 );
+		TEST( gpipelines[0].specialization.size() == 0 );
+		TEST( gpipelines[0].patchControlPoints == 0 );
+		TEST( gpipelines[0].earlyFragmentTests == true );
+		
+		TEST( mpipelines.size() == 1 );
+		TEST( mpipelines[0].layout == PipelineLayoutUID(1) );
+		TEST( mpipelines[0].renderPass == RenderPassUID(0) );
+		TEST( mpipelines[0].shaders.size() == 2 );
+		TEST( mpipelines[0].topology == EPrimitive::TriangleList );
+		TEST( mpipelines[0].maxVertices == 3 );
+		TEST( mpipelines[0].maxIndices == 3 );
+		TEST( All( mpipelines[0].defaultTaskGroupSize == uint3{0} ));
+		TEST( All( mpipelines[0].taskSizeSpec == uint3{~0u} ));
+		TEST( All( mpipelines[0].defaultMeshGroupSize == uint3{3, 1, 1} ));
+		TEST( All( mpipelines[0].meshSizeSpec == uint3{~0u} ));
+		TEST( mpipelines[0].specialization.size() == 0 );
+		TEST( mpipelines[0].earlyFragmentTests == true );
+		
+		TEST( cpipelines.size() == 1 );
+		TEST( cpipelines[0].layout == PipelineLayoutUID(2) );
+		//TEST( cpipelines[0].shader == ShaderUID(0) );
+		TEST( All( cpipelines[0].defaultLocalGroupSize == uint3{8, 8, 1} ));
+		TEST( All( cpipelines[0].localSizeSpec == uint3{0, 1, ~0u} ));
+		TEST( cpipelines[0].specialization.size() == 0 );
 
 		TEST( ppln_names.size() == 4 );
 		TEST( ppln_names[0].first == PipelineName{"graphics_2"} );

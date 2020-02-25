@@ -17,7 +17,7 @@ namespace {
 	StringToWString
 =================================================
 */
-	ND_ WString  StringToWString (const String &str)
+	ND_ static WString  StringToWString (const String &str)
 	{
 	#ifdef COMPILER_MSVC
 	#	pragma warning( push )
@@ -37,7 +37,7 @@ namespace {
 	SortDefines
 =================================================
 */
-	void  SortDefines (INOUT ShaderDefines_t &defines)
+	static void  SortDefines (INOUT ShaderDefines_t &defines)
 	{
 		const auto	CmpStrings = [](StringView lhs, StringView rhs) -> bool
 		{
@@ -59,7 +59,7 @@ namespace {
 	SetDefines
 =================================================
 */
-	void  SetDefines (OUT ShaderDefines_t &defines, const String &def)
+	static void  SetDefines (OUT ShaderDefines_t &defines, const String &def)
 	{
 		Array<StringView>	lines;
 		StringParser::DivideLines( def, OUT lines );
@@ -71,7 +71,8 @@ namespace {
 
 		SortDefines( INOUT defines );
 	}
-}
+
+}	// namespace
 //-----------------------------------------------------------------------------
 
 
@@ -369,6 +370,61 @@ namespace {
 	
 /*
 =================================================
+	ValidatePrimitiveTopology
+=================================================
+*/
+	static void ValidatePrimitiveTopology (INOUT GraphicsPipelineDesc::TopologyBits_t &topology)
+	{
+		if ( topology.test(uint(EPrimitive::Patch)) )
+		{
+			topology.reset().set(uint(EPrimitive::Patch));
+			return;
+		}
+		
+		if ( topology.test(uint(EPrimitive::TriangleListAdjacency)) or
+			 topology.test(uint(EPrimitive::TriangleStripAdjacency)) )
+		{
+			topology.reset().set(uint(EPrimitive::TriangleListAdjacency))
+							.set(uint(EPrimitive::TriangleStripAdjacency));
+			return;
+		}
+		
+		if ( topology.test(uint(EPrimitive::LineListAdjacency)) or
+			 topology.test(uint(EPrimitive::LineStripAdjacency)) )
+		{
+			topology.reset().set(uint(EPrimitive::LineListAdjacency))
+							.set(uint(EPrimitive::LineStripAdjacency));
+			return;
+		}
+
+		if ( topology.none() )
+		{
+			topology.reset().set(uint(EPrimitive::Point))
+							.set(uint(EPrimitive::LineList))
+							.set(uint(EPrimitive::LineStrip))
+							.set(uint(EPrimitive::TriangleList))
+							.set(uint(EPrimitive::TriangleStrip))
+							.set(uint(EPrimitive::TriangleFan));
+			return;
+		}
+	}
+	
+/*
+=================================================
+	MergePrimitiveTopology
+=================================================
+*/
+	static void MergePrimitiveTopology (const GraphicsPipelineDesc::TopologyBits_t &src, INOUT GraphicsPipelineDesc::TopologyBits_t &dst)
+	{
+		for (size_t i = 0; i < src.size(); ++i)
+		{
+			if ( src.test( i ) )
+				dst.set( i );
+		}
+	}
+
+/*
+=================================================
 	Build
 =================================================
 */
@@ -404,6 +460,8 @@ namespace {
 
 			desc.patchControlPoints	= iter->second.reflection.tessellation.patchControlPoints;
 			desc.shaders.insert_or_assign( EShader::TessControl, iter->second.uid );
+
+			MergePrimitiveTopology( iter->second.reflection.vertex.supportedTopology, INOUT desc.supportedTopology );
 		}
 
 		if ( tessEval.IsDefined() )
@@ -422,6 +480,8 @@ namespace {
 			CHECK_ERR( iter->second.compiled );
 			
 			desc.shaders.insert_or_assign( EShader::Geometry, iter->second.uid );
+
+			MergePrimitiveTopology( iter->second.reflection.vertex.supportedTopology, INOUT desc.supportedTopology );
 		}
 
 		if ( fragment.IsDefined() )
@@ -436,6 +496,8 @@ namespace {
 		}
 
 		desc.renderPass = ppln_storage.AddRenderPass( RenderPassName{rpName}, pass );
+
+		ValidatePrimitiveTopology( INOUT desc.supportedTopology );
 
 		Unused( ppln_storage.AddPipeline( _name, std::move(desc) ));
 		return true;

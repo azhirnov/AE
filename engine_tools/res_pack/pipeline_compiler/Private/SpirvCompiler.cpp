@@ -1810,15 +1810,15 @@ namespace AE::PipelineCompiler
 				topologyBits.set( uint(EPrimitive::TriangleStripAdjacency) );
 				break;
 			}
-			case TLayoutGeometry::ElgNone :
+			case TLayoutGeometry::ElgNone :	// to shutup warnings
 			case TLayoutGeometry::ElgLineStrip :
 			case TLayoutGeometry::ElgTriangleStrip :
 			case TLayoutGeometry::ElgQuads :
 			case TLayoutGeometry::ElgIsolines :
-				break;	// to shutup warnings
+			default :
+				COMP_RETURN_ERR( "invalid geometry input primitive type!", void() );
 		}
 		END_ENUM_CHECKS();
-		COMP_RETURN_ERR( "invalid geometry input primitive type!", void() );
 	}
 	
 /*

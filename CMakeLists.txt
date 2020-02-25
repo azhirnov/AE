@@ -66,11 +66,15 @@ if (${AE_ENABLE_TESTS})
 	add_subdirectory( "tests/platform" )
 	add_subdirectory( "tests/graphics" )
 	add_subdirectory( "tests/ecs-st" )
+	
+	if (NOT DEFINED ANDROID)
+		add_subdirectory( "tests/asset_packer" )
+	endif ()
 
 	if (DEFINED ANDROID)
 		add_subdirectory( "tests/test_launcher" )
 	endif ()
-endif()
+endif ()
 
 #----------------------------------------------------------
 

@@ -22,7 +22,6 @@ ExternalProject_Add( "ResourcePacker"
 		# install
 		INSTALL_DIR 		""
 		INSTALL_COMMAND		""
-		LOG_INSTALL 		1
 		# test
 		TEST_COMMAND 		""
 	)

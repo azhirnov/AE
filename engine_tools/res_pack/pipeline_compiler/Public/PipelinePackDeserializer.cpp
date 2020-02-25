@@ -164,13 +164,13 @@ namespace AE::PipelineCompiler
 
 
 	
-namespace {
 /*
 =================================================
 	Deserialize_VertexAttribs
 =================================================
 */
-	bool Deserialize_VertexAttribs (Serializing::Deserializer const& des, OUT GraphicsPipelineDesc::VertexAttribs_t &vertexAttribs)
+namespace {
+	static bool  Deserialize_VertexAttribs (Serializing::Deserializer const& des, OUT GraphicsPipelineDesc::VertexAttribs_t &vertexAttribs)
 	{
 		uint	count	= 0;
 		bool	result	= true;
@@ -186,7 +186,8 @@ namespace {
 		}
 		return result;
 	}
-}
+}	// namespace
+
 /*
 =================================================
 	Deserialize
@@ -194,7 +195,7 @@ namespace {
 */
 	bool GraphicsPipelineDesc::Deserialize (Serializing::Deserializer const& des)
 	{
-		bool	result = des( OUT layout, OUT shaders, OUT supportedTopology, OUT patchControlPoints, OUT specialization, OUT earlyFragmentTests );
+		bool	result = des( OUT layout, OUT renderPass, OUT shaders, OUT supportedTopology, OUT patchControlPoints, OUT specialization, OUT earlyFragmentTests );
 		result &= Deserialize_VertexAttribs( des, OUT vertexAttribs );
 		return result;
 	}
@@ -223,7 +224,7 @@ namespace {
 	bool MeshPipelineDesc::Deserialize (Serializing::Deserializer const& des)
 	{
 		bool	result = true;
-		result &= des( OUT layout, OUT shaders, OUT topology, OUT maxVertices, OUT maxIndices, OUT specialization );
+		result &= des( OUT layout, OUT renderPass, OUT shaders, OUT topology, OUT maxVertices, OUT maxIndices, OUT specialization );
 		result &= des( OUT defaultTaskGroupSize, OUT taskSizeSpec, OUT defaultMeshGroupSize, OUT meshSizeSpec, OUT earlyFragmentTests );
 		return result;
 	}

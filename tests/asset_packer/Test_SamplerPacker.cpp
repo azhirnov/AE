@@ -1,7 +1,6 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "stl/Platforms/WindowsLibrary.h"
-#include "stl/Platforms/PosixLibrary.h"
+#include "stl/Platforms/PlatformUtils.h"
 #include "stl/Stream/FileStream.h"
 
 #include "serializing/Deserializer.h"
@@ -20,7 +19,7 @@ namespace
 	decltype(&PackSamplers)		pack_samplers = null;
 
 
-	void SamplerPacker_Test1 ()
+	static void  SamplerPacker_Test1 ()
 	{
 		const wchar_t*	samplers_dir[]		= { L"default.samp" };
 		Path			output				= L"_output";
@@ -70,6 +69,7 @@ namespace
 		TEST( samplers[ samp_names[0].second ].magFilter == EFilter::Nearest );
 		TEST( samplers[ samp_names[0].second ].minFilter == EFilter::Nearest );
 		TEST( samplers[ samp_names[0].second ].mipmapMode == EMipmapFilter::Nearest );
+		TEST( samplers[ samp_names[0].second ].maxAnisotropy.has_value() == false );
 		
 		TEST( samplers[ samp_names[1].second ].addressMode[0] == EAddressMode::Repeat );
 		TEST( samplers[ samp_names[1].second ].addressMode[1] == EAddressMode::Repeat );
@@ -77,6 +77,7 @@ namespace
 		TEST( samplers[ samp_names[1].second ].magFilter == EFilter::Linear );
 		TEST( samplers[ samp_names[1].second ].minFilter == EFilter::Linear );
 		TEST( samplers[ samp_names[1].second ].mipmapMode == EMipmapFilter::Linear );
+		TEST( samplers[ samp_names[1].second ].maxAnisotropy.has_value() == false );
 		
 		TEST( samplers[ samp_names[2].second ].addressMode[0] == EAddressMode::ClampToEdge );
 		TEST( samplers[ samp_names[2].second ].addressMode[1] == EAddressMode::ClampToEdge );
@@ -84,6 +85,7 @@ namespace
 		TEST( samplers[ samp_names[2].second ].magFilter == EFilter::Linear );
 		TEST( samplers[ samp_names[2].second ].minFilter == EFilter::Linear );
 		TEST( samplers[ samp_names[2].second ].mipmapMode == EMipmapFilter::Linear );
+		TEST( samplers[ samp_names[2].second ].maxAnisotropy.has_value() == false );
 		
 		TEST( samplers[ samp_names[3].second ].addressMode[0] == EAddressMode::ClampToEdge );
 		TEST( samplers[ samp_names[3].second ].addressMode[1] == EAddressMode::ClampToEdge );
@@ -91,6 +93,7 @@ namespace
 		TEST( samplers[ samp_names[3].second ].magFilter == EFilter::Linear );
 		TEST( samplers[ samp_names[3].second ].minFilter == EFilter::Linear );
 		TEST( samplers[ samp_names[3].second ].mipmapMode == EMipmapFilter::Nearest );
+		TEST( samplers[ samp_names[3].second ].maxAnisotropy.has_value() == false );
 		
 		TEST( samplers[ samp_names[4].second ].addressMode[0] == EAddressMode::Repeat );
 		TEST( samplers[ samp_names[4].second ].addressMode[1] == EAddressMode::Repeat );
@@ -98,6 +101,7 @@ namespace
 		TEST( samplers[ samp_names[4].second ].magFilter == EFilter::Nearest );
 		TEST( samplers[ samp_names[4].second ].minFilter == EFilter::Nearest );
 		TEST( samplers[ samp_names[4].second ].mipmapMode == EMipmapFilter::Nearest );
+		TEST( samplers[ samp_names[4].second ].maxAnisotropy.has_value() == false );
 		
 		TEST( samplers[ samp_names[5].second ].addressMode[0] == EAddressMode::Repeat );
 		TEST( samplers[ samp_names[5].second ].addressMode[1] == EAddressMode::Repeat );
@@ -114,6 +118,7 @@ namespace
 		TEST( samplers[ samp_names[6].second ].magFilter == EFilter::Linear );
 		TEST( samplers[ samp_names[6].second ].minFilter == EFilter::Linear );
 		TEST( samplers[ samp_names[6].second ].mipmapMode == EMipmapFilter::Nearest );
+		TEST( samplers[ samp_names[6].second ].maxAnisotropy.has_value() == false );
 	}
 }
 

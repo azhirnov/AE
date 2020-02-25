@@ -354,13 +354,13 @@ namespace AE::PipelineCompiler
 
 	
 
-namespace {
 /*
 =================================================
 	Serialize_VertexAttribs
 =================================================
 */
-	bool Serialize_VertexAttribs (Serializing::Serializer& ser, const GraphicsPipelineDesc::VertexAttribs_t &vertexAttribs)
+namespace {
+	static bool  Serialize_VertexAttribs (Serializing::Serializer& ser, const GraphicsPipelineDesc::VertexAttribs_t &vertexAttribs)
 	{
 		bool	result = ser( uint(vertexAttribs.size()) );
 
@@ -370,7 +370,7 @@ namespace {
 		}
 		return result;
 	}
-}
+}	// namespace
 
 /*
 =================================================
@@ -379,7 +379,7 @@ namespace {
 */
 	bool GraphicsPipelineDesc::Serialize (Serializing::Serializer& ser) const
 	{
-		bool	result = ser( layout, shaders, supportedTopology, patchControlPoints, specialization, earlyFragmentTests );
+		bool	result = ser( layout, renderPass, shaders, supportedTopology, patchControlPoints, specialization, earlyFragmentTests );
 		result &= Serialize_VertexAttribs( ser, vertexAttribs );
 		return result;
 	}
@@ -394,7 +394,7 @@ namespace {
 	bool MeshPipelineDesc::Serialize (Serializing::Serializer& ser) const
 	{
 		bool	result = true;
-		result &= ser( layout, shaders, topology, maxVertices, maxIndices, specialization );
+		result &= ser( layout, renderPass, shaders, topology, maxVertices, maxIndices, specialization );
 		result &= ser( defaultTaskGroupSize, taskSizeSpec, defaultMeshGroupSize, meshSizeSpec, earlyFragmentTests );
 		return result;
 	}
