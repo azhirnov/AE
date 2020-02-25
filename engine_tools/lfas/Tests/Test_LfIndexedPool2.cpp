@@ -13,6 +13,7 @@
 using namespace LFAS;
 using namespace LFAS::CPP;
 
+#include "threading/Primitives/SpinLock.h"
 #include "threading/Containers/LfIndexedPool2.h"
 
 

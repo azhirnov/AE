@@ -386,6 +386,9 @@
 		 AE_PRIVATE_EXIT(); \
 		}
 
+#	undef  ASSERT
+#	define ASSERT	CHECK
+
 #	include <cassert>
 #	undef  assert
 #	define assert( ... ) \

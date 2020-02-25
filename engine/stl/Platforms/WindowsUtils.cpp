@@ -176,7 +176,7 @@ namespace
 	{
 		DWORD_PTR	mask;
 		
-		ASSERT( cpuCore < std::thread::hardware_concurrency() );
+		//ASSERT( cpuCore < std::thread::hardware_concurrency() );
 
 		#if PLATFORM_BITS == 64
 		{

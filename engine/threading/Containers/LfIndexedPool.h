@@ -48,6 +48,7 @@ namespace AE::Threading
 		STATIC_ASSERT( MaxChunks > 0 );
 		STATIC_ASSERT( IsPowerOfTwo( ChunkSize ));	// must be power of 2 to increase performance
 		STATIC_ASSERT( AllocatorType::IsThreadSafe );
+		STATIC_ASSERT( ToBitMask<size_t>(sizeof(IndexType)*8) >= (ChunkSize * MaxChunks) );
 		
 	// types
 	public:

@@ -329,10 +329,8 @@ namespace AE::Serializing
 		bool	res			= stream->Read( OUT has_value );
 
 		if ( res & has_value )
-		{
-			value = {};
-			return _Deserialize( INOUT *value );
-		}
+			return _Deserialize( INOUT value.emplace() );
+		
 		return res;
 	}
 

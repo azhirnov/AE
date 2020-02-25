@@ -23,13 +23,13 @@ namespace AE::STL
 			}
 			
 			template <typename T>
-			ND_ friend constexpr bool operator == (const T& left, const _UMax &right)
+			ND_ friend constexpr bool  operator == (const T& left, const _UMax &right)
 			{
 				return T(right) == left;
 			}
 			
 			template <typename T>
-			ND_ friend constexpr bool operator != (const T& left, const _UMax &right)
+			ND_ friend constexpr bool  operator != (const T& left, const _UMax &right)
 			{
 				return T(right) != left;
 			}

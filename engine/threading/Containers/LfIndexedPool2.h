@@ -12,12 +12,13 @@
 
 #pragma once
 
-#include "stl/Containers/FixedArray.h"
-#include "stl/CompileTime/Math.h"
-#include "stl/Math/BitMath.h"
-#include "stl/Memory/UntypedAllocator.h"
-
-#include "threading/Primitives/SpinLock.h"
+#ifndef AE_LFAS_ENABLED
+# include "stl/Containers/FixedArray.h"
+# include "stl/CompileTime/Math.h"
+# include "stl/Math/BitMath.h"
+# include "stl/Memory/UntypedAllocator.h"
+# include "threading/Primitives/SpinLock.h"
+#endif
 
 namespace AE::Threading
 {
@@ -40,6 +41,7 @@ namespace AE::Threading
 		STATIC_ASSERT( MaxChunks_v > 0 and MaxChunks_v <= 64 );
 		STATIC_ASSERT( IsPowerOfTwo( ChunkSize_v ));	// must be power of 2 to increase performance
 		STATIC_ASSERT( AllocatorType::IsThreadSafe );
+		STATIC_ASSERT( ToBitMask<size_t>(sizeof(IndexType)*8) >= (ChunkSize_v * MaxChunks_v) );
 
 	// types
 	public:

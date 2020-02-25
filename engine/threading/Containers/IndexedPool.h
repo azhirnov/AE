@@ -27,6 +27,7 @@ namespace AE::Threading
 	{
 		STATIC_ASSERT( ChunkSize > 0 and MaxChunks > 0 );
 		STATIC_ASSERT( IsPowerOfTwo( ChunkSize ) );	// must be power of 2 for best performance
+		STATIC_ASSERT( ToBitMask<size_t>(sizeof(IndexType)*8) >= (ChunkSize * MaxChunks) );
 
 	// types
 	public:
