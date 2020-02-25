@@ -64,7 +64,7 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool VBuffer::Create (VResourceManager &resMngr, const BufferDesc &desc, GfxMemAllocatorPtr allocator, StringView dbgName)
+	bool  VBuffer::Create (VResourceManager &resMngr, const BufferDesc &desc, GfxMemAllocatorPtr allocator, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( _buffer == VK_NULL_HANDLE );
@@ -111,9 +111,9 @@ namespace AE::Graphics
 			dev.SetObjectName( BitCast<uint64_t>(_buffer), dbgName, VK_OBJECT_TYPE_BUFFER );
 		}
 		
-		_memAllocator		= std::move(allocator);
-		//_readAccessMask	= GetAllBufferReadAccessMasks( info.usage );
-		_debugName			= dbgName;
+		_memAllocator	= std::move(allocator);
+		_debugName		= dbgName;
+		_canBeDestroyed	= true;
 
 		return true;
 	}
@@ -122,32 +122,21 @@ namespace AE::Graphics
 =================================================
 	Create
 =================================================
-*
-	bool VBuffer::Create (const VDevice &dev, const VulkanBufferDesc &desc, StringView dbgName, OnRelease_t &&onRelease)
+*/
+	bool  VBuffer::Create (const VDevice &dev, const VulkanBufferDesc &desc, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( _buffer == VK_NULL_HANDLE );
 
 		_buffer		= BitCast<VkBuffer>( desc.buffer );
 		_desc.size	= desc.size;
-		_desc.usage	= FGEnumCast( BitCast<VkBufferUsageFlagBits>( desc.usage ));
+		_desc.usage	= AEEnumCast( BitCast<VkBufferUsageFlagBits>( desc.usage ));
 
-		if ( not dbgName.empty() )
-		{
+		if ( dbgName.size() )
 			dev.SetObjectName( BitCast<uint64_t>(_buffer), dbgName, VK_OBJECT_TYPE_BUFFER );
-		}
-		
-		CHECK( desc.queueFamily == VK_QUEUE_FAMILY_IGNORED );	// not supported yet
-		CHECK( desc.queueFamilyIndices.empty() or desc.queueFamilyIndices.size() >= 2 );
 
-		_queueFamilyMask = Default;
-
-		for (auto idx : desc.queueFamilyIndices) {
-			_queueFamilyMask |= BitCast<EQueueFamily>(idx);
-		}
-
-		_debugName	= dbgName;
-		_onRelease	= std::move(onRelease);
+		_debugName		= dbgName;
+		_canBeDestroyed	= desc.canBeDestroyed;
 
 		return true;
 	}
@@ -157,7 +146,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void VBuffer::Destroy (VResourceManager &resMngr)
+	void  VBuffer::Destroy (VResourceManager &resMngr)
 	{
 		EXLOCK( _drCheck );
 
@@ -167,7 +156,7 @@ namespace AE::Graphics
 			dev.vkDestroyBufferView( dev.GetVkDevice(), view.second, null );
 		}
 
-		if ( _buffer ) {
+		if ( _canBeDestroyed and _buffer ) {
 			dev.vkDestroyBuffer( dev.GetVkDevice(), _buffer, null );
 		}
 
@@ -188,7 +177,7 @@ namespace AE::Graphics
 	GetMemoryInfo
 =================================================
 */
-	bool VBuffer::GetMemoryInfo (OUT VResourceMemoryInfo &outInfo) const
+	bool  VBuffer::GetMemoryInfo (OUT VResourceMemoryInfo &outInfo) const
 	{
 		SHAREDLOCK( _drCheck );
 		CHECK_ERR( _memAllocator );
@@ -205,6 +194,18 @@ namespace AE::Graphics
 		outInfo.size		= vk_info->size;
 		outInfo.mappedPtr	= vk_info->mappedPtr;
 		return true;
+	}
+	
+/*
+=================================================
+	GetMemoryInfo
+=================================================
+*/
+	bool  VBuffer::GetMemoryInfo (OUT IGfxMemAllocator::NativeMemInfo_t &info) const
+	{
+		SHAREDLOCK( _drCheck );
+		CHECK_ERR( _memAllocator );
+		return _memAllocator->GetInfo( _memStorage, OUT info );
 	}
 
 /*
@@ -293,8 +294,7 @@ namespace AE::Graphics
 		desc.buffer			= BitCast<BufferVk_t>( _buffer );
 		desc.usage			= BitCast<BufferUsageVk_t>( VEnumCast( _desc.usage ));
 		desc.size			= _desc.size;
-		//desc.queueFamily	= VK_QUEUE_FAMILY_IGNORED;
-		//desc.queueFamilyIndices	// TODO
+		desc.canBeDestroyed	= _canBeDestroyed;
 		return desc;
 	}
 	

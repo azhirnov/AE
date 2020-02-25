@@ -2,6 +2,8 @@
 
 namespace AE::Graphics
 {
+namespace
+{
 
 	//
 	// Barrier Manager
@@ -36,8 +38,8 @@ namespace AE::Graphics
 		BufferMemoryBarriers_t		_bufferBarriers;
 		//VkMemoryBarrier			_memoryBarrier;
 
-		VkPipelineStageFlagBits		_srcStageMask		= VkPipelineStageFlagBits(0);
-		VkPipelineStageFlagBits		_dstStageMask		= VkPipelineStageFlagBits(0);
+		VkPipelineStageFlagBits		_srcStageMask		= Zero;
+		VkPipelineStageFlagBits		_dstStageMask		= Zero;
 		VkDependencyFlags			_dependencyFlags	= 0;
 
 		MemoryRanges_t				_flushMemRanges;
@@ -142,8 +144,8 @@ namespace AE::Graphics
 		_imageBarriers.clear();
 		_bufferBarriers.clear();
 
-		_srcStageMask = _dstStageMask = VkPipelineStageFlagBits(0);
-		_dependencyFlags = VkDependencyFlags(0);
+		_srcStageMask = _dstStageMask = Zero;
+		_dependencyFlags = Zero;
 	}
 	
 /*
@@ -209,4 +211,5 @@ namespace AE::Graphics
 	}
 
 
+}	// namespace
 }	// AE::Graphics

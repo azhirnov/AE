@@ -35,7 +35,7 @@ namespace AE::Graphics
 		VkQueue				handle			= VK_NULL_HANDLE;
 		EQueueType			type			= Default;
 		EQueueFamily		familyIndex		= Default;
-		VkQueueFlagBits		familyFlags		= VkQueueFlagBits(0);
+		VkQueueFlagBits		familyFlags		= Zero;
 		uint				queueIndex		= UMax;
 		float				priority		= 0.0f;
 		uint3				minImageTransferGranularity;

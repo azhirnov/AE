@@ -34,7 +34,7 @@ namespace AE::Graphics
 			default :							break;
 		}
 		END_ENUM_CHECKS();
-		RETURN_ERR( "unknown stencil face", VkStencilFaceFlagBits(0) );
+		RETURN_ERR( "unknown stencil face", Zero );
 	}
 	
 /*
@@ -162,78 +162,80 @@ namespace AE::Graphics
 	{
 		switch ( value )
 		{
-			case EVertexType::Byte			: return VK_FORMAT_R8_SINT;
-			case EVertexType::Byte2			: return VK_FORMAT_R8G8_SINT;
-			case EVertexType::Byte3			: return VK_FORMAT_R8G8B8_SINT;
-			case EVertexType::Byte4			: return VK_FORMAT_R8G8B8A8_SINT;
-			case EVertexType::Byte_Norm		: return VK_FORMAT_R8_SNORM;
-			case EVertexType::Byte2_Norm	: return VK_FORMAT_R8G8_SNORM;
-			case EVertexType::Byte3_Norm	: return VK_FORMAT_R8G8B8_SNORM;
-			case EVertexType::Byte4_Norm	: return VK_FORMAT_R8G8B8A8_SNORM;
-			case EVertexType::Byte_Scaled	: return VK_FORMAT_R8_SSCALED;
-			case EVertexType::Byte2_Scaled	: return VK_FORMAT_R8G8_SSCALED;
-			case EVertexType::Byte3_Scaled	: return VK_FORMAT_R8G8B8_SSCALED;
-			case EVertexType::Byte4_Scaled	: return VK_FORMAT_R8G8B8A8_SSCALED;
-			case EVertexType::UByte			: return VK_FORMAT_R8_UINT;
-			case EVertexType::UByte2		: return VK_FORMAT_R8G8_UINT;
-			case EVertexType::UByte3		: return VK_FORMAT_R8G8B8_UINT;
-			case EVertexType::UByte4		: return VK_FORMAT_R8G8B8A8_UINT;
-			case EVertexType::UByte_Norm	: return VK_FORMAT_R8_UNORM;
-			case EVertexType::UByte2_Norm	: return VK_FORMAT_R8G8_UNORM;
-			case EVertexType::UByte3_Norm	: return VK_FORMAT_R8G8B8_UNORM;
-			case EVertexType::UByte4_Norm	: return VK_FORMAT_R8G8B8A8_UNORM;
-			case EVertexType::UByte_Scaled	: return VK_FORMAT_R8_USCALED;
-			case EVertexType::UByte2_Scaled	: return VK_FORMAT_R8G8_USCALED;
-			case EVertexType::UByte3_Scaled	: return VK_FORMAT_R8G8B8_USCALED;
-			case EVertexType::UByte4_Scaled	: return VK_FORMAT_R8G8B8A8_USCALED;
-			case EVertexType::Short			: return VK_FORMAT_R16_SINT;
-			case EVertexType::Short2		: return VK_FORMAT_R16G16_SINT;
-			case EVertexType::Short3		: return VK_FORMAT_R16G16B16_SINT;
-			case EVertexType::Short4		: return VK_FORMAT_R16G16B16A16_SINT;
-			case EVertexType::Short_Norm	: return VK_FORMAT_R16_SNORM;
-			case EVertexType::Short2_Norm	: return VK_FORMAT_R16G16_SNORM;
-			case EVertexType::Short3_Norm	: return VK_FORMAT_R16G16B16_SNORM;
-			case EVertexType::Short4_Norm	: return VK_FORMAT_R16G16B16A16_SNORM;
-			case EVertexType::Short_Scaled	: return VK_FORMAT_R16_SSCALED;
-			case EVertexType::Short2_Scaled	: return VK_FORMAT_R16G16_SSCALED;
-			case EVertexType::Short3_Scaled	: return VK_FORMAT_R16G16B16_SSCALED;
-			case EVertexType::Short4_Scaled	: return VK_FORMAT_R16G16B16A16_SSCALED;
-			case EVertexType::UShort		: return VK_FORMAT_R16_UINT;
-			case EVertexType::UShort2		: return VK_FORMAT_R16G16_UINT;
-			case EVertexType::UShort3		: return VK_FORMAT_R16G16B16_UINT;
-			case EVertexType::UShort4		: return VK_FORMAT_R16G16B16A16_UINT;
-			case EVertexType::UShort_Norm	: return VK_FORMAT_R16_UNORM;
-			case EVertexType::UShort2_Norm	: return VK_FORMAT_R16G16_UNORM;
-			case EVertexType::UShort3_Norm	: return VK_FORMAT_R16G16B16_UNORM;
-			case EVertexType::UShort4_Norm	: return VK_FORMAT_R16G16B16A16_UNORM;
-			case EVertexType::UShort_Scaled	: return VK_FORMAT_R16_USCALED;
-			case EVertexType::UShort2_Scaled: return VK_FORMAT_R16G16_USCALED;
-			case EVertexType::UShort3_Scaled: return VK_FORMAT_R16G16B16_USCALED;
-			case EVertexType::UShort4_Scaled: return VK_FORMAT_R16G16B16A16_USCALED;
-			case EVertexType::Int			: return VK_FORMAT_R32_SINT;
-			case EVertexType::Int2			: return VK_FORMAT_R32G32_SINT;
-			case EVertexType::Int3			: return VK_FORMAT_R32G32B32_SINT;
-			case EVertexType::Int4			: return VK_FORMAT_R32G32B32A32_SINT;
-			case EVertexType::UInt			: return VK_FORMAT_R32_UINT;
-			case EVertexType::UInt2			: return VK_FORMAT_R32G32_UINT;
-			case EVertexType::UInt3			: return VK_FORMAT_R32G32B32_UINT;
-			case EVertexType::UInt4			: return VK_FORMAT_R32G32B32A32_UINT;
-			case EVertexType::Long			: return VK_FORMAT_R64_SINT;
-			case EVertexType::Long2			: return VK_FORMAT_R64G64_SINT;
-			case EVertexType::Long3			: return VK_FORMAT_R64G64B64_SINT;
-			case EVertexType::Long4			: return VK_FORMAT_R64G64B64A64_SINT;
-			case EVertexType::ULong			: return VK_FORMAT_R64_UINT;
-			case EVertexType::ULong2		: return VK_FORMAT_R64G64_UINT;
-			case EVertexType::ULong3		: return VK_FORMAT_R64G64B64_UINT;
-			case EVertexType::ULong4		: return VK_FORMAT_R64G64B64A64_UINT;
-			case EVertexType::Float			: return VK_FORMAT_R32_SFLOAT;
-			case EVertexType::Float2		: return VK_FORMAT_R32G32_SFLOAT;
-			case EVertexType::Float3		: return VK_FORMAT_R32G32B32_SFLOAT;
-			case EVertexType::Float4		: return VK_FORMAT_R32G32B32A32_SFLOAT;
-			case EVertexType::Double		: return VK_FORMAT_R64_SFLOAT;
-			case EVertexType::Double2		: return VK_FORMAT_R64G64_SFLOAT;
-			case EVertexType::Double3		: return VK_FORMAT_R64G64B64_SFLOAT;
-			case EVertexType::Double4		: return VK_FORMAT_R64G64B64A64_SFLOAT;
+			case EVertexType::Byte :				return VK_FORMAT_R8_SINT;
+			case EVertexType::Byte2 :				return VK_FORMAT_R8G8_SINT;
+			case EVertexType::Byte3 :				return VK_FORMAT_R8G8B8_SINT;
+			case EVertexType::Byte4 :				return VK_FORMAT_R8G8B8A8_SINT;
+			case EVertexType::Byte_Norm :			return VK_FORMAT_R8_SNORM;
+			case EVertexType::Byte2_Norm :			return VK_FORMAT_R8G8_SNORM;
+			case EVertexType::Byte3_Norm :			return VK_FORMAT_R8G8B8_SNORM;
+			case EVertexType::Byte4_Norm :			return VK_FORMAT_R8G8B8A8_SNORM;
+			case EVertexType::Byte_Scaled :			return VK_FORMAT_R8_SSCALED;
+			case EVertexType::Byte2_Scaled :		return VK_FORMAT_R8G8_SSCALED;
+			case EVertexType::Byte3_Scaled :		return VK_FORMAT_R8G8B8_SSCALED;
+			case EVertexType::Byte4_Scaled :		return VK_FORMAT_R8G8B8A8_SSCALED;
+			case EVertexType::UByte :				return VK_FORMAT_R8_UINT;
+			case EVertexType::UByte2 :				return VK_FORMAT_R8G8_UINT;
+			case EVertexType::UByte3 :				return VK_FORMAT_R8G8B8_UINT;
+			case EVertexType::UByte4 :				return VK_FORMAT_R8G8B8A8_UINT;
+			case EVertexType::UByte_Norm :			return VK_FORMAT_R8_UNORM;
+			case EVertexType::UByte2_Norm :			return VK_FORMAT_R8G8_UNORM;
+			case EVertexType::UByte3_Norm :			return VK_FORMAT_R8G8B8_UNORM;
+			case EVertexType::UByte4_Norm :			return VK_FORMAT_R8G8B8A8_UNORM;
+			case EVertexType::UByte_Scaled :		return VK_FORMAT_R8_USCALED;
+			case EVertexType::UByte2_Scaled :		return VK_FORMAT_R8G8_USCALED;
+			case EVertexType::UByte3_Scaled :		return VK_FORMAT_R8G8B8_USCALED;
+			case EVertexType::UByte4_Scaled :		return VK_FORMAT_R8G8B8A8_USCALED;
+			case EVertexType::Short :				return VK_FORMAT_R16_SINT;
+			case EVertexType::Short2 :				return VK_FORMAT_R16G16_SINT;
+			case EVertexType::Short3 :				return VK_FORMAT_R16G16B16_SINT;
+			case EVertexType::Short4 :				return VK_FORMAT_R16G16B16A16_SINT;
+			case EVertexType::Short_Norm :			return VK_FORMAT_R16_SNORM;
+			case EVertexType::Short2_Norm :			return VK_FORMAT_R16G16_SNORM;
+			case EVertexType::Short3_Norm :			return VK_FORMAT_R16G16B16_SNORM;
+			case EVertexType::Short4_Norm :			return VK_FORMAT_R16G16B16A16_SNORM;
+			case EVertexType::Short_Scaled :		return VK_FORMAT_R16_SSCALED;
+			case EVertexType::Short2_Scaled :		return VK_FORMAT_R16G16_SSCALED;
+			case EVertexType::Short3_Scaled :		return VK_FORMAT_R16G16B16_SSCALED;
+			case EVertexType::Short4_Scaled :		return VK_FORMAT_R16G16B16A16_SSCALED;
+			case EVertexType::UShort :				return VK_FORMAT_R16_UINT;
+			case EVertexType::UShort2 :				return VK_FORMAT_R16G16_UINT;
+			case EVertexType::UShort3 :				return VK_FORMAT_R16G16B16_UINT;
+			case EVertexType::UShort4 :				return VK_FORMAT_R16G16B16A16_UINT;
+			case EVertexType::UShort_Norm :			return VK_FORMAT_R16_UNORM;
+			case EVertexType::UShort2_Norm :		return VK_FORMAT_R16G16_UNORM;
+			case EVertexType::UShort3_Norm :		return VK_FORMAT_R16G16B16_UNORM;
+			case EVertexType::UShort4_Norm :		return VK_FORMAT_R16G16B16A16_UNORM;
+			case EVertexType::UShort_Scaled :		return VK_FORMAT_R16_USCALED;
+			case EVertexType::UShort2_Scaled :		return VK_FORMAT_R16G16_USCALED;
+			case EVertexType::UShort3_Scaled :		return VK_FORMAT_R16G16B16_USCALED;
+			case EVertexType::UShort4_Scaled :		return VK_FORMAT_R16G16B16A16_USCALED;
+			case EVertexType::Int :					return VK_FORMAT_R32_SINT;
+			case EVertexType::Int2 :				return VK_FORMAT_R32G32_SINT;
+			case EVertexType::Int3 :				return VK_FORMAT_R32G32B32_SINT;
+			case EVertexType::Int4 :				return VK_FORMAT_R32G32B32A32_SINT;
+			case EVertexType::UInt :				return VK_FORMAT_R32_UINT;
+			case EVertexType::UInt2 :				return VK_FORMAT_R32G32_UINT;
+			case EVertexType::UInt3 :				return VK_FORMAT_R32G32B32_UINT;
+			case EVertexType::UInt4 :				return VK_FORMAT_R32G32B32A32_UINT;
+			case EVertexType::Long :				return VK_FORMAT_R64_SINT;
+			case EVertexType::Long2 :				return VK_FORMAT_R64G64_SINT;
+			case EVertexType::Long3 :				return VK_FORMAT_R64G64B64_SINT;
+			case EVertexType::Long4 :				return VK_FORMAT_R64G64B64A64_SINT;
+			case EVertexType::ULong :				return VK_FORMAT_R64_UINT;
+			case EVertexType::ULong2 :				return VK_FORMAT_R64G64_UINT;
+			case EVertexType::ULong3 :				return VK_FORMAT_R64G64B64_UINT;
+			case EVertexType::ULong4 :				return VK_FORMAT_R64G64B64A64_UINT;
+			case EVertexType::Float :				return VK_FORMAT_R32_SFLOAT;
+			case EVertexType::Float2 :				return VK_FORMAT_R32G32_SFLOAT;
+			case EVertexType::Float3 :				return VK_FORMAT_R32G32B32_SFLOAT;
+			case EVertexType::Float4 :				return VK_FORMAT_R32G32B32A32_SFLOAT;
+			case EVertexType::Double :				return VK_FORMAT_R64_SFLOAT;
+			case EVertexType::Double2 :				return VK_FORMAT_R64G64_SFLOAT;
+			case EVertexType::Double3 :				return VK_FORMAT_R64G64B64_SFLOAT;
+			case EVertexType::Double4 :				return VK_FORMAT_R64G64B64A64_SFLOAT;
+			case EVertexType::UInt_2_10_10_10 :		return VK_FORMAT_A2B10G10R10_UINT_PACK32;
+			case EVertexType::UInt_2_10_10_10_Norm:	return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
 		}
 		RETURN_ERR( "unknown vertex type!", VK_FORMAT_MAX_ENUM );
 	}
@@ -317,7 +319,7 @@ namespace AE::Graphics
 		if ( values == EShaderStages::All )
 			return VK_SHADER_STAGE_ALL;
 
-		VkShaderStageFlagBits	flags = VkShaderStageFlagBits(0);
+		VkShaderStageFlagBits	flags = Zero;
 		for (EShaderStages t = EShaderStages(1); t <= values; t = EShaderStages(uint(t) << 1)) 
 		{
 			if ( not EnumEq( values, t ))
@@ -338,7 +340,7 @@ namespace AE::Graphics
 				case EShaderStages::Mesh :				flags |= VK_SHADER_STAGE_MESH_BIT_NV;					break;
 				#else
 				case EShaderStages::MeshTask :
-				case EShaderStages::Mesh :				RETURN_ERR( "mesh shaders are not supported!", VkShaderStageFlagBits(0) );
+				case EShaderStages::Mesh :				RETURN_ERR( "mesh shaders are not supported!", Zero );
 				#endif
 				
 				#ifdef VK_NV_ray_tracing
@@ -354,18 +356,18 @@ namespace AE::Graphics
 				case EShaderStages::RayClosestHit :
 				case EShaderStages::RayMiss :
 				case EShaderStages::RayIntersection :
-				case EShaderStages::RayCallable :		RETURN_ERR( "ray tracing shaders are not supported!", VkShaderStageFlagBits(0) );
+				case EShaderStages::RayCallable :		RETURN_ERR( "ray tracing shaders are not supported!", Zero );
 				#endif
-
 				case EShaderStages::_Last :
 				case EShaderStages::Unknown :
 				case EShaderStages::AllGraphics :
 				case EShaderStages::AllRayTracing :
 				case EShaderStages::All :				// to shutup warnings	
-				default :								RETURN_ERR( "unknown shader type!", VkShaderStageFlagBits(0) );
+				default :								RETURN_ERR( "unknown shader type!", Zero );
 			}
 			END_ENUM_CHECKS();
 		}
+		ASSERT( flags != Zero );
 		return flags;
 	}
 
@@ -390,7 +392,6 @@ namespace AE::Graphics
 			#else
 			case EPipelineDynamicState::ShadingRatePalette:	break;
 			#endif
-
 			case EPipelineDynamicState::Unknown :
 			case EPipelineDynamicState::All :
 			case EPipelineDynamicState::Default :
@@ -509,7 +510,7 @@ namespace AE::Graphics
 	CullMode
 =================================================
 */
-	ND_ inline VkCullModeFlags  VEnumCast (ECullMode value)
+	ND_ inline VkCullModeFlagBits  VEnumCast (ECullMode value)
 	{
 		BEGIN_ENUM_CHECKS();
 		switch ( value )
@@ -517,10 +518,10 @@ namespace AE::Graphics
 			case ECullMode::None :			return VK_CULL_MODE_NONE;
 			case ECullMode::Front :			return VK_CULL_MODE_FRONT_BIT;
 			case ECullMode::Back :			return VK_CULL_MODE_BACK_BIT;
-			case ECullMode::FontAndBack :	return VK_CULL_MODE_FRONT_BIT | VK_CULL_MODE_BACK_BIT;
+			case ECullMode::FontAndBack :	return VK_CULL_MODE_FRONT_AND_BACK;
 		}
 		END_ENUM_CHECKS();
-		RETURN_ERR( "unknown cull mode" );
+		RETURN_ERR( "unknown cull mode", VK_CULL_MODE_NONE );
 	}
 	
 /*
@@ -530,9 +531,9 @@ namespace AE::Graphics
 */
 	ND_ inline VkImageCreateFlagBits  VEnumCast (EImageFlags values)
 	{
-		VkImageCreateFlagBits	result = VkImageCreateFlagBits(0);
+		VkImageCreateFlagBits	flags = Zero;
 
-		for (EImageFlags t = EImageFlags(1); t <= values; t = EImageFlags(uint(t) << 1)) 
+		for (EImageFlags t = EImageFlags(1); t <= values; t = EImageFlags(uint(t) << 1))
 		{
 			if ( not EnumEq( values, t ))
 				continue;
@@ -540,14 +541,14 @@ namespace AE::Graphics
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
 			{
-				case EImageFlags::CubeCompatibple :		result |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;	break;
+				case EImageFlags::CubeCompatibple :		flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;	break;
 				case EImageFlags::_Last :
 				case EImageFlags::Unknown :
-				default :								RETURN_ERR( "unknown image flag", VkImageCreateFlagBits(0) );
+				default :								RETURN_ERR( "unknown image flag", Zero );
 			}
 			END_ENUM_CHECKS();
 		}
-		return result;
+		return flags;
 	}
 	
 /*
@@ -567,6 +568,28 @@ namespace AE::Graphics
 		}
 		END_ENUM_CHECKS();
 		RETURN_ERR( "unsupported image type", VK_IMAGE_TYPE_MAX_ENUM );
+	}
+
+/*
+=================================================
+	BorderColor
+=================================================
+*
+	ND_ inline VkBorderColor  VEnumCast (EBorderColor value)
+	{
+		BEGIN_ENUM_CHECKS();
+		switch ( value )
+		{
+			case EBorderColor::FloatTransparentBlack :	return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+			case EBorderColor::FloatOpaqueBlack :		return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+			case EBorderColor::FloatOpaqueWhite :		return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+			case EBorderColor::IntTransparentBlack :	return VK_BORDER_COLOR_INT_TRANSPARENT_BLACK;
+			case EBorderColor::IntOpaqueBlack :			return VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+			case EBorderColor::IntOpaqueWhite :			return VK_BORDER_COLOR_INT_OPAQUE_WHITE;
+			case EBorderColor::Unknown :				break;
+		}
+		END_ENUM_CHECKS();
+		RETURN_ERR( "unknown border color type", VK_BORDER_COLOR_MAX_ENUM );
 	}
 
 /*
@@ -597,107 +620,109 @@ namespace AE::Graphics
 	ImageUsage
 =================================================
 */
-	ND_ inline VkImageUsageFlags  VEnumCast (EImageUsage values)
+	ND_ inline VkImageUsageFlagBits  VEnumCast (EImageUsage values)
 	{
-		VkImageUsageFlags	flags = 0;
+		VkImageUsageFlagBits	flags = Zero;
 
 		for (EImageUsage t = EImageUsage(1); t <= values; t = EImageUsage(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ) )
+			if ( not EnumEq( values, t ))
 				continue;
 			
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
 			{
-				case EImageUsage::TransferSrc				: flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;				break;
-				case EImageUsage::TransferDst				: flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;				break;
-				case EImageUsage::Sampled					: flags |= VK_IMAGE_USAGE_SAMPLED_BIT;					break;
-				case EImageUsage::Storage					: flags |= VK_IMAGE_USAGE_STORAGE_BIT;					break;
-				case EImageUsage::ColorAttachment			: flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;			break;
-				case EImageUsage::DepthStencilAttachment	: flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;	break;
-				case EImageUsage::TransientAttachment		: flags |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;		break;
-				case EImageUsage::InputAttachment			: flags |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;			break;
+				case EImageUsage::TransferSrc :				flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;				break;
+				case EImageUsage::TransferDst :				flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;				break;
+				case EImageUsage::Sampled :					flags |= VK_IMAGE_USAGE_SAMPLED_BIT;					break;
+				case EImageUsage::Storage :					flags |= VK_IMAGE_USAGE_STORAGE_BIT;					break;
+				case EImageUsage::ColorAttachment :			flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;			break;
+				case EImageUsage::DepthStencilAttachment :	flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;	break;
+				case EImageUsage::TransientAttachment :		flags |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;		break;
+				case EImageUsage::InputAttachment :			flags |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;			break;
 				
 				#ifdef VK_NV_shading_rate_image
-				case EImageUsage::ShadingRate				: flags |= VK_IMAGE_USAGE_SHADING_RATE_IMAGE_BIT_NV;	break;
+				case EImageUsage::ShadingRate :				flags |= VK_IMAGE_USAGE_SHADING_RATE_IMAGE_BIT_NV;	break;
 				#else
-				case EImageUsage::ShadingRate				: RETURN_ERR( "shading rate image is not supported", VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM );
+				case EImageUsage::ShadingRate :				RETURN_ERR( "shading rate image is not supported", Zero );
 				#endif
 
 				#ifdef VK_EXT_fragment_density_map
-				case EImageUsage::FragmentDensityMap		: flags |= VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT;	break;
+				case EImageUsage::FragmentDensityMap :		flags |= VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT;	break;
 				#else
-				case EImageUsage::FragmentDensityMap		: RETURN_ERR( "fragment density is not supported", VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM );
+				case EImageUsage::FragmentDensityMap :		RETURN_ERR( "fragment density is not supported", Zero );
 				#endif
 
-				case EImageUsage::_Last						:
-				case EImageUsage::Unknown					:
-				case EImageUsage::Transfer					:
-				case EImageUsage::All						: // to shutup warnings
-				default										: RETURN_ERR( "invalid image usage type", VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM );
+				case EImageUsage::_Last :
+				case EImageUsage::Unknown :
+				case EImageUsage::Transfer :
+				case EImageUsage::All :						// to shutup warnings
+				default :									RETURN_ERR( "invalid image usage type", Zero );
 			}
 			END_ENUM_CHECKS();
 		}
+		ASSERT( flags != Zero );
 		return flags;
 	}
 
 /*
 =================================================
-	ImageAspectFlags
+	ImageLayout
+=================================================
+*/
+	ND_ inline VkImageLayout  VEnumCast (EImageLayout value)
+	{
+		BEGIN_ENUM_CHECKS();
+		switch ( value )
+		{
+			case EImageLayout::Undefined :							return VK_IMAGE_LAYOUT_UNDEFINED;
+			case EImageLayout::General :							return VK_IMAGE_LAYOUT_GENERAL;
+			case EImageLayout::ColorAttachment :					return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			case EImageLayout::DepthStencilAttachment :				return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			case EImageLayout::DepthStencilReadOnly :				return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+			case EImageLayout::ShaderReadOnly :						return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			case EImageLayout::TransferSrc :						return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			case EImageLayout::TransferDst :						return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			case EImageLayout::DepthReadOnly_StencilAttachment :	return VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL;
+			case EImageLayout::DepthAttachment_StencilReadOnly :	return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL;
+			case EImageLayout::PresentSrc :							return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			case EImageLayout::SharedPresent :						return VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR;
+			case EImageLayout::Unknown :							break;
+		}
+		END_ENUM_CHECKS();
+		RETURN_ERR( "unknown image layout", Zero );
+	}
+
+/*
+=================================================
+	ImageAspect
 =================================================
 */
 	ND_ inline VkImageAspectFlagBits  VEnumCast (EImageAspect values)
 	{
-		VkImageAspectFlagBits	flags = VkImageAspectFlagBits(0);
+		VkImageAspectFlagBits	flags = Zero;
 		
 		for (EImageAspect t = EImageAspect(1); t <= values; t = EImageAspect(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ) )
+			if ( not EnumEq( values, t ))
 				continue;
 			
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
 			{
-				case EImageAspect::Color		: flags |= VK_IMAGE_ASPECT_COLOR_BIT;		break;
-				case EImageAspect::Depth		: flags |= VK_IMAGE_ASPECT_DEPTH_BIT;		break;
-				case EImageAspect::Stencil		: flags |= VK_IMAGE_ASPECT_STENCIL_BIT;		break;
-				case EImageAspect::Metadata		: flags |= VK_IMAGE_ASPECT_METADATA_BIT;	break;
-				case EImageAspect::_Last		:
-				case EImageAspect::Auto			:
-				case EImageAspect::DepthStencil	:
-				case EImageAspect::Unknown		: // to shutup warnings
-				default							: RETURN_ERR( "invalid image aspect type", VkImageAspectFlagBits(0) );
+				case EImageAspect::Color :		flags |= VK_IMAGE_ASPECT_COLOR_BIT;		break;
+				case EImageAspect::Depth :		flags |= VK_IMAGE_ASPECT_DEPTH_BIT;		break;
+				case EImageAspect::Stencil :	flags |= VK_IMAGE_ASPECT_STENCIL_BIT;	break;
+				case EImageAspect::Metadata :	flags |= VK_IMAGE_ASPECT_METADATA_BIT;	break;
+				case EImageAspect::_Last :
+				case EImageAspect::DepthStencil :
+				case EImageAspect::Unknown :	// to shutup warnings
+				default :						RETURN_ERR( "invalid image aspect type", Zero );
 			}
 			END_ENUM_CHECKS();
 		}
+		ASSERT( flags != Zero );
 		return flags;
-	}
-	
-/*
-=================================================
-	ImageAspectFlags
-=================================================
-*
-	ND_ inline VkImageAspectFlags  VEnumCast (EImageAspect values, EPixelFormat format)
-	{
-		if ( values == EImageAspect::Auto )
-		{
-			const bool	has_depth	= EPixelFormat_HasDepth( format );
-			const bool	has_stencil	= EPixelFormat_HasStencil( format );
-
-			//if ( has_depth and has_stencil )
-			//	return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-
-			if ( has_depth )
-				return VK_IMAGE_ASPECT_DEPTH_BIT;
-
-			if ( has_stencil )
-				return VK_IMAGE_ASPECT_STENCIL_BIT;
-
-			return VK_IMAGE_ASPECT_COLOR_BIT;
-		}
-
-		return VEnumCast( values );
 	}
 	
 /*
@@ -705,45 +730,45 @@ namespace AE::Graphics
 	BufferUsage
 =================================================
 */
-	ND_ inline VkBufferUsageFlags  VEnumCast (EBufferUsage values)
+	ND_ inline VkBufferUsageFlagBits  VEnumCast (EBufferUsage values)
 	{
-		VkBufferUsageFlags	result = 0;
+		VkBufferUsageFlagBits	result = Zero;
 		
 		for (EBufferUsage t = EBufferUsage(1); t <= values; t = EBufferUsage(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ) )
+			if ( not EnumEq( values, t ))
 				continue;
 			
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
 			{
-				case EBufferUsage::TransferSrc	:	result |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;					break;
-				case EBufferUsage::TransferDst	:	result |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;					break;
-				case EBufferUsage::UniformTexel	:	result |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;			break;
-				case EBufferUsage::StorageTexel	:	result |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;			break;
-				case EBufferUsage::Uniform		:	result |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;				break;
-				case EBufferUsage::Storage		:	result |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;				break;
-				case EBufferUsage::Index		:	result |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;					break;
-				case EBufferUsage::Vertex		:	result |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;				break;
-				case EBufferUsage::Indirect		:	result |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;				break;
+				case EBufferUsage::TransferSrc :	result |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;					break;
+				case EBufferUsage::TransferDst :	result |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;					break;
+				case EBufferUsage::UniformTexel :	result |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;			break;
+				case EBufferUsage::StorageTexel :	result |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;			break;
+				case EBufferUsage::Uniform :		result |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;				break;
+				case EBufferUsage::Storage :		result |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;				break;
+				case EBufferUsage::Index :			result |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;					break;
+				case EBufferUsage::Vertex :			result |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;				break;
+				case EBufferUsage::Indirect :		result |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;				break;
 					
 				#ifdef VK_NV_ray_tracing
-				case EBufferUsage::RayTracing	:	result |= VK_BUFFER_USAGE_RAY_TRACING_BIT_NV;				break;
+				case EBufferUsage::RayTracing :		result |= VK_BUFFER_USAGE_RAY_TRACING_BIT_NV;				break;
 				#else
-				case EBufferUsage::RayTracing	:	RETURN_ERR( "ray tracing is not supported", VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM );
+				case EBufferUsage::RayTracing :		RETURN_ERR( "ray tracing is not supported", Zero );
 				#endif
 
 				#ifdef VK_KHR_buffer_device_address
-				case EBufferUsage::ShaderAddress:	result |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;	break;
+				case EBufferUsage::ShaderAddress :	result |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;	break;
 				#else
-				case EBufferUsage::ShaderAddress:	RETURN_ERR( "buffer address is not supported", VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM );
+				case EBufferUsage::ShaderAddress :	RETURN_ERR( "buffer address is not supported", Zero );
 				#endif
 
-				case EBufferUsage::_Last		:
-				case EBufferUsage::Transfer		:
-				case EBufferUsage::Unknown		:
-				case EBufferUsage::All			:	// to shutup warnings
-				default							:	RETURN_ERR( "invalid buffer usage", VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM );
+				case EBufferUsage::_Last :
+				case EBufferUsage::Transfer :
+				case EBufferUsage::Unknown :
+				case EBufferUsage::All :			// to shutup warnings
+				default :							RETURN_ERR( "invalid buffer usage", Zero );
 			}
 			END_ENUM_CHECKS();
 		}
@@ -801,23 +826,26 @@ namespace AE::Graphics
 	GeometryFlags
 =================================================
 *
-	ND_ inline VkGeometryFlagsNV  VEnumCast (ERayTracingGeometryFlags values)
+	ND_ inline VkGeometryFlagBitsNV  VEnumCast (ERayTracingGeometryFlags values)
 	{
-		VkGeometryFlagsNV	result = 0;
+		VkGeometryFlagBitsNV	result = Zero;
 		
 		for (ERayTracingGeometryFlags t = ERayTracingGeometryFlags(1); t <= values; t = ERayTracingGeometryFlags(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ) )
+			if ( not EnumEq( values, t ))
 				continue;
 			
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
 			{
+				#ifdef VK_NV_ray_tracing
 				case ERayTracingGeometryFlags::Opaque						: result |= VK_GEOMETRY_OPAQUE_BIT_NV;							break;
 				case ERayTracingGeometryFlags::NoDuplicateAnyHitInvocation	: result |= VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_NV;	break;
+				#endif
+
 				case ERayTracingGeometryFlags::_Last						:
 				case ERayTracingGeometryFlags::Unknown						:
-				default														: RETURN_ERR( "invalid geometry flags", 0 );
+				default														: RETURN_ERR( "invalid geometry flags", Zero );
 			}
 			END_ENUM_CHECKS();
 		}
@@ -829,25 +857,28 @@ namespace AE::Graphics
 	GeometryInstanceFlags
 =================================================
 *
-	ND_ inline VkGeometryInstanceFlagsNV   VEnumCast (ERayTracingInstanceFlags values)
+	ND_ inline VkGeometryInstanceFlagBitsNV   VEnumCast (ERayTracingInstanceFlags values)
 	{
-		VkGeometryInstanceFlagsNV	result = 0;
+		VkGeometryInstanceFlagBitsNV	result = Zero;
 		
 		for (ERayTracingInstanceFlags t = ERayTracingInstanceFlags(1); t <= values; t = ERayTracingInstanceFlags(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ) )
+			if ( not EnumEq( values, t ))
 				continue;
 		
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
 			{
+				#ifdef VK_NV_ray_tracing
 				case ERayTracingInstanceFlags::TriangleCullDisable	: return VK_GEOMETRY_INSTANCE_TRIANGLE_CULL_DISABLE_BIT_NV;
 				case ERayTracingInstanceFlags::TriangleFrontCCW		: return VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_NV;
 				case ERayTracingInstanceFlags::ForceOpaque			: return VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_NV;
 				case ERayTracingInstanceFlags::ForceNonOpaque		: return VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_NV;
+				#endif
+
 				case ERayTracingInstanceFlags::_Last				:
 				case ERayTracingInstanceFlags::Unknown				:
-				default												: RETURN_ERR( "invalid geometry instance flags", 0 );
+				default												: RETURN_ERR( "invalid geometry instance flags", Zero );
 			}
 			END_ENUM_CHECKS();
 		}
@@ -859,26 +890,29 @@ namespace AE::Graphics
 	AccelerationStructureFlags
 =================================================
 *
-	ND_ inline VkBuildAccelerationStructureFlagsNV   VEnumCast (ERayTracingFlags values)
+	ND_ inline VkBuildAccelerationStructureFlagBitsNV   VEnumCast (ERayTracingFlags values)
 	{
-		VkBuildAccelerationStructureFlagsNV	result = 0;
+		VkBuildAccelerationStructureFlagBitsNV	result = Zero;
 		
 		for (ERayTracingFlags t = ERayTracingFlags(1); t <= values; t = ERayTracingFlags(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ) )
+			if ( not EnumEq( values, t ))
 				continue;
 		
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
 			{
+				#ifdef VK_NV_ray_tracing
 				case ERayTracingFlags::AllowUpdate		: result |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_NV;		break;
 				case ERayTracingFlags::AllowCompaction	: result |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_NV;	break;
 				case ERayTracingFlags::PreferFastTrace	: result |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_NV;	break;
 				case ERayTracingFlags::PreferFastBuild	: result |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_NV;	break;
 				case ERayTracingFlags::LowMemory		: result |= VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_NV;			break;
+				#endif
+
 				case ERayTracingFlags::_Last			:
 				case ERayTracingFlags::Unknown			:
-				default									: RETURN_ERR( "invalid flags", 0 );
+				default									: RETURN_ERR( "invalid flags", Zero );
 			}
 			END_ENUM_CHECKS();
 		}
@@ -919,7 +953,7 @@ namespace AE::Graphics
 			case EResourceState::_Access_Uniform :
 			case EResourceState::_Access_ShaderSample : {
 				ASSERT( EnumAny( value, EResourceState::_ShaderMask ));
-				VkPipelineStageFlagBits		result = VkPipelineStageFlagBits(0);
+				VkPipelineStageFlagBits	result = Zero;
 				if ( EnumEq( value, EResourceState::_VertexShader ) )			result |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
 				if ( EnumEq( value, EResourceState::_TessControlShader ) )		result |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
 				if ( EnumEq( value, EResourceState::_TessEvaluationShader ) )	result |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
@@ -938,13 +972,13 @@ namespace AE::Graphics
 
 			case EResourceState::_Access_DepthStencilAttachment : {
 				ASSERT( EnumAny( value, EResourceState::EarlyFragmentTests | EResourceState::LateFragmentTests ));
-				VkPipelineStageFlagBits		result = VkPipelineStageFlagBits(0);
+				VkPipelineStageFlagBits	result = Zero;
 				if ( EnumEq( value, EResourceState::EarlyFragmentTests ) )		result |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 				if ( EnumEq( value, EResourceState::LateFragmentTests ) )		result |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 				return result;
 			}
 		}
-		RETURN_ERR( "unknown resource state!", VkPipelineStageFlagBits(0) );
+		RETURN_ERR( "unknown resource state!", Zero );
 	}
 	
 /*
@@ -956,7 +990,7 @@ namespace AE::Graphics
 	{
 		switch ( value & EResourceState::_StateMask )
 		{
-			case EResourceState::Unknown :							return VkAccessFlagBits(0);
+			case EResourceState::Unknown :							return Zero;
 			case EResourceState::UniformRead :						return VK_ACCESS_UNIFORM_READ_BIT;
 			case EResourceState::ShaderSample :
 			case EResourceState::ShaderRead :						return VK_ACCESS_SHADER_READ_BIT;
@@ -978,7 +1012,7 @@ namespace AE::Graphics
 			case EResourceState::IndexBuffer :						return VK_ACCESS_INDEX_READ_BIT;
 			case EResourceState::VertexBuffer :						return VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 			//case EResourceState::TransientAttachment
-			case EResourceState::PresentImage :						return VkAccessFlagBits(0);
+			case EResourceState::PresentImage :						return Zero;
 				
 			#ifdef VK_NV_ray_tracing
 			case EResourceState::BuildRayTracingStructRead :		return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV;
@@ -987,13 +1021,13 @@ namespace AE::Graphics
 			#endif
 
 			case EResourceState::RTASBuildingBufferRead :
-			case EResourceState::RTASBuildingBufferReadWrite :		return VkAccessFlagBits(0);	// ceche invalidation is not needed for buffers
+			case EResourceState::RTASBuildingBufferReadWrite :		return Zero;	// ceche invalidation is not needed for buffers
 				
 			#ifdef VK_NV_shading_rate_image
 			case EResourceState::ShadingRateImageRead :				return VK_ACCESS_SHADING_RATE_IMAGE_READ_BIT_NV;
 			#endif
 		}
-		RETURN_ERR( "unknown resource state!", VkAccessFlagBits(0) );
+		RETURN_ERR( "unknown resource state!", Zero );
 	}
 	
 /*
@@ -1148,8 +1182,8 @@ namespace AE::Graphics
 		_builder_( BC2_RGBA8_UNorm,		VK_FORMAT_BC2_UNORM_BLOCK ) \
 		_builder_( BC3_RGBA8_UNorm,		VK_FORMAT_BC3_UNORM_BLOCK ) \
 		_builder_( BC3_sRGB,			VK_FORMAT_BC3_SRGB_BLOCK ) \
-		_builder_( BC4_RED8_SNorm,		VK_FORMAT_BC4_SNORM_BLOCK ) \
-		_builder_( BC4_RED8_UNorm,		VK_FORMAT_BC4_UNORM_BLOCK ) \
+		_builder_( BC4_R8_SNorm,		VK_FORMAT_BC4_SNORM_BLOCK ) \
+		_builder_( BC4_R8_UNorm,		VK_FORMAT_BC4_UNORM_BLOCK ) \
 		_builder_( BC5_RG8_SNorm,		VK_FORMAT_BC5_SNORM_BLOCK ) \
 		_builder_( BC5_RG8_UNorm,		VK_FORMAT_BC5_UNORM_BLOCK ) \
 		_builder_( BC7_RGBA8_UNorm,		VK_FORMAT_BC7_UNORM_BLOCK ) \
@@ -1218,6 +1252,201 @@ namespace AE::Graphics
 
 		RETURN_ERR( "invalid pixel format", VK_FORMAT_MAX_ENUM );
 	}
+	
+/*
+=================================================
+	AEEnumCast (VkFormat)
+=================================================
+*/
+	ND_ inline EPixelFormat  AEEnumCast (VkFormat value)
+	{
+#		define FMT_BUILDER( _engineFmt_, _vkFormat_ ) \
+			case _vkFormat_ : return EPixelFormat::_engineFmt_;
+		
+		switch ( value )
+		{
+			FG_PRIVATE_VKPIXELFORMATS( FMT_BUILDER )
+		}
+
+#		undef FMT_BUILDER
+
+		RETURN_ERR( "invalid pixel format" );
+	}
+
+/*
+=================================================
+	AEEnumCast (VkImageType)
+=================================================
+*/
+	ND_ inline EImage  AEEnumCast (VkImageType value)
+	{
+		BEGIN_ENUM_CHECKS();
+		switch ( value )
+		{
+			case VK_IMAGE_TYPE_1D :			return EImage::_1D;
+			case VK_IMAGE_TYPE_2D :			return EImage::_2D;
+			case VK_IMAGE_TYPE_3D :			return EImage::_3D;
+			case VK_IMAGE_TYPE_RANGE_SIZE :
+			case VK_IMAGE_TYPE_MAX_ENUM :
+			default :						break;
+		}
+		END_ENUM_CHECKS();
+		RETURN_ERR( "unknown vulkan image type" );
+	}
+	
+/*
+=================================================
+	AEEnumCast (VkImageUsageFlagBits)
+=================================================
+*/
+	ND_ inline EImageUsage  AEEnumCast (VkImageUsageFlagBits usage)
+	{
+		EImageUsage		result = Default;
+
+		for (VkImageUsageFlags t = 1; t < VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM; t <<= 1)
+		{
+			if ( not EnumEq( usage, t ) )
+				continue;
+			
+			BEGIN_ENUM_CHECKS();
+			switch ( VkImageUsageFlagBits(t) )
+			{
+				case VK_IMAGE_USAGE_TRANSFER_SRC_BIT :				result |= EImageUsage::TransferSrc;				break;
+				case VK_IMAGE_USAGE_TRANSFER_DST_BIT :				result |= EImageUsage::TransferDst;				break;
+				case VK_IMAGE_USAGE_SAMPLED_BIT :					result |= EImageUsage::Sampled;					break;
+				case VK_IMAGE_USAGE_STORAGE_BIT :					result |= EImageUsage::Storage;					break;
+				case VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT :			result |= EImageUsage::ColorAttachment;			break;
+				case VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT :	result |= EImageUsage::DepthStencilAttachment;	break;
+				case VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT :		result |= EImageUsage::TransientAttachment;		break;
+				case VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT :			result |= EImageUsage::InputAttachment;			break;
+					
+				#ifdef VK_NV_shading_rate_image
+				case VK_IMAGE_USAGE_SHADING_RATE_IMAGE_BIT_NV :		result |= EImageUsage::ShadingRate;				break;
+				#endif
+
+				#ifdef VK_EXT_fragment_density_map
+				case VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT :	result |= EImageUsage::FragmentDensityMap;		break;
+				#endif
+
+				case VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM :
+				default :											RETURN_ERR( "not supported", Zero );
+			}
+			END_ENUM_CHECKS();
+		}
+		return result;
+	}
+	
+/*
+=================================================
+	AEEnumCast (VkSampleCountFlagBits)
+=================================================
+*/
+	ND_ inline  MultiSamples  AEEnumCast (VkSampleCountFlagBits samples)
+	{
+		if ( samples == 0 )
+			return 1_samples;
+
+		ASSERT( IsPowerOfTwo( samples ) );
+		return MultiSamples{ uint(samples) };
+	}
+	
+/*
+=================================================
+	AEEnumCast (VkImageCreateFlagBits)
+=================================================
+*/
+	ND_ inline EImageFlags  AEEnumCast (VkImageCreateFlagBits values)
+	{
+		EImageFlags	result = Zero;
+
+		for (uint t = 1; t <= uint(values); t <<= 1)
+		{
+			if ( not EnumEq( values, t ))
+				continue;
+		
+			BEGIN_ENUM_CHECKS();
+			switch ( VkImageCreateFlagBits(t) )
+			{
+				case VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT :		result |= EImageFlags::CubeCompatibple;
+
+				case VK_IMAGE_CREATE_SPARSE_BINDING_BIT :
+				case VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT :
+				case VK_IMAGE_CREATE_SPARSE_ALIASED_BIT :
+				case VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT :
+				case VK_IMAGE_CREATE_ALIAS_BIT :
+				case VK_IMAGE_CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT :
+				case VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT :
+				case VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT :
+				case VK_IMAGE_CREATE_EXTENDED_USAGE_BIT :
+				case VK_IMAGE_CREATE_PROTECTED_BIT :
+				case VK_IMAGE_CREATE_DISJOINT_BIT :
+				case VK_IMAGE_CREATE_SAMPLE_LOCATIONS_COMPATIBLE_DEPTH_BIT_EXT :
+				case VK_IMAGE_CREATE_FLAG_BITS_MAX_ENUM :
+
+				#ifdef VK_NV_corner_sampled_image
+				case VK_IMAGE_CREATE_CORNER_SAMPLED_BIT_NV :
+				#endif
+				#ifdef VK_EXT_fragment_density_map
+				case VK_IMAGE_CREATE_SUBSAMPLED_BIT_EXT :
+				#endif
+
+				default :
+					RETURN_ERR( "unsupported image create flags" );
+			}
+			END_ENUM_CHECKS();
+		}
+		return result;
+	}
+	
+/*
+=================================================
+	AEEnumCast (VkBufferUsageFlagBits)
+=================================================
+*/
+	ND_ inline EBufferUsage  AEEnumCast (VkBufferUsageFlagBits values)
+	{
+		EBufferUsage	result = Default;
+		
+		for (uint t = 1; t <= uint(values); t <<= 1)
+		{
+			if ( not EnumEq( values, t ) )
+				continue;
+			
+			BEGIN_ENUM_CHECKS();
+			switch ( VkBufferUsageFlagBits(t) )
+			{
+				case VK_BUFFER_USAGE_TRANSFER_SRC_BIT :				result |= EBufferUsage::TransferSrc;	break;
+				case VK_BUFFER_USAGE_TRANSFER_DST_BIT :				result |= EBufferUsage::TransferDst;	break;
+				case VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT :		result |= EBufferUsage::UniformTexel;	break;
+				case VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT :		result |= EBufferUsage::StorageTexel;	break;
+				case VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT :			result |= EBufferUsage::Uniform;		break;
+				case VK_BUFFER_USAGE_STORAGE_BUFFER_BIT :			result |= EBufferUsage::Storage;		break;
+				case VK_BUFFER_USAGE_INDEX_BUFFER_BIT :				result |= EBufferUsage::Index;			break;
+				case VK_BUFFER_USAGE_VERTEX_BUFFER_BIT :			result |= EBufferUsage::Vertex;			break;
+				case VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT :			result |= EBufferUsage::Indirect;		break;
+					
+				#ifdef VK_NV_ray_tracing
+				case VK_BUFFER_USAGE_RAY_TRACING_BIT_NV :			result |= EBufferUsage::RayTracing;		break;
+				#endif
+				#ifdef VK_KHR_buffer_device_address
+				case VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR:	result |= EBufferUsage::ShaderAddress;	break;
+				#endif
+				#ifdef VK_EXT_conditional_rendering
+				case VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT :
+				#endif
+				#ifdef VK_EXT_transform_feedback
+				case VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_BUFFER_BIT_EXT :
+				case VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_COUNTER_BUFFER_BIT_EXT :
+				#endif
+
+				case VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM :
+				default :											RETURN_ERR( "invalid buffer usage" );
+			}
+			END_ENUM_CHECKS();
+		}
+		return result;
+	}
+
 
 }	// AE::Graphics
 

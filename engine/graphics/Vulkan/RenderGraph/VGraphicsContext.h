@@ -29,7 +29,7 @@ namespace AE::Graphics
 		using LocalImages_t		= LocalResPool< VLocalImage,	VResourceManager::ImagePool_t,		16 >;
 		using LocalBuffers_t	= LocalResPool< VLocalBuffer,	VResourceManager::BufferPool_t,		16 >;
 		
-		using BufferBarriers_t	= HashSet< VLocalBuffer const *>;
+		using BufferBarriers_t	= HashSet< VLocalBuffer const *>;	// TODO: optimize
 		using ImageBarriers_t	= HashSet< VLocalImage const *>;
 
 
@@ -43,6 +43,8 @@ namespace AE::Graphics
 		VResourceManager &			_resMngr;
 		LinearAllocator<>			_allocator;
 		
+		VResourceMap				_resources;
+
 		VBarrierManager				_barrierMngr;
 		struct {
 			BufferBarriers_t			buffers;
@@ -50,12 +52,12 @@ namespace AE::Graphics
 		}							_pendingBarriers;
 
 		VQueuePtr					_queue;
-		VCommandPool				_cmdPool;
+		VCommandPoolPtr				_cmdPool;
 		Ptr<VCommandBatch>			_cmdBatch;
-		CmdBatchID					_cmdBatchId;
+		UniqueID<BakedCommandBufferID>	_cachedCommands;
 
-		VkPipelineStageFlagBits		_allSrcStages			= VkPipelineStageFlagBits(0);
-		VkPipelineStageFlagBits		_allDstStages			= VkPipelineStageFlagBits(0);
+		VkPipelineStageFlagBits		_allSrcStages			= Zero;
+		VkPipelineStageFlagBits		_allDstStages			= Zero;
 
 		struct {
 			VkPipelineLayout			computeLayout		= VK_NULL_HANDLE;
@@ -86,67 +88,91 @@ namespace AE::Graphics
 		ND_ VLocalImage  const*	ToLocalImage (GfxResourceID id);
 
 		bool  Create ();
-		bool  Begin (VCommandBatch *, CmdBatchID);
+		bool  Begin (VCommandBatch *, VCommandPoolManager &);
 		bool  Submit ();
+		bool  LastSubmit ();
+
+		bool  Execute (const VLogicalRenderPass &logicalRP, UniqueID<BakedCommandBufferID> renderCommands);
+
+		bool  BeginPass (const VLogicalRenderPass &logicalRP, VkSubpassContents contents);
+		void  EndPass (const VLogicalRenderPass &logicalRP);
+
+		void  MergeResources (VResourceMap &);
 
 
 	// ITransferContext
 		NativeContext_t  GetNativeContext () override;
 		
+		void  ImageBarrier (GfxResourceID image, EResourceState srcState, EResourceState dstState) override;
+		void  ImageBarrier (GfxResourceID image, EResourceState srcState, EResourceState dstState, const ImageSubresourceRange &subRes) override;
+
+		void  BufferBarrier (GfxResourceID buffer, EResourceState srcState, EResourceState dstState) override;
+		void  BufferBarrier (GfxResourceID buffer, EResourceState srcState, EResourceState dstState, BytesU offset, BytesU size) override;
+		
+		void  SetInitialState (GfxResourceID id, EResourceState state) override;
+		void  SetInitialState (GfxResourceID id, EResourceState state, EImageLayout layout) override;
+
+		void  GlobalBarrier () override;
+
 		GfxResourceID   GetOutput (GfxResourceID id) override;
-		void SetOutput (GfxResourceID id, GfxResourceID res) override;
+		void  SetOutput (GfxResourceID id, GfxResourceID res) override;
 		
-		void ClearColorImage (GfxResourceID image, const ClearColor_t &color, ArrayView<ImageSubresourceRange> ranges) override;
-		void ClearDepthStencilImage (GfxResourceID image, const DepthStencil &depthStencil, ArrayView<ImageSubresourceRange> ranges) override;
-		void FillBuffer (GfxResourceID buffer, BytesU offset, BytesU size, uint data) override;
+		void  ClearColorImage (GfxResourceID image, const ClearColor_t &color, ArrayView<ImageSubresourceRange> ranges) override;
+		void  ClearDepthStencilImage (GfxResourceID image, const DepthStencil &depthStencil, ArrayView<ImageSubresourceRange> ranges) override;
+		void  FillBuffer (GfxResourceID buffer, BytesU offset, BytesU size, uint data) override;
 
-		void UpdateBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint> data) override;
+		void  UpdateBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint8_t> data) override;
 		
-		bool UpdateHostBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint> data) override;
-		bool MapHostBuffer (GfxResourceID buffer, BytesU offset, INOUT BytesU &size, OUT void* &mapped) override;
+		bool  UpdateHostBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint8_t> data) override;
+		bool  MapHostBuffer (GfxResourceID buffer, BytesU offset, INOUT BytesU &size, OUT void* &mapped) override;
 		
-		Promise<BufferView>  ReadBuffer (GfxResourceID buffer, BytesU offset, BytesU size) override;
-		Promise<ImageView>   ReadImage (GfxResourceID image) override;
+		bool  ReadBuffer (GfxResourceID buffer, BytesU offset, BytesU size, Function<void (const BufferView &)>&& fn) override;
+		bool  ReadImage (GfxResourceID image, const uint3 &offset, const uint3 &size, MipmapLevel mipLevel,
+						 ImageLayer arrayLayer, EImageAspect aspectMask, Function<void (const ImageView &)>&& fn) override;
+		
+		bool  UploadBuffer (GfxResourceID buffer, BytesU offset, BytesU size, OUT BufferView &ranges) override;
+		bool  UploadImage (GfxResourceID image, const uint3 &offset, const uint3 &size, MipmapLevel mipLevel,
+						   ImageLayer arrayLayer, EImageAspect aspectMask, OUT ImageView &ranges) override; 
 
-		void CopyBuffer (GfxResourceID srcBuffer, GfxResourceID dstBuffer, ArrayView<BufferCopy> ranges) override;
-		void CopyImage (GfxResourceID srcImage, GfxResourceID dstImage, ArrayView<ImageCopy> ranges) override;
-		void CopyBufferToImage (GfxResourceID srcBuffer, GfxResourceID dstImage, ArrayView<BufferImageCopy> ranges) override;
-		void CopyImageToBuffer (GfxResourceID srcImage, GfxResourceID dstBuffer, ArrayView<BufferImageCopy> ranges) override;
+		void  CopyBuffer (GfxResourceID srcBuffer, GfxResourceID dstBuffer, ArrayView<BufferCopy> ranges) override;
+		void  CopyImage (GfxResourceID srcImage, GfxResourceID dstImage, ArrayView<ImageCopy> ranges) override;
+		void  CopyBufferToImage (GfxResourceID srcBuffer, GfxResourceID dstImage, ArrayView<BufferImageCopy> ranges) override;
+		void  CopyImageToBuffer (GfxResourceID srcImage, GfxResourceID dstBuffer, ArrayView<BufferImageCopy> ranges) override;
 		
-		void Present (GfxResourceID image, MipmapLevel level, ImageLayer layer) override;
+		void  Present (GfxResourceID image, MipmapLevel level, ImageLayer layer) override;
 
 
 	// IComputeContext
-		void BindPipeline (ComputePipelineID ppln) override;
-		void BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets) override;
-		void PushConstant (BytesU offset, BytesU size, const void *values, EShaderStages stages) override;
+		void  BindPipeline (ComputePipelineID ppln) override;
+		void  BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets) override;
+		void  PushConstant (BytesU offset, BytesU size, const void *values, EShaderStages stages) override;
 
-		void Dispatch (const uint3 &groupCount) override;
-		void DispatchIndirect (GfxResourceID buffer, BytesU offset) override;
-		void DispatchBase (const uint3 &baseGroup, const uint3 &groupCount) override;
+		void  Dispatch (const uint3 &groupCount) override;
+		void  DispatchIndirect (GfxResourceID buffer, BytesU offset) override;
+		void  DispatchBase (const uint3 &baseGroup, const uint3 &groupCount) override;
 		
 
 	// IGraphicsContext
-		void BlitImage (GfxResourceID srcImage, GfxResourceID dstImage, EBlitFilter filter, ArrayView<ImageBlit> regions) override;
-		void ResolveImage (GfxResourceID srcImage, GfxResourceID dstImage, ArrayView<ImageResolve> regions) override;
+		void  BlitImage (GfxResourceID srcImage, GfxResourceID dstImage, EBlitFilter filter, ArrayView<ImageBlit> regions) override;
+		void  ResolveImage (GfxResourceID srcImage, GfxResourceID dstImage, ArrayView<ImageResolve> regions) override;
 
 
 	private:
 		template <typename ID, typename Res, typename MainPool, size_t MC>
 		ND_ Res const*  _ToLocal (ID id, INOUT LocalResPool<Res,MainPool,MC> &, StringView msg);
 		
-		void _AddImage (const VLocalImage *img, EResourceState state, VkImageLayout layout, StructView<VkImageSubresourceLayers> subresLayers);
-		void _AddImage (const VLocalImage *img, EResourceState state, VkImageLayout layout, StructView<VkImageSubresourceRange> subres);
-		void _AddBuffer (const VLocalBuffer *buf, EResourceState state, VkDeviceSize offset, VkDeviceSize size);
-		void _AddBuffer (const VLocalBuffer *buf, EResourceState state, ArrayView<VkBufferImageCopy> copy);
-		void _CheckBufferAccess (const VLocalBuffer *buf, EResourceState state, VkDeviceSize offset, VkDeviceSize size);
-		void _CheckBufferAccess (const VLocalBuffer *buf, EResourceState state, ArrayView<VkBufferImageCopy> copy);
-		void _CommitBarriers ();
+		void  _AddImage (const VLocalImage *img, EResourceState state, VkImageLayout layout, StructView<VkImageSubresourceLayers> subresLayers);
+		void  _AddImage (const VLocalImage *img, EResourceState state, VkImageLayout layout, StructView<VkImageSubresourceRange> subres);
+		void  _AddBuffer (const VLocalBuffer *buf, EResourceState state, VkDeviceSize offset, VkDeviceSize size);
+		void  _AddBuffer (const VLocalBuffer *buf, EResourceState state, ArrayView<VkBufferImageCopy> copy);
+		void  _CheckBufferAccess (const VLocalBuffer *buf, EResourceState state, VkDeviceSize offset, VkDeviceSize size);
+		void  _CheckBufferAccess (const VLocalBuffer *buf, EResourceState state, ArrayView<VkBufferImageCopy> copy);
+		void  _CommitBarriers ();
 
-		void _FlushLocalResourceStates ();
+		void  _FlushLocalResourceStates ();
 
 		template <typename ID, typename ResPool>
-		void _FlushLocalResourceStates (ResPool &);
+		void  _FlushLocalResourceStates (ResPool &);
 	};
 
 
@@ -241,8 +267,6 @@ namespace {
 	{
 		ASSERT( not _cmdbuf );
 		ASSERT( _cmdCounter == 0 );
-
-		_cmdPool.Destroy( _device );
 	}
 
 /*
@@ -254,15 +278,13 @@ namespace {
 	{
 		_allocator.SetBlockSize( 4_Kb );
 
-		CHECK_ERR( _cmdPool.Create( _device, _queue, 0, "" ));
-
 		// set source pipeline stages
 		{
 			VkPipelineStageFlagBits	rt_flags =
 				#ifdef VK_NV_ray_tracing
-					_device.GetFeatures().rayTracingNV ? VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV | VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV : VkPipelineStageFlagBits(0);
+					_device.GetFeatures().rayTracingNV ? VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV | VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV : Zero;
 				#else
-					VkPipelineStageFlagBits(0);
+					Zero;
 				#endif
 
 			BEGIN_ENUM_CHECKS();
@@ -302,16 +324,23 @@ namespace {
 	Begin
 =================================================
 */
-	bool  VRenderGraph::GraphicsContext::Begin (VCommandBatch *batch, CmdBatchID batchId)
+	bool  VRenderGraph::GraphicsContext::Begin (VCommandBatch *batch, VCommandPoolManager &cmdPoolMngr)
 	{
 		CHECK_ERR( not _cmdbuf );
 		CHECK_ERR( not _cmdBatch );
 
-		_cmdBatch	= batch;
-		_cmdBatchId	= batchId;
+		_cmdBatch = batch;
 
-		_cmdbuf = _cmdPool.AllocPrimary( _device );
-		CHECK_ERR( _cmdbuf );
+		if ( not _cmdPool )
+		{
+			_cmdPool = cmdPoolMngr.Acquire( _queue, ECommandPoolType::Primary_OneTimeSubmit );
+			CHECK_ERR( _cmdPool );
+		}
+
+		_cachedCommands = _resMngr.CreateCommandBuffer( _cmdPool, Default );
+		CHECK_ERR( _cachedCommands );
+
+		_cmdbuf = _resMngr.GetResource( _cachedCommands )->GetCommands();
 		
 		VkCommandBufferBeginInfo	begin_info = {};
 		begin_info.sType	= VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -319,7 +348,7 @@ namespace {
 
 		VK_CHECK( vkBeginCommandBuffer( _cmdbuf, &begin_info ));
 
-		// invalidate staging buffer cache
+		// invalidate cache for staging buffers
 		// TODO: optimize ?
 		{
 			VkMemoryBarrier	barrier = {};
@@ -345,11 +374,12 @@ namespace {
 		if ( _cmdCounter == 0 )
 		{
 			VK_CHECK( vkEndCommandBuffer( _cmdbuf ));
-			_cmdPool.RecyclePrimary( _device, _cmdbuf );
+
+			_resMngr.ReleaseResource( _cachedCommands );
+			_resources.Release( _resMngr );
 
 			_cmdbuf		= VK_NULL_HANDLE;
 			_cmdBatch	= null;
-			_cmdBatchId	= Default;
 			return true;
 		}
 
@@ -377,21 +407,165 @@ namespace {
 
 			VK_CHECK( vkQueueSubmit( _queue->handle, 1, &submit_info, fence ));
 		}
-
-		// TODO: remove
-		//VK_CHECK( vkQueueWaitIdle( _queue->handle ));
-		//_cmdPool.RecyclePrimary( _device, _cmdbuf );
+		
+		_resMngr.GetResource( _cachedCommands )->SetResources( std::move(_resources) );
+		_resources = Default;
 
 		_cmdBatch->AddFence( fence );
-		_cmdBatch->AddCmdBuffer( &_cmdPool, _cmdbuf );
+		_cmdBatch->AddCmdBuffer( std::move(_cachedCommands) );
 
 		_cmdBatch	= null;
-		_cmdBatchId	= Default;		
 		_cmdbuf		= VK_NULL_HANDLE;
 		_cmdCounter	= 0;
 		return true;
 	}
 	
+/*
+=================================================
+	LastSubmit
+=================================================
+*/
+	bool  VRenderGraph::GraphicsContext::LastSubmit ()
+	{
+		bool	res = Submit();
+
+		_cmdPool->Unlock();
+		_cmdPool = null;
+
+		return res;
+	}
+
+/*
+=================================================
+	AcquireResource
+=================================================
+*/
+	template <typename ID>
+	inline auto*  VRenderGraph::GraphicsContext::AcquireResource (ID id)
+	{
+		return _resMngr.GetResource( id, _resources.Add( id ));
+	}
+	
+/*
+=================================================
+	Execute
+=================================================
+*/
+	bool  VRenderGraph::GraphicsContext::Execute (const VLogicalRenderPass &logicalRP, UniqueID<BakedCommandBufferID> renderCommands)
+	{
+		CHECK( _resources.Add( renderCommands ));
+
+		auto*	cmds = _resMngr.GetResource( renderCommands.Release() );
+		CHECK_ERR( cmds );
+
+		// add barriers
+		for (auto&[id, state] : cmds->Barriers())
+		{
+			if ( id.ResourceType() == GfxResourceID::EType::Buffer )
+			{
+				auto*	buf = ToLocalBuffer( id );
+				_AddBuffer( buf, state, 0, VkDeviceSize(buf->Size()) );
+			}
+			else
+			if ( id.ResourceType() == GfxResourceID::EType::Image )
+			{
+				auto*	img = ToLocalImage( id );
+				_AddImage( img, state, EResourceState_ToImageLayout( state, img->AspectMask() ), StructView<VkImageSubresourceRange>{} );
+			}
+			else
+				AE_LOGE( "unsupported resource type" );
+		}
+
+		CHECK_ERR( BeginPass( logicalRP, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS ));
+
+		VkCommandBuffer		cmdbuffers[] = { cmds->GetCommands() };
+		vkCmdExecuteCommands( _cmdbuf, uint(CountOf( cmdbuffers )), cmdbuffers );
+
+		EndPass( logicalRP );
+
+		++_cmdCounter;
+		return true;
+	}
+
+/*
+=================================================
+	BeginPass
+=================================================
+*/
+	bool  VRenderGraph::GraphicsContext::BeginPass (const VLogicalRenderPass &logicalRP, VkSubpassContents contents)
+	{
+		if ( logicalRP.GetSubpassIndex() == 0 )
+		{
+			auto*	framebuffer = AcquireResource( logicalRP.GetFramebuffer() );
+			auto*	render_pass = AcquireResource( logicalRP.GetRenderPass() );
+			CHECK_ERR( framebuffer );
+			CHECK_ERR( render_pass );
+
+			for (auto& att : logicalRP.GetColorTargets())
+			{
+				auto*	img = ToLocalImage( att.imageId );
+				CHECK_ERR( img );
+
+				_AddImage( img, att.state, att.layout, StructView<VkImageSubresourceRange>{} );
+			}
+			_CommitBarriers();
+
+			VkRenderPassBeginInfo	pass_info = {};
+			pass_info.sType						= VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			pass_info.renderPass				= render_pass->Handle();
+			pass_info.renderArea.offset.x		= logicalRP.GetArea().left;
+			pass_info.renderArea.offset.y		= logicalRP.GetArea().top;
+			pass_info.renderArea.extent.width	= uint(logicalRP.GetArea().Width());
+			pass_info.renderArea.extent.height	= uint(logicalRP.GetArea().Height());
+			pass_info.clearValueCount			= render_pass->GetCreateInfo().attachmentCount;
+			pass_info.pClearValues				= logicalRP.GetClearValues().data();
+			pass_info.framebuffer				= framebuffer->Handle();
+			
+			vkCmdBeginRenderPass( _cmdbuf, &pass_info, contents );
+		}
+		else
+		{
+			vkCmdNextSubpass( _cmdbuf, contents );
+
+			// TODO: clear attachment
+		}
+		
+		if ( contents == VK_SUBPASS_CONTENTS_INLINE )
+		{
+			if ( auto viewports = logicalRP.GetViewports(); viewports.size() )
+				vkCmdSetViewport( _cmdbuf, 0, uint(viewports.size()), viewports.data() );
+		
+			if ( auto scissors = logicalRP.GetScissors(); scissors.size() )
+				vkCmdSetScissor( _cmdbuf, 0, uint(scissors.size()), scissors.data() );
+		}
+
+		++_cmdCounter;
+		return true;
+	}
+	
+/*
+=================================================
+	EndPass
+=================================================
+*/
+	void  VRenderGraph::GraphicsContext::EndPass (const VLogicalRenderPass &logicalRP)
+	{
+		if ( logicalRP.IsLastSubpass() )
+		{
+			vkCmdEndRenderPass( _cmdbuf );
+		}
+	}
+	
+/*
+=================================================
+	MergeResources
+=================================================
+*/
+	void  VRenderGraph::GraphicsContext::MergeResources (VResourceMap &other)
+	{
+		_resources.Merge( INOUT other );
+	}
+
 /*
 =================================================
 	_FlushLocalResourceStates
@@ -453,6 +627,8 @@ namespace {
 		if ( not res )
 			return null;
 
+		_resources.Add( id );
+
 		CHECK_ERR( localRes.pool.Assign( OUT local ));
 
 		auto&	data = localRes.pool[ local ];
@@ -465,8 +641,6 @@ namespace {
 			localRes.pool.Unassign( local );
 			RETURN_ERR( msg );
 		}
-
-		_cmdBatch->AddResource( id );
 
 		return &(data.Data());
 	}
@@ -502,6 +676,11 @@ namespace {
 	{
 		if ( not img->IsMutable() )
 			return;
+		
+		img->AddPendingState( state, layout, ExeOrderIndex(_cmdCounter + 1) );
+		Unused( subresLayers );
+		
+		_pendingBarriers.images.insert( img );
 	}
 	
 /*
@@ -513,6 +692,11 @@ namespace {
 	{
 		if ( not img->IsMutable() )
 			return;
+
+		img->AddPendingState( state, layout, ExeOrderIndex(_cmdCounter + 1) );
+		Unused( subres );
+		
+		_pendingBarriers.images.insert( img );
 	}
 	
 /*
@@ -554,6 +738,7 @@ namespace {
 */
 	inline void  VRenderGraph::GraphicsContext::_CheckBufferAccess (const VLocalBuffer *buf, EResourceState state, VkDeviceSize offset, VkDeviceSize size)
 	{
+		Unused( buf, state, offset, size );
 		// TODO
 	}
 	
@@ -564,6 +749,7 @@ namespace {
 */
 	inline void  VRenderGraph::GraphicsContext::_CheckBufferAccess (const VLocalBuffer *buf, EResourceState state, ArrayView<VkBufferImageCopy> ranges)
 	{
+		Unused( buf, state, ranges );
 		// TODO
 	}
 
@@ -586,17 +772,6 @@ namespace {
 
 		_barrierMngr.Commit( _device, _cmdbuf );
 	}
-	
-/*
-=================================================
-	AcquireResource
-=================================================
-*/
-	template <typename ID>
-	inline auto*  VRenderGraph::GraphicsContext::AcquireResource (ID id)
-	{
-		return _resMngr.GetResource( id, _cmdBatch->AddResource( id ));
-	}
 
 /*
 =================================================
@@ -610,6 +785,202 @@ namespace {
 		return vctx;
 	}
 	
+/*
+=================================================
+	ImageBarrier
+=================================================
+*/
+	void  VRenderGraph::GraphicsContext::ImageBarrier (GfxResourceID image, EResourceState srcState, EResourceState dstState)
+	{
+		CHECK_ERR( not _enableBarriers, void());
+
+		auto*	img = ToLocalImage( image );
+		CHECK_ERR( img, void());
+		
+		VkImageMemoryBarrier	barrier = {};
+		barrier.subresourceRange	= { img->AspectMask(), 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS };
+		barrier.sType				= VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.image				= img->Handle();
+		barrier.oldLayout			= EResourceState_ToImageLayout( srcState, barrier.subresourceRange.aspectMask );
+		barrier.newLayout			= EResourceState_ToImageLayout( dstState, barrier.subresourceRange.aspectMask );
+		barrier.srcQueueFamilyIndex	= VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex	= VK_QUEUE_FAMILY_IGNORED;
+		barrier.srcAccessMask		= EResourceState_ToAccess( srcState );
+		barrier.dstAccessMask		= EResourceState_ToAccess( dstState );
+		auto	src_stage			= EResourceState_ToPipelineStages( srcState );
+		auto	dst_stage			= EResourceState_ToPipelineStages( dstState );
+
+		_barrierMngr.AddImageBarrier( src_stage, dst_stage, Zero, barrier );
+	}
+	
+/*
+=================================================
+	ImageBarrier
+=================================================
+*/
+	void  VRenderGraph::GraphicsContext::ImageBarrier (GfxResourceID image, EResourceState srcState, EResourceState dstState, const ImageSubresourceRange &subRes)
+	{
+		CHECK_ERR( not _enableBarriers, void());
+
+		auto*	img = ToLocalImage( image );
+		CHECK_ERR( img, void());
+		
+		VkImageMemoryBarrier	barrier = {};
+		barrier.subresourceRange.aspectMask		= VEnumCast( subRes.aspectMask );
+		barrier.subresourceRange.baseMipLevel	= subRes.baseMipLevel.Get();	// TODO: validate?
+		barrier.subresourceRange.levelCount		= subRes.levelCount;
+		barrier.subresourceRange.baseArrayLayer	= subRes.baseArrayLayer.Get();
+		barrier.subresourceRange.layerCount		= subRes.layerCount;
+		barrier.sType				= VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.image				= img->Handle();
+		barrier.oldLayout			= EResourceState_ToImageLayout( srcState, barrier.subresourceRange.aspectMask );
+		barrier.newLayout			= EResourceState_ToImageLayout( dstState, barrier.subresourceRange.aspectMask );
+		barrier.srcQueueFamilyIndex	= VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex	= VK_QUEUE_FAMILY_IGNORED;
+		barrier.srcAccessMask		= EResourceState_ToAccess( srcState );
+		barrier.dstAccessMask		= EResourceState_ToAccess( dstState );
+		auto	src_stage			= EResourceState_ToPipelineStages( srcState );
+		auto	dst_stage			= EResourceState_ToPipelineStages( dstState );
+
+		_barrierMngr.AddImageBarrier( src_stage, dst_stage, Zero, barrier );
+	}
+	
+/*
+=================================================
+	BufferBarrier
+=================================================
+*/
+	void  VRenderGraph::GraphicsContext::BufferBarrier (GfxResourceID buffer, EResourceState srcState, EResourceState dstState)
+	{
+		CHECK_ERR( not _enableBarriers, void());
+
+		auto*	buf = ToLocalBuffer( buffer );
+		CHECK_ERR( buf, void());
+		
+		VkBufferMemoryBarrier	barrier = {};
+		barrier.sType				= VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.buffer				= buf->Handle();
+		barrier.offset				= 0;
+		barrier.size				= VK_WHOLE_SIZE;
+		barrier.srcQueueFamilyIndex	= VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex	= VK_QUEUE_FAMILY_IGNORED;
+		barrier.srcAccessMask		= EResourceState_ToAccess( srcState );
+		barrier.dstAccessMask		= EResourceState_ToAccess( dstState );
+		auto	src_stage			= EResourceState_ToPipelineStages( srcState );
+		auto	dst_stage			= EResourceState_ToPipelineStages( dstState );
+		
+		_barrierMngr.AddBufferBarrier( src_stage, dst_stage, barrier );
+	}
+	
+/*
+=================================================
+	BufferBarrier
+=================================================
+*/
+	void  VRenderGraph::GraphicsContext::BufferBarrier (GfxResourceID buffer, EResourceState srcState, EResourceState dstState, BytesU offset, BytesU size)
+	{
+		CHECK_ERR( not _enableBarriers, void());
+
+		auto*	buf = ToLocalBuffer( buffer );
+		CHECK_ERR( buf, void());
+		
+		VkBufferMemoryBarrier	barrier = {};
+		barrier.sType				= VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.buffer				= buf->Handle();
+		barrier.offset				= VkDeviceSize(offset);	// TODO: validate?
+		barrier.size				= VkDeviceSize(size);
+		barrier.srcQueueFamilyIndex	= VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex	= VK_QUEUE_FAMILY_IGNORED;
+		barrier.srcAccessMask		= EResourceState_ToAccess( srcState );
+		barrier.dstAccessMask		= EResourceState_ToAccess( dstState );
+		auto	src_stage			= EResourceState_ToPipelineStages( srcState );
+		auto	dst_stage			= EResourceState_ToPipelineStages( dstState );
+		
+		_barrierMngr.AddBufferBarrier( src_stage, dst_stage, barrier );
+	}
+		
+/*
+=================================================
+	SetInitialState
+=================================================
+*/
+	void  VRenderGraph::GraphicsContext::SetInitialState (GfxResourceID id, EResourceState state)
+	{
+		BEGIN_ENUM_CHECKS();
+		switch ( id.ResourceType() )
+		{
+			case GfxResourceID::EType::Buffer :
+			{
+				if ( auto* buf = ToLocalBuffer( id ))
+					buf->SetInitialState( state );
+				break;
+			}
+			case GfxResourceID::EType::Image :
+			{
+				if ( auto* img = ToLocalImage( id ))
+					img->SetInitialState( state );
+				break;
+			}
+			case GfxResourceID::EType::Unknown :
+			case GfxResourceID::EType::RayTracingGeometry :
+			case GfxResourceID::EType::RayTracingScene :
+			case GfxResourceID::EType::VirtualBuffer :
+			case GfxResourceID::EType::VirtualImage :
+			case GfxResourceID::EType::_Count :
+			default :
+				ASSERT(!"current resource type is not supported");
+				break;
+		}
+		END_ENUM_CHECKS();
+	}
+	
+/*
+=================================================
+	SetInitialState
+=================================================
+*/
+	void  VRenderGraph::GraphicsContext::SetInitialState (GfxResourceID id, EResourceState state, EImageLayout layout)
+	{
+		BEGIN_ENUM_CHECKS();
+		switch ( id.ResourceType() )
+		{
+			case GfxResourceID::EType::Image :
+			{
+				if ( auto* img = ToLocalImage( id ))
+					img->SetInitialState( state, layout );
+				break;
+			}
+			case GfxResourceID::EType::Unknown :
+			case GfxResourceID::EType::Buffer :
+			case GfxResourceID::EType::RayTracingGeometry :
+			case GfxResourceID::EType::RayTracingScene :
+			case GfxResourceID::EType::VirtualBuffer :
+			case GfxResourceID::EType::VirtualImage :
+			case GfxResourceID::EType::_Count :
+			default :
+				ASSERT(!"current resource type is not supported");
+				break;
+		}
+		END_ENUM_CHECKS();
+	}
+
+/*
+=================================================
+	GlobalBarrier
+=================================================
+*/
+	void  VRenderGraph::GraphicsContext::GlobalBarrier ()
+	{
+		CHECK_ERR( not _enableBarriers, void());
+
+		VkMemoryBarrier		barrier = {};
+		barrier.sType			= VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+		barrier.srcAccessMask	= _allSrcStages & VWriteAccessMask;
+		barrier.dstAccessMask	= _allDstStages;
+
+		vkCmdPipelineBarrier( _cmdbuf, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 1, &barrier, 0, null, 0, null );
+	}
+
 /*
 =================================================
 	GetOutput
@@ -628,6 +999,7 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::SetOutput (GfxResourceID id, GfxResourceID res)
 	{
+		Unused( id, res );
 		// TODO
 	}
 	
@@ -725,10 +1097,10 @@ namespace {
 	UpdateBuffer
 =================================================
 */
-	void  VRenderGraph::GraphicsContext::UpdateBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint> data)
+	void  VRenderGraph::GraphicsContext::UpdateBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint8_t> data)
 	{
 		BytesU	size = ArraySizeOf(data);
-		auto*	buf = ToLocalBuffer( buffer );
+		auto*	buf  = ToLocalBuffer( buffer );
 		CHECK_ERR( buf, void());
 
 		ASSERT( offset < buf->Size() );
@@ -751,7 +1123,7 @@ namespace {
 	UpdateHostBuffer
 =================================================
 */
-	bool  VRenderGraph::GraphicsContext::UpdateHostBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint> data)
+	bool  VRenderGraph::GraphicsContext::UpdateHostBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint8_t> data)
 	{
 		BytesU	size	= ArraySizeOf(data);
 		void *	mapped	= null;
@@ -799,15 +1171,49 @@ namespace {
 	ReadBuffer
 =================================================
 */
-	Promise<BufferView>  VRenderGraph::GraphicsContext::ReadBuffer (GfxResourceID buffer, BytesU offset, BytesU size)
+	bool  VRenderGraph::GraphicsContext::ReadBuffer (GfxResourceID srcBuffer, const BytesU offset, BytesU size, Function<void (const BufferView &)>&& fn)
 	{
-		return	Threading::MakePromise(
-					[] ()
-					{
-						return BufferView{};
-					},
-					Tuple{CmdBatchDep{_cmdBatchId}}
-				);
+		auto*	buf = ToLocalBuffer( srcBuffer );
+		CHECK_ERR( buf and fn and  offset < buf->Size() );
+
+		size = Min( size, buf->Size() - offset );
+		
+		const uint		max_parts	= BufferView::Count;
+		const BytesU	min_part	= 4_Kb;
+		const BytesU	min_size	= Min( (size + max_parts-1) / max_parts, Min( size, min_part ));
+		GfxResourceID	staging_buf;
+		BytesU			readn;
+		BufferView		view;
+
+		FixedArray<BufferCopy, max_parts>	copy;
+
+		// copy to staging buffer
+		for (; readn < size;)
+		{
+			BufferView::Data	range;
+			GfxResourceID		dst_buf;
+			BytesU				dst_offset;
+
+			CHECK_ERR( _cmdBatch->GetReadable( size - readn, 1_b, 16_b, min_size, OUT dst_buf, OUT dst_offset, OUT range ));
+			
+			if ( copy.size() and (dst_buf != staging_buf or copy.size() == copy.capacity()) )
+			{
+				CopyBuffer( srcBuffer, staging_buf, copy );
+				copy.clear();
+			}
+
+			copy.push_back({ offset + readn, dst_offset, range.size });
+			CHECK_ERR( view.try_push_back( range.ptr, range.size ));
+
+			staging_buf  = dst_buf;
+			readn		+= range.size;
+		}
+		
+		if ( copy.size() )
+			CopyBuffer( srcBuffer, staging_buf, copy );
+		
+		_cmdBatch->AddDataLoadedEvent( VCommandBatch::OnBufferDataLoadedEvent{ std::move(fn), std::move(view) });
+		return true;
 	}
 	
 /*
@@ -815,15 +1221,299 @@ namespace {
 	ReadImage
 =================================================
 */
-	Promise<ImageView>  VRenderGraph::GraphicsContext::ReadImage (GfxResourceID image)
+	bool  VRenderGraph::GraphicsContext::ReadImage (GfxResourceID srcImage, const uint3 &imageOffset, const uint3 &imageSize, MipmapLevel mipLevel,
+													ImageLayer arrayLayer, EImageAspect aspectMask, Function<void (const ImageView &)>&& fn)
 	{
-		return	Threading::MakePromise(
-					[] ()
-					{
-						return ImageView{};
-					},
-					Tuple{CmdBatchDep{_cmdBatchId}}
-				);
+		auto*	img = ToLocalImage( srcImage );
+		CHECK_ERR( img );
+		
+		ASSERT(All( imageOffset < img->Dimension() ));
+		ASSERT(All( imageSize <= img->Dimension() ));
+		ASSERT( mipLevel < img->Description().maxLevel );
+		ASSERT( arrayLayer < img->Description().arrayLayers );
+
+		const uint		max_parts		= BufferView::Count;
+		const BytesU	stagingbuf_size	= _resMngr.GetHostReadBufferSize();
+		const auto&		fmt_info		= EPixelFormat_GetInfo( img->Description().format );
+		const auto&		block_dim		= fmt_info.blockSize;
+		const uint		block_size		= aspectMask != EImageAspect::Stencil ? fmt_info.bitsPerBlock : fmt_info.bitsPerBlock2;
+		const uint3		image_size		= Max( imageSize, uint3(1) );
+		const BytesU	row_pitch		= BytesU(image_size.x * block_size + block_dim.x-1) / (block_dim.x * 8);
+		const BytesU	slice_pitch		= (image_size.y * row_pitch + block_dim.y-1) / block_dim.y;
+		const BytesU	total_size		= slice_pitch * image_size.z;
+		const BytesU	min_size		= (total_size + max_parts-1) / max_parts;
+		const uint		row_length		= image_size.x;
+		const uint		img_height		= image_size.y;
+		GfxResourceID	staging_buf;
+		BytesU			readn;
+		BufferView		view;
+
+		FixedArray<BufferImageCopy, max_parts>	copy;
+		
+		// copy to staging buffer slice by slice
+		if ( total_size < stagingbuf_size )
+		{
+			uint	z_offset = 0;
+			for (BytesU written; written < total_size;)
+			{
+				BufferView::Data	range;
+				GfxResourceID		dst_buf;
+				BytesU				dst_offset;
+
+				CHECK_ERR( _cmdBatch->GetReadable( total_size - readn, 1_b, slice_pitch, min_size, OUT dst_buf, OUT dst_offset, OUT range ));
+				
+				if ( copy.size() and (dst_buf != staging_buf or copy.size() == copy.capacity()) )
+				{
+					CopyImageToBuffer( srcImage, staging_buf, copy );
+					copy.clear();
+				}
+				
+				CHECK_ERR( view.try_push_back( range.ptr, range.size ));
+				
+				const uint	z_size = uint(range.size / slice_pitch);
+
+				auto&	reg = copy.emplace_back();
+				reg.bufferImageHeight	= img_height;
+				reg.bufferOffset		= dst_offset;
+				reg.bufferRowLength		= row_length;
+				reg.imageExtent			= {image_size.x,  image_size.y,  z_size};
+				reg.imageOffset			= {imageOffset.x, imageOffset.y, imageOffset.z + z_offset};
+				reg.imageSubresource.aspectMask		= aspectMask;
+				reg.imageSubresource.baseArrayLayer	= arrayLayer;
+				reg.imageSubresource.layerCount		= 1;
+				reg.imageSubresource.mipLevel		= mipLevel;
+
+				staging_buf  = dst_buf;
+				written		+= range.size;
+				z_offset	+= z_size;
+			}
+			ASSERT( z_offset == image_size.z );
+		}
+		else
+		
+		// copy to staging buffer row by row
+		for (uint slice = 0; slice < image_size.z; ++slice)
+		{
+			uint	y_offset = 0;
+
+			for (BytesU written; written < slice_pitch;)
+			{
+				BufferView::Data	range;
+				GfxResourceID		dst_buf;
+				BytesU				dst_offset;
+
+				CHECK_ERR( _cmdBatch->GetReadable( total_size - readn, 1_b, row_pitch, min_size, OUT dst_buf, OUT dst_offset, OUT range ));
+				
+				if ( copy.size() and (dst_buf != staging_buf or copy.size() == copy.capacity()) )
+				{
+					CopyImageToBuffer( srcImage, staging_buf, copy );
+					copy.clear();
+				}
+				
+				CHECK_ERR( view.try_push_back( range.ptr, range.size ));
+
+				const uint	y_size = uint((range.size * block_dim.y) / row_pitch);
+				
+				auto&	reg = copy.emplace_back();
+				reg.bufferImageHeight	= img_height;
+				reg.bufferOffset		= dst_offset;
+				reg.bufferRowLength		= row_length;
+				reg.imageExtent			= {image_size.x,  y_size,                  1u};
+				reg.imageOffset			= {imageOffset.x, imageOffset.y + y_offset, imageOffset.z};
+				reg.imageSubresource.aspectMask		= aspectMask;
+				reg.imageSubresource.baseArrayLayer	= arrayLayer;
+				reg.imageSubresource.layerCount		= 1;
+				reg.imageSubresource.mipLevel		= mipLevel;
+
+				staging_buf  = dst_buf;
+				written		+= range.size;
+				y_offset	+= y_size;
+			}
+			ASSERT( y_offset == image_size.y );
+		}
+		
+		if ( copy.size() )
+			CopyImageToBuffer( srcImage, staging_buf, copy );
+
+		_cmdBatch->AddDataLoadedEvent( VCommandBatch::OnImageDataLoadedEvent{
+			std::move(fn),
+			ImageView{ std::move(view), image_size, row_pitch, slice_pitch, img->Description().format, aspectMask }});
+
+		return true;
+	}
+	
+/*
+=================================================
+	UploadBuffer
+=================================================
+*/
+	bool  VRenderGraph::GraphicsContext::UploadBuffer (GfxResourceID dstBuffer, const BytesU offset, BytesU size, OUT BufferView &outRanges)
+	{
+		outRanges.clear();
+		
+		auto*	buf = ToLocalBuffer( dstBuffer );
+		CHECK_ERR( buf );
+		CHECK_ERR( offset < buf->Size() );
+
+		size = Min( size, buf->Size() - offset );
+		
+		const uint		max_parts	= BufferView::Count;
+		const BytesU	min_part	= 4_Kb;
+		const BytesU	min_size	= Min( (size + max_parts-1) / max_parts, Min( size, min_part ));
+		GfxResourceID	staging_buf;
+		BytesU			writen;
+
+		FixedArray<BufferCopy, max_parts>	copy;
+
+		// copy from staging buffer to dest buffer
+		for (; writen < size;)
+		{
+			BufferView::Data	range;
+			GfxResourceID		src_buf;
+			BytesU				src_offset;
+
+			CHECK_ERR( _cmdBatch->GetWritable( size - writen, 1_b, 16_b, min_size, OUT src_buf, OUT src_offset, OUT range ));
+
+			if ( copy.size() and src_buf != staging_buf )
+			{
+				CopyBuffer( staging_buf, dstBuffer, copy );
+				copy.clear();
+			}
+
+			copy.push_back({ src_offset, offset + writen, range.size });
+			CHECK_ERR( outRanges.try_push_back( range.ptr, range.size ));
+
+			staging_buf  = src_buf;
+			writen		+= range.size;
+		}
+		
+		if ( copy.size() )
+			CopyBuffer( staging_buf, dstBuffer, copy );
+
+		return true;
+	}
+	
+/*
+=================================================
+	UploadImage
+=================================================
+*/
+	bool  VRenderGraph::GraphicsContext::UploadImage (GfxResourceID dstImage, const uint3 &imageOffset, const uint3 &imageSize, MipmapLevel mipLevel,
+													  ImageLayer arrayLayer, EImageAspect aspectMask, OUT ImageView &outRanges)
+	{
+		auto*	img = ToLocalImage( dstImage );
+		CHECK_ERR( img );
+		
+		ASSERT(All( imageOffset < img->Dimension() ));
+		ASSERT(All( imageSize <= img->Dimension() ));
+		ASSERT( mipLevel < img->Description().maxLevel );
+		ASSERT( arrayLayer < img->Description().arrayLayers );
+
+		const uint		max_parts		= BufferView::Count;
+		const BytesU	stagingbuf_size	= _resMngr.GetHostReadBufferSize();
+		const auto&		fmt_info		= EPixelFormat_GetInfo( img->Description().format );
+		const auto&		block_dim		= fmt_info.blockSize;
+		const uint		block_size		= aspectMask != EImageAspect::Stencil ? fmt_info.bitsPerBlock : fmt_info.bitsPerBlock2;
+		const uint3		image_size		= Max( imageSize, uint3(1) );
+		const BytesU	row_pitch		= BytesU(image_size.x * block_size + block_dim.x-1) / (block_dim.x * 8);
+		const BytesU	slice_pitch		= (image_size.y * row_pitch + block_dim.y-1) / block_dim.y;
+		const BytesU	total_size		= slice_pitch * image_size.z;
+		const BytesU	min_size		= (total_size + max_parts-1) / max_parts;
+		const uint		row_length		= image_size.x;
+		const uint		img_height		= image_size.y;
+		GfxResourceID	staging_buf;
+		BytesU			readn;
+		BufferView		view;
+
+		FixedArray<BufferImageCopy, max_parts>	copy;
+		
+		// copy to staging buffer slice by slice
+		if ( total_size < stagingbuf_size )
+		{
+			uint	z_offset = 0;
+			for (BytesU written; written < total_size;)
+			{
+				BufferView::Data	range;
+				GfxResourceID		dst_buf;
+				BytesU				dst_offset;
+
+				CHECK_ERR( _cmdBatch->GetWritable( total_size - readn, 1_b, slice_pitch, min_size, OUT dst_buf, OUT dst_offset, OUT range ));
+				
+				if ( copy.size() and (dst_buf != staging_buf or copy.size() == copy.capacity()) )
+				{
+					CopyBufferToImage( staging_buf, dstImage, copy );
+					copy.clear();
+				}
+				
+				CHECK_ERR( view.try_push_back( range.ptr, range.size ));
+				
+				const uint	z_size = uint(range.size / slice_pitch);
+
+				auto&	reg = copy.emplace_back();
+				reg.bufferImageHeight	= img_height;
+				reg.bufferOffset		= dst_offset;
+				reg.bufferRowLength		= row_length;
+				reg.imageExtent			= {image_size.x,  image_size.y,  z_size};
+				reg.imageOffset			= {imageOffset.x, imageOffset.y, imageOffset.z + z_offset};
+				reg.imageSubresource.aspectMask		= aspectMask;
+				reg.imageSubresource.baseArrayLayer	= arrayLayer;
+				reg.imageSubresource.layerCount		= 1;
+				reg.imageSubresource.mipLevel		= mipLevel;
+
+				staging_buf  = dst_buf;
+				written		+= range.size;
+				z_offset	+= z_size;
+			}
+			ASSERT( z_offset == image_size.z );
+		}
+		else
+		
+		// copy to staging buffer row by row
+		for (uint slice = 0; slice < image_size.z; ++slice)
+		{
+			uint	y_offset = 0;
+
+			for (BytesU written; written < slice_pitch;)
+			{
+				BufferView::Data	range;
+				GfxResourceID		dst_buf;
+				BytesU				dst_offset;
+
+				CHECK_ERR( _cmdBatch->GetWritable( total_size - readn, 1_b, row_pitch, min_size, OUT dst_buf, OUT dst_offset, OUT range ));
+				
+				if ( copy.size() and (dst_buf != staging_buf or copy.size() == copy.capacity()) )
+				{
+					CopyBufferToImage( staging_buf, dstImage, copy );
+					copy.clear();
+				}
+				
+				CHECK_ERR( view.try_push_back( range.ptr, range.size ));
+
+				const uint	y_size = uint((range.size * block_dim.y) / row_pitch);
+				
+				auto&	reg = copy.emplace_back();
+				reg.bufferImageHeight	= img_height;
+				reg.bufferOffset		= dst_offset;
+				reg.bufferRowLength		= row_length;
+				reg.imageExtent			= {image_size.x,  y_size,                   1u};
+				reg.imageOffset			= {imageOffset.x, imageOffset.y + y_offset, imageOffset.z};
+				reg.imageSubresource.aspectMask		= aspectMask;
+				reg.imageSubresource.baseArrayLayer	= arrayLayer;
+				reg.imageSubresource.layerCount		= 1;
+				reg.imageSubresource.mipLevel		= mipLevel;
+
+				staging_buf  = dst_buf;
+				written		+= range.size;
+				y_offset	+= y_size;
+			}
+			ASSERT( y_offset == image_size.y );
+		}
+		
+		if ( copy.size() )
+			CopyBufferToImage( staging_buf, dstImage, copy );
+
+		outRanges = ImageView{ std::move(view), image_size, row_pitch, slice_pitch, img->Description().format, aspectMask };
+		return true;
 	}
 
 /*
@@ -904,10 +1594,10 @@ namespace {
 		if ( _enableBarriers )
 		{
 			_AddImage( src_img, EResourceState::TransferSrc, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-						StructView<VkImageSubresourceLayers>{ vk_ranges, ranges.size(), offsetof( VkImageCopy, srcSubresource ) });
+						StructView<VkImageSubresourceLayers>{ vk_ranges, ranges.size(), offsetof( VkImageCopy, srcSubresource )});
 
 			_AddImage( dst_img, EResourceState::TransferDst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-						StructView<VkImageSubresourceLayers>{ vk_ranges, ranges.size(), offsetof( VkImageCopy, dstSubresource ) });
+						StructView<VkImageSubresourceLayers>{ vk_ranges, ranges.size(), offsetof( VkImageCopy, dstSubresource )});
 		}
 		_CommitBarriers();
 
@@ -982,6 +1672,7 @@ namespace {
 	void  VRenderGraph::GraphicsContext::Present (GfxResourceID image, MipmapLevel level, ImageLayer layer)
 	{
 		// TODO
+		Unused( image, level, layer );
 	}
 	
 /*
@@ -1011,6 +1702,7 @@ namespace {
 	void  VRenderGraph::GraphicsContext::BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets)
 	{
 		// TODO
+		Unused( index, ds, dynamicOffsets );
 	}
 	
 /*

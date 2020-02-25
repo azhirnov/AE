@@ -6,13 +6,12 @@
 using BufferCopy = ITransferContext::BufferCopy;
 
 
-bool VRGTest::Test_CopyBuffer ()
+bool VRGTest::Test_CopyBuffer1 ()
 {
 	constexpr BytesU		buf_size = 128_b;
 
 	UniqueID<GfxResourceID>	buf_1;
 	UniqueID<GfxResourceID>	buf_2;
-	UniqueID<GfxResourceID>	buf_3;
 
 	{
 		BufferDesc	desc;
@@ -30,24 +29,31 @@ bool VRGTest::Test_CopyBuffer ()
 
 		buf_2 = _resourceMngr->CreateBuffer( desc, "buf_2" );
 		CHECK_ERR( buf_2 );
-	}{
-		BufferDesc	desc;
-		desc.size		= buf_size;
-		desc.usage		= EBufferUsage::TransferDst;
-		desc.memType	= EMemoryType::HostCocherent;
-
-		buf_3 = _resourceMngr->CreateBuffer( desc, "buf_3" );
-		CHECK_ERR( buf_3 );
 	}
 	
-	uint	buffer_data[32] = {};
+	uint8_t		buffer_data [uint(buf_size)] = {};
 	STATIC_ASSERT( buf_size == sizeof(buffer_data) );
 
 	for (size_t i = 0; i < CountOf(buffer_data); ++i) {
-		buffer_data[i] = uint(i);
+		buffer_data[i] = uint8_t(i);
 	}
 	
-	void*	mapped_buf_3 = null;
+	bool	cb_was_called	= false;
+	bool	data_is_correct	= false;
+
+	auto	OnLoaded = [&] (const BufferView &inData)
+	{
+		cb_was_called	= true;
+		data_is_correct	= (inData.DataSize() == buf_size);
+
+		for (size_t i = 0; data_is_correct and (i < CountOf(buffer_data)); ++i)
+		{
+			bool	is_equal = (buffer_data[i] == Cast<uint8_t>(inData.Parts().front().ptr)[i]);
+			ASSERT( is_equal );
+
+			data_is_correct &= is_equal;
+		}
+	};
 
 	_renderGraph->Add(
 		EQueueType::Graphics, {}, {},
@@ -55,27 +61,17 @@ bool VRGTest::Test_CopyBuffer ()
 		{
 			CHECK( ctx.UpdateHostBuffer( buf_1, 0_b, buffer_data ));
 
-			ctx.CopyBuffer( buf_1, buf_2, { BufferCopy{ 0_b, 0_b, buf_size } });
-		});
-	
-	_renderGraph->Add(
-		EQueueType::Graphics, {}, {},
-		[&] (IGraphicsContext &ctx, ArrayView<GfxResourceID>, ArrayView<GfxResourceID>)
-		{
-			ctx.CopyBuffer( buf_2, buf_3, { BufferCopy{ 0_b, 0_b, buf_size } });
-
-			BytesU	size = buf_size;
-			CHECK( ctx.MapHostBuffer( buf_3, 0_b, INOUT size, OUT mapped_buf_3 ));	// TODO
+			ctx.CopyBuffer( buf_1, buf_2, { BufferCopy{ 0_b, 0_b, buf_size }});
+			ctx.ReadBuffer( buf_2, 0_b, buf_size, std::move(OnLoaded) );
 		});
 
 	CmdBatchID	batch = _renderGraph->Submit();
 	
 	CHECK_ERR( _renderGraph->Wait({ batch }));
-	CHECK_ERR( mapped_buf_3 );
+	CHECK_ERR( cb_was_called );
+	CHECK_ERR( data_is_correct );
 
-	CHECK_ERR( std::memcmp( buffer_data, mapped_buf_3, sizeof(buffer_data) ) == 0 );
-
-	DeleteResources( buf_1, buf_2, buf_3 );
+	DeleteResources( buf_1, buf_2 );
 	
 	AE_LOGI( TEST_NAME << " - passed" );
 	return true;

@@ -2,6 +2,8 @@
 
 namespace AE::Graphics
 {
+namespace
+{
 
 	//
 	// Vulkan Local Buffer
@@ -11,48 +13,50 @@ namespace AE::Graphics
 	{
 	// types
 	private:
-		//using BufferRange = ResourceDataRange< VkDeviceSize >;
-		
-		struct BufferAccess
+		struct PendingAccess
 		{
-		// variables
-			VkPipelineStageFlagBits	stages		= VkPipelineStageFlagBits(0);
-			VkAccessFlagBits		access		= VkAccessFlagBits(0);
-			VkAccessFlagBits		writeMask	= VkAccessFlagBits(0);
+			VkPipelineStageFlagBits	stages		= Zero;
+			VkAccessFlagBits		access		= Zero;
 			ExeOrderIndex			index		= ExeOrderIndex::Initial;
 			bool					isReadable	: 1;
 			bool					isWritable	: 1;
 
-		// methods
-			BufferAccess () : isReadable{false}, isWritable{false} {}
+			PendingAccess () : isReadable{false}, isWritable{false} {}
+		};
 
-			ND_ bool IsEnabled () const	{ return stages | access; }
+		struct CurrentAccess
+		{
+			VkPipelineStageFlagBits	writeStages		= Zero;
+			VkAccessFlagBits		writeAccess		= Zero;
+			VkPipelineStageFlagBits	readStages		= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			VkAccessFlagBits		readAccess		= Zero;
+			ExeOrderIndex			index			= ExeOrderIndex::Initial;
+			VkAccessFlagBits		unavailable		= Zero;		// access flags that must be invalidated before reading
 		};
 
 
 	// variables
 	private:
 		Ptr<VBuffer const>		_bufferData;	// readonly access is thread safe
+		mutable PendingAccess	_pendingAccess;
+		mutable CurrentAccess	_currentState;
 		mutable bool			_isMutable	= true;
-		mutable BufferAccess	_pendingAccesses;
-		mutable BufferAccess	_accessForWrite;
-		mutable BufferAccess	_accessForRead;
 
 
 	// methods
 	public:
 		VLocalBuffer () {}
 
-		bool Create (const VBuffer *buf);
-		void Destroy (VBarrierManager &);
+		bool  Create (const VBuffer *buf);
+		void  Destroy (VBarrierManager &);
 		
-		void AddPendingState (EResourceState state, ExeOrderIndex order) const;
-		void CommitBarrier (VBarrierManager &) const;
+		void  AddPendingState (EResourceState state, ExeOrderIndex order) const;
+		void  CommitBarrier (VBarrierManager &) const;
+		void  SetInitialState (EResourceState state) const;
 		
 		ND_ bool				IsMutable ()		const	{ return _isMutable; }
 		ND_ VkBuffer			Handle ()			const	{ return _bufferData->Handle(); }
 		ND_ VBuffer const*		ToGlobal ()			const	{ return _bufferData.get(); }
-		//ND_ BufferDesc const&	Description ()		const	{ return _bufferData->Description(); }
 		ND_ BytesU				Size ()				const	{ return _bufferData->Description().size; }
 		ND_ EBufferUsage		Usage ()			const	{ return _bufferData->Description().usage; }
 		ND_ bool				IsHostVisible ()	const	{ return EnumAny( _bufferData->Description().memType, EMemoryType::HostCocherent | EMemoryType::HostCached ); }
@@ -70,15 +74,37 @@ namespace AE::Graphics
 		CHECK_ERR( _bufferData == null );
 		CHECK_ERR( bufferData );
 
-		_bufferData			= bufferData;
-		_isMutable			= true; //not _bufferData->IsReadOnly();
-		_accessForWrite		= Default;
-		_accessForRead		= Default;
-		_pendingAccesses	= Default;
-
-		_accessForRead.stages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		_bufferData		= bufferData;
+		_isMutable		= true; //not _bufferData->IsReadOnly();
+		_currentState	= Default;
+		_pendingAccess	= Default;
 
 		return true;
+	}
+	
+/*
+=================================================
+	Destroy
+=================================================
+*/
+	void  VLocalBuffer::Destroy (VBarrierManager &barrierMngr)
+	{
+		ASSERT( _isMutable );
+
+		if ( _currentState.unavailable == Zero )
+			return;
+		
+		VkBufferMemoryBarrier	barrier = {};
+		barrier.sType				= VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.buffer				= Handle();
+		barrier.offset				= 0;
+		barrier.size				= VK_WHOLE_SIZE;
+		barrier.srcQueueFamilyIndex	= VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex	= VK_QUEUE_FAMILY_IGNORED;
+		barrier.srcAccessMask		= _currentState.writeAccess;
+		barrier.dstAccessMask		= 0;
+
+		barrierMngr.AddBufferBarrier( _currentState.readStages | _currentState.writeStages, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, barrier );
 	}
 	
 /*
@@ -90,11 +116,11 @@ namespace AE::Graphics
 	{
 		ASSERT( _isMutable );
 		
-		_pendingAccesses.stages		|= EResourceState_ToPipelineStages( state );
-		_pendingAccesses.access		|= EResourceState_ToAccess( state );
-		_pendingAccesses.isReadable	|= EResourceState_IsReadable( state );
-		_pendingAccesses.isWritable	|= EResourceState_IsWritable( state );
-		_pendingAccesses.index		 = Max( _pendingAccesses.index, order );
+		_pendingAccess.stages		|= EResourceState_ToPipelineStages( state );
+		_pendingAccess.access		|= EResourceState_ToAccess( state );
+		_pendingAccess.isReadable	|= EResourceState_IsReadable( state );
+		_pendingAccess.isWritable	|= EResourceState_IsWritable( state );
+		_pendingAccess.index		 = Max( _pendingAccess.index, order );
 	}
 	
 /*
@@ -105,12 +131,7 @@ namespace AE::Graphics
 	void  VLocalBuffer::CommitBarrier (VBarrierManager &barrierMngr) const
 	{
 		ASSERT( _isMutable );
-		
-		if ( _pendingAccesses.isWritable or _pendingAccesses.isReadable )
-		{
-			ASSERT( _accessForWrite.index < _pendingAccesses.index );
-			ASSERT( _accessForRead.index < _pendingAccesses.index );
-		}
+		ASSERT( _currentState.index < _pendingAccess.index );
 
 		VkBufferMemoryBarrier	barrier = {};
 		barrier.sType				= VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -119,51 +140,80 @@ namespace AE::Graphics
 		barrier.size				= VK_WHOLE_SIZE;
 		barrier.srcQueueFamilyIndex	= VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex	= VK_QUEUE_FAMILY_IGNORED;
-
+		
 		// write after write or write after read
-		if ( _pendingAccesses.isWritable )
+		if ( _pendingAccess.isWritable )
 		{
-			barrier.srcAccessMask	= _accessForWrite.access | _accessForRead.access;
-			barrier.dstAccessMask	= _pendingAccesses.access;
+			barrier.srcAccessMask	= _currentState.writeAccess;	// read access has no effect
+			barrier.dstAccessMask	= _pendingAccess.access;
+			auto	stages			= _currentState.writeStages;
 
-			barrierMngr.AddBufferBarrier( _accessForWrite.stages | _accessForRead.stages, _pendingAccesses.stages, barrier );
-			_accessForWrite = _pendingAccesses;
-			_accessForRead	= Default;
+			// don't sync with write stages if has read stages because they happens after writing (write -> read -> current)
+			if ( _currentState.readStages )
+			{
+				stages					= _currentState.readStages;
+				barrier.srcAccessMask	= Zero;
+			}
+
+			barrierMngr.AddBufferBarrier( stages, _pendingAccess.stages, barrier );
+
+			_currentState.writeStages	= _pendingAccess.stages;
+			_currentState.writeAccess	= _pendingAccess.access;
+			_currentState.readStages	= Zero;
+			_currentState.readAccess	= Zero;
+			_currentState.unavailable	= VReadAccessMask;	// all subsequent reads must invalidate cache before reading
+			_currentState.index			= _pendingAccess.index;
 		}
 		else
 		// read after write
-		if ( _pendingAccesses.isReadable & _accessForWrite.IsEnabled() )
+		if ( EnumAny( _currentState.unavailable, _pendingAccess.access ))
 		{
-			barrier.srcAccessMask	= _accessForWrite.access;
-			barrier.dstAccessMask	= _pendingAccesses.access;
+			barrier.srcAccessMask	= _currentState.writeAccess;
+			barrier.dstAccessMask	= _pendingAccess.access;
 
-			barrierMngr.AddBufferBarrier( _accessForWrite.stages, _pendingAccesses.stages, barrier );
-			_accessForRead	= _pendingAccesses;
-			_accessForWrite = Default;
+			barrierMngr.AddBufferBarrier( _currentState.writeStages, _pendingAccess.stages, barrier );
+
+			_currentState.unavailable	&= ~_pendingAccess.access;
+			_currentState.readStages	|= _pendingAccess.stages;
+			_currentState.readAccess	|= _pendingAccess.access;
+			_currentState.index			 = _pendingAccess.index;
 		}
-		else
 		// parallel reading
-		if ( _pendingAccesses.isReadable )
+		else
 		{
-			_accessForRead.stages	|= _pendingAccesses.stages;
-			_accessForRead.access	|= _pendingAccesses.access;
-			_accessForRead.index	 = Max( _accessForRead.index, _pendingAccesses.index );
+			_currentState.readStages	|= _pendingAccess.stages;
+			_currentState.readAccess	|= _pendingAccess.access;
+			_currentState.index			 = _pendingAccess.index;
 		}
 
-		_pendingAccesses = Default;
+		_pendingAccess = Default;
 	}
-	
+
 /*
 =================================================
-	Destroy
+	SetInitialState
 =================================================
 */
-	void  VLocalBuffer::Destroy (VBarrierManager &barrierMngr)
+	void  VLocalBuffer::SetInitialState (EResourceState state) const
 	{
-		ASSERT( _isMutable );
-		
-		// TODO
+		_currentState = Default;
+
+		const auto	stages	= EResourceState_ToPipelineStages( state );
+		const auto	access	= EResourceState_ToAccess( state );
+
+		if ( EResourceState_IsWritable( state ))
+		{
+			_currentState.writeStages	= stages;
+			_currentState.writeAccess	= access;
+			_currentState.unavailable	= VReadAccessMask;
+		}
+		else
+		{
+			_currentState.readStages	= stages;
+			_currentState.readAccess	= access;
+		}
 	}
 
 
+}	// namespace
 }	// AE::Graphics

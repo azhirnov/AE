@@ -29,10 +29,6 @@ namespace AE::Graphics
 		class RenderContext;
 
 		struct BaseCmd;
-		struct RenderCmd;
-		struct GraphicsCmd;
-		struct ComputeCmd;
-		struct TransferCmd;
 
 		struct CtxPerQueue
 		{
@@ -48,6 +44,7 @@ namespace AE::Graphics
 		using CmdBatchPool_t		= Threading::LfIndexedPool< VCommandBatch, uint, 32, 16 >;
 
 		using TaskDepsMngr_t		= SharedPtr< VCmdBatchDepsManager >;
+		using CmdPoolMngr_t			= UniquePtr< VCommandPoolManager >;
 
 
 	// variables
@@ -55,7 +52,7 @@ namespace AE::Graphics
 		LinearAllocator<>		_allocator;
 
 		Mutex					_cmdGuard;
-		Array<BaseCmd *>		_commands;			// TODO: use LfIndexedPool + UnassignAll()
+		Array< BaseCmd *>		_commands;			// TODO: use LfIndexedPool + UnassignAll()
 		VirtualResWrite_t		_resWriteCmd;		// TODO: lock-free ?
 		VirtualResUsage_t		_resUsage;
 
@@ -67,6 +64,7 @@ namespace AE::Graphics
 		VResourceManager &		_resMngr;
 
 		TaskDepsMngr_t			_taskDepsMngr;
+		CmdPoolMngr_t			_cmdPoolMngr;
 		
 		RWDataRaceCheck			_drCheck;
 
@@ -81,29 +79,36 @@ namespace AE::Graphics
 		
 		EQueueMask  GetPresentQueues () override;
 
+		bool _AddSync (EQueueType				queue,
+					   VirtualResources_t		input,
+					   VirtualResources_t		output,
+					   RenderPassDesc const&	rpDesc,
+					   RenderPassDrawFn_t &&	draw,
+					   StringView				dbgName) override;
+		
+		bool _AddAsync (EQueueType				queue,
+						VirtualResources_t		input,
+						VirtualResources_t		output,
+						RenderPassDesc const&	rpDesc,
+						AsyncDrawFn_t &&		asyncDraw,
+						StringView				dbgName) override;
+
 		bool Add (EQueueType				queue,
 				  VirtualResources_t		input,
 				  VirtualResources_t		output,
-				  RenderPassSetupFn_t&&		setup,
-				  RenderPassDrawFn_t&&		pass,
+				  GraphicsCommandFn_t &&	pass,
 				  StringView				dbgName) override;
 
 		bool Add (EQueueType				queue,
 				  VirtualResources_t		input,
 				  VirtualResources_t		output,
-				  GraphicsCommandFn_t&&		pass,
+				  ComputeCommandFn_t &&		pass,
 				  StringView				dbgName) override;
 
 		bool Add (EQueueType				queue,
 				  VirtualResources_t		input,
 				  VirtualResources_t		output,
-				  ComputeCommandFn_t&&		pass,
-				  StringView				dbgName) override;
-
-		bool Add (EQueueType				queue,
-				  VirtualResources_t		input,
-				  VirtualResources_t		output,
-				  TransferCommandFn_t&&		pass,
+				  TransferCommandFn_t &&	pass,
 				  StringView				dbgName) override;
 		
 		CmdBatchID Submit () override;
@@ -124,12 +129,13 @@ namespace AE::Graphics
 		ND_ VLogicalRenderPass*  _CreateLogicalPass (const RenderPassDesc &desc);
 
 		bool  _CreateRenderPass (ArrayView<VLogicalRenderPass*> passes);
+		bool  _CreateFramebuffer (ArrayView<VLogicalRenderPass*> passes);
 
 		void  _ResolveDependencies ();
 		void  _SortCommands (OUT Array<BaseCmd*> &ordered);
-		void  _MergeRenderPasses ();
+		bool  _MergeRenderPasses (ArrayView<BaseCmd*> ordered);
 		bool  _AcquireNextBatch (OUT CmdBatchID &, OUT VCommandBatch* &batch);
-		bool  _ExecuteCommands (ArrayView<BaseCmd*> ordered, VCommandBatch *batch, CmdBatchID batchId);
+		bool  _ExecuteCommands (ArrayView<BaseCmd*> ordered, VCommandBatch *batch);
 		void  _RecycleCmdBatches ();
 	};
 

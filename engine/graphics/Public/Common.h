@@ -15,14 +15,17 @@
 #include "stl/CompileTime/Math.h"
 #include "stl/Stream/Stream.h"
 
-# include "threading/TaskSystem/Promise.h"
+#include "threading/Containers/RefCounter.h"
 
 namespace AE::Graphics
 {
 	using namespace AE::STL;
 	using namespace AE::Math;
 
-	using Threading::Promise;
+	using AE::Threading::EnableRC;
+	using AE::Threading::RC;
+	using AE::Threading::MakeRC;
+
 
 	struct GraphicsConfig
 	{

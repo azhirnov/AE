@@ -7,14 +7,20 @@ namespace AE::Graphics
 	// Render Context
 	//
 
-	class VRenderGraph::RenderContext final : public VulkanDeviceFn, public IRenderContext
+	class VRenderGraph::RenderContext final : public VulkanDeviceFn, public IAsyncRenderContext
 	{
+	// types
+	private:
+
+
 	// variables
 	private:
 		VkCommandBuffer				_cmdbuf			= VK_NULL_HANDLE;
-
-		GraphicsContext &		_graphicsCtx;
+		
+		VResourceManager &			_resMngr;
 		VLogicalRenderPass const&	_logicalRP;
+
+		VResourceMap				_resources;
 
 		// cached states
 		VkPipelineLayout			_curLayout		= VK_NULL_HANDLE;
@@ -23,60 +29,152 @@ namespace AE::Graphics
 		VkBuffer					_indexBuffer	= VK_NULL_HANDLE;
 		BytesU						_indexOffset;
 
+		UniqueID<BakedCommandBufferID>	_cachedCommands;
+		VBakedCommandBuffer const*		_renderCommands	= null;
+		VCommandPoolPtr					_cmdPool;
+
+		bool						_isAsync	: 1;
+		bool						_isCached	: 1;
+		bool						_hasErrors	: 1;
+
 
 	// methods
 	public:
-		RenderContext (GraphicsContext &gctx, const VLogicalRenderPass &logicalRP);
+		RenderContext (VResourceManager &resMngr, const VLogicalRenderPass &logicalRP);
+
+		void  Begin (VkCommandBuffer primaryCmdBuf);
+		void  BeginAsync (const VCommandPoolPtr &pool);
+
+		ND_ UniqueID<BakedCommandBufferID>  EndAsync ();
+
+		ND_ VResourceMap &	GetResourceMap ()	{ return _resources; }
+
+
+	// IAsyncRenderContext
+		UniqueID<BakedCommandBufferID>  CacheCommandBuffer () override;
+		bool  ReuseCommandBuffer (const BakedCommandBufferID &) override;
+		bool  BeginCommandBuffer () override;
+		
+		void  Barrier (ArrayView< Pair<GfxResourceID, EResourceState>>) override;
+
 
 	// IRenderContext
 		NativeContext_t    GetNativeContext () override;
 		RenderContextInfo  GetContextInfo () override;
 
-		void ResetStates () override;
+		void  ResetStates () override;
 
-		void BindPipeline (GraphicsPipelineID ppln) override;
-		void BindPipeline (MeshPipelineID ppln) override;
-		void BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets) override;
-		void PushConstant (BytesU offset, BytesU size, const void *values, EShaderStages stages) override;
+		void  BindPipeline (GraphicsPipelineID ppln) override;
+		void  BindPipeline (MeshPipelineID ppln) override;
+		void  BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets) override;
+		void  PushConstant (BytesU offset, BytesU size, const void *values, EShaderStages stages) override;
 		
-		void SetScissor (uint first, ArrayView<RectI> scissors) override;
-		void SetDepthBias (float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor) override;
-		void SetLineWidth (float lineWidth) override;
-		void SetDepthBounds (float minDepthBounds, float maxDepthBounds) override;
-		void SetStencilCompareMask (EStencilFace faceMask, uint compareMask) override;
-		void SetStencilWriteMask (EStencilFace faceMask, uint writeMask) override;
-		void SetStencilReference (EStencilFace faceMask, uint reference) override;
-		void SetBlendConstants (const RGBA32f &color) override;
+		void  SetScissor (uint first, ArrayView<RectI> scissors) override;
+		void  SetDepthBias (float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor) override;
+		void  SetLineWidth (float lineWidth) override;
+		void  SetDepthBounds (float minDepthBounds, float maxDepthBounds) override;
+		void  SetStencilCompareMask (EStencilFace faceMask, uint compareMask) override;
+		void  SetStencilWriteMask (EStencilFace faceMask, uint writeMask) override;
+		void  SetStencilReference (EStencilFace faceMask, uint reference) override;
+		void  SetBlendConstants (const RGBA32f &color) override;
 
-		void BindIndexBuffer (GfxResourceID buffer, BytesU offset, EIndex indexType) override;
-		void BindVertexBuffer (uint index, GfxResourceID buffer, BytesU offset) override;
-		void BindVertexBuffers (uint firstBinding, ArrayView<Pair<GfxResourceID, BytesU>> bufferAndOffset) override;
+		void  BindIndexBuffer (GfxResourceID buffer, BytesU offset, EIndex indexType) override;
+		void  BindVertexBuffer (uint index, GfxResourceID buffer, BytesU offset) override;
+		void  BindVertexBuffers (uint firstBinding, ArrayView<Pair<GfxResourceID, BytesU>> bufferAndOffset) override;
 
-		void Draw (uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance) override;
-		void DrawIndexed (uint indexCount, uint instanceCount, uint firstIndex, int vertexOffset, uint firstInstance) override;
-		void DrawIndirect (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride) override;
-		void DrawIndexedIndirect (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride) override;
-		void DrawIndirectCount (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride) override;
-		void DrawIndexedIndirectCount (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride) override;
+		void  Draw (uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance) override;
+		void  DrawIndexed (uint indexCount, uint instanceCount, uint firstIndex, int vertexOffset, uint firstInstance) override;
+		void  DrawIndirect (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride) override;
+		void  DrawIndexedIndirect (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride) override;
+		void  DrawIndirectCount (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride) override;
+		void  DrawIndexedIndirectCount (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride) override;
 
-		void DrawMeshTasksNV (uint taskCount, uint firstTask) override;
-		void DrawMeshTasksIndirectNV (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride) override;
-		void DrawMeshTasksIndirectCountNV (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride) override;
+		void  DrawMeshTasksNV (uint taskCount, uint firstTask) override;
+		void  DrawMeshTasksIndirectNV (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride) override;
+		void  DrawMeshTasksIndirectCountNV (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride) override;
+
+	private:
+		template <typename ID>
+		ND_ auto*  _AcquireResource (ID id);
+
+		ND_ bool  _IsAsync ()					const	{ return _isAsync; }
+		ND_ bool  _IsCached ()					const	{ return _isCached; }
+		ND_ bool  _IsRecordingNewCommands ()	const	{ return _renderCommands != null; }
 	};
 //-----------------------------------------------------------------------------
 	
+
 /*
 =================================================
 	constructor
 =================================================
 */
-	VRenderGraph::RenderContext::RenderContext (GraphicsContext &gctx, const VLogicalRenderPass &logicalRP) :
-		_cmdbuf{ gctx.GetCommandBuffer() },
-		_graphicsCtx{ gctx }, _logicalRP{ logicalRP }
+	VRenderGraph::RenderContext::RenderContext (VResourceManager &resMngr, const VLogicalRenderPass &logicalRP) :
+		_resMngr{ resMngr },	_logicalRP{ logicalRP },
+		_isAsync{ false },		_isCached{ false },		_hasErrors{ false }
 	{
-		VulkanDeviceFn_Init( _graphicsCtx.GetDevice() );
+		VulkanDeviceFn_Init( resMngr.GetDevice() );
+	}
+
+/*
+=================================================
+	Begin
+=================================================
+*/
+	void  VRenderGraph::RenderContext::Begin (VkCommandBuffer primaryCmdBuf)
+	{
+		_cmdbuf	= primaryCmdBuf;
 	}
 	
+/*
+=================================================
+	BeginAsync
+=================================================
+*/
+	void  VRenderGraph::RenderContext::BeginAsync (const VCommandPoolPtr &pool)
+	{
+		_cmdPool	= pool;
+		_isAsync	= true;
+	}
+
+/*
+=================================================
+	EndAsync
+=================================================
+*/
+	UniqueID<BakedCommandBufferID>  VRenderGraph::RenderContext::EndAsync ()
+	{
+		if ( _renderCommands and _cmdbuf )
+		{
+			VK_CALL( vkEndCommandBuffer( _cmdbuf ));
+
+			_renderCommands->SetResources( std::move(_resources) );
+			_resources = Default;
+		}
+			
+		_renderCommands = null;
+		_cmdbuf			= VK_NULL_HANDLE;
+		
+		if ( _hasErrors and _cachedCommands )
+		{
+			_resMngr.ReleaseResource( _cachedCommands );
+			RETURN_ERR( "command buffer recorded with errors" );
+		}
+
+		return std::move(_cachedCommands);
+	}
+
+/*
+=================================================
+	_AcquireResource
+=================================================
+*/
+	template <typename ID>
+	inline auto*  VRenderGraph::RenderContext::_AcquireResource (ID id)
+	{
+		return _resMngr.GetResource( id, _resources.Add( id ));
+	}
+
 /*
 =================================================
 	GetNativeContext
@@ -84,8 +182,8 @@ namespace AE::Graphics
 */
 	IRenderContext::NativeContext_t  VRenderGraph::RenderContext::GetNativeContext ()
 	{
-		auto*	render_pass	= _graphicsCtx.AcquireResource( _logicalRP.GetRenderPass() );
-		auto*	framebuffer	= _graphicsCtx.AcquireResource( _logicalRP.GetFramebuffer() );
+		auto*	render_pass	= _AcquireResource( _logicalRP.GetRenderPass() );
+		auto*	framebuffer	= _AcquireResource( _logicalRP.GetFramebuffer() );
 		CHECK_ERR( render_pass and framebuffer, NativeContext_t{} );
 
 		VulkanRenderContext	vctx;
@@ -114,7 +212,7 @@ namespace AE::Graphics
 	ResetStates
 =================================================
 */
-	void VRenderGraph::RenderContext::ResetStates ()
+	void  VRenderGraph::RenderContext::ResetStates ()
 	{
 		_curLayout		= VK_NULL_HANDLE;
 		_curPipeline	= VK_NULL_HANDLE;
@@ -128,9 +226,11 @@ namespace AE::Graphics
 	BindPipeline
 =================================================
 */
-	void VRenderGraph::RenderContext::BindPipeline (GraphicsPipelineID ppln)
+	void  VRenderGraph::RenderContext::BindPipeline (GraphicsPipelineID ppln)
 	{
-		auto*	gppln = _graphicsCtx.AcquireResource( ppln );
+		ASSERT( not _IsCached() );
+
+		auto*	gppln = _AcquireResource( ppln );
 		CHECK_ERR( gppln, void());
 
 		if ( _curPipeline == gppln->Handle() )
@@ -146,9 +246,11 @@ namespace AE::Graphics
 	BindPipeline
 =================================================
 */
-	void VRenderGraph::RenderContext::BindPipeline (MeshPipelineID ppln)
+	void  VRenderGraph::RenderContext::BindPipeline (MeshPipelineID ppln)
 	{
-		auto*	mppln = _graphicsCtx.AcquireResource( ppln );
+		ASSERT( not _IsCached() );
+
+		auto*	mppln = _AcquireResource( ppln );
 		CHECK_ERR( mppln, void());
 
 		if ( _curPipeline == mppln->Handle() )
@@ -164,8 +266,11 @@ namespace AE::Graphics
 	BindDescriptorSet
 =================================================
 */
-	void VRenderGraph::RenderContext::BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets)
+	void  VRenderGraph::RenderContext::BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets)
 	{
+		ASSERT( not _IsCached() );
+
+		Unused( index, ds, dynamicOffsets );
 		// TODO
 		//vkCmdBindDescriptorSets( _cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, _curLayout, index, 1, ds, uint(dynamicOffsets.size()), dynamicOffsets.data() );
 	}
@@ -175,8 +280,10 @@ namespace AE::Graphics
 	PushConstant
 =================================================
 */
-	void VRenderGraph::RenderContext::PushConstant (BytesU offset, BytesU size, const void *values, EShaderStages stages)
+	void  VRenderGraph::RenderContext::PushConstant (BytesU offset, BytesU size, const void *values, EShaderStages stages)
 	{
+		ASSERT( not _IsCached() );
+
 		vkCmdPushConstants( _cmdbuf, _curLayout, VEnumCast(stages), uint(offset), uint(size), values );
 	}
 		
@@ -185,8 +292,10 @@ namespace AE::Graphics
 	SetScissor
 =================================================
 */
-	void VRenderGraph::RenderContext::SetScissor (uint first, ArrayView<RectI> scissors)
+	void  VRenderGraph::RenderContext::SetScissor (uint first, ArrayView<RectI> scissors)
 	{
+		ASSERT( not _IsCached() );
+
 		StaticArray< VkRect2D, GraphicsConfig::MaxViewports >	vk_scissors;
 
 		for (size_t i = 0; i < scissors.size(); ++i)
@@ -205,8 +314,10 @@ namespace AE::Graphics
 	SetDepthBias
 =================================================
 */
-	void VRenderGraph::RenderContext::SetDepthBias (float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor)
+	void  VRenderGraph::RenderContext::SetDepthBias (float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor)
 	{
+		ASSERT( not _IsCached() );
+
 		vkCmdSetDepthBias( _cmdbuf, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor );
 	}
 	
@@ -215,8 +326,10 @@ namespace AE::Graphics
 	SetLineWidth
 =================================================
 */
-	void VRenderGraph::RenderContext::SetLineWidth (float lineWidth)
+	void  VRenderGraph::RenderContext::SetLineWidth (float lineWidth)
 	{
+		ASSERT( not _IsCached() );
+
 		vkCmdSetLineWidth( _cmdbuf, lineWidth );
 	}
 	
@@ -225,8 +338,10 @@ namespace AE::Graphics
 	SetDepthBounds
 =================================================
 */
-	void VRenderGraph::RenderContext::SetDepthBounds (float minDepthBounds, float maxDepthBounds)
+	void  VRenderGraph::RenderContext::SetDepthBounds (float minDepthBounds, float maxDepthBounds)
 	{
+		ASSERT( not _IsCached() );
+
 		vkCmdSetDepthBounds( _cmdbuf, minDepthBounds, maxDepthBounds );
 	}
 	
@@ -235,8 +350,10 @@ namespace AE::Graphics
 	SetStencilCompareMask
 =================================================
 */
-	void VRenderGraph::RenderContext::SetStencilCompareMask (EStencilFace faceMask, uint compareMask)
+	void  VRenderGraph::RenderContext::SetStencilCompareMask (EStencilFace faceMask, uint compareMask)
 	{
+		ASSERT( not _IsCached() );
+
 		vkCmdSetStencilCompareMask( _cmdbuf, VEnumCast(faceMask), compareMask );
 	}
 	
@@ -245,8 +362,10 @@ namespace AE::Graphics
 	SetStencilWriteMask
 =================================================
 */
-	void VRenderGraph::RenderContext::SetStencilWriteMask (EStencilFace faceMask, uint writeMask)
+	void  VRenderGraph::RenderContext::SetStencilWriteMask (EStencilFace faceMask, uint writeMask)
 	{
+		ASSERT( not _IsCached() );
+
 		vkCmdSetStencilWriteMask( _cmdbuf, VEnumCast(faceMask), writeMask );
 	}
 	
@@ -255,8 +374,10 @@ namespace AE::Graphics
 	SetStencilReference
 =================================================
 */
-	void VRenderGraph::RenderContext::SetStencilReference (EStencilFace faceMask, uint reference)
+	void  VRenderGraph::RenderContext::SetStencilReference (EStencilFace faceMask, uint reference)
 	{
+		ASSERT( not _IsCached() );
+
 		vkCmdSetStencilReference( _cmdbuf, VEnumCast(faceMask), reference );
 	}
 	
@@ -265,8 +386,10 @@ namespace AE::Graphics
 	SetBlendConstants
 =================================================
 */
-	void VRenderGraph::RenderContext::SetBlendConstants (const RGBA32f &color)
+	void  VRenderGraph::RenderContext::SetBlendConstants (const RGBA32f &color)
 	{
+		ASSERT( not _IsCached() );
+
 		vkCmdSetBlendConstants( _cmdbuf, color.data() );
 	}
 	
@@ -275,14 +398,13 @@ namespace AE::Graphics
 	BindIndexBuffer
 =================================================
 */
-	void VRenderGraph::RenderContext::BindIndexBuffer (GfxResourceID buffer, BytesU offset, EIndex indexType)
+	void  VRenderGraph::RenderContext::BindIndexBuffer (GfxResourceID buffer, BytesU offset, EIndex indexType)
 	{
-		auto*	buf = _graphicsCtx.ToLocalBuffer( buffer );
-		CHECK_ERR( buf, void());
+		ASSERT( not _IsCached() );
+		CHECK_ERR( buffer.ResourceType() == GfxResourceID::EType::Buffer, void());
 
-		if ( _graphicsCtx._enableBarriers ) {
-			_graphicsCtx._CheckBufferAccess( buf, EResourceState::IndexBuffer, VkDeviceSize(offset), VkDeviceSize(buf->Size() - offset) );
-		}
+		auto*	buf = _AcquireResource( VBufferID{ buffer.Index(), buffer.Generation() });
+		CHECK_ERR( buf, void());
 
 		if ( (_indexBuffer == buf->Handle()) & (_indexOffset == offset) )
 			return;
@@ -297,14 +419,13 @@ namespace AE::Graphics
 	BindVertexBuffer
 =================================================
 */
-	void VRenderGraph::RenderContext::BindVertexBuffer (uint index, GfxResourceID buffer, BytesU offset)
+	void  VRenderGraph::RenderContext::BindVertexBuffer (uint index, GfxResourceID buffer, BytesU offset)
 	{
-		auto*	buf = _graphicsCtx.ToLocalBuffer( buffer );
+		ASSERT( not _IsCached() );
+		CHECK_ERR( buffer.ResourceType() == GfxResourceID::EType::Buffer, void());
+
+		auto*	buf = _AcquireResource( VBufferID{ buffer.Index(), buffer.Generation() });
 		CHECK_ERR( buf, void());
-		
-		if ( _graphicsCtx._enableBarriers ) {
-			_graphicsCtx._CheckBufferAccess( buf, EResourceState::VertexBuffer, VkDeviceSize(offset), VkDeviceSize(buf->Size() - offset) );
-		}
 
 		const VkBuffer		handle	= buf->Handle();
 		const VkDeviceSize	off		= VkDeviceSize(offset);
@@ -317,8 +438,10 @@ namespace AE::Graphics
 	BindVertexBuffers
 =================================================
 */
-	void VRenderGraph::RenderContext::BindVertexBuffers (uint firstBinding, ArrayView<Pair<GfxResourceID, BytesU>> bufferAndOffset)
+	void  VRenderGraph::RenderContext::BindVertexBuffers (uint firstBinding, ArrayView<Pair<GfxResourceID, BytesU>> bufferAndOffset)
 	{
+		ASSERT( not _IsCached() );
+
 		StaticArray< VkBuffer, GraphicsConfig::MaxVertexBuffers >		buffers;
 		StaticArray< VkDeviceSize, GraphicsConfig::MaxVertexBuffers >	offsets;
 
@@ -326,16 +449,14 @@ namespace AE::Graphics
 		{
 			auto&	buf	= bufferAndOffset[i].first;
 			auto&	off = bufferAndOffset[i].second;
-			
-			auto*	buffer = _graphicsCtx.ToLocalBuffer( buf );
+	
+			CHECK_ERR( buf.ResourceType() == GfxResourceID::EType::Buffer, void());
+
+			auto*	buffer = _AcquireResource( VBufferID{ buf.Index(), buf.Generation() });
 			CHECK_ERR( buffer, void());
 
 			buffers[i]	= buffer->Handle();
 			offsets[i]	= VkDeviceSize(off);
-			
-			if ( _graphicsCtx._enableBarriers ) {
-				_graphicsCtx._CheckBufferAccess( buffer, EResourceState::VertexBuffer, VkDeviceSize(off), VkDeviceSize(buffer->Size() - off) );
-			}
 		}
 
 		vkCmdBindVertexBuffers( _cmdbuf, firstBinding, uint(bufferAndOffset.size()), buffers.data(), offsets.data() );
@@ -346,8 +467,10 @@ namespace AE::Graphics
 	Draw
 =================================================
 */
-	void VRenderGraph::RenderContext::Draw (uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance)
+	void  VRenderGraph::RenderContext::Draw (uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance)
 	{
+		ASSERT( not _IsCached() );
+
 		vkCmdDraw( _cmdbuf, vertexCount, instanceCount, firstVertex, firstInstance );
 	}
 	
@@ -356,8 +479,10 @@ namespace AE::Graphics
 	DrawIndexed
 =================================================
 */
-	void VRenderGraph::RenderContext::DrawIndexed (uint indexCount, uint instanceCount, uint firstIndex, int vertexOffset, uint firstInstance)
+	void  VRenderGraph::RenderContext::DrawIndexed (uint indexCount, uint instanceCount, uint firstIndex, int vertexOffset, uint firstInstance)
 	{
+		ASSERT( not _IsCached() );
+
 		vkCmdDrawIndexed( _cmdbuf, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance );
 	}
 	
@@ -366,14 +491,13 @@ namespace AE::Graphics
 	DrawIndirect
 =================================================
 */
-	void VRenderGraph::RenderContext::DrawIndirect (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride)
+	void  VRenderGraph::RenderContext::DrawIndirect (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride)
 	{
-		auto*	buf = _graphicsCtx.ToLocalBuffer( buffer );
+		ASSERT( not _IsCached() );
+		CHECK_ERR( buffer.ResourceType() == GfxResourceID::EType::Buffer, void());
+
+		auto*	buf = _AcquireResource( VBufferID{ buffer.Index(), buffer.Generation() });
 		CHECK_ERR( buf, void());
-		
-		if ( _graphicsCtx._enableBarriers ) {
-			_graphicsCtx._CheckBufferAccess( buf, EResourceState::IndirectBuffer, VkDeviceSize(offset), VkDeviceSize(stride) * drawCount );
-		}
 
 		vkCmdDrawIndirect( _cmdbuf, buf->Handle(), VkDeviceSize(offset), drawCount, CheckCast<uint>(stride) );
 	}
@@ -383,14 +507,13 @@ namespace AE::Graphics
 	DrawIndexedIndirect
 =================================================
 */
-	void VRenderGraph::RenderContext::DrawIndexedIndirect (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride)
+	void  VRenderGraph::RenderContext::DrawIndexedIndirect (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride)
 	{
-		auto*	buf = _graphicsCtx.ToLocalBuffer( buffer );
+		ASSERT( not _IsCached() );
+		CHECK_ERR( buffer.ResourceType() == GfxResourceID::EType::Buffer, void());
+
+		auto*	buf = _AcquireResource( VBufferID{ buffer.Index(), buffer.Generation() });
 		CHECK_ERR( buf, void());
-		
-		if ( _graphicsCtx._enableBarriers ) {
-			_graphicsCtx._CheckBufferAccess( buf, EResourceState::IndirectBuffer, VkDeviceSize(offset), VkDeviceSize(stride) * drawCount );
-		}
 
 		vkCmdDrawIndexedIndirect( _cmdbuf, buf->Handle(), VkDeviceSize(offset), drawCount, CheckCast<uint>(stride) );
 	}
@@ -400,19 +523,16 @@ namespace AE::Graphics
 	DrawIndirectCount
 =================================================
 */
-	void VRenderGraph::RenderContext::DrawIndirectCount (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride)
+	void  VRenderGraph::RenderContext::DrawIndirectCount (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride)
 	{
-		CHECK_ERR( _graphicsCtx.GetDevice().GetFeatures().drawIndirectCount, void());
+		ASSERT( not _IsCached() );
+		CHECK_ERR( buffer.ResourceType() == GfxResourceID::EType::Buffer, void());
+		CHECK_ERR( countBuffer.ResourceType() == GfxResourceID::EType::Buffer, void());
+		CHECK_ERR( _resMngr.GetDevice().GetFeatures().drawIndirectCount, void());
 
-		auto*	ibuf = _graphicsCtx.ToLocalBuffer( buffer );
-		auto*	cbuf = _graphicsCtx.ToLocalBuffer( countBuffer );
+		auto*	ibuf = _AcquireResource( VBufferID{ buffer.Index(), buffer.Generation() });
+		auto*	cbuf = _AcquireResource( VBufferID{ countBuffer.Index(), countBuffer.Generation() });
 		CHECK_ERR( ibuf and cbuf, void());
-		
-		if ( _graphicsCtx._enableBarriers )
-		{
-			_graphicsCtx._CheckBufferAccess( ibuf, EResourceState::IndirectBuffer, VkDeviceSize(offset), VkDeviceSize(stride) * maxDrawCount );
-			_graphicsCtx._CheckBufferAccess( cbuf, EResourceState::IndirectBuffer, VkDeviceSize(countBufferOffset), sizeof(uint) );
-		}
 
 		vkCmdDrawIndirectCountKHR( _cmdbuf, ibuf->Handle(), VkDeviceSize(offset), cbuf->Handle(), VkDeviceSize(countBufferOffset), maxDrawCount, CheckCast<uint>(stride) );
 	}
@@ -422,20 +542,17 @@ namespace AE::Graphics
 	DrawIndexedIndirectCount
 =================================================
 */
-	void VRenderGraph::RenderContext::DrawIndexedIndirectCount (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride)
+	void  VRenderGraph::RenderContext::DrawIndexedIndirectCount (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride)
 	{
-		CHECK_ERR( _graphicsCtx.GetDevice().GetFeatures().drawIndirectCount, void());
+		ASSERT( not _IsCached() );
+		CHECK_ERR( buffer.ResourceType() == GfxResourceID::EType::Buffer, void());
+		CHECK_ERR( countBuffer.ResourceType() == GfxResourceID::EType::Buffer, void());
+		CHECK_ERR( _resMngr.GetDevice().GetFeatures().drawIndirectCount, void());
 
-		auto*	ibuf = _graphicsCtx.ToLocalBuffer( buffer );
-		auto*	cbuf = _graphicsCtx.ToLocalBuffer( countBuffer );
+		auto*	ibuf = _AcquireResource( VBufferID{ buffer.Index(), buffer.Generation() });
+		auto*	cbuf = _AcquireResource( VBufferID{ countBuffer.Index(), countBuffer.Generation() });
 		CHECK_ERR( ibuf and cbuf, void());
 		
-		if ( _graphicsCtx._enableBarriers )
-		{
-			_graphicsCtx._CheckBufferAccess( ibuf, EResourceState::IndirectBuffer, VkDeviceSize(offset), VkDeviceSize(stride) * maxDrawCount );
-			_graphicsCtx._CheckBufferAccess( cbuf, EResourceState::IndirectBuffer, VkDeviceSize(countBufferOffset), sizeof(uint) );
-		}
-
 		vkCmdDrawIndexedIndirectCountKHR( _cmdbuf, ibuf->Handle(), VkDeviceSize(offset), cbuf->Handle(), VkDeviceSize(countBufferOffset), maxDrawCount, CheckCast<uint>(stride) );
 	}
 	
@@ -444,14 +561,17 @@ namespace AE::Graphics
 	DrawMeshTasksNV
 =================================================
 */
-	void VRenderGraph::RenderContext::DrawMeshTasksNV (uint taskCount, uint firstTask)
+	void  VRenderGraph::RenderContext::DrawMeshTasksNV (uint taskCount, uint firstTask)
 	{
+		ASSERT( not _IsCached() );
+
 	#ifdef VK_NV_mesh_shader
-		CHECK_ERR( _graphicsCtx.GetDevice().GetFeatures().meshShaderNV, void());
+		CHECK_ERR( _resMngr.GetDevice().GetFeatures().meshShaderNV, void());
 		
 		vkCmdDrawMeshTasksNV( _cmdbuf, taskCount, firstTask );
 
 	#else
+		Unused( taskCount, firstTask );
 		AE_LOGE( "mesh shader is not supported!" );
 	#endif
 	}
@@ -461,21 +581,21 @@ namespace AE::Graphics
 	DrawMeshTasksIndirectNV
 =================================================
 */
-	void VRenderGraph::RenderContext::DrawMeshTasksIndirectNV (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride)
+	void  VRenderGraph::RenderContext::DrawMeshTasksIndirectNV (GfxResourceID buffer, BytesU offset, uint drawCount, BytesU stride)
 	{
-	#ifdef VK_NV_mesh_shader
-		CHECK_ERR( _graphicsCtx.GetDevice().GetFeatures().meshShaderNV, void());
+		ASSERT( not _IsCached() );
 
-		auto*	buf = _graphicsCtx.ToLocalBuffer( buffer );
+	#ifdef VK_NV_mesh_shader
+		CHECK_ERR( buffer.ResourceType() == GfxResourceID::EType::Buffer, void());
+		CHECK_ERR( _resMngr.GetDevice().GetFeatures().meshShaderNV, void());
+
+		auto*	buf = _AcquireResource( VBufferID{ buffer.Index(), buffer.Generation() });
 		CHECK_ERR( buf, void());
-		
-		if ( _graphicsCtx._enableBarriers ) {
-			_graphicsCtx._CheckBufferAccess( buf, EResourceState::IndirectBuffer, VkDeviceSize(offset), VkDeviceSize(stride) * drawCount );
-		}
 
 		vkCmdDrawMeshTasksIndirectNV( _cmdbuf, buf->Handle(), VkDeviceSize(offset), drawCount, CheckCast<uint>(stride) );
 
 	#else
+		Unused( buffer, offset, drawCount, stride );
 		AE_LOGE( "mesh shader is not supported!" );
 	#endif
 	}
@@ -485,26 +605,147 @@ namespace AE::Graphics
 	DrawMeshTasksIndirectCountNV
 =================================================
 */
-	void VRenderGraph::RenderContext::DrawMeshTasksIndirectCountNV (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride)
+	void  VRenderGraph::RenderContext::DrawMeshTasksIndirectCountNV (GfxResourceID buffer, BytesU offset, GfxResourceID countBuffer, BytesU countBufferOffset, uint maxDrawCount, BytesU stride)
 	{
-	#ifdef VK_NV_mesh_shader
-		CHECK_ERR( _graphicsCtx.GetDevice().GetFeatures().meshShaderNV, void());
+		ASSERT( not _IsCached() );
 
-		auto*	ibuf = _graphicsCtx.ToLocalBuffer( buffer );
-		auto*	cbuf = _graphicsCtx.ToLocalBuffer( countBuffer );
+	#ifdef VK_NV_mesh_shader
+		CHECK_ERR( buffer.ResourceType() == GfxResourceID::EType::Buffer, void());
+		CHECK_ERR( _resMngr.GetDevice().GetFeatures().meshShaderNV, void());
+
+		auto*	ibuf = _AcquireResource( VBufferID{ buffer.Index(), buffer.Generation() });
+		auto*	cbuf = _AcquireResource( VBufferID{ countBuffer.Index(), countBuffer.Generation() });
 		CHECK_ERR( ibuf and cbuf, void());
 		
-		if ( _graphicsCtx._enableBarriers )
-		{
-			_graphicsCtx._CheckBufferAccess( ibuf, EResourceState::IndirectBuffer, VkDeviceSize(offset), VkDeviceSize(stride) * maxDrawCount );
-			_graphicsCtx._CheckBufferAccess( cbuf, EResourceState::IndirectBuffer, VkDeviceSize(countBufferOffset), sizeof(uint) );
-		}
-
 		vkCmdDrawMeshTasksIndirectCountNV( _cmdbuf, ibuf->Handle(), VkDeviceSize(offset), cbuf->Handle(), VkDeviceSize(countBufferOffset), maxDrawCount, CheckCast<uint>(stride) );
 
 	#else
+		Unused( buffer, offset, countBuffer, countBufferOffset, maxDrawCount, stride );
 		AE_LOGE( "mesh shader is not supported!" );
 	#endif
+	}
+	
+/*
+=================================================
+	CacheCommandBuffer
+=================================================
+*/
+	UniqueID<BakedCommandBufferID>  VRenderGraph::RenderContext::CacheCommandBuffer ()
+	{
+		ASSERT( _IsAsync() );
+		CHECK_ERR( not _IsCached() );
+		CHECK_ERR( _IsRecordingNewCommands() );
+		CHECK_ERR( _cachedCommands );
+		
+		if ( _renderCommands and _cmdbuf )
+		{
+			VK_CHECK( vkEndCommandBuffer( _cmdbuf ));
+
+			_renderCommands->SetResources( std::move(_resources) );
+			_resources = Default;
+		}
+
+		_renderCommands	= null;
+		_cmdbuf			= VK_NULL_HANDLE;
+		
+		if ( _hasErrors and _cachedCommands )
+		{
+			_resMngr.ReleaseResource( _cachedCommands );
+			RETURN_ERR( "command buffer recorded with errors" );
+		}
+
+		_isCached = true;
+
+		return _resMngr.AcquireResource( BakedCommandBufferID{_cachedCommands} );
+	}
+	
+/*
+=================================================
+	ReuseCommandBuffer
+=================================================
+*/
+	bool  VRenderGraph::RenderContext::ReuseCommandBuffer (const BakedCommandBufferID &cmdBufId)
+	{
+		ASSERT( _IsAsync() );
+		CHECK_ERR( not _IsRecordingNewCommands() );
+
+		_cachedCommands = _resMngr.AcquireResource( cmdBufId );
+
+		if ( not _cachedCommands )
+			return false;
+
+		auto*	render_commands = _resMngr.GetResource( _cachedCommands );
+
+		if ( _logicalRP.GetRenderPass() != render_commands->GetRenderPass() )
+		{
+			_resMngr.ReleaseResource( _cachedCommands );
+			return false;
+		}
+
+		_isCached = true;
+		return true;
+	}
+	
+/*
+=================================================
+	BeginCommandBuffer
+=================================================
+*/
+	bool  VRenderGraph::RenderContext::BeginCommandBuffer ()
+	{
+		ASSERT( _IsAsync() );
+		CHECK_ERR( not _IsCached() );
+
+		_hasErrors = true;
+
+		_cachedCommands = _resMngr.CreateCommandBuffer( _cmdPool, _logicalRP.GetRenderPass() );
+		_renderCommands = _resMngr.GetResource( _cachedCommands );
+		CHECK_ERR( _renderCommands );
+
+		_cmdbuf = _renderCommands->GetCommands();
+
+		// begin recording
+		{
+			auto*	render_pass	= _AcquireResource( _logicalRP.GetRenderPass() );
+			CHECK_ERR( render_pass );
+
+			VkCommandBufferInheritanceInfo	inheritance = {};
+			inheritance.sType		= VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+			inheritance.renderPass	= render_pass->Handle();
+			inheritance.subpass		= _logicalRP.GetSubpassIndex();
+
+			VkCommandBufferBeginInfo	info = {};
+			info.sType				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			info.pInheritanceInfo	= &inheritance;
+			info.flags				= VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+
+			VK_CHECK( vkBeginCommandBuffer( _cmdbuf, &info ));
+		}
+		
+		// initial states
+		{
+			if ( auto viewports = _logicalRP.GetViewports(); viewports.size() )
+				vkCmdSetViewport( _cmdbuf, 0, uint(viewports.size()), viewports.data() );
+		
+			if ( auto scissors = _logicalRP.GetScissors(); scissors.size() )
+				vkCmdSetScissor( _cmdbuf, 0, uint(scissors.size()), scissors.data() );
+		}
+
+		_hasErrors = false;
+		return true;
+	}
+
+/*
+=================================================
+	Barrier
+=================================================
+*/
+	void  VRenderGraph::RenderContext::Barrier (ArrayView< Pair<GfxResourceID, EResourceState>> barriers)
+	{
+		ASSERT( _IsAsync() );
+		CHECK_ERR( _IsRecordingNewCommands(), void());
+
+		_renderCommands->AddBarriers( barriers );
 	}
 
 

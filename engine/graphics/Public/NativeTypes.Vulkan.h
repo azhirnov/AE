@@ -31,7 +31,11 @@ namespace AE::Graphics
 	using FramebufferVk_t			= VkFramebuffer;
 	using ImageVk_t					= VkImage;
 	using RenderPassVk_t			= VkRenderPass;
+	#ifdef VK_NV_ray_tracing
 	using AccelerationStructureVk_t	= VkAccelerationStructureNV;
+	#else
+	enum AccelerationStructureVk_t	: uint64_t {};
+	#endif
 	using DeviceMemoryVk_t			= VkDeviceMemory;
 	
 	using FormatVk_t				= VkFormat;
@@ -63,6 +67,7 @@ namespace AE::Graphics
 		uint3					dimension;
 		uint					arrayLayers		= 0;
 		uint					maxLevels		= 0;
+		bool					canBeDestroyed	= true;
 		//uint					queueFamily		= UMax;	// queue family that owns image, you must specify this correctly
 														// if image created with exclusive sharing mode and you need to
 														// keep current content of the image, otherwise keep default value.
@@ -77,9 +82,10 @@ namespace AE::Graphics
 	//
 	struct VulkanBufferDesc
 	{
-		BufferVk_t				buffer		= {};
-		BufferUsageVk_t			usage		= {};
+		BufferVk_t				buffer			= {};
+		BufferUsageVk_t			usage			= {};
 		BytesU					size;
+		bool					canBeDestroyed	= true;
 		
 		//uint					queueFamily	= UMax;		// queue family that owns buffer, you must specify this correctly
 														// if buffer created with exclusive sharing mode and you need to
@@ -95,9 +101,9 @@ namespace AE::Graphics
 	//
 	struct VulkanRenderContext
 	{
-		CommandBufferVk_t	cmdBuffer		= null;
+		CommandBufferVk_t	cmdBuffer		= null;		// primary for sync, secondary for async context
 		RenderPassVk_t		renderPass		= {};
-		FramebufferVk_t		framebuffer		= {};
+		FramebufferVk_t		framebuffer		= {};		// non-null for sync, null for async context
 		uint				subpassIndex	= 0;
 	};
 

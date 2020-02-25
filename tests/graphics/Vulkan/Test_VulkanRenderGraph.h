@@ -4,10 +4,11 @@
 
 #ifdef AE_ENABLE_VULKAN
 
+# include "graphics/Public/ResourceManager.h"
+# include "graphics/Public/RenderGraph.h"
+
 # include "graphics/Vulkan/VDevice.h"
 # include "graphics/Vulkan/VSwapchain.h"
-# include "graphics/Vulkan/RenderGraph/VRenderGraph.h"
-# include "graphics/Vulkan/VResourceManager.h"
 
 # include "platform/Public/IWindow.h"
 # include "platform/Public/IApplication.h"
@@ -33,6 +34,8 @@ public:
 	UniquePtr<IResourceManager>	_resourceMngr;
 	UniquePtr<IRenderGraph>		_renderGraph;
 
+	UniqueID<PipelinePackID>	_pipelinePack;
+
 	TestQueue_t					_tests;
 	uint						_testsPassed		= 0;
 	uint						_testsFailed		= 0;
@@ -43,22 +46,29 @@ public:
 	VRGTest ();
 	~VRGTest () {}
 
-	bool Run (AE::App::IApplication &app, AE::App::IWindow &wnd);
+	bool  Run (AE::App::IApplication &app, AE::App::IWindow &wnd);
 
 private:
-	bool _Create (AE::App::IApplication &app, AE::App::IWindow &wnd);
-	bool _RunTests ();
-	void _Destroy ();
+	bool  _Create (AE::App::IApplication &app, AE::App::IWindow &wnd);
+	bool  _RunTests ();
+	void  _Destroy ();
+
+	bool  _CompilePipelines ();
 	
 	template <typename Arg0, typename ...Args>
-	void DeleteResources (Arg0 &arg0, Args& ...args);
+	void  DeleteResources (Arg0 &arg0, Args& ...args);
 
 	ND_ static String  _GetFuncName (StringView src);
 
 private:
-	bool Test_Buffer ();
-	bool Test_Image ();
-	bool Test_CopyBuffer ();
+	bool  Test_Buffer ();
+	bool  Test_Image ();
+	bool  Test_CopyBuffer1 ();
+	bool  Test_CopyBuffer2 ();
+	bool  Test_CopyImage1 ();
+	
+	bool  Test_Draw1 ();
+	bool  Test_DrawAsync1 ();
 };
 
 
@@ -84,6 +94,5 @@ inline String  VRGTest::_GetFuncName (StringView src)
 }
 
 # define TEST_NAME	_GetFuncName( AE_FUNCTION_NAME )
-
 
 #endif	// AE_ENABLE_VULKAN

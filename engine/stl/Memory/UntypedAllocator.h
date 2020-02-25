@@ -29,7 +29,8 @@ namespace AE::STL
 		{
 			::operator delete ( ptr, std::nothrow_t() );
 		}
-
+		
+		// deallocation with explicit size may be faster
 		static void  Deallocate (void *ptr, BytesU size)
 		{
 			::operator delete ( ptr, size_t(size) );
@@ -65,6 +66,7 @@ namespace AE::STL
 			::operator delete ( ptr, std::align_val_t(size_t(align)), std::nothrow_t() );
 		}
 
+		// deallocation with explicit size may be faster
 		static void  Deallocate (void *ptr, BytesU size, BytesU align)
 		{
 			::operator delete ( ptr, size_t(size), std::align_val_t(size_t(align)) );

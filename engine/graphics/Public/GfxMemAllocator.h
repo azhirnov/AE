@@ -16,7 +16,7 @@ namespace AE::Graphics
 	// Graphics Memory Allocator interface
 	//
 
-	class IGfxMemAllocator : public std::enable_shared_from_this<IGfxMemAllocator>
+	class IGfxMemAllocator : public EnableRC<IGfxMemAllocator>
 	{
 	// types
 	public:
@@ -40,7 +40,7 @@ namespace AE::Graphics
 		virtual bool GetInfo (const Storage_t &data, OUT NativeMemInfo_t &info) const = 0;
 	};
 
-	using GfxMemAllocatorPtr = SharedPtr< IGfxMemAllocator >;
+	using GfxMemAllocatorPtr = RC< IGfxMemAllocator >;
 
 
 }	// AE::Graphics

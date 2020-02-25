@@ -107,7 +107,7 @@ namespace AE::STL
 				size_t	off = 0;
 				std::tie( idx, off ) = _UnpackBookmark( _bookmarks.back() );
 
-				ASSERT( _blocks[idx].size >= off );
+				ASSERT( idx >= _blocks.size() or _blocks[idx].size >= off );
 			}
 
 			for (; idx < _blocks.size(); ++idx)
@@ -124,12 +124,12 @@ namespace AE::STL
 			
 			if ( _blocks.size() == _blocks.capacity() )
 			{
-				ASSERT( !"overflow" );
+				//ASSERT( !"overflow" );
 				return null;
 			}
 
 			BytesU	block_size	= _blockSize * (1 + _blocks.size()/2);
-					block_size	= size*2 < block_size ? block_size : size*2;
+					block_size	= size*2 < block_size ? block_size : block_size*2;
 			void*	ptr			= _alloc.Allocate( block_size, _ptrAlign );
 
 			if ( not ptr )

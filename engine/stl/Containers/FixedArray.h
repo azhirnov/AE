@@ -42,13 +42,13 @@ namespace AE::STL
 
 		constexpr FixedArray (std::initializer_list<T> list) : FixedArray()
 		{
-			ASSERT( list.size() < capacity() );
+			ASSERT( list.size() <= capacity() );
 			assign( list.begin(), list.end() );
 		}
 
 		constexpr FixedArray (ArrayView<T> view) : FixedArray()
 		{
-			ASSERT( view.size() < capacity() );
+			ASSERT( view.size() <= capacity() );
 			assign( view.begin(), view.end() );
 		}
 
@@ -191,6 +191,16 @@ namespace AE::STL
 			if ( _count < capacity() )
 			{
 				PlacementNew<T>( data() + (_count++), value );
+				return true;
+			}
+			return false;
+		}
+		
+		constexpr bool  try_push_back (T&& value)
+		{
+			if ( _count < capacity() )
+			{
+				PlacementNew<T>( data() + (_count++), std::move(value) );
 				return true;
 			}
 			return false;

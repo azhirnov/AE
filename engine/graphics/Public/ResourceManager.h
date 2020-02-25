@@ -23,6 +23,7 @@ namespace AE::Graphics
 		using NativeImageDesc_t		= Union< NullUnion, VulkanImageDesc >;
 		using NativeBufferHandle_t	= Union< NullUnion, BufferVk_t >;
 		using NativeImageHandle_t	= Union< NullUnion, ImageVk_t >;
+		using NativeMemInfo_t		= IGfxMemAllocator::NativeMemInfo_t;
 
 
 	// interface
@@ -41,9 +42,8 @@ namespace AE::Graphics
 		ND_ virtual UniqueID<GfxResourceID>		CreateImage (const ImageDesc &desc, EResourceState defaultState = Default, StringView dbgName = Default, const GfxMemAllocatorPtr &allocator = null) = 0;
 		ND_ virtual UniqueID<GfxResourceID>		CreateBuffer (const BufferDesc &desc, StringView dbgName = Default, const GfxMemAllocatorPtr &allocator = null) = 0;
 		
-		// TODO
-		//ND_ virtual UniqueID<GfxResourceID>		CreateImage (const NativeImageDesc_t &desc, StringView dbgName = Default) = 0;
-		//ND_ virtual UniqueID<GfxResourceID>		CreateBuffer (const NativeBufferDesc_t &desc, StringView dbgName = Default) = 0;
+		ND_ virtual UniqueID<GfxResourceID>		CreateImage (const NativeImageDesc_t &desc, StringView dbgName = Default) = 0;
+		ND_ virtual UniqueID<GfxResourceID>		CreateBuffer (const NativeBufferDesc_t &desc, StringView dbgName = Default) = 0;
 
 			virtual UniqueID<PipelinePackID>	LoadPipelinePack (const SharedPtr<RStream> &stream) = 0;
 			virtual bool						ReloadPipelinePack (const SharedPtr<RStream> &stream, PipelinePackID id) = 0;
@@ -60,16 +60,21 @@ namespace AE::Graphics
 
 			virtual bool						ReleaseResource (UniqueID<GfxResourceID> &id) = 0;
 			virtual bool						ReleaseResource (UniqueID<PipelinePackID> &id) = 0;
+			virtual bool						ReleaseResource (UniqueID<BakedCommandBufferID> &id) = 0;
 
 		// returned reference is valid until resource is alive
 		ND_ virtual BufferDesc const&			GetBufferDescription (GfxResourceID id) const = 0;
 		ND_ virtual ImageDesc const&			GetImageDescription (GfxResourceID id) const = 0;
+		ND_ virtual VirtualBufferDesc const&	GetVirtualBufferDescription (GfxResourceID id) const = 0;
+		ND_ virtual VirtualImageDesc const&		GetVirtualImageDescription (GfxResourceID id) const = 0;
 
 		//ND_ virtual NativeBufferDesc_t		GetBufferNativeDesc (GfxResourceID id) const = 0;
 		//ND_ virtual NativeImageDesc_t			GetImageNativeDesc (GfxResourceID id) const = 0;
 
 		ND_ virtual NativeBufferHandle_t		GetBufferHandle (GfxResourceID id) const = 0;
 		ND_ virtual NativeImageHandle_t			GetImageHandle (GfxResourceID id) const = 0;
+
+			virtual bool						GetMemoryInfo (GfxResourceID id, OUT NativeMemInfo_t &info) const = 0;
 	};
 
 

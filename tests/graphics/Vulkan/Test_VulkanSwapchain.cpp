@@ -22,9 +22,9 @@ extern void Test_VulkanSwapchain (IApplication &app, IWindow &wnd)
 	CHECK_FATAL( vulkan.CreateLogicalDevice( Default ));
 	
 	CHECK_FATAL( swapchain.CreateSurface( wnd.GetNative() ));
-	CHECK_FATAL( swapchain.Create( wnd.GetSurfaceSize() ));
+	CHECK_FATAL( swapchain.Create( null, wnd.GetSurfaceSize() ));
 	
-	swapchain.Destroy();
+	swapchain.Destroy( null );
 	swapchain.DestroySurface();
 
 	CHECK_FATAL( vulkan.DestroyLogicalDevice() );

@@ -34,7 +34,7 @@ namespace AE::Graphics
 		mutable SharedMutex			_viewMapLock;
 		mutable ImageViewMap_t		_viewMap;
 		
-		VkImageAspectFlagBits		_aspectMask			= VkImageAspectFlagBits(0);
+		VkImageAspectFlagBits		_aspectMask			= Zero;
 		VkImageLayout				_defaultLayout		= VK_IMAGE_LAYOUT_MAX_ENUM;
 		//VkAccessFlags				_readAccessMask		= 0;
 		
@@ -42,6 +42,7 @@ namespace AE::Graphics
 		MemStorage_t				_memStorage;
 
 		DebugName_t					_debugName;
+		bool						_canBeDestroyed		= true;
 
 		RWDataRaceCheck				_drCheck;
 
@@ -57,6 +58,7 @@ namespace AE::Graphics
 		void Destroy (VResourceManager &);
 		
 		bool GetMemoryInfo (OUT VResourceMemoryInfo &) const;
+		bool GetMemoryInfo (OUT IGfxMemAllocator::NativeMemInfo_t &) const;
 
 		ND_ VkImageView			GetView (const VDevice &, const ImageViewDesc &) const;
 		ND_ VkImageView			GetView (const VDevice &, bool isDefault, INOUT ImageViewDesc &) const;

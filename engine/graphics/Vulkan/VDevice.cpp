@@ -121,6 +121,28 @@ namespace AE::Graphics
 	}
 //-----------------------------------------------------------------------------
 
+	
+		
+/*
+=================================================
+	constructor
+=================================================
+*/
+	VDeviceInitializer::VDeviceInitializer ()
+	{
+		_tempObjectDbgInfos.reserve( 16 );
+		_tempString.reserve( 1024 );
+	}
+	
+/*
+=================================================
+	destructor
+=================================================
+*/
+	VDeviceInitializer::~VDeviceInitializer ()
+	{
+		DestroyDebugCallback();
+	}
 
 /*
 =================================================
@@ -230,12 +252,16 @@ namespace AE::Graphics
 		if ( not _vkInstance )
 			return false;
 		
+		DestroyDebugCallback();
+
 		vkDestroyInstance( _vkInstance, null );
 		VulkanLoader::Unload();
 		
 		_vkInstance			= VK_NULL_HANDLE;
 		_vkPhysicalDevice	= VK_NULL_HANDLE;
 		
+		_instanceExtensions.clear();
+
 		AE_LOGD( "Destroyed Vulkan instance" );
 		return true;
 	}
@@ -852,6 +878,8 @@ namespace {
 		_vkLogicalDevice = VK_NULL_HANDLE;
 		_vkQueues.clear();
 		
+		_deviceExtensions.clear();
+
 		AE_LOGD( "Destroyed Vulkan logical device" );
 		return true;
 	}
@@ -1129,7 +1157,7 @@ namespace {
 */
 	bool  VDeviceInitializer::_SetupQueueTypes ()
 	{
-		for (EQueueType t = EQueueType(0); t < EQueueType::_Count; t = EQueueType(uint(t) + 1))
+		for (EQueueType t = Zero; t < EQueueType::_Count; t = EQueueType(uint(t) + 1))
 		{
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
@@ -1313,7 +1341,7 @@ namespace {
 				requiredFlags &= ~VK_QUEUE_TRANSFER_BIT;
 		}
 
-		Pair<VkQueueFlagBits, uint>		compatible { VkQueueFlagBits(0), UMax };
+		Pair<VkQueueFlagBits, uint>		compatible { Zero, UMax };
 
 		for (size_t i = 0; i < queueFamilyProps.size(); ++i)
 		{
@@ -1642,26 +1670,195 @@ namespace {
 		if ( _vkVersion >= InstanceVersion{1,2} )
 		{
 		// VK_KHR_draw_indirect_count
-			_table._var_vkCmdDrawIndirectCountKHR			= _table->_var_vkCmdDrawIndirectCount;
-			_table._var_vkCmdDrawIndexedIndirectCountKHR	= _table->_var_vkCmdDrawIndexedIndirectCountKHR;
+			_table->_var_vkCmdDrawIndirectCountKHR			= _table->_var_vkCmdDrawIndirectCount;
+			_table->_var_vkCmdDrawIndexedIndirectCountKHR	= _table->_var_vkCmdDrawIndexedIndirectCountKHR;
 
 		// VK_KHR_create_renderpass2
-			_table._var_vkCreateRenderPass2KHR		= _table._var_vkCreateRenderPass2;
-			_table._var_vkCmdBeginRenderPass2KHR	= _table._var_vkCmdBeginRenderPass2;
-			_table._var_vkCmdNextSubpass2KHR		= _table._var_vkCmdNextSubpass2;
-			_table._var_vkCmdEndRenderPass2KHR		= _table._var_vkCmdEndRenderPass2;
+			_table->_var_vkCreateRenderPass2KHR		= _table->_var_vkCreateRenderPass2;
+			_table->_var_vkCmdBeginRenderPass2KHR	= _table->_var_vkCmdBeginRenderPass2;
+			_table->_var_vkCmdNextSubpass2KHR		= _table->_var_vkCmdNextSubpass2;
+			_table->_var_vkCmdEndRenderPass2KHR		= _table->_var_vkCmdEndRenderPass2;
 
 		// VK_KHR_timeline_semaphore
-			_table._var_vkGetSemaphoreCounterValueKHR	= _table._var_vkGetSemaphoreCounterValue;
-			_table._var_vkWaitSemaphoresKHR				= _table._var_vkWaitSemaphores;
-			_table._var_vkSignalSemaphoreKHR			= _table._var_vkSignalSemaphore;
+			_table->_var_vkGetSemaphoreCounterValueKHR	= _table->_var_vkGetSemaphoreCounterValue;
+			_table->_var_vkWaitSemaphoresKHR			= _table->_var_vkWaitSemaphores;
+			_table->_var_vkSignalSemaphoreKHR			= _table->_var_vkSignalSemaphore;
 
 		// VK_KHR_buffer_device_address
-			_table._var_vkGetBufferDeviceAddressKHR					= _table._var_vkGetBufferDeviceAddress;
-			_table._var_vkGetBufferOpaqueCaptureAddressKHR			= _table._var_vkGetBufferOpaqueCaptureAddress;
-			_table._var_vkGetDeviceMemoryOpaqueCaptureAddressKHR	= _table._var_vkGetDeviceMemoryOpaqueCaptureAddress;
+			_table->_var_vkGetBufferDeviceAddressKHR				= _table->_var_vkGetBufferDeviceAddress;
+			_table->_var_vkGetBufferOpaqueCaptureAddressKHR			= _table->_var_vkGetBufferOpaqueCaptureAddress;
+			_table->_var_vkGetDeviceMemoryOpaqueCaptureAddressKHR	= _table->_var_vkGetDeviceMemoryOpaqueCaptureAddress;
 		}
 	#endif
+	}
+	
+/*
+=================================================
+	CreateDebugCallback
+=================================================
+*/
+	bool  VDeviceInitializer::CreateDebugCallback (VkDebugUtilsMessageSeverityFlagsEXT severity, DebugReport_t &&callback)
+	{
+		CHECK_ERR( GetVkInstance() );
+		CHECK_ERR( not _debugUtilsMessenger );
+	
+		if ( not _features.debugUtils )
+			return false;
+
+		VkDebugUtilsMessengerCreateInfoEXT	info = {};
+		info.sType				= VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+		info.messageSeverity	= severity;
+		info.messageType		= VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT	 |
+								  VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT  |
+								  VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+		info.pfnUserCallback	= _DebugUtilsCallback;
+		info.pUserData			= this;
+
+		VK_CHECK( vkCreateDebugUtilsMessengerEXT( GetVkInstance(), &info, NULL, &_debugUtilsMessenger ));
+
+		_callback = std::move(callback);
+		return true;
+	}
+	
+/*
+=================================================
+	DestroyDebugCallback
+=================================================
+*/
+	void  VDeviceInitializer::DestroyDebugCallback ()
+	{
+		if ( _debugUtilsMessenger ) {
+			vkDestroyDebugUtilsMessengerEXT( GetVkInstance(), _debugUtilsMessenger, null );
+		}
+	}
+
+/*
+=================================================
+	_ObjectTypeToString
+=================================================
+*/
+	StringView  VDeviceInitializer::_ObjectTypeToString (VkObjectType objType)
+	{
+		BEGIN_ENUM_CHECKS();
+		switch ( objType )
+		{
+			case VK_OBJECT_TYPE_INSTANCE			: return "Instance";
+			case VK_OBJECT_TYPE_PHYSICAL_DEVICE		: return "PhysicalDevice";
+			case VK_OBJECT_TYPE_DEVICE				: return "Device";
+			case VK_OBJECT_TYPE_QUEUE				: return "Queue";
+			case VK_OBJECT_TYPE_SEMAPHORE			: return "Semaphore";
+			case VK_OBJECT_TYPE_COMMAND_BUFFER		: return "CommandBuffer";
+			case VK_OBJECT_TYPE_FENCE				: return "Fence";
+			case VK_OBJECT_TYPE_DEVICE_MEMORY		: return "DeviceMemory";
+			case VK_OBJECT_TYPE_BUFFER				: return "Buffer";
+			case VK_OBJECT_TYPE_IMAGE				: return "Image";
+			case VK_OBJECT_TYPE_EVENT				: return "Event";
+			case VK_OBJECT_TYPE_QUERY_POOL			: return "QueryPool";
+			case VK_OBJECT_TYPE_BUFFER_VIEW			: return "BufferView";
+			case VK_OBJECT_TYPE_IMAGE_VIEW			: return "ImageView";
+			case VK_OBJECT_TYPE_SHADER_MODULE		: return "ShaderModule";
+			case VK_OBJECT_TYPE_PIPELINE_CACHE		: return "PipelineCache";
+			case VK_OBJECT_TYPE_PIPELINE_LAYOUT		: return "PipelineLayout";
+			case VK_OBJECT_TYPE_RENDER_PASS			: return "RenderPass";
+			case VK_OBJECT_TYPE_PIPELINE			: return "Pipeline";
+			case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT: return "DescriptorSetLayout";
+			case VK_OBJECT_TYPE_SAMPLER				: return "Sampler";
+			case VK_OBJECT_TYPE_DESCRIPTOR_POOL		: return "DescriptorPool";
+			case VK_OBJECT_TYPE_DESCRIPTOR_SET		: return "DescriptorSet";
+			case VK_OBJECT_TYPE_FRAMEBUFFER			: return "Framebuffer";
+			case VK_OBJECT_TYPE_COMMAND_POOL		: return "CommandPool";
+			case VK_OBJECT_TYPE_SURFACE_KHR			: return "Surface";
+			case VK_OBJECT_TYPE_SWAPCHAIN_KHR		: return "Swapchain";
+			case VK_OBJECT_TYPE_DISPLAY_KHR			: return "Display";
+			case VK_OBJECT_TYPE_DISPLAY_MODE_KHR	: return "DisplayMode";
+
+			#ifdef VK_NVX_device_generated_commands
+			case VK_OBJECT_TYPE_OBJECT_TABLE_NVX	: return "ObjectTableNvx";
+			case VK_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NVX: return "IndirectCommandsLayoutNvx";
+			#endif
+			#ifdef VK_NV_ray_tracing
+			case VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_NV	: return "AccelerationStructureNv";
+			#endif
+			#ifdef VK_EXT_debug_report
+			case VK_OBJECT_TYPE_DEBUG_REPORT_CALLBACK_EXT	: return "DebugReportCallback";
+			#endif
+			#ifdef VK_EXT_debug_utils
+			case VK_OBJECT_TYPE_DEBUG_UTILS_MESSENGER_EXT	: return "DebugUtilsMessenger";
+			#endif
+			case VK_OBJECT_TYPE_SAMPLER_YCBCR_CONVERSION	: return "SamplerYcBr";
+			#ifdef VK_INTEL_performance_query
+			case VK_OBJECT_TYPE_PERFORMANCE_CONFIGURATION_INTEL: return "PerformanceConfigIntel";
+			#endif
+
+			case VK_OBJECT_TYPE_UNKNOWN :
+			case VK_OBJECT_TYPE_DESCRIPTOR_UPDATE_TEMPLATE :
+			case VK_OBJECT_TYPE_VALIDATION_CACHE_EXT :
+			case VK_OBJECT_TYPE_RANGE_SIZE :
+			case VK_OBJECT_TYPE_MAX_ENUM :
+				break;	// used to shutup compilation warnings
+		}
+		END_ENUM_CHECKS();
+
+		CHECK(	objType >= VK_OBJECT_TYPE_BEGIN_RANGE and
+				objType <= VK_OBJECT_TYPE_END_RANGE );
+		return "unknown";
+	}
+
+/*
+=================================================
+	_DebugUtilsCallback
+=================================================
+*/
+	VKAPI_ATTR VkBool32 VKAPI_CALL
+		VDeviceInitializer::_DebugUtilsCallback (VkDebugUtilsMessageSeverityFlagBitsEXT			messageSeverity,
+												 VkDebugUtilsMessageTypeFlagsEXT				/*messageTypes*/,
+												 const VkDebugUtilsMessengerCallbackDataEXT*	pCallbackData,
+												 void*											pUserData)
+	{
+		auto* self = static_cast<VDeviceInitializer *>(pUserData);
+		
+		self->_tempObjectDbgInfos.resize( pCallbackData->objectCount );
+
+		for (uint i = 0; i < pCallbackData->objectCount; ++i)
+		{
+			auto&	obj = pCallbackData->pObjects[i];
+
+			self->_tempObjectDbgInfos[i] = { _ObjectTypeToString( obj.objectType ),
+											 obj.pObjectName ? StringView{obj.pObjectName} : StringView{},
+											 obj.objectHandle };
+		}
+		
+		self->_DebugReport({ self->_tempObjectDbgInfos, pCallbackData->pMessage,
+							 EnumEq( messageSeverity, VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
+						   });
+		return VK_FALSE;
+	}
+
+/*
+=================================================
+	_DebugReport
+=================================================
+*/
+	void  VDeviceInitializer::_DebugReport (const DebugReport &msg)
+	{
+		if ( _callback )
+			return _callback( msg );
+
+		String&		str = _tempString;
+		str.clear();
+
+		str << msg.message << '\n';
+
+		for (auto& obj : msg.objects)
+		{
+			str << "object{ " << obj.type << ", \"" << obj.name << "\", " << ToString(obj.handle) << " }\n";
+		}
+		str << "----------------------------\n";
+
+		if ( _breakOnValidationError and msg.isError )
+			AE_LOGE( str )
+		else
+			AE_LOGI( str );
 	}
 
 /*

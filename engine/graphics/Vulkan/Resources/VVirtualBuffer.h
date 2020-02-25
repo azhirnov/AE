@@ -17,7 +17,9 @@ namespace AE::Graphics
 	{
 	// variables
 	private:
-		DebugName_t		_debugName;
+		VirtualBufferDesc	_desc;
+
+		DebugName_t			_debugName;
 
 
 	// methods
@@ -26,16 +28,21 @@ namespace AE::Graphics
 		~VVirtualBuffer () {}
 
 
-		bool Create (StringView dbgName)
+		bool Create (const VirtualBufferDesc &desc, StringView dbgName)
 		{
-			_debugName = dbgName;
+			_desc		= desc;
+			_debugName	= dbgName;
 			return true;
 		}
 
 
 		void Destroy (const VResourceManager &)
 		{}
+
+
+		ND_ VirtualBufferDesc const&	Description ()	const	{ return _desc; }
 	};
+
 
 }	// AE::Graphics
 

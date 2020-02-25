@@ -9,6 +9,7 @@ endif()
 source_group( TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} )
 set_property( TARGET "Tests.Graphics" PROPERTY FOLDER "EngineTests" )
 target_link_libraries( "Tests.Graphics" PUBLIC "Graphics" )
+add_dependencies( "Tests.Graphics" "ResourcePacker" )
 target_compile_definitions( "Tests.Graphics" PUBLIC AE_TEST_GRAPHICS )
 
 add_test( NAME "Tests.Graphics" COMMAND "Tests.Graphics" )

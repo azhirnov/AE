@@ -169,17 +169,45 @@ namespace AE::Graphics
 	public:
 		struct QueueCreateInfo
 		{
-			VkQueueFlagBits		flags		= VkQueueFlagBits(0);
+			VkQueueFlagBits		flags		= Zero;
 			float				priority	= 0.0f;
 			DebugName_t			debugName;
 
 			QueueCreateInfo () {}
 			QueueCreateInfo (VkQueueFlagBits flags, float priority = 0.0f, StringView name = {}) : flags{flags}, priority{priority}, debugName{name} {}
 		};
+		
+		struct ObjectDbgInfo
+		{
+			StringView				type;
+			StringView				name;
+			uint64_t				handle;
+		};
+
+		struct DebugReport
+		{
+			ArrayView<ObjectDbgInfo>	objects;
+			StringView					message;
+			bool						isError		= false;
+		};
+		using DebugReport_t = std::function< void (const DebugReport &) >;
+
+
+	// variable
+	private:
+		VkDebugUtilsMessengerEXT	_debugUtilsMessenger	= VK_NULL_HANDLE;
+		DebugReport_t				_callback;
+		
+		bool						_breakOnValidationError	= true;
+		Array<ObjectDbgInfo>		_tempObjectDbgInfos;
+		String						_tempString;
 
 
 	// methods
 	public:
+		VDeviceInitializer ();
+		~VDeviceInitializer ();
+
 		ND_ InstanceVersion  GetInstanceVersion () const;
 
 		bool CreateInstance (NtStringView appName, NtStringView engineName, ArrayView<const char*> instanceLayers,
@@ -195,6 +223,9 @@ namespace AE::Graphics
 		bool SetLogicalDevice (VkDevice value, ArrayView<const char*> extensions = {});
 		bool DestroyLogicalDevice ();
 		
+		bool CreateDebugCallback (VkDebugUtilsMessageSeverityFlagsEXT severity, DebugReport_t &&callback = Default);
+		void DestroyDebugCallback ();
+
 		ND_ static ArrayView<const char*>	GetRecomendedInstanceLayers ();
 
 
@@ -226,7 +257,22 @@ namespace AE::Graphics
 
 		void _SetupInstanceBackwardCompatibility ();
 		void _SetupDeviceBackwardCompatibility ();
+		
+		VKAPI_ATTR static VkBool32 VKAPI_CALL
+			_DebugUtilsCallback (VkDebugUtilsMessageSeverityFlagBitsEXT			messageSeverity,
+								 VkDebugUtilsMessageTypeFlagsEXT				messageTypes,
+								 const VkDebugUtilsMessengerCallbackDataEXT*	pCallbackData,
+								 void*											pUserData);
+
+		ND_ static StringView  _ObjectTypeToString (VkObjectType objType);
+
+		void _DebugReport (const DebugReport &);
 	};
+	
+	static constexpr VkDebugUtilsMessageSeverityFlagsEXT	DefaultDebugMessageSeverity = //VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+																							//VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+																							VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+																							VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 
 
 }	// AE::Graphics

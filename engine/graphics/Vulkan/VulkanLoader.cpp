@@ -6,8 +6,7 @@
 # include "graphics/Vulkan/VulkanCheckError.h"
 # include "stl/Algorithms/Cast.h"
 # include "stl/Algorithms/StringUtils.h"
-# include "stl/Platforms/WindowsLibrary.h"
-# include "stl/Platforms/PosixLibrary.h"
+# include "stl/Platforms/PlatformUtils.h"
 
 
 namespace AE::Graphics

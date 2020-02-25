@@ -21,15 +21,14 @@ namespace AE::Graphics
 	public:
 		struct ColorTarget
 		{
-			uint					index			= Default;
-			VImageID				imageId;
+			uint					index			= UMax;
+			GfxResourceID			imageId;
 			ImageViewDesc			viewDesc;
 			VkSampleCountFlagBits	samples			= VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM;
 			VkAttachmentLoadOp		loadOp			= VK_ATTACHMENT_LOAD_OP_MAX_ENUM;
 			VkAttachmentStoreOp		storeOp			= VK_ATTACHMENT_STORE_OP_MAX_ENUM;
 			EResourceState			state			= Default;
 			VkImageLayout			layout			= VK_IMAGE_LAYOUT_UNDEFINED;
-			//HashVal				_imageHash;		// used for fast render target comparison
 
 			ColorTarget () {}
 		};
@@ -43,7 +42,7 @@ namespace AE::Graphics
 		};
 		
 		using VkClearValues_t	= StaticArray< VkClearValue, GraphicsConfig::MaxAttachments >;
-		using ColorTargets_t	= FixedMap< RenderTargetName, ColorTarget, GraphicsConfig::MaxColorBuffers >;
+		using ColorTargets_t	= FixedArray< ColorTarget, GraphicsConfig::MaxColorBuffers >;
 		using Viewports_t		= FixedArray< VkViewport, GraphicsConfig::MaxViewports >;
 		using Scissors_t		= FixedArray< VkRect2D, GraphicsConfig::MaxViewports >;
 		
@@ -61,21 +60,24 @@ namespace AE::Graphics
 
 		VRenderPassOutputID		_rpOutputId;
 
-		uint					_subpassIndex	= UMax;
+		uint					_subpassIndex	: 8;
+		uint					_isLastSubpass	: 1;
 		RenderPassID			_renderPassId;
+
 		VFramebufferID			_framebufferId;
 
 
 	// methods
 	public:
-		VLogicalRenderPass () {}
+		VLogicalRenderPass () : _subpassIndex{UMax}, _isLastSubpass{1} {}
 		VLogicalRenderPass (VLogicalRenderPass &&) = delete;
 		~VLogicalRenderPass () {}
 
-		bool Create (const VResourceManager &resMngr, const RenderPassDesc &);
-		bool SetRenderPass (const VResourceManager &resMngr, RenderPassID rp, uint subpass, VFramebufferID fb);
+		bool  Create (const VResourceManager &resMngr, const RenderPassDesc &);
+		bool  SetRenderPass (const VResourceManager &resMngr, RenderPassID rp, uint subpass, uint subpassCount);
+		bool  SetFramebuffer (VFramebufferID fb);
 		
-		ND_ ColorTargets_t const&		GetColorTargets ()			const	{ return _colorTargets; }
+		ND_ ArrayView<ColorTarget>		GetColorTargets ()			const	{ return _colorTargets; }
 		ND_ DepthStencilTarget const&	GetDepthStencilTarget ()	const	{ return _depthStencilTarget; }
 		ND_ ArrayView< VkClearValue >	GetClearValues ()			const	{ return _clearValues; }
 		
@@ -86,6 +88,7 @@ namespace AE::Graphics
 		ND_ ArrayView<VkRect2D>			GetScissors ()				const	{ return _defaultScissors; }
 
 		ND_ uint						GetSubpassIndex ()			const	{ return _subpassIndex; }
+		ND_ bool						IsLastSubpass ()			const	{ return _isLastSubpass; }
 		ND_ RenderPassID				GetRenderPass ()			const	{ return _renderPassId; }
 		ND_ VFramebufferID				GetFramebuffer ()			const	{ return _framebufferId; }
 	};

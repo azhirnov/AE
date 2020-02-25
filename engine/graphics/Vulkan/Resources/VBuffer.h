@@ -39,6 +39,7 @@ namespace AE::Graphics
 		MemStorage_t				_memStorage;
 
 		DebugName_t					_debugName;
+		bool						_canBeDestroyed		= true;
 
 		RWDataRaceCheck				_drCheck;
 
@@ -54,6 +55,7 @@ namespace AE::Graphics
 		void Destroy (VResourceManager &);
 		
 		bool GetMemoryInfo (OUT VResourceMemoryInfo &) const;
+		bool GetMemoryInfo (OUT IGfxMemAllocator::NativeMemInfo_t &) const;
 
 		ND_ VkBufferView		GetView (const VDevice &dev, const BufferViewDesc &) const;
 		

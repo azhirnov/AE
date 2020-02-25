@@ -107,7 +107,54 @@ namespace AE::Graphics
 		}
 	}
 //-----------------------------------------------------------------------------
+	
+	
+/*
+=================================================
+	VirtualImageDesc::SetDimensionAndType
+=================================================
+*/
+	VirtualImageDesc&  VirtualImageDesc::SetDimensionAndType (const uint3 &value)
+	{
+		dimension = value;
 
+		if ( dimension.z > 1 )
+			imageType = EImage::_3D;
+		else
+		if ( dimension.y > 1 )
+			imageType = EImage::_2D;
+		else
+			imageType = EImage::_1D;
+
+		return *this;
+	}
+	
+/*
+=================================================
+	VirtualImageDesc::ToPhysical
+=================================================
+*/
+	ImageDesc  VirtualImageDesc::ToPhysical (uint2 viewportSize, EImageUsage usage) const
+	{
+		ImageDesc	result;
+		result.imageType	= this->imageType;
+		result.flags		= this->flags;
+		result.format		= this->format;
+		result.usage		= usage;
+		result.arrayLayers	= this->arrayLayers;
+		result.maxLevel		= this->maxLevel;
+		result.samples		= this->samples;
+		result.queues		= Default;
+		result.memType		= EMemoryType::DeviceLocal;
+
+		if ( All( this->dimension == ~0u ))
+			result.dimension = uint3{ dimScale.Mul_RTN( viewportSize ), 1 };
+		else
+			result.dimension = dimension;
+
+		return result;
+	}
+//-----------------------------------------------------------------------------
 
 	
 /*

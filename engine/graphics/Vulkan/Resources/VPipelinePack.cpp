@@ -103,6 +103,7 @@ namespace AE::Graphics
 		CHECK_ERR( _LoadGraphicsPipelines( resMngr, des, allocator ));
 		CHECK_ERR( _LoadMeshPipelines( resMngr, des, allocator ));
 		CHECK_ERR( _LoadComputePipelines( resMngr, des ));
+		CHECK_ERR( _LoadRayTracingPipelines( resMngr, des ));
 		CHECK_ERR( _LoadPipelineNames( des, INOUT refs ));
 		return true;
 	}
@@ -156,9 +157,9 @@ namespace AE::Graphics
 			}
 			CHECK_ERR( result );
 			
-			_dsLayouts[i].Set( resMngr.CreateDescriptorSetLayout(
+			_dsLayouts[i] = resMngr.CreateDescriptorSetLayout(
 								VDescriptorSetLayout::Uniforms_t{ uniform_count, un_names, un_data },
-								ArrayView{ vk_samplers, sampler_count }));
+								ArrayView{ vk_samplers, sampler_count });
 			CHECK_ERR( _dsLayouts[i] );
 
 			allocator.Pop( bm );
@@ -202,7 +203,7 @@ namespace AE::Graphics
 				desc_sets.insert_or_assign( src.first, VPipelineLayout::DescSetLayout{ id, ds_layout->Handle(), src.second.index });
 			}
 
-			_pplnLayouts[i].Set( resMngr.CreatePipelineLayout( desc_sets, desc.pushConstants.items ));
+			_pplnLayouts[i] = resMngr.CreatePipelineLayout( desc_sets, desc.pushConstants.items );
 			CHECK_ERR( _pplnLayouts[i] );
 		}
 		return true;
@@ -233,7 +234,7 @@ namespace AE::Graphics
 				frag_outputs.insert( item );
 			}
 
-			_renderPassOutputs[i].Set( resMngr.CreateRenderPassOutput( frag_outputs ));
+			_renderPassOutputs[i] = resMngr.CreateRenderPassOutput( frag_outputs );
 			CHECK_ERR( _renderPassOutputs[i] );
 		}
 		
@@ -284,7 +285,7 @@ namespace AE::Graphics
 			
 			VkShaderModuleCreateInfo	shader_info = {};
 			shader_info.sType		= VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-			shader_info.codeSize	= code_size;
+			shader_info.codeSize	= code_size * sizeof(uint);
 			shader_info.pCode		= code;
 			
 			VK_CHECK( dev.vkCreateShaderModule( dev.GetVkDevice(), &shader_info, null, OUT &_shaderModules[i] ));
@@ -332,7 +333,7 @@ namespace AE::Graphics
 				modules[j].module	= _shaderModules[idx];
 			}
 
-			_gpipelines[i].Set( resMngr.CreateGPTemplate( layout_id, rp_output_id, desc, ArrayView{modules, desc.shaders.size()} ));
+			_gpipelines[i] = resMngr.CreateGPTemplate( layout_id, rp_output_id, desc, ArrayView{modules, desc.shaders.size()} );
 			CHECK_ERR( _gpipelines[i] );
 			
 			allocator.Pop( bm );
@@ -378,7 +379,7 @@ namespace AE::Graphics
 				modules[j].module	= _shaderModules[idx];
 			}
 
-			_mpipelines[i].Set( resMngr.CreateMPTemplate( layout_id, rp_output_id, desc, ArrayView{modules, desc.shaders.size()} ));
+			_mpipelines[i] = resMngr.CreateMPTemplate( layout_id, rp_output_id, desc, ArrayView{modules, desc.shaders.size()} );
 			CHECK_ERR( _mpipelines[i] );
 			
 			allocator.Pop( bm );
@@ -414,10 +415,27 @@ namespace AE::Graphics
 			CHECK_ERR( EnumEq( desc.shader, PipelineCompiler::ShaderUID::SPIRV ));
 			CHECK_ERR( idx < _shaderModules.size() );
 
-			_cpipelines[i].Set( resMngr.CreateCPTemplate( id, desc, _shaderModules[idx] ));
+			_cpipelines[i] = resMngr.CreateCPTemplate( id, desc, _shaderModules[idx] );
 			CHECK_ERR( _cpipelines[i] );
 		}
 		return true;
+	}
+	
+/*
+=================================================
+	_LoadRayTracingPipelines
+=================================================
+*/
+	bool VPipelinePack::_LoadRayTracingPipelines (VResourceManager &resMngr, Serializing::Deserializer &des)
+	{
+		EMarker	marker;
+		uint	count	= 0;
+		CHECK_ERR( des( OUT marker, OUT count ) and marker == EMarker::RayTracingPipelines );
+		
+		if ( not count )
+			return true;
+		
+		return false;
 	}
 
 /*

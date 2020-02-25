@@ -91,6 +91,7 @@ namespace AE::Graphics
 		bool _LoadGraphicsPipelines (VResourceManager &resMngr, Serializing::Deserializer &, StackAllocator_t &allocator);
 		bool _LoadMeshPipelines (VResourceManager &resMngr, Serializing::Deserializer &, StackAllocator_t &allocator);
 		bool _LoadComputePipelines (VResourceManager &resMngr, Serializing::Deserializer &);
+		bool _LoadRayTracingPipelines (VResourceManager &resMngr, Serializing::Deserializer &);
 		bool _LoadPipelineNames (Serializing::Deserializer &des, INOUT PipelineRefs &refs);
 	};
 

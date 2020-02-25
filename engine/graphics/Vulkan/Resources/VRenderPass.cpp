@@ -52,7 +52,7 @@ namespace AE::Graphics
 		
 
 		// setup color attachments
-		for (auto&[name, rt] : pass->GetColorTargets())
+		for (auto& rt : pass->GetColorTargets())
 		{
 			const VkImageLayout			layout	= rt.layout;
 			VkAttachmentDescription&	desc	= _attachments[ rt.index ];

@@ -88,7 +88,9 @@ namespace AE::Graphics
 
 	inline RenderPassDesc&  RenderPassDesc::AddTarget (RenderTargetName id, GfxResourceID image, EAttachmentLoadOp loadOp, EAttachmentStoreOp storeOp)
 	{
-		ASSERT( image and image.ResourceType() == GfxResourceID::EType::Image );
+		ASSERT( image );
+		ASSERT( image.ResourceType() == GfxResourceID::EType::Image or
+				image.ResourceType() == GfxResourceID::EType::VirtualImage );
 		ASSERT( loadOp != EAttachmentLoadOp::Clear );	// clear value is not defined
 
 		renderTargets.insert_or_assign( id, RT{ image, {}, ClearValue_t{}, loadOp, storeOp });
@@ -99,7 +101,9 @@ namespace AE::Graphics
 	template <typename ClearVal>
 	inline RenderPassDesc&  RenderPassDesc::AddTarget (RenderTargetName id, GfxResourceID image, const ClearVal &clearValue, EAttachmentStoreOp storeOp)
 	{
-		ASSERT( image and image.ResourceType() == GfxResourceID::EType::Image );
+		ASSERT( image );
+		ASSERT( image.ResourceType() == GfxResourceID::EType::Image or
+				image.ResourceType() == GfxResourceID::EType::VirtualImage );
 
 		renderTargets.insert_or_assign( id, RT{ image, {}, clearValue, EAttachmentLoadOp::Clear, storeOp });
 		return *this;
@@ -108,7 +112,9 @@ namespace AE::Graphics
 
 	inline RenderPassDesc&  RenderPassDesc::AddTarget (RenderTargetName id, GfxResourceID image, const ImageViewDesc &desc, EAttachmentLoadOp loadOp, EAttachmentStoreOp storeOp)
 	{
-		ASSERT( image and image.ResourceType() == GfxResourceID::EType::Image );
+		ASSERT( image );
+		ASSERT( image.ResourceType() == GfxResourceID::EType::Image or
+				image.ResourceType() == GfxResourceID::EType::VirtualImage );
 		ASSERT( loadOp != EAttachmentLoadOp::Clear );	// clear value is not defined
 
 		renderTargets.insert_or_assign( id, RT{ image, desc, ClearValue_t{}, loadOp, storeOp });
@@ -119,7 +125,9 @@ namespace AE::Graphics
 	template <typename ClearVal>
 	inline RenderPassDesc&  RenderPassDesc::AddTarget (RenderTargetName id, GfxResourceID image, const ImageViewDesc &desc, const ClearVal &clearValue, EAttachmentStoreOp storeOp)
 	{
-		ASSERT( image and image.ResourceType() == GfxResourceID::EType::Image );
+		ASSERT( image );
+		ASSERT( image.ResourceType() == GfxResourceID::EType::Image or
+				image.ResourceType() == GfxResourceID::EType::VirtualImage );
 
 		renderTargets.insert_or_assign( id, RT{ image, desc, clearValue, EAttachmentLoadOp::Clear, storeOp });
 		return *this;

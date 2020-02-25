@@ -24,6 +24,7 @@
 # include "graphics/Vulkan/Resources/VFramebuffer.h"
 # include "graphics/Vulkan/Resources/VVirtualBuffer.h"
 # include "graphics/Vulkan/Resources/VVirtualImage.h"
+# include "graphics/Vulkan/Resources/VBakedCommandBuffer.h"
 
 # include "threading/Containers/LfIndexedPool.h"
 # include "threading/Containers/CachedIndexedPool.h"
@@ -77,6 +78,7 @@ namespace AE::Graphics
 		using RPOutputPool_t		= PoolTmpl< VResourceBase<VRenderPassOutput>,			MaxCached,		 8 >;
 		using RenderPassPool_t		= CachedPoolTmpl< VResourceBase<VRenderPass>,			MaxCached,		 8 >;
 		using FramebufferPool_t		= CachedPoolTmpl< VResourceBase<VFramebuffer>,			MaxCached,		 8 >;
+		using RenderCommandsPool_t	= PoolTmpl< VResourceBase<VBakedCommandBuffer>,		MaxCached,		 8 >;
 
 		using PipelineRefs			= VPipelinePack::PipelineRefs;
 		using SamplerRefs			= VSamplerPack::SamplerRefs;
@@ -90,6 +92,8 @@ namespace AE::Graphics
 		
 		using SemaphorePool_t		= Threading::LfStaticPool< VkSemaphore, 64*4 >;
 		using FencePool_t			= Threading::LfStaticPool< VkFence,     64*4 >;
+		
+		using StagingBufferfPool_t	= Threading::LfIndexedPool< UniqueID<GfxResourceID>, uint, 64, 4 >;
 
 
 	// variables
@@ -127,6 +131,8 @@ namespace AE::Graphics
 			VirtBufferPool_t		virtBuffers;
 			VirtImagePool_t			virtImages;
 
+			RenderCommandsPool_t	renderCommands;
+
 		}						_resPool;
 		
 		SamplerRefs				_samplerRefs;
@@ -136,10 +142,24 @@ namespace AE::Graphics
 		FencePool_t				_fencePool;
 		
 		GfxMemAllocatorPtr		_defaultAllocator;
+		
+		struct {
+			StagingBufferfPool_t	write;
+			StagingBufferfPool_t	read;
+			StagingBufferfPool_t	uniform;
+			BytesU					writeBufPageSize;
+			BytesU					readBufPageSize;
+			BytesU					uniformBufPageSize;
+		}						_staging;
 
 		// dummy resource descriptions
-		const BufferDesc		_dummyBufferDesc;
-		const ImageDesc			_dummyImageDesc;
+		struct {
+			const BufferDesc		buffer;
+			const ImageDesc			image;
+			const VirtualBufferDesc	virtBuffer;
+			const VirtualImageDesc	virtImage;
+
+		}						_dummyDesc;
 
 		UniqueID<VSamplerID>				_defaultSampler;
 		UniqueID<VDescriptorSetLayoutID>	_emptyDSLayout;
@@ -174,6 +194,9 @@ namespace AE::Graphics
 		UniqueID<GfxResourceID>		CreateImage (const ImageDesc &desc, EResourceState defaultState, StringView dbgName, const GfxMemAllocatorPtr &allocator) override;
 		UniqueID<GfxResourceID>		CreateBuffer (const BufferDesc &desc, StringView dbgName, const GfxMemAllocatorPtr &allocator) override;
 		
+		UniqueID<GfxResourceID>		CreateImage (const NativeImageDesc_t &desc, StringView dbgName) override;
+		UniqueID<GfxResourceID>		CreateBuffer (const NativeBufferDesc_t &desc, StringView dbgName) override;
+
 		UniqueID<PipelinePackID>	LoadPipelinePack (const SharedPtr<RStream> &stream) override;
 		bool						ReloadPipelinePack (const SharedPtr<RStream> &stream, PipelinePackID id) override;
 		
@@ -191,6 +214,8 @@ namespace AE::Graphics
 		ND_ UniqueID<VRenderPassOutputID>	CreateRenderPassOutput (const VRenderPassOutput::Output_t &fragOutput);
 		ND_ VRenderPassOutputID				GetRenderPassOutput (const RenderPassName &name) const;
 		
+		ND_ UniqueID<BakedCommandBufferID>	CreateCommandBuffer (const VCommandPoolPtr &pool, RenderPassID renderPass);
+
 		ND_ UniqueID<RenderPassID>		CreateRenderPass (ArrayView<VLogicalRenderPass*> logicalPasses, StringView dbgName = Default);
 		ND_ UniqueID<VFramebufferID>	CreateFramebuffer (ArrayView<Pair<VImageID, ImageViewDesc>> attachments, RenderPassID rp, uint2 dim, uint layers, StringView dbgName = Default);
 
@@ -201,20 +226,25 @@ namespace AE::Graphics
 
 		ND_ VkFence			CreateFence ();
 
-		bool				ReleaseResource (UniqueID<GfxResourceID> &id)		override;
-		bool				ReleaseResource (UniqueID<PipelinePackID> &id)		override	{ return _ReleaseResource( id.Release() ) == 0; }
+		bool	ReleaseResource (UniqueID<GfxResourceID> &id)			override;
+		bool	ReleaseResource (UniqueID<PipelinePackID> &id)			override	{ return _ReleaseResource( id.Release() ) == 0; }
+		bool	ReleaseResource (UniqueID<BakedCommandBufferID> &id)	override	{ return _ReleaseResource( id.Release() ) == 0; }
 		
 		template <typename IT, typename GT, uint UID>
-		bool				ReleaseResource (UniqueID< HandleTmpl< IT, GT, UID >> &id)		{ return _ReleaseResource( id.Release() ) == 0; }
+		bool	ReleaseResource (UniqueID< HandleTmpl< IT, GT, UID >> &id, uint refCount = 1)	{ return _ReleaseResource( id.Release(), refCount ) == 0; }
 		
-		void				ReleaseFences (ArrayView<VkFence>);
-		void				ReleaseSemaphores (ArrayView<VkSemaphore>);
+		void	ReleaseFences (ArrayView<VkFence>);
+		void	ReleaseSemaphores (ArrayView<VkSemaphore>);
 
-		BufferDesc const&		GetBufferDescription (GfxResourceID id) const override;
-		ImageDesc const&		GetImageDescription (GfxResourceID id) const override;
+		BufferDesc const&			GetBufferDescription (GfxResourceID id) const override;
+		ImageDesc const&			GetImageDescription (GfxResourceID id) const override;
+		VirtualBufferDesc const&	GetVirtualBufferDescription (GfxResourceID id) const override;
+		VirtualImageDesc const&		GetVirtualImageDescription (GfxResourceID id) const override;
 
 		NativeBufferHandle_t	GetBufferHandle (GfxResourceID id) const override;
 		NativeImageHandle_t		GetImageHandle (GfxResourceID id) const override;
+		
+		bool				GetMemoryInfo (GfxResourceID id, OUT NativeMemInfo_t &info) const override;
 
 		template <typename ID>
 		ND_ UniqueID<ID>	AcquireResource (ID id);
@@ -233,6 +263,14 @@ namespace AE::Graphics
 		ND_ auto const&		GetDescription (ID id) const;
 
 		ND_ VDevice const&	GetDevice ()	const	{ return _device; }
+		
+		// staging buffers
+		ND_ BytesU			GetHostReadBufferSize ()	const	{ return _staging.readBufPageSize; }
+		ND_ BytesU			GetHostWriteBufferSize ()	const	{ return _staging.writeBufPageSize; }
+		ND_ BytesU			GetUniformBufferSize ()		const	{ return _staging.uniformBufPageSize; }
+
+		bool  CreateStagingBuffer (EBufferUsage usage, OUT GfxResourceID &id, OUT StagingBufferIdx &index);
+		void  ReleaseStagingBuffer (StagingBufferIdx index);
 
 
 	private:
@@ -259,6 +297,7 @@ namespace AE::Graphics
 		ND_ auto&  _GetResourcePool (const VFramebufferID &)				{ return _resPool.framebufferCache; }
 		ND_ auto&  _GetResourcePool (const VVirtualBufferID &)				{ return _resPool.virtBuffers; }
 		ND_ auto&  _GetResourcePool (const VVirtualImageID &)				{ return _resPool.virtImages; }
+		ND_ auto&  _GetResourcePool (const BakedCommandBufferID &)		{ return _resPool.renderCommands; }
 		
 		template <typename ID>
 		ND_ const auto&  _GetResourceCPool (const ID &id)	const			{ return const_cast<VResourceManager *>(this)->_GetResourcePool( id ); }
@@ -267,6 +306,8 @@ namespace AE::Graphics
 	// memory managment
 		ND_ GfxMemAllocatorPtr  _ChooseAllocator (const GfxMemAllocatorPtr &userDefined);
 
+		bool  _CheckHostVisibleMemory ();
+		void  _DestroyStagingBuffers ();
 
 	// 
 		template <typename ID>	ND_ bool   _Assign (OUT ID &id);
@@ -310,6 +351,12 @@ namespace AE::Graphics
 		
 		template <typename DataT, size_t CS, size_t MC>
 		int  _ReleaseResource (CachedPoolTmpl<DataT,CS,MC> &pool, DataT& data, Index_t index, uint refCount);
+		
+		template <typename DataT, size_t CS, size_t MC>
+		void  _DestroyResources (INOUT PoolTmpl<DataT,CS,MC> &pool);
+
+		template <typename DataT, size_t CS, size_t MC>
+		void  _DestroyResourceCache (INOUT CachedPoolTmpl<DataT,CS,MC> &pool);
 	};
 
 	
@@ -400,14 +447,28 @@ namespace AE::Graphics
 	inline auto const&  VResourceManager::GetDescription (VBufferID id) const
 	{
 		auto*	res = GetResource( id );
-		return res ? res->Description() : _dummyBufferDesc;
+		return res ? res->Description() : _dummyDesc.buffer;
 	}
 
 	template <>
 	inline auto const&  VResourceManager::GetDescription (VImageID id) const
 	{
 		auto*	res = GetResource( id );
-		return res ? res->Description() : _dummyImageDesc;
+		return res ? res->Description() : _dummyDesc.image;
+	}
+
+	template <>
+	inline auto const&  VResourceManager::GetDescription (VVirtualImageID id) const
+	{
+		auto*	res = GetResource( id );
+		return res ? res->Description() : _dummyDesc.virtImage;
+	}
+
+	template <>
+	inline auto const&  VResourceManager::GetDescription (VVirtualBufferID id) const
+	{
+		auto*	res = GetResource( id );
+		return res ? res->Description() : _dummyDesc.virtBuffer;
 	}
 
 /*

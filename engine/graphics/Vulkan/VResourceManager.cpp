@@ -65,11 +65,109 @@ namespace {
 		CHECK_ERR( _CreateEmptyDescriptorSetLayout() );
 		CHECK_ERR( _CreateDefaultSampler() );
 
-		_defaultAllocator = MakeShared< VUniMemAllocator >( _device );
+		_defaultAllocator = MakeRC< VUniMemAllocator >( _device );
 
+		_CheckHostVisibleMemory();
 		return true;
 	}
 	
+/*
+=================================================
+	_CheckHostVisibleMemory
+=================================================
+*/
+	bool  VResourceManager::_CheckHostVisibleMemory ()
+	{
+		auto&	dev		= _device;
+		auto&	props	= dev.GetProperties().memoryProperties;
+		
+		VkMemoryRequirements	transfer_mem_req = {};
+		VkMemoryRequirements	uniform_mem_req  = {};
+		{
+			VkBuffer			id;
+			VkBufferCreateInfo	info = {};
+			info.sType	= VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			info.pNext	= null;
+			info.flags	= 0;
+			info.usage	= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+			info.size	= 64 << 10;
+			info.sharingMode			= VK_SHARING_MODE_EXCLUSIVE;
+			info.pQueueFamilyIndices	= null;
+			info.queueFamilyIndexCount	= 0;
+
+			VK_CHECK( dev.vkCreateBuffer( dev.GetVkDevice(), &info, null, OUT &id ));
+			dev.vkGetBufferMemoryRequirements( dev.GetVkDevice(), id, OUT &transfer_mem_req );
+			dev.vkDestroyBuffer( dev.GetVkDevice(), id, null );
+			
+			info.size  = 256;
+			info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+			VK_CHECK( dev.vkCreateBuffer( dev.GetVkDevice(), &info, null, OUT &id ));
+			dev.vkGetBufferMemoryRequirements( dev.GetVkDevice(), id, OUT &uniform_mem_req );
+			dev.vkDestroyBuffer( dev.GetVkDevice(), id, null );
+		}
+
+		BitSet<VK_MAX_MEMORY_HEAPS>		cached_heaps;
+		BitSet<VK_MAX_MEMORY_HEAPS>		cocherent_heaps;
+		BitSet<VK_MAX_MEMORY_HEAPS>		uniform_heaps;
+
+		for (uint i = 0; i < props.memoryTypeCount; ++i)
+		{
+			auto&	mt = props.memoryTypes[i];
+
+			if ( EnumEq( transfer_mem_req.memoryTypeBits, 1u << i ))
+			{
+				if ( EnumEq( mt.propertyFlags, VK_MEMORY_PROPERTY_HOST_CACHED_BIT ))
+					cached_heaps[ mt.heapIndex ] = true;
+			
+				if ( EnumEq( mt.propertyFlags, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ))
+					cocherent_heaps[ mt.heapIndex ] = true;
+			}
+
+			if ( EnumEq( uniform_mem_req.memoryTypeBits, 1u << i ) and
+				 EnumEq( mt.propertyFlags, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ))
+			{
+				uniform_heaps[ mt.heapIndex ] = true;
+			}
+		}
+
+		BytesU	uniform_heap_size;
+		BytesU	transfer_heap_size;
+
+		for (uint i = 0; i < props.memoryHeapCount; ++i)
+		{
+			if ( uniform_heaps[i] )
+				uniform_heap_size += props.memoryHeaps[i].size;
+
+			if ( cached_heaps[i] or cocherent_heaps[i] )
+				transfer_heap_size += props.memoryHeaps[i].size;
+		}
+
+		BytesU	un_size = uniform_heap_size  / StagingBufferfPool_t::Capacity();
+		BytesU	tr_size = transfer_heap_size / StagingBufferfPool_t::Capacity();
+
+		if ( un_size > 256_Mb )
+			un_size = 64_Mb;
+		else
+		if ( un_size > 64_Mb )
+			un_size = 32_Mb;
+		else
+			un_size = 16_Mb;
+
+		if ( tr_size > 512_Mb )
+			tr_size = 256_Mb;
+		else
+		if ( tr_size > 128_Mb )
+			tr_size = 128_Mb;
+		else
+			tr_size = 64_Mb;
+
+		_staging.writeBufPageSize = _staging.readBufPageSize = tr_size;
+		_staging.uniformBufPageSize = un_size;
+
+		return true;
+	}
+
 /*
 =================================================
 	ResourceDestructor
@@ -89,11 +187,56 @@ namespace {
 	
 /*
 =================================================
+	_DestroyResources
+=================================================
+*/
+	template <typename DataT, size_t CS, size_t MC>
+	inline void  VResourceManager::_DestroyResources (INOUT PoolTmpl<DataT,CS,MC> &pool)
+	{
+		for (size_t i = 0, count = pool.size(); i < count; ++i)
+		{
+			Index_t	id	 = Index_t(i);
+			auto&	data = pool[id];
+				
+			if ( data.IsCreated() )
+			{
+				data.Destroy( *this );
+				pool.Unassign( id );
+			}
+		}
+	}
+
+/*
+=================================================
+	_DestroyResourceCache
+=================================================
+*/
+	template <typename DataT, size_t CS, size_t MC>
+	inline void  VResourceManager::_DestroyResourceCache (INOUT CachedPoolTmpl<DataT,CS,MC> &pool)
+	{
+		for (size_t i = 0, count = pool.size(); i < count; ++i)
+		{
+			Index_t	id	 = Index_t(i);
+			auto&	data = pool[id];
+				
+			if ( data.IsCreated() )
+			{
+				pool.RemoveFromCache( id );
+				data.Destroy( *this );
+				pool.Unassign( id );
+			}
+		}
+	}
+
+/*
+=================================================
 	Deinitialize
 =================================================
 */
 	void  VResourceManager::Deinitialize ()
 	{
+		_DestroyStagingBuffers();
+
 		if ( _defaultAllocator )
 		{
 			CHECK( _defaultAllocator.use_count() == 1 );
@@ -102,6 +245,16 @@ namespace {
 
 		ReleaseResource( _defaultSampler );
 		ReleaseResource( _emptyDSLayout );
+		
+		_DestroyResources( INOUT _resPool.samplerPacks );
+		_DestroyResources( INOUT _resPool.samplers );
+		_DestroyResources( INOUT _resPool.graphicsPpln );
+		_DestroyResources( INOUT _resPool.computePpln );
+		_DestroyResources( INOUT _resPool.meshPpln );
+		_DestroyResources( INOUT _resPool.dsLayouts );
+		_DestroyResources( INOUT _resPool.pplnLayouts );
+		_DestroyResourceCache( INOUT _resPool.renderPassCache );
+		_DestroyResourceCache( INOUT _resPool.framebufferCache );
 
 		AllResourceIDs_t::Visit( ResourceDestructor{*this} );
 		
@@ -168,7 +321,7 @@ namespace {
 */
 	BufferDesc const&  VResourceManager::GetBufferDescription (GfxResourceID id) const
 	{
-		CHECK_ERR( id.ResourceType() == GfxResourceID::EType::Buffer, _dummyBufferDesc );
+		CHECK_ERR( id.ResourceType() == GfxResourceID::EType::Buffer, _dummyDesc.buffer );
 
 		return GetDescription( VBufferID{ id.Index(), id.Generation() });
 	}
@@ -180,9 +333,33 @@ namespace {
 */
 	ImageDesc const&  VResourceManager::GetImageDescription (GfxResourceID id) const
 	{
-		CHECK_ERR( id.ResourceType() == GfxResourceID::EType::Image, _dummyImageDesc );
+		CHECK_ERR( id.ResourceType() == GfxResourceID::EType::Image, _dummyDesc.image );
 
 		return GetDescription( VImageID{ id.Index(), id.Generation() });
+	}
+	
+/*
+=================================================
+	GetVirtualBufferDescription
+=================================================
+*/
+	VirtualBufferDesc const&  VResourceManager::GetVirtualBufferDescription (GfxResourceID id) const
+	{
+		CHECK_ERR( id.ResourceType() == GfxResourceID::EType::VirtualBuffer, _dummyDesc.virtBuffer );
+
+		return GetDescription( VVirtualBufferID{ id.Index(), id.Generation() });
+	}
+	
+/*
+=================================================
+	GetVirtualImageDescription
+=================================================
+*/
+	VirtualImageDesc const&  VResourceManager::GetVirtualImageDescription (GfxResourceID id) const
+	{
+		CHECK_ERR( id.ResourceType() == GfxResourceID::EType::VirtualImage, _dummyDesc.virtImage );
+
+		return GetDescription( VVirtualImageID{ id.Index(), id.Generation() });
 	}
 
 /*
@@ -215,6 +392,31 @@ namespace {
 		return BitCast<ImageVk_t>(img->Handle());
 	}
 		
+/*
+=================================================
+	GetMemoryInfo
+=================================================
+*/
+	bool  VResourceManager::GetMemoryInfo (GfxResourceID id, OUT NativeMemInfo_t &info) const
+	{
+		switch ( id.ResourceType() )
+		{
+			case GfxResourceID::EType::Buffer :
+			{
+				auto*	buf = GetResource( VBufferID{ id.Index(), id.Generation() });
+				CHECK_ERR( buf );
+				return buf->GetMemoryInfo( OUT info );
+			}
+			case GfxResourceID::EType::Image :
+			{
+				auto*	img = GetResource( VImageID{ id.Index(), id.Generation() });
+				CHECK_ERR( img );
+				return img->GetMemoryInfo( OUT info );
+			}
+		}
+		RETURN_ERR( "unsupported resource type" );
+	}
+
 /*
 =================================================
 	IsSupported
@@ -410,6 +612,60 @@ namespace {
 		return UniqueID<GfxResourceID>{ GfxResourceID{ id.Index(), id.Generation(), GfxResourceID::EType::Buffer }};
 	}
 	
+/*
+=================================================
+	CreateImage
+=================================================
+*/
+	UniqueID<GfxResourceID>  VResourceManager::CreateImage (const NativeImageDesc_t &desc, StringView dbgName)
+	{
+		VulkanImageDesc const*	desc_ptr = UnionGetIf<VulkanImageDesc>( &desc );
+		CHECK_ERR( desc_ptr );
+
+		VImageID	id;
+		CHECK_ERR( _Assign( OUT id ));
+
+		auto&	data = _GetResourcePool( id )[ id.Index() ];
+		Replace( data );
+
+		if ( not data.Create( _device, *desc_ptr, dbgName ))
+		{
+			_Unassign( id );
+			RETURN_ERR( "failed when creating image" );
+		}
+		
+		data.AddRef();
+
+		return UniqueID<GfxResourceID>{ GfxResourceID{ id.Index(), id.Generation(), GfxResourceID::EType::Image }};
+	}
+	
+/*
+=================================================
+	CreateBuffer
+=================================================
+*/
+	UniqueID<GfxResourceID>  VResourceManager::CreateBuffer (const NativeBufferDesc_t &desc, StringView dbgName)
+	{
+		VulkanBufferDesc const*	desc_ptr = UnionGetIf<VulkanBufferDesc>( &desc );
+		CHECK_ERR( desc_ptr );
+
+		VBufferID	id;
+		CHECK_ERR( _Assign( OUT id ));
+
+		auto&	data = _GetResourcePool( id )[ id.Index() ];
+		Replace( data );
+		
+		if ( not data.Create( _device, *desc_ptr, dbgName ))
+		{
+			_Unassign( id );
+			RETURN_ERR( "failed when creating buffer" );
+		}
+		
+		data.AddRef();
+
+		return UniqueID<GfxResourceID>{ GfxResourceID{ id.Index(), id.Generation(), GfxResourceID::EType::Buffer }};
+	}
+
 /*
 =================================================
 	_CreateCachedResource
@@ -1255,8 +1511,8 @@ namespace {
 
 		GraphicsPipelineID	id = _GetGraphicsPipeline( name, desc, OUT ppln_templ_id, OUT render_pass_id );
 
-		ReleaseResource( ppln_templ_id );
-		ReleaseResource( render_pass_id );
+		if ( ppln_templ_id )	ReleaseResource( ppln_templ_id );
+		if ( render_pass_id )	ReleaseResource( render_pass_id );
 		return id;
 	}
 
@@ -1386,8 +1642,8 @@ namespace {
 
 		MeshPipelineID	id = _GetMeshPipeline( name, desc, OUT ppln_templ_id, OUT render_pass_id );
 
-		ReleaseResource( ppln_templ_id );
-		ReleaseResource( render_pass_id );
+		if ( ppln_templ_id )	ReleaseResource( ppln_templ_id );
+		if ( render_pass_id )	ReleaseResource( render_pass_id );
 		return id;
 	}
 
@@ -1471,7 +1727,7 @@ namespace {
 
 		ComputePipelineID	id = _GetComputePipeline( name, desc, OUT ppln_templ_id );
 
-		ReleaseResource( ppln_templ_id );
+		if ( ppln_templ_id )	ReleaseResource( ppln_templ_id );
 		return id;
 	}
 
@@ -1718,6 +1974,133 @@ namespace {
 			return Default;
 
 		return iter->second;
+	}
+	
+/*
+=================================================
+	CreateCommandBuffer
+=================================================
+*/
+	UniqueID<BakedCommandBufferID>  VResourceManager::CreateCommandBuffer (const VCommandPoolPtr &pool, RenderPassID renderPass)
+	{
+		if ( renderPass )
+			CHECK_ERR( IsAlive( renderPass ));
+
+		BakedCommandBufferID	id;
+		CHECK_ERR( _Assign( OUT id ));
+
+		auto&	data = _GetResourcePool( id )[ id.Index() ];
+		Replace( data );
+
+		if ( not data.Create( _device, pool, renderPass ))
+		{
+			_Unassign( id );
+			RETURN_ERR( "failed when creating command buffer" );
+		}
+		
+		data.AddRef();
+		return UniqueID<BakedCommandBufferID>{ id };
+	}
+//-----------------------------------------------------------------------------
+
+
+	
+/*
+=================================================
+	CreateStagingBuffer
+=================================================
+*/
+	bool  VResourceManager::CreateStagingBuffer (EBufferUsage usage, OUT GfxResourceID &outBufferId, OUT StagingBufferIdx &outIndex)
+	{
+		StagingBufferfPool_t*	pool	 = null;
+		uint					idx_mask = 0;
+		BufferDesc				desc;
+		desc.usage = usage;
+
+		switch ( usage )
+		{
+			case EBufferUsage::TransferSrc :
+				pool		= &_staging.write;
+				desc.size	= _staging.writeBufPageSize;
+				desc.memType= EMemoryType::HostCocherent;
+				idx_mask	= 1u << 30;
+				break;
+			case EBufferUsage::TransferDst :
+				pool		= &_staging.read;
+				desc.size	= _staging.readBufPageSize;
+				desc.memType= EMemoryType::HostCached;
+				idx_mask	= 2u << 30;
+				break;
+			case EBufferUsage::Uniform :
+				pool		= &_staging.uniform;
+				desc.size	= _staging.uniformBufPageSize;
+				desc.memType= EMemoryType::HostCocherent;
+				idx_mask	= 3u << 30;
+				break;
+			default :
+				RETURN_ERR( "unsupported buffer usage" );
+		}
+		
+		const auto	ctor = [this, &desc] (auto *ptr, uint)
+		{
+			UniqueID<GfxResourceID>	id = CreateBuffer( desc, Default, _defaultAllocator );
+			CHECK( id );
+			PlacementNew< UniqueID<GfxResourceID> >( ptr, std::move(id) );
+		};
+
+		uint	index;
+		CHECK_ERR( pool->Assign( OUT index, ctor ));
+		
+		outBufferId = (*pool)[ index ];
+
+		outIndex = StagingBufferIdx(index | idx_mask);
+		return true;
+	}
+	
+/*
+=================================================
+	ReleaseStagingBuffer
+=================================================
+*/
+	void  VResourceManager::ReleaseStagingBuffer (StagingBufferIdx index)
+	{
+		const uint	idx = uint(index) & ~(3u << 30);
+
+		switch ( uint(index) >> 30 )
+		{
+			case 1 :
+				_staging.write.Unassign( idx );
+				break;
+
+			case 2 :
+				_staging.read.Unassign( idx );
+				break;
+				
+			case 3 :
+				_staging.uniform.Unassign( idx );
+				break;
+
+			default :
+				CHECK( !"something goes wrong!" );
+				break;
+		}
+	}
+	
+/*
+=================================================
+	_DestroyStagingBuffers
+=================================================
+*/
+	void  VResourceManager::_DestroyStagingBuffers ()
+	{
+		const auto	dtor = [this] (UniqueID<GfxResourceID> &id)
+		{
+			ReleaseResource( id );
+		};
+
+		_staging.write.Release( dtor, true );
+		_staging.read.Release( dtor, true );
+		_staging.uniform.Release( dtor, true );
 	}
 
 

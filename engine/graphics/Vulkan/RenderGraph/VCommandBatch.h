@@ -1,12 +1,5 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#pragma once
-
-#ifdef AE_ENABLE_VULKAN
-
-# include "graphics/Vulkan/VResourceManager.h"
-# include "graphics/Vulkan/RenderGraph/VCommandPool.h"
-
 namespace AE::Graphics
 {
 
@@ -18,61 +11,53 @@ namespace AE::Graphics
 	{
 	// types
 	public:
-		using OutFences_t	= FixedArray< VkFence, 32 >;
+		struct OnBufferDataLoadedEvent
+		{
+			using Callback_t = Function< void (const BufferView &) >;
+			
+			Callback_t		callback;
+			BufferView		view;
+
+			OnBufferDataLoadedEvent () {}
+			OnBufferDataLoadedEvent (Callback_t&& cb, BufferView&& view) : callback{std::move(cb)}, view{std::move(view)} {}
+		};
+
+		
+		struct OnImageDataLoadedEvent
+		{
+			using Callback_t	= Function< void (const ImageView &) >;
+
+			Callback_t		callback;
+			ImageView		view;
+
+			OnImageDataLoadedEvent () {}
+			OnImageDataLoadedEvent (Callback_t&& cb, ImageView&& view) : callback{std::move(cb)}, view{std::move(view)} {}
+		};
+		//---------------------------------------------------------------------
+
 
 	private:
-		struct Resource
+		struct StagingBuffer
 		{
-		// types
-			enum class EType
-			{
-				Buffer,
-				Image,
-				GraphicsPipeline,
-				ComputePipeline,
-				MeshPipeline,
-				RayTracingPipeline,
-				DescriptorSet,
-				RenderPass,
-				Framebuffer
-			};
-
-		// constants
-			static constexpr uint		IndexOffset			= 0;
-			static constexpr uint		GenerationOffset	= 16;
-			static constexpr uint		ResTypeOffset		= 32;
-			static constexpr uint64_t	IndexMask			= 0xFFFF;
-			static constexpr uint64_t	GenerationMask		= 0xFFFF;
-			static constexpr uint64_t	ResTypeMask			= 0xFF;
-
-			STATIC_ASSERT( ((IndexMask << IndexOffset) | (GenerationMask << GenerationOffset) | (ResTypeMask << ResTypeOffset)) == 0xFF'FFFF'FFFFull );
-
-		// variables
-			uint64_t	value	= UMax;
+			GfxResourceID		bufferId;
+			BytesU				capacity;
+			BytesU				size;
+			StagingBufferIdx	index;
 			
-		// methods
-			Resource () {}
-			
-			Resource (uint64_t index, uint64_t generation, EType type) :
-				value{ (index << IndexOffset) | (generation << GenerationOffset) | (uint64_t(type) << ResTypeOffset) } {}
+			void *				mappedPtr	= null;
+			BytesU				memOffset;					// can be used to flush memory ranges
+			VkDeviceMemory		mem			= VK_NULL_HANDLE;
+			bool				isCoherent	= false;
 
-			ND_ bool  operator == (const Resource &rhs)	const	{ return value == rhs.value; }
-
-			ND_ uint16_t	Index ()				const	{ return CheckCast<uint16_t>((value >> IndexOffset) & IndexMask); }
-			ND_ uint16_t	Generation ()			const	{ return CheckCast<uint16_t>((value >> GenerationOffset) & GenerationMask); }
-			ND_ EType		ResType ()				const	{ return EType((value >> ResTypeOffset) & ResTypeMask); }
+			ND_ bool	IsFull ()	const	{ return size >= capacity; }
+			ND_ bool	Empty ()	const	{ return size == 0_b; }
 		};
+		using StagingBuffers_t	= FixedArray< StagingBuffer, 8 >;
 
-		struct ResourceHash {
-			ND_ size_t  operator () (const Resource &x) const {
-				return std::hash<decltype(x.value)>{}( x.value );
-			}
-		};
 
-		using ResourceMap_t		= HashSet< Resource, ResourceHash >;		// TODO: custom allocator
 		using Semaphores_t		= FixedArray< VkSemaphore, 16 >;
 		using Fences_t			= FixedArray< VkFence, 8 >;
-		using CmdBuffers_t		= FixedArray< Pair<VCommandPool*, VkCommandBuffer>, 8 >;
+		using CmdBuffers_t		= FixedArray< UniqueID<BakedCommandBufferID>, 16 >;
 
 
 	// variables
@@ -81,10 +66,19 @@ namespace AE::Graphics
 
 		Atomic<uint16_t>	_generation	{0};
 
-		ResourceMap_t		_resourceMap;
 		Semaphores_t		_semaphores;
 		Fences_t			_fences;
 		CmdBuffers_t		_cmdBuffers;
+		
+		// staging buffers
+		struct {
+			StagingBuffers_t					hostToDevice;	// CPU write, GPU read
+			StagingBuffers_t					deviceToHost;	// GPU write, CPU read
+			Array< OnBufferDataLoadedEvent >	onBufferLoadedEvents;
+			Array< OnImageDataLoadedEvent >		onImageLoadedEvents;
+		}					_staging;
+
+		VResourceManager&	_resMngr;
 
 		bool				_isComplete	= false;
 		
@@ -93,84 +87,38 @@ namespace AE::Graphics
 
 	// methods
 	public:
-		VCommandBatch () {}
+		VCommandBatch (VResourceManager &rm) : _resMngr{rm} {}
 		~VCommandBatch () {}
 
 		void  Initialize ();
-		bool  OnComplete (VResourceManager &resMngr);
+		bool  OnComplete ();
 
 		void  AddSemaphore (VkSemaphore sem);
 		void  AddFence (VkFence fence);
-		void  AddCmdBuffer (VCommandPool *pool, VkCommandBuffer cmdbuf);
+		void  AddCmdBuffer (UniqueID<BakedCommandBufferID> &&id);
 
-		// returns 'true' if new resource has been added
-		bool  AddResource (VBufferID id);
-		bool  AddResource (VImageID id);
-		bool  AddResource (GraphicsPipelineID id);
-		bool  AddResource (MeshPipelineID id);
-		bool  AddResource (ComputePipelineID id);
-		bool  AddResource (RayTracingPipelineID id);
-		bool  AddResource (RenderPassID id);
-		bool  AddResource (VFramebufferID id);
+		// staging buffer
+		bool  GetWritable (const BytesU srcRequiredSize, const BytesU blockAlign, const BytesU offsetAlign, const BytesU dstMinSize,
+						   OUT GfxResourceID &dstBuffer, OUT BytesU &dstOffset, OUT BufferView::Data &outDataRange);
+		bool  GetReadable (const BytesU srcRequiredSize, const BytesU blockAlign, const BytesU offsetAlign, const BytesU dstMinSize,
+						   OUT GfxResourceID &dstBuffer, OUT BytesU &dstOffset, OUT BufferView::Data &outDataRange);
+		bool  AddDataLoadedEvent (OnImageDataLoadedEvent &&);
+		bool  AddDataLoadedEvent (OnBufferDataLoadedEvent &&);
 
 		ND_ bool	IsComplete ()	const	{ SHAREDLOCK( _drCheck );  return _isComplete; }
 		ND_ uint	Generation ()	const	{ SHAREDLOCK( _drCheck );  return _generation.load( EMemoryOrder::Relaxed ); }
+
+	private:
+		bool  _ReleaseFencesAndSemaphores ();
+		void  _ProcessReadOps ();
+		
+		bool  _GetStaging (StagingBuffers_t &stagingBuffers, EBufferUsage usage,
+						   const BytesU srcRequiredSize, const BytesU blockAlign, const BytesU offsetAlign, const BytesU dstMinSize,
+						   OUT GfxResourceID &dstBuffer, OUT BytesU &dstOffset, OUT BufferView::Data &outDataRange);
 	};
 
 	
-/*
-=================================================
-	AddResource
-=================================================
-*/
-	bool  VCommandBatch::AddResource (VBufferID id)
-	{
-		EXLOCK( _drCheck );
-		return _resourceMap.insert(Resource{ id.Index(), id.Generation(), Resource::EType::Buffer }).second;
-	}
 
-	bool  VCommandBatch::AddResource (VImageID id)
-	{
-		EXLOCK( _drCheck );
-		return _resourceMap.insert(Resource{ id.Index(), id.Generation(), Resource::EType::Image }).second;
-	}
-
-	bool  VCommandBatch::AddResource (GraphicsPipelineID id)
-	{
-		EXLOCK( _drCheck );
-		return _resourceMap.insert(Resource{ id.Index(), id.Generation(), Resource::EType::GraphicsPipeline }).second;
-	}
-
-	bool  VCommandBatch::AddResource (MeshPipelineID id)
-	{
-		EXLOCK( _drCheck );
-		return _resourceMap.insert(Resource{ id.Index(), id.Generation(), Resource::EType::MeshPipeline }).second;
-	}
-
-	bool  VCommandBatch::AddResource (ComputePipelineID id)
-	{
-		EXLOCK( _drCheck );
-		return _resourceMap.insert(Resource{ id.Index(), id.Generation(), Resource::EType::ComputePipeline }).second;
-	}
-
-	bool  VCommandBatch::AddResource (RayTracingPipelineID id)
-	{
-		EXLOCK( _drCheck );
-		return _resourceMap.insert(Resource{ id.Index(), id.Generation(), Resource::EType::RayTracingPipeline }).second;
-	}
-	
-	bool  VCommandBatch::AddResource (RenderPassID id)
-	{
-		EXLOCK( _drCheck );
-		return _resourceMap.insert(Resource{ id.Index(), id.Generation(), Resource::EType::RenderPass }).second;
-	}
-
-	bool  VCommandBatch::AddResource (VFramebufferID id)
-	{
-		EXLOCK( _drCheck );
-		return _resourceMap.insert(Resource{ id.Index(), id.Generation(), Resource::EType::Framebuffer }).second;
-	}
-	
 /*
 =================================================
 	Initialize
@@ -186,83 +134,21 @@ namespace AE::Graphics
 	OnComplete
 =================================================
 */
-	bool  VCommandBatch::OnComplete (VResourceManager &resMngr)
+	bool  VCommandBatch::OnComplete ()
 	{
-		using EResType = Resource::EType;
-
 		EXLOCK( _drCheck );
 
 		if ( _isComplete )
 			return true;
 
-		auto&	dev = resMngr.GetDevice();
+		CHECK_ERR( _ReleaseFencesAndSemaphores() );
 
-		CHECK( _fences.size() );
-		VK_CHECK( dev.vkWaitForFences( dev.GetVkDevice(), uint(_fences.size()), _fences.data(), true, UMax ));
+		_ProcessReadOps();
 
-		resMngr.ReleaseFences( _fences );
-		resMngr.ReleaseSemaphores( _semaphores );
-
-		for (auto[pool, cmdbuf] : _cmdBuffers) {
-			pool->RecyclePrimary( dev, cmdbuf );
+		for (auto& cb : _cmdBuffers) {
+			_resMngr.ReleaseResource( cb );
 		}
-
-		_fences.clear();
-		_semaphores.clear();
 		_cmdBuffers.clear();
-
-		for (auto& res : _resourceMap)
-		{
-			BEGIN_ENUM_CHECKS();
-			switch ( res.ResType() )
-			{
-				case EResType::Buffer : {
-					UniqueID<GfxResourceID>			id{ GfxResourceID{ res.Index(), res.Generation(), GfxResourceID::EType::Buffer }};
-					resMngr.ReleaseResource( id );
-					break;
-				}
-				case EResType::Image : {
-					UniqueID<GfxResourceID>			id{ GfxResourceID{ res.Index(), res.Generation(), GfxResourceID::EType::Image }};
-					resMngr.ReleaseResource( id );
-					break;
-				}
-				case EResType::GraphicsPipeline : {
-					UniqueID<GraphicsPipelineID>	id{ GraphicsPipelineID{ res.Index(), res.Generation() }};
-					resMngr.ReleaseResource( id );
-					break;
-				}
-				case EResType::ComputePipeline : {
-					UniqueID<ComputePipelineID>		id{ ComputePipelineID{ res.Index(), res.Generation() }};
-					resMngr.ReleaseResource( id );
-					break;
-				}
-				case EResType::MeshPipeline : {
-					UniqueID<MeshPipelineID>		id{ MeshPipelineID{ res.Index(), res.Generation() }};
-					resMngr.ReleaseResource( id );
-					break;
-				}
-				case EResType::RayTracingPipeline : {
-					//resMngr.ReleaseResource( RayTracingPipelineID{ res.Index(), res.Generation() });
-					break;
-				}
-				case EResType::DescriptorSet : {
-					//resMngr.ReleaseResource( DescriptorSetID{ res.Index(), res.Generation() });
-					break;
-				}
-				case EResType::RenderPass : {
-					UniqueID<RenderPassID>		id{ RenderPassID{ res.Index(), res.Generation() }};
-					resMngr.ReleaseResource( id );
-					break;
-				}
-				case EResType::Framebuffer : {
-					UniqueID<VFramebufferID>	id{ VFramebufferID{ res.Index(), res.Generation() }};
-					resMngr.ReleaseResource( id );
-					break;
-				}
-			}
-			END_ENUM_CHECKS();
-		}
-		_resourceMap.clear();
 
 		_isComplete = true;
 		
@@ -272,13 +158,98 @@ namespace AE::Graphics
 	
 /*
 =================================================
+	_ReleaseFencesAndSemaphores
+=================================================
+*/
+	bool  VCommandBatch::_ReleaseFencesAndSemaphores ()
+	{
+		auto&	dev = _resMngr.GetDevice();
+
+		CHECK( _fences.size() );
+		VK_CHECK( dev.vkWaitForFences( dev.GetVkDevice(), uint(_fences.size()), _fences.data(), true, UMax ));
+
+		_resMngr.ReleaseFences( _fences );
+		_resMngr.ReleaseSemaphores( _semaphores );
+
+		_fences.clear();
+		_semaphores.clear();
+
+		return true;
+	}
+	
+/*
+=================================================
+	_ProcessReadOps
+=================================================
+*/
+	void  VCommandBatch::_ProcessReadOps ()
+	{
+		// invalidate non-cocherent memory before reading
+		FixedArray<VkMappedMemoryRange, 32>		regions;
+		VDevice const&							dev = _resMngr.GetDevice();
+
+		for (auto& buf : _staging.deviceToHost)
+		{
+			if ( buf.isCoherent )
+				continue;
+
+			if ( regions.size() == regions.capacity() )
+			{
+				VK_CALL( dev.vkInvalidateMappedMemoryRanges( dev.GetVkDevice(), uint(regions.size()), regions.data() ));
+				regions.clear();
+			}
+
+			auto&	reg = regions.emplace_back();
+			reg.sType	= VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+			reg.pNext	= null;
+			reg.memory	= buf.mem;
+			reg.offset	= VkDeviceSize(buf.memOffset);
+			reg.size	= VkDeviceSize(buf.size);
+		}
+
+		if ( regions.size() )
+			VK_CALL( dev.vkInvalidateMappedMemoryRanges( dev.GetVkDevice(), uint(regions.size()), regions.data() ));
+
+		
+		// trigger buffer events
+		for (auto& ev : _staging.onBufferLoadedEvents)
+		{
+			ev.callback( ev.view );
+		}
+		_staging.onBufferLoadedEvents.clear();
+		
+		
+		// trigger image events
+		for (auto& ev : _staging.onImageLoadedEvents)
+		{
+			ev.callback( ev.view );
+		}
+		_staging.onImageLoadedEvents.clear();
+		
+
+		// release resources
+		{
+			for (auto& sb : _staging.hostToDevice) {
+				_resMngr.ReleaseStagingBuffer( sb.index );
+			}
+			_staging.hostToDevice.clear();
+
+			for (auto& sb : _staging.deviceToHost) {
+				_resMngr.ReleaseStagingBuffer( sb.index );
+			}
+			_staging.deviceToHost.clear();
+		}
+	}
+
+/*
+=================================================
 	AddSemaphore
 =================================================
 */
 	void  VCommandBatch::AddSemaphore (VkSemaphore sem)
 	{
 		EXLOCK( _drCheck );
-		_semaphores.push_back( sem );	// TODO: check for overflow
+		_semaphores.try_push_back( sem );	// TODO: check for overflow
 	}
 	
 /*
@@ -289,7 +260,7 @@ namespace AE::Graphics
 	void  VCommandBatch::AddFence (VkFence fence)
 	{
 		EXLOCK( _drCheck );
-		_fences.push_back( fence );		// TODO: check for overflow
+		_fences.try_push_back( fence );		// TODO: check for overflow
 	}
 	
 /*
@@ -297,13 +268,137 @@ namespace AE::Graphics
 	AddCmdBuffer
 =================================================
 */
-	void  VCommandBatch::AddCmdBuffer (VCommandPool *pool, VkCommandBuffer cmdbuf)
+	void  VCommandBatch::AddCmdBuffer (UniqueID<BakedCommandBufferID>&& id)
 	{
 		EXLOCK( _drCheck );
-		_cmdBuffers.push_back({ pool, cmdbuf });
+		_cmdBuffers.try_push_back( std::move(id) );
+	}
+	
+/*
+=================================================
+	AddDataLoadedEvent
+=================================================
+*/
+	bool  VCommandBatch::AddDataLoadedEvent (OnImageDataLoadedEvent &&ev)
+	{
+		EXLOCK( _drCheck );
+		CHECK_ERR( ev.callback and not ev.view.Parts().empty() );
+
+		_staging.onImageLoadedEvents.push_back( std::move(ev) );
+		return true;
+	}
+	
+	bool  VCommandBatch::AddDataLoadedEvent (OnBufferDataLoadedEvent &&ev)
+	{
+		EXLOCK( _drCheck );
+		CHECK_ERR( ev.callback and not ev.view.empty() );
+
+		_staging.onBufferLoadedEvents.push_back( std::move(ev) );
+		return true;
+	}
+
+/*
+=================================================
+	GetWritable
+=================================================
+*/
+	bool  VCommandBatch::GetWritable (const BytesU srcRequiredSize, const BytesU blockAlign, const BytesU offsetAlign, const BytesU dstMinSize,
+									  OUT GfxResourceID &dstBuffer, OUT BytesU &dstOffset, OUT BufferView::Data &outDataRange)
+	{
+		return _GetStaging( _staging.hostToDevice, EBufferUsage::TransferSrc,
+						    srcRequiredSize, blockAlign, offsetAlign, dstMinSize,
+						    OUT dstBuffer, OUT dstOffset, OUT outDataRange );
+	}
+	
+/*
+=================================================
+	GetReadable
+=================================================
+*/
+	bool  VCommandBatch::GetReadable (const BytesU srcRequiredSize, const BytesU blockAlign, const BytesU offsetAlign, const BytesU dstMinSize,
+									  OUT GfxResourceID &dstBuffer, OUT BytesU &dstOffset, OUT BufferView::Data &outDataRange)
+	{
+		return _GetStaging( _staging.deviceToHost, EBufferUsage::TransferDst,
+						    srcRequiredSize, blockAlign, offsetAlign, dstMinSize,
+						    OUT dstBuffer, OUT dstOffset, OUT outDataRange );
+	}
+
+/*
+=================================================
+	_GetStaging
+=================================================
+*/
+	bool  VCommandBatch::_GetStaging (StagingBuffers_t &stagingBuffers, EBufferUsage usage,
+									  const BytesU srcRequiredSize, const BytesU blockAlign, const BytesU offsetAlign, const BytesU dstMinSize,
+									  OUT GfxResourceID &dstBuffer, OUT BytesU &dstOffset, OUT BufferView::Data &outDataRange)
+	{
+		EXLOCK( _drCheck );
+		ASSERT( blockAlign > 0_b and offsetAlign > 0_b );
+		ASSERT( dstMinSize == AlignToSmaller( dstMinSize, blockAlign ));
+
+		// search in existing
+		StagingBuffer*	suitable		= null;
+		StagingBuffer*	max_available	= null;
+		BytesU			max_size;
+
+		for (auto& buf : stagingBuffers)
+		{
+			const BytesU	off	= AlignToLarger( buf.size, offsetAlign );
+			const BytesU	av	= AlignToSmaller( buf.capacity - off, blockAlign );
+
+			if ( av >= srcRequiredSize )
+			{
+				suitable = &buf;
+				break;
+			}
+
+			if ( not max_available or av > max_size )
+			{
+				max_available	= &buf;
+				max_size		= av;
+			}
+		}
+
+		// no suitable space, try to use max available block
+		if ( not suitable and max_available and max_size >= dstMinSize )
+		{
+			suitable = max_available;
+		}
+
+		// allocate new buffer
+		if ( not suitable )
+		{
+			CHECK_ERR( stagingBuffers.size() < stagingBuffers.capacity() );
+
+			GfxResourceID		buf_id;
+			StagingBufferIdx	buf_idx;
+			CHECK_ERR( _resMngr.CreateStagingBuffer( usage, OUT buf_id, OUT buf_idx ));
+
+			auto*	buffer = _resMngr.GetResource( VBufferID{ buf_id.Index(), buf_id.Generation() });
+			CHECK_ERR( buffer );
+
+			VResourceMemoryInfo		mem_info;
+			CHECK_ERR( buffer->GetMemoryInfo( OUT mem_info ));
+
+			suitable = &stagingBuffers.emplace_back();
+			suitable->bufferId	= buf_id;
+			suitable->index		= buf_idx;
+			suitable->mappedPtr	= mem_info.mappedPtr;
+			suitable->mem		= mem_info.memory;
+			suitable->capacity	= mem_info.size;
+			suitable->memOffset	= mem_info.offset;
+			suitable->isCoherent= EnumEq( mem_info.flags, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT );
+		}
+
+		// write data to buffer
+		dstOffset			= AlignToLarger( suitable->size, offsetAlign );
+		outDataRange.size	= Min( AlignToSmaller( suitable->capacity - dstOffset, blockAlign ), srcRequiredSize );
+		dstBuffer			= suitable->bufferId;
+		outDataRange.ptr	= suitable->mappedPtr + dstOffset;
+
+		suitable->size = dstOffset + outDataRange.size;
+		return true;
 	}
 
 
 }	// AE::Graphics
-
-#endif	// AE_ENABLE_VULKAN

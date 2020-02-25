@@ -15,161 +15,80 @@ namespace AE::Graphics
 	{
 	// types
 	public:
-		using T				= uint8_t;
-		using value_type	= T;
-
-
-		struct Iterator
+		struct Data
 		{
-			friend struct BufferView;
-
-		// variables
-		private:
-			ArrayView< ArrayView<T> >	_parts;
-			size_t						_partIndex	= 0;
-			size_t						_index		= 0;
-			
-		// methods
-		private:
-			Iterator (ArrayView<ArrayView<T>> parts, size_t partIndex, size_t index) :
-				_parts{parts}, _partIndex{partIndex}, _index{index} {}
-
-		public:
-			Iterator (const Iterator &) = default;
-			Iterator (Iterator &&) = default;
-
-			ND_ bool  operator == (const Iterator &rhs) const
-			{
-				return	_parts.data()	== rhs._parts.data()	and
-						_partIndex		== rhs._partIndex		and
-						_index			== rhs._index;
-			}
-
-			ND_ T const&  operator *  () const
-			{
-				return _parts[_partIndex][_index];
-			}
-
-			ND_ T const*  operator -> () const
-			{
-				return &_parts[_partIndex][_index];
-			}
-
-			Iterator&  operator ++ ()
-			{
-				if ( ++_index >= _parts[_partIndex].size() ) {
-					++_partIndex;
-					_index = 0;
-				}
-				return *this;
-			}
-
-			Iterator  operator ++ (int)
-			{
-				Iterator res{*this};
-				++(*this);
-				return res;
-			}
-
-			Iterator&  operator -- ()
-			{
-				if ( --_index >= _parts[_partIndex].size() ) {
-					--_partIndex;
-					_index = _parts[_partIndex].size();
-				}
-				return *this;
-			}
-
-			Iterator  operator -- (int)
-			{
-				Iterator res{*this};
-				--(*this);
-				return res;
-			}
+			void *		ptr;
+			BytesU		size;
 		};
+
+		struct ConstData
+		{
+			void const *	ptr;
+			BytesU			size;
+		};
+
+		static constexpr uint	Count = 4;
+
+		using Parts_t = FixedArray< Data, Count >;
 
 
 	// variables
 	private:
-		ArrayView< ArrayView<T> >	_parts;
+		Parts_t		_parts;
 
 
 	// methods
 	public:
-		BufferView ()
-		{}
+		BufferView () {}
+		BufferView (ArrayView<Data> parts) : _parts{parts} {}
 
-		BufferView (ArrayView<ArrayView<T>> parts) : _parts{parts}
-		{}
-		
+		BufferView (const BufferView &) = delete;
+		BufferView (BufferView &&) = default;
 
-		ND_ T const&  operator [] (size_t i) const
+		BufferView&  operator = (const BufferView &) = delete;
+		BufferView&  operator = (BufferView &&) = default;
+
+		ND_ ArrayView<ConstData>	Parts () const	{ return ArrayView<ConstData>{ Cast<ConstData>(_parts.data()), _parts.size() }; }
+		ND_ ArrayView<Data>			Parts ()		{ return _parts; }
+
+		ND_ auto	begin ()			{ return Parts().begin(); }
+		ND_ auto	end ()				{ return Parts().end(); }
+
+		ND_ auto	begin ()	const	{ return Parts().begin(); }
+		ND_ auto	end ()		const	{ return Parts().end(); }
+
+		ND_ bool	empty ()	const	{ return _parts.empty(); }
+
+			void	clear ()			{ _parts.clear(); }
+
+
+		bool  try_push_back (void *ptr, BytesU size)
 		{
-			for (auto& val : _parts)
-			{
-				if ( i < val.size() )
-					return val[i];
-
-				i -= val.size();
-			}
-
-			ASSERT(false);	// index out of range
-			return _parts.back().back();
+			return _parts.try_push_back( Data{ ptr, size });
 		}
 
-
-		ND_ ArrayView<ArrayView<T>>  Parts () const
+		ND_ BytesU  DataSize () const
 		{
-			return _parts;
-		}
-
-
-		ND_ Iterator  begin () const
-		{
-			return Iterator{ _parts, 0, 0 };
-		}
-
-		ND_ Iterator  end () const
-		{
-			return not empty() ?	Iterator{ _parts, _parts.size()-1, _parts.back().size() } :
-									Iterator{ _parts, 0, 1 };
-		}
-
-
-		ND_ bool  empty () const
-		{
-			return size() == 0;
-		}
-
-		ND_ size_t  size () const
-		{
-			size_t	result = 0;
-			for (auto& val : _parts) {
-				result += val.size();
+			BytesU	result;
+			for (auto& part : _parts) {
+				result += part.size;
 			}
 			return result;
 		}
 
-
-		ND_ T const *  data () const
+		ND_ BufferView  section (BytesU offset, BytesU size)
 		{
-			ASSERT( _parts.size() == 1 );
-			return _parts.front().data();
-		}
+			BufferView	result;
+			BytesU		off;
 
-
-		ND_ ArrayView<T>  section (size_t first, size_t count) const
-		{
-			for (auto& val : _parts)
+			for (auto& part : _parts)
 			{
-				if ( first < val.size() )
-					return val.section( first, count );
+				if ( off >= offset )
+					result.try_push_back( part.ptr + offset - off, Min( off + part.size, offset + size ));
 
-				first -= val.size();
+				off += part.size;
 			}
-
-			ASSERT(false);
-			return {};
+			return result;
 		}
 	};
 

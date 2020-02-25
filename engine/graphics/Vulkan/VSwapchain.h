@@ -5,6 +5,7 @@
 #ifdef AE_ENABLE_VULKAN
 
 # include "graphics/Vulkan/VDevice.h"
+# include "graphics/Public/ResourceManager.h"
 
 namespace AE::App
 {
@@ -29,8 +30,8 @@ namespace AE::Graphics
 	private:
 		static constexpr uint	MaxSwapchainLength = 8;
 
-		using Images_t			= FixedArray< VkImage, MaxSwapchainLength >;
-		//using ImageViews_t		= FixedArray< VkImageView, MaxSwapchainLength >;
+		using Images_t		= FixedArray< VkImage, MaxSwapchainLength >;
+		using ImageIDs_t	= FixedArray< UniqueID<GfxResourceID>, MaxSwapchainLength >;
 
 
 	// variables
@@ -43,7 +44,7 @@ namespace AE::Graphics
 
 		uint							_currImageIndex		= UMax;
 		Images_t						_images;
-		//ImageViews_t					_imageViews;
+		ImageIDs_t						_imageIDs;
 
 		VkFormat						_colorFormat		= VK_FORMAT_UNDEFINED;
 		VkColorSpaceKHR					_colorSpace			= VK_COLOR_SPACE_MAX_ENUM_KHR;
@@ -82,6 +83,7 @@ namespace AE::Graphics
 
 		ND_ VkImageUsageFlagBits		GetImageUsage ()				const	{ return _colorImageUsage; }
 		ND_ VkImage						GetCurrentImage ()				const;
+		ND_ GfxResourceID				GetCurrentImageID ()			const;
 	};
 
 	
@@ -104,8 +106,8 @@ namespace AE::Graphics
 		
 		bool ChooseColorFormat (INOUT VkFormat &colorFormat, INOUT VkColorSpaceKHR &colorSpace) const;
 
-
-		bool Create (const uint2							&viewSize,
+		bool Create (IResourceManager *						resMngr,
+					 const uint2							&viewSize,
 					 const VkFormat							colorFormat			= VK_FORMAT_B8G8R8A8_UNORM,
 					 const VkColorSpaceKHR					colorSpace			= VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
 					 const uint								minImageCount		= 2,
@@ -114,14 +116,15 @@ namespace AE::Graphics
 					 const VkCompositeAlphaFlagBitsKHR		compositeAlpha		= VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
 					 const VkImageUsageFlagBits				colorImageUsage		= DefaultImageUsage,
 					 StringView								dbgName				= {});
-		void Destroy ();
 
-		bool Recreate (const uint2 &size);
+		void Destroy (IResourceManager* resMngr);
+
+		bool Recreate (IResourceManager* resMngr, const uint2 &size);
 		
 		ND_ static ArrayView<const char*>  GetInstanceExtensions ();
 
 	private:
-		bool _CreateColorAttachment ();
+		bool _CreateColorAttachment (IResourceManager* resMngr);
 		void _PrintInfo () const;
 
 		bool _GetImageUsage (OUT VkImageUsageFlags &imageUsage,	VkPresentModeKHR presentMode, VkFormat colorFormat, const VkSurfaceCapabilitiesKHR &surfaceCaps) const;
@@ -132,6 +135,26 @@ namespace AE::Graphics
 		void _GetSurfaceImageCount (INOUT uint &minImageCount, const VkSurfaceCapabilitiesKHR &surfaceCaps) const;
 	};
 
+	
+/*
+=================================================
+	GetCurrentImage
+=================================================
+*/
+	inline VkImage  VSwapchain::GetCurrentImage () const
+	{
+		return _currImageIndex < _images.size() ? _images[_currImageIndex] : VK_NULL_HANDLE;
+	}
+	
+/*
+=================================================
+	GetCurrentImageID
+=================================================
+*/
+	inline GfxResourceID  VSwapchain::GetCurrentImageID () const
+	{
+		return _currImageIndex < _imageIDs.size() ? _imageIDs[_currImageIndex] : Default;
+	}
 
 }	// AE::Graphics
 

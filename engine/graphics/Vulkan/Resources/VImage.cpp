@@ -12,12 +12,12 @@ namespace AE::Graphics
 namespace {
 /*
 =================================================
-	_ChooseAspect
+	ChooseAspect
 =================================================
 */
-	ND_ static VkImageAspectFlagBits  ChooseAspect (EPixelFormat format)
+	ND_ VkImageAspectFlagBits  ChooseAspect (EPixelFormat format)
 	{
-		VkImageAspectFlagBits	result = VkImageAspectFlagBits(0);
+		VkImageAspectFlagBits	result = Zero;
 
 		if ( EPixelFormat_IsColor( format ))
 			result |= VK_IMAGE_ASPECT_COLOR_BIT;
@@ -34,10 +34,10 @@ namespace {
 	
 /*
 =================================================
-	_ChooseDefaultLayout
+	ChooseDefaultLayout
 =================================================
 */
-	ND_ static VkImageLayout  ChooseDefaultLayout (EImageUsage usage, VkImageLayout defaultLayout)
+	ND_ VkImageLayout  ChooseDefaultLayout (EImageUsage usage, VkImageLayout defaultLayout)
 	{
 		VkImageLayout	result = VK_IMAGE_LAYOUT_GENERAL;
 
@@ -59,7 +59,7 @@ namespace {
 
 		return result;
 	}
-	
+
 /*
 =================================================
 	GetAllImageAccessMasks
@@ -114,7 +114,7 @@ namespace {
 	Create
 =================================================
 */
-	bool VImage::Create (VResourceManager &resMngr, const ImageDesc &desc, GfxMemAllocatorPtr allocator, EResourceState defaultState, StringView dbgName)
+	bool  VImage::Create (VResourceManager &resMngr, const ImageDesc &desc, GfxMemAllocatorPtr allocator, EResourceState defaultState, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( _image == VK_NULL_HANDLE );
@@ -163,23 +163,18 @@ namespace {
 			info.queueFamilyIndexCount	= 0;
 		}
 
-		// TODO:
-		// test usage with supported features (vkGetPhysicalDeviceFormatProperties2)
-
 		VK_CHECK( dev.vkCreateImage( dev.GetVkDevice(), &info, null, OUT &_image ));
 
 		CHECK_ERR( allocator->AllocForImage( BitCast<ImageVk_t>(_image), _desc, INOUT _memStorage ));
 		
-		if ( not dbgName.empty() )
-		{
+		if ( dbgName.size() )
 			dev.SetObjectName( BitCast<uint64_t>(_image), dbgName, VK_OBJECT_TYPE_IMAGE );
-		}
 
-		_memAllocator		= std::move(allocator);
-		//_readAccessMask	= GetAllImageAccessMasks( info.usage );
-		_aspectMask			= ChooseAspect( _desc.format );
-		_defaultLayout		= ChooseDefaultLayout( _desc.usage, EResourceState_ToImageLayout( defaultState, _aspectMask ));
-		_debugName			= dbgName;
+		_memAllocator	= std::move(allocator);
+		_aspectMask		= ChooseAspect( _desc.format );
+		_defaultLayout	= ChooseDefaultLayout( _desc.usage, EResourceState_ToImageLayout( defaultState, _aspectMask ));
+		_debugName		= dbgName;
+		_canBeDestroyed	= true;
 
 		return true;
 	}
@@ -188,41 +183,29 @@ namespace {
 =================================================
 	Create
 =================================================
-*
-	bool VImage::Create (const VDevice &dev, const VulkanImageDesc &desc, StringView dbgName, OnRelease_t &&onRelease)
+*/
+	bool  VImage::Create (const VDevice &dev, const VulkanImageDesc &desc, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( _image == VK_NULL_HANDLE );
 		
 		_image				= BitCast<VkImage>( desc.image );
-		_desc.imageType		= FGEnumCast( BitCast<VkImageType>( desc.imageType ), BitCast<ImageFlagsVk_t>( desc.flags ),
-										  desc.arrayLayers, BitCast<VkSampleCountFlagBits>( desc.samples ) );
+		_desc.imageType		= AEEnumCast( BitCast<VkImageType>( desc.imageType ));
+		_desc.flags			= AEEnumCast( BitCast<VkImageCreateFlagBits>( desc.flags ));
+		_desc.usage			= AEEnumCast( BitCast<VkImageUsageFlagBits>( desc.usage ));
+		_desc.format		= AEEnumCast( BitCast<VkFormat>( desc.format ));
+		_desc.samples		= AEEnumCast( BitCast<VkSampleCountFlagBits>( desc.samples ));
 		_desc.dimension		= desc.dimension;
-		_desc.format		= FGEnumCast( BitCast<VkFormat>( desc.format ));
-		_desc.usage			= FGEnumCast( BitCast<VkImageUsageFlagBits>( desc.usage ));
 		_desc.arrayLayers	= ImageLayer{ desc.arrayLayers };
 		_desc.maxLevel		= MipmapLevel{ desc.maxLevels };
-		_desc.samples		= FGEnumCast( BitCast<VkSampleCountFlagBits>( desc.samples ));
-		_desc.isExternal	= true;
 
-		if ( not dbgName.empty() )
-		{
+		if ( dbgName.size() )
 			dev.SetObjectName( BitCast<uint64_t>(_image), dbgName, VK_OBJECT_TYPE_IMAGE );
-		}
-		
-		CHECK( desc.queueFamily == VK_QUEUE_FAMILY_IGNORED );	// not supported yet
-		CHECK( desc.queueFamilyIndices.empty() or desc.queueFamilyIndices.size() >= 2 );
-
-		_queueFamilyMask = Default;
-
-		for (auto idx : desc.queueFamilyIndices) {
-			_queueFamilyMask |= BitCast<EQueueFamily>(idx);
-		}
 
 		_aspectMask		= ChooseAspect( _desc.format );
 		_defaultLayout	= ChooseDefaultLayout( _desc.usage, BitCast<VkImageLayout>(desc.defaultLayout) );
 		_debugName		= dbgName;
-		_onRelease		= std::move(onRelease);
+		_canBeDestroyed	= desc.canBeDestroyed;
 
 		return true;
 	}
@@ -232,7 +215,7 @@ namespace {
 	Destroy
 =================================================
 */
-	void VImage::Destroy (VResourceManager &resMngr)
+	void  VImage::Destroy (VResourceManager &resMngr)
 	{
 		EXLOCK( _drCheck );
 		
@@ -242,7 +225,7 @@ namespace {
 			dev.vkDestroyImageView( dev.GetVkDevice(), view.second, null );
 		}
 		
-		if ( _image ) {
+		if ( _canBeDestroyed and _image ) {
 			dev.vkDestroyImage( dev.GetVkDevice(), _image, null );
 		}
 
@@ -256,7 +239,7 @@ namespace {
 		_memAllocator	= null;
 		_image			= VK_NULL_HANDLE;
 		_desc			= Default;
-		_aspectMask		= VkImageAspectFlagBits(0);
+		_aspectMask		= Zero;
 		_defaultLayout	= VK_IMAGE_LAYOUT_MAX_ENUM;
 	}
 	
@@ -265,7 +248,7 @@ namespace {
 	GetMemoryInfo
 =================================================
 */
-	bool VImage::GetMemoryInfo (OUT VResourceMemoryInfo &outInfo) const
+	bool  VImage::GetMemoryInfo (OUT VResourceMemoryInfo &outInfo) const
 	{
 		SHAREDLOCK( _drCheck );
 		CHECK_ERR( _memAllocator );
@@ -282,6 +265,18 @@ namespace {
 		outInfo.size		= vk_info->size;
 		outInfo.mappedPtr	= vk_info->mappedPtr;
 		return true;
+	}
+	
+/*
+=================================================
+	GetMemoryInfo
+=================================================
+*/
+	bool  VImage::GetMemoryInfo (OUT IGfxMemAllocator::NativeMemInfo_t &info) const
+	{
+		SHAREDLOCK( _drCheck );
+		CHECK_ERR( _memAllocator );
+		return _memAllocator->GetInfo( _memStorage, OUT info );
 	}
 
 /*
@@ -393,18 +388,17 @@ namespace {
 	{
 		VulkanImageDesc		desc;
 		desc.image			= BitCast<ImageVk_t>( _image );
-		//desc.imageType		= BitCast<ImageTypeVk_t>( GetImageType( _desc.imageType ));	// TODO
-		//desc.flags			= BitCast<ImageFlagsVk_t>( GetImageFlags( _desc.flags ));
+		desc.imageType		= BitCast<ImageTypeVk_t>( VEnumCast( _desc.imageType ));
+		desc.flags			= BitCast<ImageFlagsVk_t>( VEnumCast( _desc.flags ));
 		desc.usage			= BitCast<ImageUsageVk_t>( VEnumCast( _desc.usage ));
 		desc.format			= BitCast<FormatVk_t>( VEnumCast( _desc.format ));
-		desc.currentLayout	= BitCast<ImageLayoutVk_t>( _defaultLayout );	// TODO
+		desc.currentLayout	= BitCast<ImageLayoutVk_t>( _defaultLayout );
 		desc.defaultLayout	= desc.currentLayout;
 		desc.samples		= BitCast<SampleCountVk_t>( VEnumCast( _desc.samples ));
 		desc.dimension		= _desc.dimension;
 		desc.arrayLayers	= _desc.arrayLayers.Get();
 		desc.maxLevels		= _desc.maxLevel.Get();
-		//desc.queueFamily	= VK_QUEUE_FAMILY_IGNORED;
-		//desc.queueFamilyIndices	// TODO
+		desc.canBeDestroyed	= _canBeDestroyed;
 		return desc;
 	}
 	

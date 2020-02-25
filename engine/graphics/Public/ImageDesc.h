@@ -25,8 +25,8 @@ namespace AE::Graphics
 		uint3				dimension;	// width, height, depth
 		EPixelFormat		format		= Default;
 		EImageUsage			usage		= Default;
-		ImageLayer			arrayLayers;
-		MipmapLevel			maxLevel;
+		ImageLayer			arrayLayers	= 1_layer;
+		MipmapLevel			maxLevel	= 1_mipmap;
 		MultiSamples		samples;	// if > 1 then enabled multisampling
 		EQueueMask			queues		= Default;
 		EMemoryType			memType		= EMemoryType::DeviceLocal;
@@ -39,8 +39,8 @@ namespace AE::Graphics
 				   EPixelFormat	format,
 				   EImageUsage	usage,
 				   EImageFlags	flags		= Default,
-				   ImageLayer	arrayLayers	= Default,
-				   MipmapLevel	maxLevel	= Default,
+				   ImageLayer	arrayLayers	= 1_layer,
+				   MipmapLevel	maxLevel	= 1_mipmap,
 				   MultiSamples	samples		= Default,
 				   EQueueMask	queues		= Default,
 				   EMemoryType	memType		= EMemoryType::DeviceLocal);
@@ -72,14 +72,32 @@ namespace AE::Graphics
 	struct VirtualImageDesc
 	{
 	// variables
-		EImage				imageType	= Default;
-		EImageFlags			flags		= Default;
-		EPixelFormat		format		= Default;
-		uint3				dimension	{ ~0u };	// width, height, depth;  ~0u - viewport size
-		FractionalI16		dimScale	{1, 0};		// dimension = viewport_size * scale
-		ImageLayer			arrayLayers;
-		MipmapLevel			maxLevel;
-		MultiSamples		samples;				// if > 1 then enabled multisampling
+		EImage				imageType		= Default;
+		EImageFlags			flags			= Default;
+		EPixelFormat		format			= Default;
+		uint3				dimension		{ ~0u };		// width, height, depth;  ~0u - viewport size
+		FractionalI16		dimScale		{1, 1};			// dimension = viewport_size * scale
+		ImageLayer			arrayLayers		= 1_layer;
+		MipmapLevel			maxLevel		= 1_mipmap;
+		MultiSamples		samples;						// if > 1 then enabled multisampling
+		
+	// methods
+		VirtualImageDesc () {}
+
+		VirtualImageDesc&  SetType (EImage value)						{ imageType = value;  return *this; }
+		VirtualImageDesc&  SetFlags (EImageFlags value)					{ flags = value;  return *this; }
+		VirtualImageDesc&  SetDimension (const uint value)				{ return SetDimension( uint3{ value, 0, 0 }); }
+		VirtualImageDesc&  SetDimension (const uint2 &value)			{ return SetDimension( uint3{ value, 0 }); }
+		VirtualImageDesc&  SetDimension (const uint3 &value)			{ dimension = value;  return *this; }
+		VirtualImageDesc&  SetFormat (EPixelFormat value)				{ format = value;  return *this; }
+		VirtualImageDesc&  SetArrayLayers (uint value)					{ arrayLayers = ImageLayer{value};  return *this; }
+		VirtualImageDesc&  SetMaxMipmaps (uint value)					{ maxLevel = MipmapLevel{value};  return *this; }
+		VirtualImageDesc&  SetSamples (uint value)						{ samples = MultiSamples{value};  return *this; }
+		VirtualImageDesc&  SetDimensionAndType (const uint value)		{ return SetDimensionAndType( uint3{ value, 0, 0 }); }
+		VirtualImageDesc&  SetDimensionAndType (const uint2 &value)		{ return SetDimensionAndType( uint3{ value, 0 }); }
+		VirtualImageDesc&  SetDimensionAndType (const uint3 &value);
+
+		ND_ ImageDesc  ToPhysical (uint2 viewportSize, EImageUsage usage) const;
 	};
 
 

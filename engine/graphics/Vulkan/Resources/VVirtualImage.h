@@ -17,7 +17,9 @@ namespace AE::Graphics
 	{
 	// variables
 	private:
-		DebugName_t		_debugName;
+		VirtualImageDesc	_desc;
+
+		DebugName_t			_debugName;
 
 
 	// methods
@@ -26,16 +28,20 @@ namespace AE::Graphics
 		~VVirtualImage () {}
 
 
-		bool Create (StringView dbgName)
+		bool Create (const VirtualImageDesc &desc, StringView dbgName)
 		{
-			_debugName = dbgName;
+			_desc		= desc;
+			_debugName	= dbgName;
 			return true;
 		}
 
 
 		void Destroy (const VResourceManager &)
 		{}
+
+		ND_ VirtualImageDesc const&		Description ()	const	{ return _desc; }
 	};
+
 
 }	// AE::Graphics
 

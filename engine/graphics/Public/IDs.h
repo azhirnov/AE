@@ -10,6 +10,7 @@ namespace AE::Graphics
 {
 	using RenderPassID			= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 	using CmdBatchID			= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using BakedCommandBufferID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 
 	using GraphicsPipelineID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 	using MeshPipelineID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;

@@ -18,7 +18,8 @@ namespace AE::Graphics
 	{
 	// types
 	private:
-		using Attachments_t	= FixedArray< Pair<VImageID, ImageViewDesc>, GraphicsConfig::MaxAttachments >;
+		using Attachments_t		= FixedArray< Pair<VImageID, ImageViewDesc>, GraphicsConfig::MaxAttachments >;
+		using AttachmentView_t	= ArrayView< Pair<VImageID, ImageViewDesc> >;
 
 		
 	// variables
@@ -54,6 +55,7 @@ namespace AE::Graphics
 		ND_ uint2 const&		Dimension ()		const	{ SHAREDLOCK( _drCheck );  return _dimension; }
 		ND_ uint				Layers ()			const	{ SHAREDLOCK( _drCheck );  return _layers.Get(); }
 		ND_ HashVal				GetHash ()			const	{ SHAREDLOCK( _drCheck );  return _hash; }
+		ND_ AttachmentView_t	GetAttachments ()	const	{ SHAREDLOCK( _drCheck );  return _attachments; }
 	};
 
 

@@ -130,10 +130,12 @@ namespace {
 =================================================
 */
 	template <uint R, uint G, uint B, uint A>
-	static void ReadInt (ArrayView<ImageView::T> pixel, OUT RGBA32i &result)
+	static void ReadInt (const BufferView::ConstData &row, uint x, OUT RGBA32i &result)
 	{
 		StaticArray< uint, 4 >	bits;
-		std::memcpy( bits.data(), pixel.data(), Min( (R+G+B+A+7)/8, size_t(ArraySizeOf(pixel)) ));
+		constexpr uint			px_size = (R+G+B+A+7)/8;
+
+		std::memcpy( OUT bits.data(), row.ptr + BytesU{x * px_size}, px_size );
 
 		result.r = ReadIntScalar< R, 0 >( bits );
 		result.g = ReadIntScalar< G, R >( bits );
@@ -147,10 +149,12 @@ namespace {
 =================================================
 */
 	template <uint R, uint G, uint B, uint A>
-	static void ReadUInt (ArrayView<ImageView::T> pixel, OUT RGBA32u &result)
+	static void ReadUInt (const BufferView::ConstData &row, uint x, OUT RGBA32u &result)
 	{
 		StaticArray< uint, 4 >	bits;
-		std::memcpy( bits.data(), pixel.data(), Min( (R+G+B+A+7)/8, size_t(ArraySizeOf(pixel)) ));
+		constexpr uint			px_size = (R+G+B+A+7)/8;
+
+		std::memcpy( OUT bits.data(), row.ptr + BytesU{x * px_size}, px_size );
 
 		result.r = ReadUIntScalar< R, 0 >( bits );
 		result.g = ReadUIntScalar< G, R >( bits );
@@ -164,10 +168,10 @@ namespace {
 =================================================
 */
 	template <uint R, uint G, uint B, uint A>
-	static void ReadUNorm (ArrayView<ImageView::T> pixel, OUT RGBA32f &result)
+	static void ReadUNorm (const BufferView::ConstData &row, uint x, OUT RGBA32f &result)
 	{
 		RGBA32u		c;
-		ReadUInt<R,G,B,A>( pixel, OUT c );
+		ReadUInt<R,G,B,A>( row, x, OUT c );
 
 		result.r = ScaleUNorm<R>( c.r );
 		result.g = ScaleUNorm<G>( c.g );
@@ -181,10 +185,10 @@ namespace {
 =================================================
 */
 	template <uint R, uint G, uint B, uint A>
-	static void ReadSNorm (ArrayView<ImageView::T> pixel, OUT RGBA32f &result)
+	static void ReadSNorm (const BufferView::ConstData &row, uint x, OUT RGBA32f &result)
 	{
 		RGBA32i		c;
-		ReadInt<R,G,B,A>( pixel, OUT c );
+		ReadInt<R,G,B,A>( row, x, OUT c );
 		
 		result.r = ScaleSNorm<R>( c.r );
 		result.g = ScaleSNorm<G>( c.g );
@@ -198,12 +202,14 @@ namespace {
 =================================================
 */
 	template <uint R, uint G, uint B, uint A>
-	static void ReadFloat (ArrayView<ImageView::T> pixel, OUT RGBA32f &result)
+	static void ReadFloat (const BufferView::ConstData &row, uint x, OUT RGBA32f &result)
 	{
+		constexpr uint	px_size = (R+G+B+A+7)/8;
+
 		if constexpr ( R == 16 )
 		{
 			StaticArray< HalfBits, 4 >	src = {};
-			std::memcpy( src.data(), pixel.data(), Min( (R+G+B+A+7)/8, size_t(ArraySizeOf(pixel)) ));
+			std::memcpy( OUT src.data(), row.ptr + BytesU{x * px_size}, px_size );
 
 			for (size_t i = 0; i < src.size(); ++i)
 			{
@@ -214,7 +220,7 @@ namespace {
 		if constexpr ( R == 32 )
 		{
 			result = {};
-			std::memcpy( result.data(), pixel.data(), Min( (R+G+B+A+7)/8, size_t(ArraySizeOf(pixel)) ));
+			std::memcpy( OUT result.data(), row.ptr + BytesU{x * px_size}, px_size );
 		}
 		else
 		{
@@ -227,7 +233,7 @@ namespace {
 	ReadFloat_11_11_10
 =================================================
 */
-	static void ReadFloat_11_11_10 (ArrayView<ImageView::T> pixel, OUT RGBA32f &result)
+	static void ReadFloat_11_11_10 (const BufferView::ConstData &row, uint x, OUT RGBA32f &result)
 	{
 		struct RGBBits
 		{
@@ -244,7 +250,7 @@ namespace {
 		STATIC_ASSERT( sizeof(RGBBits)*8 == (11+11+10) );
 
 		RGBBits	bits;
-		std::memcpy( &bits, pixel.data(), sizeof(bits) );
+		std::memcpy( OUT &bits, row.ptr + BytesU{x * sizeof(RGBBits)}, sizeof(bits) );
 
 		FloatBits	f;
 		
@@ -268,9 +274,9 @@ namespace {
 	constructor
 =================================================
 */
-	ImageView::ImageView (ArrayView<ArrayView<T>> parts, const uint3 &dim, BytesU rowPitch, BytesU slicePitch, EPixelFormat format, EImageAspect aspect) :
-		_parts{ parts },				_dimension{ dim },
-		_rowPitch{ size_t(rowPitch) },	_slicePitch{ size_t(slicePitch) },
+	ImageView::ImageView (BufferView&& content, const uint3 &dim, BytesU rowPitch, BytesU slicePitch, EPixelFormat format, EImageAspect aspect) :
+		_content{ std::move(content) },	_dimension{ dim },
+		_rowPitch{ rowPitch },			_slicePitch{ slicePitch },
 		_format{ format }
 	{
 		Unused( aspect );
@@ -532,8 +538,8 @@ namespace {
 			case EPixelFormat::BC2_RGBA8_UNorm :
 			case EPixelFormat::BC3_RGBA8_UNorm :
 			case EPixelFormat::BC3_sRGB :
-			case EPixelFormat::BC4_RED8_SNorm :
-			case EPixelFormat::BC4_RED8_UNorm :
+			case EPixelFormat::BC4_R8_SNorm :
+			case EPixelFormat::BC4_R8_UNorm :
 			case EPixelFormat::BC5_RG8_SNorm :
 			case EPixelFormat::BC5_RG8_UNorm :
 			case EPixelFormat::BC7_RGBA8_UNorm :

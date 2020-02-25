@@ -3,6 +3,8 @@
 #ifdef AE_ENABLE_VULKAN
 
 # include "graphics/Vulkan/VSwapchain.h"
+# include "graphics/Vulkan/VResourceManager.h"
+# include "graphics/Vulkan/VEnumCast.h"
 # include "platform/Public/IWindow.h"
 # include "stl/Algorithms/StringUtils.h"
 
@@ -118,7 +120,8 @@ namespace AE::Graphics
 */
 	bool  VSwapchainInitializer::CreateSurface (const App::NativeWindow &window, StringView dbgName)
 	{
-		#ifdef PLATFORM_WINDOWS
+		#if defined(PLATFORM_WINDOWS)
+		{
 			CHECK_ERR( _device.GetVkInstance() and window.hinstance and window.hwnd );
 			CHECK_ERR( not _vkSurface );
 			CHECK_ERR( _device.GetFeatures().surface );
@@ -138,10 +141,9 @@ namespace AE::Graphics
 				_device.SetObjectName( BitCast<uint64_t>(_vkSurface), dbgName, VK_OBJECT_TYPE_SURFACE_KHR );
 
 			AE_LOGD( "Created WinAPI Vulkan surface" );
-			return true;
-		#endif
-
-		#ifdef PLATFORM_ANDROID
+		}
+		#elif defined(PLATFORM_ANDROID)
+		{
 			CHECK_ERR( _device.GetVkInstance() and window.nativeWindow );
 
 			VkAndroidSurfaceCreateInfoKHR	surface_info = {};
@@ -159,8 +161,27 @@ namespace AE::Graphics
 				_device.SetObjectName( BitCast<uint64_t>(_vkSurface), dbgName, VK_OBJECT_TYPE_SURFACE_KHR );
 			
 			AE_LOGD( "Created Android Vulkan surface" );
-			return true;
+		}
+		#else
+			return false;
 		#endif
+
+		// check that surface supported with current device
+		bool	present_supported = false;
+
+		for (auto& q : _device.GetVkQueues())
+		{
+			VkBool32	supported = 0;
+			VK_CALL( vkGetPhysicalDeviceSurfaceSupportKHR( _device.GetVkPhysicalDevice(), uint(q.familyIndex), _vkSurface, OUT &supported ));
+
+			if ( supported ) {
+				present_supported = true;
+				break;
+			}
+		}
+
+		CHECK_ERR( present_supported );	
+		return true;
 	}
 	
 /*
@@ -319,7 +340,8 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool  VSwapchainInitializer::Create (const uint2							&viewSize,
+	bool  VSwapchainInitializer::Create (IResourceManager *						resMngr,
+										 const uint2							&viewSize,
 										 const VkFormat							colorFormat,
 										 const VkColorSpaceKHR					colorSpace,
 										 const uint								minImageCount,
@@ -339,20 +361,20 @@ namespace AE::Graphics
 		VkSwapchainKHR				old_swapchain	= _vkSwapchain;
 		VkSwapchainCreateInfoKHR	swapchain_info	= {};
 		
-		swapchain_info.sType					= VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		swapchain_info.pNext					= null;
-		swapchain_info.surface					= _vkSurface;
-		swapchain_info.imageFormat				= colorFormat;
-		swapchain_info.imageColorSpace			= colorSpace;
-		swapchain_info.imageExtent				= { viewSize.x, viewSize.y };
-		swapchain_info.imageArrayLayers			= 1;
-		swapchain_info.minImageCount			= minImageCount;
-		swapchain_info.oldSwapchain				= old_swapchain;
-		swapchain_info.clipped					= VK_TRUE;
-		swapchain_info.preTransform				= transform;
-		swapchain_info.presentMode				= presentMode;
-		swapchain_info.compositeAlpha			= compositeAlpha;
-		swapchain_info.imageSharingMode			= VK_SHARING_MODE_EXCLUSIVE;
+		swapchain_info.sType			= VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		swapchain_info.pNext			= null;
+		swapchain_info.surface			= _vkSurface;
+		swapchain_info.imageFormat		= colorFormat;
+		swapchain_info.imageColorSpace	= colorSpace;
+		swapchain_info.imageExtent		= { viewSize.x, viewSize.y };
+		swapchain_info.imageArrayLayers	= 1;
+		swapchain_info.minImageCount	= minImageCount;
+		swapchain_info.oldSwapchain		= old_swapchain;
+		swapchain_info.clipped			= VK_TRUE;
+		swapchain_info.preTransform		= transform;
+		swapchain_info.presentMode		= presentMode;
+		swapchain_info.compositeAlpha	= compositeAlpha;
+		swapchain_info.imageSharingMode	= VK_SHARING_MODE_EXCLUSIVE;
 
 		_GetSurfaceImageCount( INOUT swapchain_info.minImageCount, surf_caps );
 		_GetSurfaceTransform( INOUT swapchain_info.preTransform, surf_caps );
@@ -367,8 +389,15 @@ namespace AE::Graphics
 
 
 		// destroy obsolete resources
-		// TODO: destroy image views
+		if ( resMngr )
+		{
+			for (auto& id : _imageIDs) {
+				resMngr->ReleaseResource( id );
+			}
+		}
+
 		_images.clear();
+		_imageIDs.clear();
 
 		if ( old_swapchain != VK_NULL_HANDLE )
 			vkDestroySwapchainKHR( _device.GetVkDevice(), old_swapchain, null );
@@ -387,7 +416,7 @@ namespace AE::Graphics
 		if ( dbgName.size() )
 			_device.SetObjectName( BitCast<uint64_t>(_vkSwapchain), dbgName, VK_OBJECT_TYPE_SWAPCHAIN_KHR );
 
-		CHECK_ERR( _CreateColorAttachment() );
+		CHECK_ERR( _CreateColorAttachment( resMngr ));
 
 		if ( not old_swapchain )
 			_PrintInfo();
@@ -400,7 +429,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void  VSwapchainInitializer::Destroy ()
+	void  VSwapchainInitializer::Destroy (IResourceManager *resMngr)
 	{
 		CHECK( not IsImageAcquired() );
 
@@ -414,6 +443,14 @@ namespace AE::Graphics
 			}
 		}
 		
+		if ( resMngr )
+		{
+			for (auto& id : _imageIDs) {
+				resMngr->ReleaseResource( id );
+			}
+		}
+
+		_imageIDs.clear();
 		_images.clear();
 
 		_vkSwapchain		= VK_NULL_HANDLE;
@@ -427,7 +464,7 @@ namespace AE::Graphics
 		_preTransform		= VK_SURFACE_TRANSFORM_FLAG_BITS_MAX_ENUM_KHR;
 		_presentMode		= VK_PRESENT_MODE_MAX_ENUM_KHR;
 		_compositeAlpha		= VK_COMPOSITE_ALPHA_FLAG_BITS_MAX_ENUM_KHR;
-		_colorImageUsage	= VkImageUsageFlagBits(0);
+		_colorImageUsage	= Zero;
 	}
 
 /*
@@ -438,9 +475,9 @@ namespace AE::Graphics
 	that used swapchain images!
 =================================================
 */
-	bool  VSwapchainInitializer::Recreate (const uint2 &size)
+	bool  VSwapchainInitializer::Recreate (IResourceManager *resMngr, const uint2 &size)
 	{
-		CHECK_ERR( Create( size, _colorFormat, _colorSpace, _minImageCount, _presentMode,
+		CHECK_ERR( Create( resMngr, size, _colorFormat, _colorSpace, _minImageCount, _presentMode,
 						   _preTransform, _compositeAlpha, _colorImageUsage ));
 
 		return true;
@@ -451,7 +488,7 @@ namespace AE::Graphics
 	_CreateColorAttachment
 =================================================
 */
-	bool  VSwapchainInitializer::_CreateColorAttachment ()
+	bool  VSwapchainInitializer::_CreateColorAttachment (IResourceManager *resMngr)
 	{
 		CHECK_ERR( _images.empty() );
 		
@@ -462,6 +499,29 @@ namespace AE::Graphics
 		_images.resize( count );
 		VK_CHECK( vkGetSwapchainImagesKHR( _device.GetVkDevice(), _vkSwapchain, OUT &count, OUT _images.data() ));
 
+		if ( resMngr )
+		{
+			_imageIDs.resize( count );
+
+			VulkanImageDesc	desc;
+			desc.dimension		= uint3(_surfaceSize, 1);
+			desc.arrayLayers	= 1;
+			desc.currentLayout	= BitCast<ImageLayoutVk_t>( VK_IMAGE_LAYOUT_UNDEFINED );
+			desc.defaultLayout	= BitCast<ImageLayoutVk_t>( VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+			desc.flags			= ImageFlagsVk_t(0);
+			desc.format			= BitCast<FormatVk_t>( AEEnumCast( _colorFormat ));
+			desc.imageType		= BitCast<ImageTypeVk_t>( VK_IMAGE_TYPE_2D );
+			desc.maxLevels		= 1;
+			desc.samples		= BitCast<SampleCountVk_t>( VK_SAMPLE_COUNT_1_BIT );
+			desc.usage			= BitCast<ImageUsageVk_t>( AEEnumCast( _colorImageUsage ));
+			desc.canBeDestroyed	= false;	// images created by swapchain, so don't destroy they
+
+			for (size_t i = 0; i < count; ++i)
+			{
+				desc.image = _images[i];
+				_imageIDs[i] = resMngr->CreateImage( desc, "SwapchainImage_"s + ToString(i) );
+			}
+		}
 		return true;
 	}
 

@@ -89,6 +89,7 @@ namespace AE::Graphics
 		Unknown		= ~0u,
 	};
 	
+
 	enum class EImageView : uint
 	{
 		_1D,
@@ -142,6 +143,24 @@ namespace AE::Graphics
 	AE_BIT_OPERATORS( EImageUsage );
 
 
+	enum class EImageLayout : uint
+	{
+		Unknown	= 0,
+		Undefined,
+		General,
+		ColorAttachment,
+		DepthStencilAttachment,
+		DepthStencilReadOnly,
+		ShaderReadOnly,
+		TransferSrc,
+		TransferDst,
+		DepthReadOnly_StencilAttachment,
+		DepthAttachment_StencilReadOnly,
+		PresentSrc,
+		SharedPresent,
+	};
+
+
 	enum class EImageAspect : uint
 	{
 		Color			= 1 << 0,
@@ -151,7 +170,6 @@ namespace AE::Graphics
 		_Last,
 
 		DepthStencil	= Depth | Stencil,
-		Auto			= ~0u,
 		Unknown			= 0,
 	};
 	AE_BIT_OPERATORS( EImageAspect );
@@ -284,8 +302,8 @@ namespace AE::Graphics
 		BC2_RGBA8_UNorm,
 		BC3_RGBA8_UNorm,
 		BC3_sRGB,
-		BC4_RED8_SNorm,
-		BC4_RED8_UNorm,
+		BC4_R8_SNorm,
+		BC4_R8_UNorm,
 		BC5_RG8_SNorm,
 		BC5_RG8_UNorm,
 		BC7_RGBA8_UNorm,

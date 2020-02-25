@@ -47,28 +47,38 @@ namespace AE::Graphics
 			CHECK_ERR( name.IsDefined() );
 			CHECK_ERR( not src.image.IsVirtual() );
 
+			// get image description
+			ImageDesc	img_dec;
+			if ( src.image.ResourceType() == GfxResourceID::EType::Image )
+			{
+				VImage const*	img = resMngr.GetResource( VImageID{ src.image.Index(), src.image.Generation() });
+				CHECK_ERR( img );
+				img_dec = img->Description();
+			}
+			else
+			if ( src.image.ResourceType() == GfxResourceID::EType::VirtualImage )
+			{
+				VVirtualImage const*	img = resMngr.GetResource( VVirtualImageID{ src.image.Index(), src.image.Generation() });
+				CHECK_ERR( img );
+				img_dec = img->Description().ToPhysical( uint2(_area.Size()), EImageUsage::All );
+			}
+			else
+				RETURN_ERR( "unsupported resource type" );
+
+			// setup color target
 			ColorTarget		dst;
-			dst.imageId		= VImageID{ src.image.Index(), src.image.Generation() };
+			dst.imageId		= src.image;
 			dst.loadOp		= VEnumCast( src.loadOp );
 			dst.storeOp		= VEnumCast( src.storeOp );
 			dst.state		= EResourceState::Unknown;
 
-			VImage const*	img = resMngr.GetResource( dst.imageId );
-			CHECK_ERR( img );
-
 			if ( src.desc.has_value() ) {
 				dst.viewDesc = *src.desc;
-				dst.viewDesc.Validate( img->Description() );
+				dst.viewDesc.Validate( img_dec );
 			}else
-				dst.viewDesc = ImageViewDesc{img->Description()};
+				dst.viewDesc = ImageViewDesc{img_dec};
 
-			dst.samples = VEnumCast( img->Description().samples );
-
-			// validate image view description
-			if ( dst.viewDesc.format == EPixelFormat::Unknown )
-			{
-				dst.viewDesc.format = img->Description().format;
-			}
+			dst.samples = VEnumCast( img_dec.samples );
 
 			// set attachment index
 			{
@@ -99,36 +109,37 @@ namespace AE::Graphics
 				END_ENUM_CHECKS();
 			}
 
+			// TODO
 			// add resource state flags
-			if ( desc.area.left == 0 and desc.area.right  == int(img->Width())  and
-				 desc.area.top  == 0 and desc.area.bottom == int(img->Height()) )
+			/*if ( (desc.area.left == 0) & (desc.area.right  == int(img_dec.dimension.x)) &
+				 (desc.area.top  == 0) & (desc.area.bottom == int(img_dec.dimension.y)) )
 			{
 				if ( src.loadOp  == EAttachmentLoadOp::Clear or src.loadOp  == EAttachmentLoadOp::Invalidate )
 					dst.state |= EResourceState::InvalidateBefore;
 
 				if ( src.storeOp == EAttachmentStoreOp::Invalidate )
 					dst.state |= EResourceState::InvalidateAfter;
-			}
+			}*/
 
 			// add color or depth-stencil render target
-			if ( EPixelFormat_HasDepthOrStencil( dst.viewDesc.format ) )
+			if ( EPixelFormat_HasDepthOrStencil( dst.viewDesc.format ))
 			{
 				ASSERT( name == RenderTarget_Depth or name == RenderTarget_DepthStencil );
 				
 				dst.state |= EResourceState::DepthStencilAttachmentReadWrite;	// TODO: add support for other layouts
 				dst.state |= (EResourceState::EarlyFragmentTests | EResourceState::LateFragmentTests);
+				dst.layout = EResourceState_ToImageLayout( dst.state, 0 );
 
 				_depthStencilTarget = DepthStencilTarget{ dst };
 			}
 			else
 			{
 				dst.state |= EResourceState::ColorAttachmentReadWrite;		// TODO: remove 'Read' state if blending disabled and 'loadOp' is 'Clear'
+				dst.layout = EResourceState_ToImageLayout( dst.state, 0 );
 
-				_colorTargets.insert_or_assign( name, dst );
+				_colorTargets.push_back( dst );
 			}
 
-			dst.layout = EResourceState_ToImageLayout( dst.state, img->AspectMask() );
-			
 			ConvertClearValue( src.clearValue, OUT _clearValues[dst.index] );
 		}
 
@@ -184,12 +195,24 @@ namespace AE::Graphics
 	SetRenderPass
 =================================================
 */
-	bool VLogicalRenderPass::SetRenderPass (const VResourceManager &, RenderPassID rp, uint subpass, VFramebufferID fb)
+	bool  VLogicalRenderPass::SetRenderPass (const VResourceManager &, RenderPassID rp, uint subpass, uint subpassCount)
 	{
 		_renderPassId	= rp;
 		_subpassIndex	= subpass;
-		_framebufferId	= fb;
+		_isLastSubpass	= (subpass+1 == subpassCount);
 
+		// TODO
+		return true;
+	}
+	
+/*
+=================================================
+	SetFramebuffer
+=================================================
+*/
+	bool  VLogicalRenderPass::SetFramebuffer (VFramebufferID fb)
+	{
+		_framebufferId	= fb;
 
 		// TODO
 		return true;

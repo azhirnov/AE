@@ -89,6 +89,24 @@ namespace AE::Math
 
 		ND_ constexpr bool  IsInteger ()	const		{ return denominator == T(1); }
 
+		template <typename R>
+		ND_ constexpr EnableIf<IsFloatPoint<R>, R>	ToFloat ()	const	{ return R(numerator) / R(denominator); }
+
+
+		// Rounding:
+		// RTS - round to smaller, similar to floor(val * float(frac))
+		// RTN - round to nearest, similar to round(val * float(frac))
+		// RTL - round to larger,  similar to ceil(val * float(frac))
+
+		template <typename R>
+		ND_ constexpr R  Mul_RTS (const R &val) const	{ return (val * numerator) / denominator; }
+		
+		template <typename R>
+		ND_ constexpr R  Mul_RTN (const R &val) const	{ return ((val * numerator) + R(denominator/2)) / denominator; }
+
+		template <typename R>
+		ND_ constexpr R  Mul_RTL (const R &val) const	{ return ((val * numerator) + R(denominator-1)) / denominator; }
+
 
 	private:
 		static constexpr T  _GreatestCommonDivisor (T value1, T value2)
