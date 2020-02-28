@@ -74,6 +74,7 @@ extern void UnitTest_Math_BitMath ()
 	BitScanForward_Test1();
 	SafeBitShift_Test1();
 	BitRotate_Test1();
+	ToBitMask_Test1();
 	
 	AE_LOGI( "UnitTest_Math_BitMath - passed" );
 }

@@ -25,7 +25,7 @@
 
 // enable SSE
 #if defined(PLATFORM_WINDOWS) or defined(PLATFORM_LINUX)
-#	define GLM_FORCE_SSE42	// TODO: check is SSE 4.2 supported
+#	define GLM_FORCE_SSE42
 #endif
 #if defined(PLATFORM_ANDROID) && defined(__ARM_NEON)
 #	define GLM_FORCE_NEON	// TODO: check is NEON supported
@@ -176,7 +176,7 @@
 
 namespace AE::Math
 {
-# if defined(GLM_FORCE_SSE42)
+# if (GLM_ARCH & GLM_ARCH_SIMD_BIT)
 	static constexpr auto	GLMQuialifier	= glm::qualifier::aligned_highp;
 # else
 	static constexpr auto	GLMQuialifier	= glm::qualifier::highp;

@@ -2,11 +2,40 @@
 
 #include "stl/Math/Math.h"
 #include "stl/CompileTime/Math.h"
+#include "stl/Math/GLM.h"
+#include "stl/Platforms/CPUInfo.h"
 #include "UnitTest_Common.h"
 
 
 namespace
 {
+	static void  CheckIntrinsics ()
+	{
+		auto&	info = CPUInfo::Get();
+		
+		#if (GLM_ARCH & GLM_ARCH_SSE3_BIT)
+			TEST( info.SSE3 );
+		#endif
+		#if (GLM_ARCH & GLM_ARCH_SSE41_BIT)
+			TEST( info.SSE41 );
+		#endif
+		#if (GLM_ARCH & GLM_ARCH_SSE42_BIT)
+			TEST( info.SSE42 );
+		#endif
+		#if (GLM_ARCH & GLM_ARCH_AVX_BIT)
+			TEST( info.AVX );
+		#endif
+		#if (GLM_ARCH & GLM_ARCH_AVX2_BIT)
+			TEST( info.AVX2 );
+		#endif
+		#if (GLM_ARCH & GLM_ARCH_NEON_BIT)
+			TEST( info.NEON );
+		#endif
+
+		TEST( info.POPCNT );
+	}
+
+
 	static void  IsIntersects_Test1 ()
 	{
 		TEST( IsIntersects( 2, 6, 5, 8 ));
@@ -33,6 +62,7 @@ namespace
 
 extern void UnitTest_Math ()
 {
+	CheckIntrinsics();
 	IsIntersects_Test1();
 	Wrap_Test1();
 
