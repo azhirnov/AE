@@ -69,6 +69,8 @@ private:
 	
 	bool  Test_Draw1 ();
 	bool  Test_DrawAsync1 ();
+
+	bool  Test_Compute1 ();
 };
 
 

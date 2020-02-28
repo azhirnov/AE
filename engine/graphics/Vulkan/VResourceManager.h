@@ -6,25 +6,27 @@
 
 # include "graphics/Public/ResourceManager.h"
 # include "graphics/Vulkan/VDevice.h"
+# include "graphics/Vulkan/VDescriptorManager.h"
 
-# include "graphics/Vulkan/Resources/VResourceBase.h"
-# include "graphics/Vulkan/Resources/VDependency.h"
+# include "graphics/Vulkan/Resources/VBakedCommandBuffer.h"
 # include "graphics/Vulkan/Resources/VBuffer.h"
-# include "graphics/Vulkan/Resources/VImage.h"
-# include "graphics/Vulkan/Resources/VSampler.h"
+# include "graphics/Vulkan/Resources/VComputePipeline.h"
+# include "graphics/Vulkan/Resources/VDescriptorSet.h"
 # include "graphics/Vulkan/Resources/VDescriptorSetLayout.h"
+# include "graphics/Vulkan/Resources/VDependency.h"
+# include "graphics/Vulkan/Resources/VFramebuffer.h"
+# include "graphics/Vulkan/Resources/VGraphicsPipeline.h"
+# include "graphics/Vulkan/Resources/VImage.h"
+# include "graphics/Vulkan/Resources/VMeshPipeline.h"
 # include "graphics/Vulkan/Resources/VPipelineLayout.h"
 # include "graphics/Vulkan/Resources/VPipelinePack.h"
-# include "graphics/Vulkan/Resources/VGraphicsPipeline.h"
-# include "graphics/Vulkan/Resources/VComputePipeline.h"
-# include "graphics/Vulkan/Resources/VMeshPipeline.h"
-# include "graphics/Vulkan/Resources/VSampler.h"
+# include "graphics/Vulkan/Resources/VResourceBase.h"
 # include "graphics/Vulkan/Resources/VRenderPassOutput.h"
 # include "graphics/Vulkan/Resources/VRenderPass.h"
-# include "graphics/Vulkan/Resources/VFramebuffer.h"
+# include "graphics/Vulkan/Resources/VSampler.h"
+# include "graphics/Vulkan/Resources/VSampler.h"
 # include "graphics/Vulkan/Resources/VVirtualBuffer.h"
 # include "graphics/Vulkan/Resources/VVirtualImage.h"
-# include "graphics/Vulkan/Resources/VBakedCommandBuffer.h"
 
 # include "threading/Containers/LfIndexedPool.h"
 # include "threading/Containers/CachedIndexedPool.h"
@@ -78,14 +80,15 @@ namespace AE::Graphics
 		using RPOutputPool_t		= PoolTmpl< VResourceBase<VRenderPassOutput>,			MaxCached,		 8 >;
 		using RenderPassPool_t		= CachedPoolTmpl< VResourceBase<VRenderPass>,			MaxCached,		 8 >;
 		using FramebufferPool_t		= CachedPoolTmpl< VResourceBase<VFramebuffer>,			MaxCached,		 8 >;
-		using RenderCommandsPool_t	= PoolTmpl< VResourceBase<VBakedCommandBuffer>,		MaxCached,		 8 >;
+		using DescSetPool_t			= CachedPoolTmpl< VResourceBase<VDescriptorSet>,		MaxCached,		 8 >;
+		using BakedCmdBufPool_t		= PoolTmpl< VResourceBase<VBakedCommandBuffer>,			MaxCached,		 8 >;
 
 		using PipelineRefs			= VPipelinePack::PipelineRefs;
 		using SamplerRefs			= VSamplerPack::SamplerRefs;
 		using ShaderModule			= VGraphicsPipelineTemplate::ShaderModule;
 		
 		struct ResourceDestructor;
-		using AllResourceIDs_t		= TypeList< VDependencyID, VBufferID, VImageID, PipelinePackID, VDescriptorSetLayoutID,
+		using AllResourceIDs_t		= TypeList< VDependencyID, VBufferID, VImageID, PipelinePackID, DescriptorSetLayoutID,
 												VPipelineLayoutID, GraphicsPipelineID, VGraphicsPipelineTemplateID, ComputePipelineID,
 												VComputePipelineTemplateID, MeshPipelineID, VMeshPipelineTemplateID, VSamplerPackID,
 												VSamplerID, VRenderPassOutputID, RenderPassID, VFramebufferID, VVirtualBufferID, VVirtualImageID >;
@@ -131,7 +134,9 @@ namespace AE::Graphics
 			VirtBufferPool_t		virtBuffers;
 			VirtImagePool_t			virtImages;
 
-			RenderCommandsPool_t	renderCommands;
+			BakedCmdBufPool_t		bakedCmdBuffers;
+
+			DescSetPool_t			descSetCache;
 
 		}						_resPool;
 		
@@ -142,6 +147,8 @@ namespace AE::Graphics
 		FencePool_t				_fencePool;
 		
 		GfxMemAllocatorPtr		_defaultAllocator;
+
+		VDescriptorManager		_descriptorMngr;
 		
 		struct {
 			StagingBufferfPool_t	write;
@@ -161,8 +168,8 @@ namespace AE::Graphics
 
 		}						_dummyDesc;
 
-		UniqueID<VSamplerID>				_defaultSampler;
-		UniqueID<VDescriptorSetLayoutID>	_emptyDSLayout;
+		UniqueID<VSamplerID>			_defaultSampler;
+		UniqueID<DescriptorSetLayoutID>	_emptyDSLayout;
 
 		// cached resources validation
 		/*struct {
@@ -196,6 +203,12 @@ namespace AE::Graphics
 		
 		UniqueID<GfxResourceID>		CreateImage (const NativeImageDesc_t &desc, StringView dbgName) override;
 		UniqueID<GfxResourceID>		CreateBuffer (const NativeBufferDesc_t &desc, StringView dbgName) override;
+		
+		bool						InitializeDescriptorSet (GraphicsPipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const override;
+		bool						InitializeDescriptorSet (MeshPipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const override;
+		bool						InitializeDescriptorSet (ComputePipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const override;
+		bool						InitializeDescriptorSet (RayTracingPipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const override;
+		DescriptorSetID				CreateDescriptorSet (const DescriptorSet &ds) override;
 
 		UniqueID<PipelinePackID>	LoadPipelinePack (const SharedPtr<RStream> &stream) override;
 		bool						ReloadPipelinePack (const SharedPtr<RStream> &stream, PipelinePackID id) override;
@@ -205,11 +218,11 @@ namespace AE::Graphics
 		ComputePipelineID			GetComputePipeline (const PipelineName &name, const ComputePipelineDesc &desc) override;
 		RayTracingPipelineID		GetRayTracingPipeline (const PipelineName &name, const RayTracingPipelineDesc &desc) override;
 
-		ND_ UniqueID<VDescriptorSetLayoutID>		CreateDescriptorSetLayout (const VDescriptorSetLayout::Uniforms_t &uniforms, ArrayView<VkSampler> samplerStorage, StringView dbgName = Default);
+		ND_ UniqueID<DescriptorSetLayoutID>			CreateDescriptorSetLayout (const VDescriptorSetLayout::Uniforms_t &uniforms, ArrayView<VkSampler> samplerStorage, StringView dbgName = Default);
 		ND_ UniqueID<VPipelineLayoutID>				CreatePipelineLayout (const VPipelineLayout::DescriptorSets_t &descSetLayouts, const VPipelineLayout::PushConstants_t &pusConstants, StringView dbgName = Default);
 		ND_ UniqueID<VGraphicsPipelineTemplateID>	CreateGPTemplate (VPipelineLayoutID layoutId, VRenderPassOutputID rpOutputId, const PipelineCompiler::GraphicsPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName = Default);
 		ND_ UniqueID<VMeshPipelineTemplateID>		CreateMPTemplate (VPipelineLayoutID layoutId, VRenderPassOutputID rpOutputId, const PipelineCompiler::MeshPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName = Default);
-		ND_ UniqueID<VComputePipelineTemplateID>	CreateCPTemplate (VPipelineLayoutID layoutId, const PipelineCompiler::ComputePipelineDesc &desc, VkShaderModule modules, StringView dbgName = Default);
+		ND_ UniqueID<VComputePipelineTemplateID>	CreateCPTemplate (VPipelineLayoutID layoutId, const PipelineCompiler::ComputePipelineDesc &desc, const ShaderModule &modules, StringView dbgName = Default);
 		
 		ND_ UniqueID<VRenderPassOutputID>	CreateRenderPassOutput (const VRenderPassOutput::Output_t &fragOutput);
 		ND_ VRenderPassOutputID				GetRenderPassOutput (const RenderPassName &name) const;
@@ -224,7 +237,7 @@ namespace AE::Graphics
 		ND_ VSamplerID				GetSampler (const SamplerName &name) const;
 		ND_ VkSampler				GetVkSampler (const SamplerName &name) const;
 
-		ND_ VkFence			CreateFence ();
+		ND_ VkFence					CreateFence ();
 
 		bool	ReleaseResource (UniqueID<GfxResourceID> &id)			override;
 		bool	ReleaseResource (UniqueID<PipelinePackID> &id)			override	{ return _ReleaseResource( id.Release() ) == 0; }
@@ -241,17 +254,27 @@ namespace AE::Graphics
 		VirtualBufferDesc const&	GetVirtualBufferDescription (GfxResourceID id) const override;
 		VirtualImageDesc const&		GetVirtualImageDescription (GfxResourceID id) const override;
 
-		NativeBufferHandle_t	GetBufferHandle (GfxResourceID id) const override;
-		NativeImageHandle_t		GetImageHandle (GfxResourceID id) const override;
+		NativeBufferHandle_t		GetBufferHandle (GfxResourceID id) const override;
+		NativeImageHandle_t			GetImageHandle (GfxResourceID id) const override;
 		
+		NativePipelineDesc_t		GetPipelineNativeDesc (GraphicsPipelineID id) const override;
+		NativePipelineDesc_t		GetPipelineNativeDesc (MeshPipelineID id) const override;
+		NativePipelineDesc_t		GetPipelineNativeDesc (ComputePipelineID id) const override;
+		NativePipelineDesc_t		GetPipelineNativeDesc (RayTracingPipelineID id) const override;
+
 		bool				GetMemoryInfo (GfxResourceID id, OUT NativeMemInfo_t &info) const override;
 
 		template <typename ID>
 		ND_ UniqueID<ID>	AcquireResource (ID id);
 
-		template <typename ID>
-		ND_ bool			IsAlive (ID id) const;
+		template <typename I, typename G, uint U>
+		ND_ bool			IsAlive (HandleTmpl<I,G,U> id) const;
+		ND_ bool			IsAlive (DescriptorSetID id, bool reqursive) const;
+		ND_ bool			IsAlive (BakedCommandBufferID id, bool reqursive) const;
+		ND_ bool			IsAlive (const SamplerName &name) const;
 		bool				IsResourceAlive (GfxResourceID id) const override;
+		bool				IsResourceAlive (DescriptorSetID id) const override			{ return IsAlive( id, true ); }
+		bool				IsResourceAlive (BakedCommandBufferID id) const override	{ return IsAlive( id, true ); }
 
 		template <typename ID>
 		ND_ auto const*		GetResource (ID id, bool incRef = false, bool quiet = false) const;
@@ -262,7 +285,9 @@ namespace AE::Graphics
 		template <typename ID>
 		ND_ auto const&		GetDescription (ID id) const;
 
-		ND_ VDevice const&	GetDevice ()	const	{ return _device; }
+		ND_ VDevice const&	GetDevice ()				const	{ return _device; }
+
+		ND_ VDescriptorManager& GetDescriptorManager ()			{ return _descriptorMngr; }
 		
 		// staging buffers
 		ND_ BytesU			GetHostReadBufferSize ()	const	{ return _staging.readBufPageSize; }
@@ -276,13 +301,16 @@ namespace AE::Graphics
 	private:
 		template <typename ID, typename FnInitialize, typename FnCreate>
 		ND_ UniqueID<ID>  _CreateCachedResource (StringView errorStr, FnInitialize&& fnInit, FnCreate&& fnCreate);
+		
+		template <typename PplnID>
+		bool  _InitPipelineResources (const PplnID &pplnId, const DescriptorSetName &name, OUT DescriptorSet &ds) const;
 
 	// resource pool
 		ND_ auto&  _GetResourcePool (const VDependencyID &)					{ return _resPool.deps; }
 		ND_ auto&  _GetResourcePool (const VBufferID &)						{ return _resPool.buffers; }
 		ND_ auto&  _GetResourcePool (const VImageID &)						{ return _resPool.images; }
 		ND_ auto&  _GetResourcePool (const PipelinePackID &)				{ return _resPool.pipelinePacks; }
-		ND_ auto&  _GetResourcePool (const VDescriptorSetLayoutID &)		{ return _resPool.dsLayouts; }
+		ND_ auto&  _GetResourcePool (const DescriptorSetLayoutID &)			{ return _resPool.dsLayouts; }
 		ND_ auto&  _GetResourcePool (const VPipelineLayoutID &)				{ return _resPool.pplnLayouts; }
 		ND_ auto&  _GetResourcePool (const GraphicsPipelineID &)			{ return _resPool.graphicsPpln; }
 		ND_ auto&  _GetResourcePool (const VGraphicsPipelineTemplateID &)	{ return _resPool.graphicsTempl; }
@@ -297,7 +325,8 @@ namespace AE::Graphics
 		ND_ auto&  _GetResourcePool (const VFramebufferID &)				{ return _resPool.framebufferCache; }
 		ND_ auto&  _GetResourcePool (const VVirtualBufferID &)				{ return _resPool.virtBuffers; }
 		ND_ auto&  _GetResourcePool (const VVirtualImageID &)				{ return _resPool.virtImages; }
-		ND_ auto&  _GetResourcePool (const BakedCommandBufferID &)		{ return _resPool.renderCommands; }
+		ND_ auto&  _GetResourcePool (const BakedCommandBufferID &)			{ return _resPool.bakedCmdBuffers; }
+		ND_ auto&  _GetResourcePool (const DescriptorSetID &)				{ return _resPool.descSetCache; }
 		
 		template <typename ID>
 		ND_ const auto&  _GetResourceCPool (const ID &id)	const			{ return const_cast<VResourceManager *>(this)->_GetResourcePool( id ); }
@@ -340,6 +369,9 @@ namespace AE::Graphics
 												 UniqueID<VComputePipelineTemplateID> &pplnTemplId);
 		//RayTracingPipelineID _GetRayTracingPipeline (const PipelineName &name, const RayTracingPipelineDesc &desc,
 		//											 UniqueID<VRayTracingPipelineTemplateID> &pplnTemplId);
+
+		template <typename ID>
+		NativePipelineDesc_t  _GetPipelineNativeDesc (ID id) const;
 
 
 	// 
@@ -402,8 +434,8 @@ namespace AE::Graphics
 	IsAlive
 =================================================
 */
-	template <typename ID>
-	inline bool  VResourceManager::IsAlive (ID id) const
+	template <typename I, typename G, uint U>
+	inline bool  VResourceManager::IsAlive (HandleTmpl<I,G,U> id) const
 	{
 		ASSERT( id );
 		auto&	pool = _GetResourceCPool( id );

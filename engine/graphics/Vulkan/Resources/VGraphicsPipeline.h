@@ -45,6 +45,7 @@ namespace AE::Graphics
 		ND_ GraphicsPipelineDesc const&	Description ()	const	{ SHAREDLOCK( _drCheck );  return _desc; }
 		ND_ VkPipeline					Handle ()		const	{ SHAREDLOCK( _drCheck );  return _handle; }
 		ND_ VkPipelineLayout			Layout ()		const	{ SHAREDLOCK( _drCheck );  return _layout; }
+		ND_ VGraphicsPipelineTemplateID	TemplateID ()	const	{ SHAREDLOCK( _drCheck );  return _templ; }
 	};
 
 
@@ -59,10 +60,13 @@ namespace AE::Graphics
 
 	// types
 	public:
+		using SpecConstants_t		= PipelineCompiler::SpirvShaderCode::SpecConstants_t;
+
 		struct ShaderModule
 		{
 			VkShaderStageFlagBits	stage	= VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
 			VkShaderModule			module	= VK_NULL_HANDLE;
+			SpecConstants_t*		spec	= null;
 		};
 
 	private:

@@ -4,10 +4,7 @@
 
 #ifdef AE_ENABLE_VULKAN
 
-# include "graphics/Vulkan/VCommon.h"
-# include "graphics/Public/RenderState.h"
-# include "graphics/Public/ResourceManager.h"
-# include "pipeline_compiler/Public/PipelinePack.h"
+# include "graphics/Vulkan/Resources/VGraphicsPipeline.h"
 
 namespace AE::Graphics
 {
@@ -45,6 +42,7 @@ namespace AE::Graphics
 		ND_ ComputePipelineDesc const&	Description ()	const	{ SHAREDLOCK( _drCheck );  return _desc; }
 		ND_ VkPipeline					Handle ()		const	{ SHAREDLOCK( _drCheck );  return _handle; }
 		ND_ VkPipelineLayout			Layout ()		const	{ SHAREDLOCK( _drCheck );  return _layout; }
+		ND_ VComputePipelineTemplateID	TemplateID ()	const	{ SHAREDLOCK( _drCheck );  return _templ; }
 	};
 
 
@@ -59,6 +57,7 @@ namespace AE::Graphics
 		
 	// types
 	public:
+		using ShaderModule		= VGraphicsPipelineTemplate::ShaderModule;
 		using SpecValues_t		= ComputePipelineDesc::SpecValues_t;
 		using PipelineID_t		= ComputePipelineID;
 		using PipelineMap_t		= HashMultiMap< HashVal, PipelineID_t >;		// TODO: use flat map
@@ -72,7 +71,7 @@ namespace AE::Graphics
 		mutable PipelineMap_t	_pipelineMap;
 
 		VPipelineLayoutID		_baseLayoutId;
-		VkShaderModule			_shader					= VK_NULL_HANDLE;
+		ShaderModule			_shader;
 		
 		uint3					_defaultLocalGroupSize;
 		uint3					_localSizeSpec			{UNDEFINED_SPECIALIZATION};
@@ -88,7 +87,7 @@ namespace AE::Graphics
 		VComputePipelineTemplate () {}
 		~VComputePipelineTemplate ();
 
-		bool Create (VPipelineLayoutID layoutId, const PipelineCompiler::ComputePipelineDesc &desc, VkShaderModule module, StringView dbgName);
+		bool Create (VPipelineLayoutID layoutId, const PipelineCompiler::ComputePipelineDesc &desc, const ShaderModule &module, StringView dbgName);
 		void Destroy (const VResourceManager &);
 		
 		ND_ VPipelineLayoutID		GetLayoutID ()			const	{ SHAREDLOCK( _drCheck );  return _baseLayoutId; }

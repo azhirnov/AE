@@ -5,7 +5,7 @@
 #ifdef AE_ENABLE_VULKAN
 
 # include "graphics/Public/IDs.h"
-# include "stl/Memory/AllocatorFwdDecl.h"
+# include "stl/Memory/LinearAllocator.h"
 # include "serializing/Common.h"
 # include "pipeline_compiler/Public/PipelinePack.h"
 # include "graphics/Vulkan/VCommon.h"
@@ -50,20 +50,22 @@ namespace AE::Graphics
 		using PipelineLayoutDesc	= PipelineCompiler::PipelineLayoutDesc;
 		using PipelineStorage		= PipelineCompiler::PipelineStorage;
 		using EMarker				= PipelineStorage::EMarker;
+		using SpecConstants_t		= PipelineCompiler::SpirvShaderCode::SpecConstants_t;
 
-		using DSLayouts_t			= Array< UniqueID< VDescriptorSetLayoutID >>;		// TODO: custom allocator
-		using PplnLayouts_t			= Array< UniqueID< VPipelineLayoutID >>;
-		using ShaderModules_t		= Array< VkShaderModule >;
-		using GPipelines_t			= Array< UniqueID< VGraphicsPipelineTemplateID >>;
-		using MPipelines_t			= Array< UniqueID< VMeshPipelineTemplateID >>;
-		using CPipelines_t			= Array< UniqueID< VComputePipelineTemplateID >>;
-		using RPOutputs_t			= Array< UniqueID< VRenderPassOutputID >>;
+		using DSLayouts_t			= Tuple< size_t, UniqueID< DescriptorSetLayoutID >* >;		// TODO: custom allocator
+		using PplnLayouts_t			= Tuple< size_t, UniqueID< VPipelineLayoutID >* >;
+		using ShaderModules_t		= Tuple< size_t, VkShaderModule*, SpecConstants_t** >;
+		using GPipelines_t			= Tuple< size_t, UniqueID< VGraphicsPipelineTemplateID >* >;
+		using MPipelines_t			= Tuple< size_t, UniqueID< VMeshPipelineTemplateID >* >;
+		using CPipelines_t			= Tuple< size_t, UniqueID< VComputePipelineTemplateID >* >;
+		using RPOutputs_t			= Tuple< size_t, UniqueID< VRenderPassOutputID >* >;
 		
 		using StackAllocator_t		= StackAllocator< UntypedAlignedAllocator, 16, false >;
-
+	
 
 	// variables
 	private:
+		LinearAllocator<>	_allocator;
 		DSLayouts_t			_dsLayouts;
 		PplnLayouts_t		_pplnLayouts;
 		ShaderModules_t		_shaderModules;

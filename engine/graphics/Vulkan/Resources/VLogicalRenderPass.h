@@ -69,7 +69,7 @@ namespace AE::Graphics
 
 	// methods
 	public:
-		VLogicalRenderPass () : _subpassIndex{UMax}, _isLastSubpass{1} {}
+		VLogicalRenderPass () : _subpassIndex{0xFF}, _isLastSubpass{1} {}
 		VLogicalRenderPass (VLogicalRenderPass &&) = delete;
 		~VLogicalRenderPass () {}
 

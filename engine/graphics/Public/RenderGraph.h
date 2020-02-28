@@ -57,7 +57,7 @@ namespace AE::Graphics
 		// pipeline and shader resources
 		virtual void  BindPipeline (GraphicsPipelineID ppln) = 0;
 		virtual void  BindPipeline (MeshPipelineID ppln) = 0;
-		virtual void  BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets) = 0;
+		virtual void  BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets = Default) = 0;
 		virtual void  PushConstant (BytesU offset, BytesU size, const void *values, EShaderStages stages = EShaderStages::AllGraphics) = 0;
 		
 		// dynamic states
@@ -238,6 +238,8 @@ namespace AE::Graphics
 		virtual void  BufferBarrier (GfxResourceID buffer, EResourceState srcState, EResourceState dstState) = 0;
 		virtual void  BufferBarrier (GfxResourceID buffer, EResourceState srcState, EResourceState dstState, BytesU offset, BytesU size) = 0;
 
+		virtual void  DescriptorsBarrier (DescriptorSetID ds) = 0;
+
 		// by default initial state is top_of_pipe stage and default image layout,
 		// you can override this states using this function.
 		virtual void  SetInitialState (GfxResourceID id, EResourceState state) = 0;
@@ -300,7 +302,7 @@ namespace AE::Graphics
 	// interface
 	public:
 		virtual void  BindPipeline (ComputePipelineID ppln) = 0;
-		virtual void  BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets) = 0;
+		virtual void  BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets = Default) = 0;
 		virtual void  PushConstant (BytesU offset, BytesU size, const void *values, EShaderStages stages) = 0;
 
 		virtual void  Dispatch (const uint3 &groupCount) = 0;
@@ -462,15 +464,15 @@ namespace AE::Graphics
 		using FI = FunctionInfo<FN>;
 
 		STATIC_ASSERT( FI::args::Count == 3 );
-		STATIC_ASSERT( IsSameTypes< FI::args::Get<1>, ArrayView<GfxResourceID> >);
-		STATIC_ASSERT( IsSameTypes< FI::args::Get<2>, ArrayView<GfxResourceID> >);
+		STATIC_ASSERT( IsSameTypes< typename FI::args::template Get<1>, ArrayView<GfxResourceID> >);
+		STATIC_ASSERT( IsSameTypes< typename FI::args::template Get<2>, ArrayView<GfxResourceID> >);
 
-		if constexpr( IsSameTypes< FI::args::Get<0>, IRenderContext& >)
+		if constexpr( IsSameTypes< typename FI::args::template Get<0>, IRenderContext& >)
 		{
 			return _AddSync( queue, input, output, rpDesc, draw, dbgName );
 		}
 		else
-		if constexpr( IsSameTypes< FI::args::Get<0>, IAsyncRenderContext& >)
+		if constexpr( IsSameTypes< typename FI::args::template Get<0>, IAsyncRenderContext& >)
 		{
 			return _AddAsync( queue, input, output, rpDesc, draw, dbgName );
 		}

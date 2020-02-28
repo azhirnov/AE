@@ -4,6 +4,7 @@
 
 #ifdef AE_ENABLE_VULKAN
 
+# include "graphics/Public/NativeTypes.Vulkan.h"
 # include "graphics/Vulkan/Resources/VDescriptorSetLayout.h"
 # include "pipeline_compiler/Public/PipelinePack.h"
 
@@ -20,7 +21,7 @@ namespace AE::Graphics
 	public:
 		struct DescSetLayout
 		{
-			VDescriptorSetLayoutID		layoutId;
+			DescriptorSetLayoutID		layoutId;
 			VkDescriptorSetLayout		layout		= VK_NULL_HANDLE;	// TODO: remove?
 			uint						index		= 0;
 		};
@@ -50,7 +51,9 @@ namespace AE::Graphics
 					 VkDescriptorSetLayout emptyLayout, StringView dbgName);
 		void Destroy (const VResourceManager &);
 		
-		bool GetDescriptorSetLayout (const DescriptorSetName &id, OUT VDescriptorSetLayoutID &layout, OUT uint &binding) const;
+		bool GetDescriptorSetLayout (const DescriptorSetName &id, OUT DescriptorSetLayoutID &layout, OUT uint &binding) const;
+
+		void GetNativeDesc (OUT VulkanPipelineInfo &) const;
 
 		ND_ VkPipelineLayout		Handle ()					const	{ SHAREDLOCK( _drCheck );  return _layout; }
 		

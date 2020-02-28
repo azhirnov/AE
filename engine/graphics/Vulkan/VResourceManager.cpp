@@ -7,6 +7,8 @@
 
 # include "graphics/Vulkan/Allocators/VUniMemAllocator.h"
 
+# include "graphics/Private/DescriptorSetHelper.h"
+
 # include "stl/Memory/LinearAllocator.h"
 
 namespace AE::Graphics
@@ -23,7 +25,7 @@ namespace {
 	inline void Replace (INOUT VResourceBase<ResType> &target, Args&& ...args)
 	{
 		target.Data().~ResType();
-		new (&target.Data()) ResType{ std::forward<Args &&>(args)... };
+		new (&target.Data()) ResType{ std::forward<Args>(args)... };
 	}
 }
 //-----------------------------------------------------------------------------
@@ -36,7 +38,8 @@ namespace {
 =================================================
 */
 	VResourceManager::VResourceManager (const VDevice &dev) :
-		_device{ dev }
+		_device{ dev },
+		_descriptorMngr{ *this }
 	{
 		STATIC_ASSERT( GfxResourceID::MaxIndex() <= DepsPool_t::capacity() );
 		STATIC_ASSERT( GfxResourceID::MaxIndex() <= BufferPool_t::capacity() );
@@ -255,6 +258,20 @@ namespace {
 		_DestroyResources( INOUT _resPool.pplnLayouts );
 		_DestroyResourceCache( INOUT _resPool.renderPassCache );
 		_DestroyResourceCache( INOUT _resPool.framebufferCache );
+		_DestroyResourceCache( INOUT _resPool.descSetCache );
+
+		_descriptorMngr.Deinitialize();
+
+		const auto	ClearRefs = [] (auto& refs) {
+			EXLOCK( refs.guard );
+			refs.map.clear();
+		};
+
+		ClearRefs( _samplerRefs );
+		ClearRefs( _pipelineRefs.compute );
+		ClearRefs( _pipelineRefs.graphics );
+		ClearRefs( _pipelineRefs.mesh );
+		ClearRefs( _pipelineRefs.renderPassNames );
 
 		AllResourceIDs_t::Visit( ResourceDestructor{*this} );
 		
@@ -392,6 +409,52 @@ namespace {
 		return BitCast<ImageVk_t>(img->Handle());
 	}
 		
+/*
+=================================================
+	GetPipelineNativeDesc
+=================================================
+*/
+	template <typename ID>
+	VResourceManager::NativePipelineDesc_t  VResourceManager::_GetPipelineNativeDesc (ID id) const
+	{
+		auto*	ppln = GetResource( id );
+		CHECK_ERR( ppln );
+
+		auto*	ppln_templ = GetResource( ppln->TemplateID() );
+		CHECK_ERR( ppln_templ );
+
+		auto*	ppln_lay = GetResource( ppln_templ->GetLayoutID() );
+		CHECK_ERR( ppln_lay );
+
+		VulkanPipelineInfo	info;
+
+		ppln_lay->GetNativeDesc( OUT info );
+		info.pipeline = BitCast<PipelineVk_t>( ppln->Handle() );
+
+		return info;
+	}
+
+	VResourceManager::NativePipelineDesc_t  VResourceManager::GetPipelineNativeDesc (GraphicsPipelineID id) const
+	{
+		return _GetPipelineNativeDesc( id );
+	}
+	
+	VResourceManager::NativePipelineDesc_t  VResourceManager::GetPipelineNativeDesc (MeshPipelineID id) const
+	{
+		return _GetPipelineNativeDesc( id );
+	}
+	
+	VResourceManager::NativePipelineDesc_t  VResourceManager::GetPipelineNativeDesc (ComputePipelineID id) const
+	{
+		return _GetPipelineNativeDesc( id );
+	}
+	
+	VResourceManager::NativePipelineDesc_t  VResourceManager::GetPipelineNativeDesc (RayTracingPipelineID id) const
+	{
+		//return _GetPipelineNativeDesc( id );
+		return Default;
+	}
+
 /*
 =================================================
 	GetMemoryInfo
@@ -665,6 +728,62 @@ namespace {
 
 		return UniqueID<GfxResourceID>{ GfxResourceID{ id.Index(), id.Generation(), GfxResourceID::EType::Buffer }};
 	}
+	
+/*
+=================================================
+	_InitPipelineResources
+=================================================
+*/
+	template <typename PplnID>
+	bool  VResourceManager::_InitPipelineResources (const PplnID &pplnId, const DescriptorSetName &name, OUT DescriptorSet &ds) const
+	{
+		auto*	ppln = GetResource( pplnId );
+		CHECK_ERR( ppln );
+
+		auto*	ppln_templ = GetResource( ppln->TemplateID() );
+		CHECK_ERR( ppln_templ );
+
+		auto*	ppln_layout = GetResource( ppln_templ->GetLayoutID() );
+		CHECK_ERR( ppln_layout );
+
+		DescriptorSetLayoutID	layout_id;
+		uint					binding;
+
+		if ( not ppln_layout->GetDescriptorSetLayout( name, OUT layout_id, OUT binding ))
+			return false;
+
+		VDescriptorSetLayout const*	ds_layout = GetResource( layout_id );
+		CHECK_ERR( ds_layout );
+
+		CHECK_ERR( DescriptorSetHelper::Initialize( OUT ds, layout_id, binding, ds_layout->GetDescriptorTemplate() ));
+		return true;
+	}
+
+/*
+=================================================
+	InitializeDescriptorSet
+=================================================
+*/
+	bool  VResourceManager::InitializeDescriptorSet (GraphicsPipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const
+	{
+		return _InitPipelineResources( ppln, name, OUT ds );
+	}
+
+	bool  VResourceManager::InitializeDescriptorSet (MeshPipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const
+	{
+		return _InitPipelineResources( ppln, name, OUT ds );
+	}
+
+	bool  VResourceManager::InitializeDescriptorSet (ComputePipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const
+	{
+		return _InitPipelineResources( ppln, name, OUT ds );
+	}
+
+	bool  VResourceManager::InitializeDescriptorSet (RayTracingPipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const
+	{
+		return false;
+		//return _InitPipelineResources( ppln, name, OUT ds );
+	}
 
 /*
 =================================================
@@ -728,6 +847,11 @@ namespace {
 										[&] (auto& data) { return data.Create( _device, dbgName ); });
 	}
 	
+/*
+=================================================
+	CreateFramebuffer
+=================================================
+*/
 	UniqueID<VFramebufferID>  VResourceManager::CreateFramebuffer (ArrayView<Pair<VImageID, ImageViewDesc>> attachments,
 																	RenderPassID rp, uint2 dim, uint layers, StringView dbgName)
 	{
@@ -742,6 +866,29 @@ namespace {
 											}
 											return false;
 										});
+	}
+	
+/*
+=================================================
+	CreateDescriptorSet
+=================================================
+*/
+	DescriptorSetID  VResourceManager::CreateDescriptorSet (const DescriptorSet &desc)
+	{
+		CHECK_ERR( desc.IsInitialized() );
+	
+		auto*	layout = GetResource( desc.GetLayout() );
+		CHECK_ERR( layout );
+
+		return _CreateCachedResource<DescriptorSetID>( "failed when creating descriptor set",
+								   [&] (auto& data) { return Replace( data, desc ); },
+								   [&] (auto& data) {
+										if (data.Create( *this, *layout, false )) {
+											//_validation.createdPplnResources.fetch_add( 1, memory_order_relaxed );
+											return true;
+										}
+										return false;
+									}).Release();
 	}
 //-----------------------------------------------------------------------------
 
@@ -821,6 +968,60 @@ namespace {
 
 		return res->Handle();
 	}
+	
+/*
+=================================================
+	IsAlive
+=================================================
+*/
+	bool  VResourceManager::IsAlive (const SamplerName &name) const
+	{
+		SHAREDLOCK( _samplerRefs.guard );
+
+		auto	iter = _samplerRefs.map.find( name );
+		if ( iter == _samplerRefs.map.end() )
+			return false;
+
+		return IsAlive( iter->second );
+	}
+	
+/*
+=================================================
+	IsAlive
+=================================================
+*/
+	bool  VResourceManager::IsAlive (DescriptorSetID id, bool reqursive) const
+	{
+		ASSERT( id );
+		
+		auto*	ds = GetResource( id, false, true );
+		if ( not ds )
+			return false;
+
+		if ( not reqursive )
+			return true;
+
+		return ds->IsAllResourcesAlive( *this );
+	}
+	
+/*
+=================================================
+	IsAlive
+=================================================
+*/
+	bool  VResourceManager::IsAlive (BakedCommandBufferID id, bool reqursive) const
+	{
+		ASSERT( id );
+		
+		auto*	cmd = GetResource( id, false, true );
+		if ( not cmd )
+			return false;
+		
+		if ( not reqursive )
+			return true;
+
+		return cmd->GetResources().IsAlive( *this );
+	}
 
 /*
 =================================================
@@ -860,15 +1061,77 @@ namespace {
 
 
 namespace {
+	using SpecConstants_t = PipelineCompiler::SpirvShaderCode::SpecConstants_t;
+
+/*
+=================================================
+	AddLocalGroupSizeSpecialization
+=================================================
+*/
+	static void  AddSpecialization (OUT VkSpecializationInfo const*				&outSpecInfo,
+									const GraphicsPipelineDesc::SpecValues_t	&specData1,
+									const GraphicsPipelineDesc::SpecValues_t	&specData2,
+									const SpecConstants_t						&specRef,
+									LinearAllocator<>							&allocator)
+	{
+		using UsedBits_t = BitSet< 64 >;
+
+		auto*		entry_arr		= allocator.Alloc<VkSpecializationMapEntry>( specRef.size() );
+		auto*		data_arr		= allocator.Alloc<uint>( specRef.size() );
+		uint		entriy_count	= 0;
+		uint		data_count		= 0;
+		UsedBits_t	used;
+
+		const auto	Process = [&] (const GraphicsPipelineDesc::SpecValues_t &specData)
+		{
+			for (auto&[name, data] : specData)
+			{
+				auto	iter = specRef.find( name );
+				if ( iter == specRef.end() )
+					continue;
+
+				if ( used[iter->second] )
+					continue;
+
+				used[iter->second] = true;
+				
+				VkSpecializationMapEntry&	entry = entry_arr[entriy_count++];
+				entry.constantID	= iter->second;
+				entry.offset		= data_count * sizeof(*data_arr);
+				entry.size			= sizeof(uint);
+
+				data_arr[data_count++] = data;
+			}
+		};
+
+		outSpecInfo = null;
+
+		Process( specData1 );
+		Process( specData2 );
+
+		if ( entriy_count and data_count )
+		{
+			auto&	spec = *allocator.Alloc<VkSpecializationInfo>();
+			spec.mapEntryCount	= entriy_count;
+			spec.pMapEntries	= entry_arr;
+			spec.dataSize		= data_count * sizeof(*data_arr);
+			spec.pData			= data_arr;
+
+			outSpecInfo = &spec;
+		}
+	}
+
 /*
 =================================================
 	SetShaderStages
 =================================================
 */
-	void SetShaderStages (OUT VkPipelineShaderStageCreateInfo const*			&outStages,
-						  OUT uint												&outCount,
-						  ArrayView<VGraphicsPipelineTemplate::ShaderModule>	shaders,
-						  LinearAllocator<>										&allocator)
+	static void  SetShaderStages (OUT VkPipelineShaderStageCreateInfo const*			&outStages,
+								  OUT uint												&outCount,
+								  ArrayView<VGraphicsPipelineTemplate::ShaderModule>	shaders,
+								  const GraphicsPipelineDesc::SpecValues_t				&specData1,
+								  const GraphicsPipelineDesc::SpecValues_t				&specData2,
+								  LinearAllocator<>										&allocator)
 	{
 		auto*	stages	= allocator.Alloc<VkPipelineShaderStageCreateInfo>( 5 );
 		outStages		= stages;
@@ -885,7 +1148,15 @@ namespace {
 			info.module		= sh.module;
 			info.pName		= "main";		// TODO
 			info.stage		= sh.stage;
+
 			info.pSpecializationInfo = null;
+
+			if ( specData1.size() or specData2.size() )
+			{
+				CHECK( sh.spec != null );
+				if ( sh.spec )
+					AddSpecialization( OUT info.pSpecializationInfo, specData1, specData2, *sh.spec, allocator );
+			}
 		}
 	}
 
@@ -894,9 +1165,9 @@ namespace {
 	SetDynamicState
 =================================================
 */
-	void SetDynamicState (OUT VkPipelineDynamicStateCreateInfo	&outState,
-						  EPipelineDynamicState					inState,
-						  LinearAllocator<>						&allocator)
+	static void  SetDynamicState (OUT VkPipelineDynamicStateCreateInfo	&outState,
+								  EPipelineDynamicState					inState,
+								  LinearAllocator<>						&allocator)
 	{
 		constexpr uint	max_size = CT_IntLog2<uint(EPipelineDynamicState::_Last)> + 1;
 
@@ -927,8 +1198,8 @@ namespace {
 	SetMultisampleState
 =================================================
 */
-	void SetMultisampleState (OUT VkPipelineMultisampleStateCreateInfo	&outState,
-							  const RenderState::MultisampleState		&inState)
+	static void  SetMultisampleState (OUT VkPipelineMultisampleStateCreateInfo	&outState,
+									  const RenderState::MultisampleState		&inState)
 	{
 		outState.sType					= VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 		outState.pNext					= null;
@@ -946,8 +1217,8 @@ namespace {
 	SetTessellationState
 =================================================
 */
-	void SetTessellationState (OUT VkPipelineTessellationStateCreateInfo &outState,
-							   uint patchSize)
+	static void  SetTessellationState (OUT VkPipelineTessellationStateCreateInfo &outState,
+									   uint patchSize)
 	{
 		outState.sType				= VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
 		outState.pNext				= null;
@@ -960,8 +1231,8 @@ namespace {
 	SetStencilOpState
 =================================================
 */
-	void SetStencilOpState (OUT VkStencilOpState				&outState,
-							const RenderState::StencilFaceState	&inState)
+	static void  SetStencilOpState (OUT VkStencilOpState				&outState,
+									const RenderState::StencilFaceState	&inState)
 	{
 		outState.failOp			= VEnumCast( inState.failOp );
 		outState.passOp			= VEnumCast( inState.passOp );
@@ -977,9 +1248,9 @@ namespace {
 	SetDepthStencilState
 =================================================
 */
-	void SetDepthStencilState (OUT VkPipelineDepthStencilStateCreateInfo	&outState,
-							   const RenderState::DepthBufferState			&depth,
-							   const RenderState::StencilBufferState		&stencil)
+	static void  SetDepthStencilState (OUT VkPipelineDepthStencilStateCreateInfo	&outState,
+									   const RenderState::DepthBufferState			&depth,
+									   const RenderState::StencilBufferState		&stencil)
 	{
 		outState.sType					= VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 		outState.pNext					= null;
@@ -1004,8 +1275,8 @@ namespace {
 	SetRasterizationState
 =================================================
 */
-	void SetRasterizationState (OUT VkPipelineRasterizationStateCreateInfo	&outState,
-								const RenderState::RasterizationState		&inState)
+	static void  SetRasterizationState (OUT VkPipelineRasterizationStateCreateInfo	&outState,
+										const RenderState::RasterizationState		&inState)
 	{
 		outState.sType						= VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		outState.pNext						= null;
@@ -1027,8 +1298,8 @@ namespace {
 	SetupPipelineInputAssemblyState
 =================================================
 */
-	void SetupPipelineInputAssemblyState (OUT VkPipelineInputAssemblyStateCreateInfo	&outState,
-										  const RenderState::InputAssemblyState			&inState)
+	static void  SetupPipelineInputAssemblyState (OUT VkPipelineInputAssemblyStateCreateInfo	&outState,
+												  const RenderState::InputAssemblyState			&inState)
 	{
 		outState.sType					= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 		outState.pNext					= null;
@@ -1042,9 +1313,9 @@ namespace {
 	SetVertexInputState
 =================================================
 */
-	void SetVertexInputState (OUT VkPipelineVertexInputStateCreateInfo	&outState,
-							  const VertexInputState					&inState,
-							  LinearAllocator<>							&allocator)
+	static void  SetVertexInputState (OUT VkPipelineVertexInputStateCreateInfo	&outState,
+									  const VertexInputState					&inState,
+									  LinearAllocator<>							&allocator)
 	{
 		auto*	input_attrib	= allocator.Alloc<VkVertexInputAttributeDescription>( inState.Vertices().size() );
 		auto*	buffer_binding	= allocator.Alloc<VkVertexInputBindingDescription>( inState.BufferBindings().size() );
@@ -1086,11 +1357,11 @@ namespace {
 	SetViewportState
 =================================================
 */
-	void SetViewportState (OUT VkPipelineViewportStateCreateInfo	&outState,
-						   const uint2								&viewportSize,
-						   const uint								viewportCount,
-						   EPipelineDynamicState					dynamicStates,
-						   LinearAllocator<>						&allocator)
+	static void  SetViewportState (OUT VkPipelineViewportStateCreateInfo	&outState,
+								   const uint2								&viewportSize,
+								   const uint								viewportCount,
+								   EPipelineDynamicState					dynamicStates,
+								   LinearAllocator<>						&allocator)
 	{
 		outState.sType			= VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 		outState.pNext			= null;
@@ -1119,9 +1390,9 @@ namespace {
 	SetColorBlendAttachmentState
 =================================================
 */
-	void SetColorBlendAttachmentState (OUT VkPipelineColorBlendAttachmentState &outState,
-									   const RenderState::ColorBuffer &inState,
-									   const bool logicOpEnabled)
+	static void  SetColorBlendAttachmentState (OUT VkPipelineColorBlendAttachmentState &outState,
+											   const RenderState::ColorBuffer &inState,
+											   const bool logicOpEnabled)
 	{
 		outState.blendEnable			= logicOpEnabled ? false : inState.blend;
 		outState.srcColorBlendFactor	= VEnumCast( inState.srcBlendFactor.color );
@@ -1141,11 +1412,11 @@ namespace {
 	SetColorBlendState
 =================================================
 */
-	void SetColorBlendState (OUT VkPipelineColorBlendStateCreateInfo	&outState,
-							 const RenderState::ColorBuffersState		&inState,
-							 const VRenderPass							&renderPass,
-							 const uint									subpassIndex,
-							 LinearAllocator<>							&allocator)
+	static void  SetColorBlendState (OUT VkPipelineColorBlendStateCreateInfo	&outState,
+									 const RenderState::ColorBuffersState		&inState,
+									 const VRenderPass							&renderPass,
+									 const uint									subpassIndex,
+									 LinearAllocator<>							&allocator)
 	{
 		ASSERT( subpassIndex < renderPass.GetCreateInfo().subpassCount );
 
@@ -1184,7 +1455,7 @@ namespace {
 	ValidateRenderState
 =================================================
 */
-	void ValidateRenderState (const VDevice &dev, INOUT RenderState &renderState, INOUT EPipelineDynamicState &dynamicStates)
+	static void  ValidateRenderState (const VDevice &dev, INOUT RenderState &renderState, INOUT EPipelineDynamicState &dynamicStates)
 	{
 		if ( renderState.rasterization.rasterizerDiscard )
 		{
@@ -1319,7 +1590,87 @@ namespace {
 			}
 		}
 	}
-}
+	
+/*
+=================================================
+	AddLocalGroupSizeSpecialization
+=================================================
+*/
+	template <typename SpecEntries, typename SpecData>
+	static void  AddSpecialization (INOUT SpecEntries											&outEntries,
+									INOUT SpecData												&outEntryData,
+									const GraphicsPipelineDesc::SpecValues_t					&specData1,
+									const GraphicsPipelineDesc::SpecValues_t					&specData2,
+									const PipelineCompiler::SpirvShaderCode::SpecConstants_t	&specRef)
+	{
+		const auto	Process = [&outEntries, &outEntryData, &specRef] (const GraphicsPipelineDesc::SpecValues_t &specData)
+		{
+			for (auto&[name, data] : specData)
+			{
+				auto	iter = specRef.find( name );
+				if ( iter == specRef.end() )
+					continue;
+				
+				VkSpecializationMapEntry	entry;
+				entry.constantID	= iter->second;
+				entry.offset		= uint(ArraySizeOf( outEntryData ));
+				entry.size			= sizeof(uint);
+				outEntries.push_back( entry );
+				outEntryData.push_back( data );
+			}
+		};
+
+		Process( specData1 );
+		Process( specData2 );
+	}
+
+/*
+=================================================
+	AddLocalGroupSizeSpecialization
+=================================================
+*/
+	template <typename SpecEntries, typename SpecData>
+	static void  AddLocalGroupSizeSpecialization (INOUT SpecEntries	&outEntries,
+												  INOUT SpecData	&outEntryData,
+												  const uint3		&localSizeSpec,
+												  const uint3		&localGroupSize)
+	{
+		const bool3	has_spec = (localSizeSpec != uint3(~0u));
+
+		if ( has_spec.x )
+		{
+			VkSpecializationMapEntry	entry;
+			entry.constantID	= localSizeSpec.x;
+			entry.offset		= uint(ArraySizeOf( outEntryData ));
+			entry.size			= sizeof(uint);
+			outEntries.push_back( entry );
+			outEntryData.push_back( localGroupSize.x );
+		}
+		
+		if ( has_spec.y )
+		{
+			VkSpecializationMapEntry	entry;
+			entry.constantID	= localSizeSpec.y;
+			entry.offset		= uint(ArraySizeOf( outEntryData ));
+			entry.size			= sizeof(uint);
+			outEntries.push_back( entry );
+			outEntryData.push_back( localGroupSize.y );
+		}
+		
+		if ( has_spec.z )
+		{
+			VkSpecializationMapEntry	entry;
+			entry.constantID	= localSizeSpec.z;
+			entry.offset		= uint(ArraySizeOf( outEntryData ));
+			entry.size			= sizeof(uint);
+			outEntries.push_back( entry );
+			outEntryData.push_back( localGroupSize.z );
+		}
+	}
+
+}	// namesoace
+//-----------------------------------------------------------------------------
+
 
 /*
 =================================================
@@ -1436,8 +1787,8 @@ namespace {
 			VkPipelineVertexInputStateCreateInfo	vertex_input_info	= {};
 			VkPipelineViewportStateCreateInfo		viewport_info		= {};
 			LinearAllocator<>						allocator;			allocator.SetBlockSize( 16_Kb );
-
-			SetShaderStages( OUT pipeline_info.pStages, OUT pipeline_info.stageCount, ppln_templ->_shaders, allocator );
+			
+			SetShaderStages( OUT pipeline_info.pStages, OUT pipeline_info.stageCount, ppln_templ->_shaders, ppln_templ->_specialization, desc.specialization, allocator );
 			SetDynamicState( OUT dynamic_state_info, desc.dynamicState, allocator );
 			SetMultisampleState( OUT multisample_info, desc.renderState.multisample );
 			SetTessellationState( OUT tessellation_info, ppln_templ->_patchControlPoints );
@@ -1567,7 +1918,7 @@ namespace {
 			VkPipelineViewportStateCreateInfo		viewport_info		= {};
 			LinearAllocator<>						allocator;			allocator.SetBlockSize( 16_Kb );
 			
-			SetShaderStages( OUT pipeline_info.pStages, OUT pipeline_info.stageCount, ppln_templ->_shaders, allocator );
+			SetShaderStages( OUT pipeline_info.pStages, OUT pipeline_info.stageCount, ppln_templ->_shaders, ppln_templ->_specialization, desc.specialization, allocator );
 			SetDynamicState( OUT dynamic_state_info, desc.dynamicState, allocator );
 			SetColorBlendState( OUT blend_info, desc.renderState.color, *render_pass, desc.subpassIndex, allocator );
 			SetMultisampleState( OUT multisample_info, desc.renderState.multisample );
@@ -1655,6 +2006,9 @@ namespace {
 	ComputePipelineID  VResourceManager::_GetComputePipeline (const PipelineName &name, const ComputePipelineDesc &inDesc,
 															  UniqueID<VComputePipelineTemplateID> &pplnTemplId)
 	{
+		using SpecEntries_t	= FixedArray< VkSpecializationMapEntry, ComputePipelineDesc::SpecValues_t::capacity()*2 + 3 >;
+		using SpecData_t	= FixedArray< uint, ComputePipelineDesc::SpecValues_t::capacity()*2 + 3 >;
+
 		ComputePipelineDesc				desc		= inDesc;
 		HashVal							desc_hash;
 		VComputePipelineTemplate const*	ppln_templ	= null;
@@ -1682,6 +2036,7 @@ namespace {
 			CHECK_ERR( layout_res );
 			layout = layout_res->Handle();
 
+			VkSpecializationInfo			spec = {};
 			VkComputePipelineCreateInfo		pipeline_info = {};
 
 			pipeline_info.sType			= VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -1690,8 +2045,28 @@ namespace {
 			pipeline_info.stage.sType	= VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			pipeline_info.stage.flags	= 0;
 			pipeline_info.stage.stage	= VK_SHADER_STAGE_COMPUTE_BIT;
-			pipeline_info.stage.module	= ppln_templ->_shader;
+			pipeline_info.stage.module	= ppln_templ->_shader.module;
 			pipeline_info.stage.pName	= "main";		// TODO
+			
+			SpecEntries_t	spec_entries;
+			SpecData_t		spec_data;
+			AddLocalGroupSizeSpecialization( INOUT spec_entries, INOUT spec_data, ppln_templ->_localSizeSpec, *desc.localGroupSize );
+
+			if ( ppln_templ->_specialization.size() or desc.specialization.size() )
+			{
+				CHECK_ERR( ppln_templ->_shader.spec != null );
+				AddSpecialization( INOUT spec_entries, INOUT spec_data, ppln_templ->_specialization, desc.specialization, *ppln_templ->_shader.spec );
+			}
+
+			if ( spec_entries.size() and spec_data.size() )
+			{
+				spec.mapEntryCount	= uint(spec_entries.size());
+				spec.pMapEntries	= spec_entries.data();
+				spec.dataSize		= size_t(ArraySizeOf( spec_data ));
+				spec.pData			= spec_data.data();
+
+				pipeline_info.stage.pSpecializationInfo	= &spec;
+			}
 
 			VK_CHECK( _device.vkCreateComputePipelines( _device.GetVkDevice(), VK_NULL_HANDLE, 1, &pipeline_info, null, OUT &ppln ));
 		}
@@ -1780,11 +2155,11 @@ namespace {
 	CreateDescriptorSetLayout
 =================================================
 */
-	UniqueID<VDescriptorSetLayoutID>  VResourceManager::CreateDescriptorSetLayout (const VDescriptorSetLayout::Uniforms_t &uniforms,
-																				   ArrayView<VkSampler> samplerStorage,
-																				   StringView dbgName)
+	UniqueID<DescriptorSetLayoutID>  VResourceManager::CreateDescriptorSetLayout (const VDescriptorSetLayout::Uniforms_t &uniforms,
+																				  ArrayView<VkSampler> samplerStorage,
+																				  StringView dbgName)
 	{
-		VDescriptorSetLayoutID	id;
+		DescriptorSetLayoutID	id;
 		CHECK_ERR( _Assign( OUT id ));
 
 		auto&	data = _GetResourcePool( id )[ id.Index() ];
@@ -1797,7 +2172,7 @@ namespace {
 		}
 		
 		data.AddRef();
-		return UniqueID<VDescriptorSetLayoutID>{ id };
+		return UniqueID<DescriptorSetLayoutID>{ id };
 	}
 	
 /*
@@ -1807,7 +2182,7 @@ namespace {
 */
 	bool  VResourceManager::_CreateEmptyDescriptorSetLayout ()
 	{
-		VDescriptorSetLayoutID	id;
+		DescriptorSetLayoutID	id;
 		CHECK_ERR( _Assign( OUT id ));
 
 		auto&	data = _GetResourcePool( id )[ id.Index() ];
@@ -1915,7 +2290,7 @@ namespace {
 =================================================
 */
 	UniqueID<VComputePipelineTemplateID>  VResourceManager::CreateCPTemplate (VPipelineLayoutID layoutId, const PipelineCompiler::ComputePipelineDesc &desc,
-																			  VkShaderModule modules, StringView dbgName)
+																			  const ShaderModule &module, StringView dbgName)
 	{
 		VComputePipelineTemplateID		id;
 		CHECK_ERR( _Assign( OUT id ));
@@ -1926,7 +2301,7 @@ namespace {
 		auto*	empty_ds = GetResource( _emptyDSLayout );
 		CHECK_ERR( empty_ds );
 
-		if ( not data.Create( layoutId, desc, modules, dbgName ))
+		if ( not data.Create( layoutId, desc, module, dbgName ))
 		{
 			_Unassign( id );
 			RETURN_ERR( "failed when creating compute pipeline template" );

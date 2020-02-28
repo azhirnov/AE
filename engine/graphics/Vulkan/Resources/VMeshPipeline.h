@@ -39,9 +39,10 @@ namespace AE::Graphics
 		bool Create (VMeshPipelineTemplateID templId, const MeshPipelineDesc &desc, VkPipeline ppln, VkPipelineLayout layout);
 		void Destroy (VResourceManager &);
 
-		ND_ MeshPipelineDesc const&	Description ()	const	{ SHAREDLOCK( _drCheck );  return _desc; }
-		ND_ VkPipeline				Handle ()		const	{ SHAREDLOCK( _drCheck );  return _handle; }
-		ND_ VkPipelineLayout		Layout ()		const	{ SHAREDLOCK( _drCheck );  return _layout; }
+		ND_ MeshPipelineDesc const&		Description ()	const	{ SHAREDLOCK( _drCheck );  return _desc; }
+		ND_ VkPipeline					Handle ()		const	{ SHAREDLOCK( _drCheck );  return _handle; }
+		ND_ VkPipelineLayout			Layout ()		const	{ SHAREDLOCK( _drCheck );  return _layout; }
+		ND_ VMeshPipelineTemplateID		TemplateID ()	const	{ SHAREDLOCK( _drCheck );  return _templ; }
 	};
 
 

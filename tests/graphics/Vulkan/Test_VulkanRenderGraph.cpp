@@ -40,6 +40,7 @@ VRGTest::VRGTest () :
 	_tests.emplace_back( &VRGTest::Test_CopyImage1 );
 	_tests.emplace_back( &VRGTest::Test_Draw1 );
 	_tests.emplace_back( &VRGTest::Test_DrawAsync1 );
+	_tests.emplace_back( &VRGTest::Test_Compute1 );
 }
 
 /*
@@ -96,6 +97,7 @@ bool  VRGTest::_Create (IApplication &app, IWindow &wnd)
 */
 bool  VRGTest::_CompilePipelines ()
 {
+#ifdef PLATFORM_WINDOWS
 	using namespace AE::PipelineCompiler;
 
 	decltype(&CompilePipelines)		compile_pipelines = null;
@@ -111,7 +113,11 @@ bool  VRGTest::_CompilePipelines ()
 	
 	const wchar_t*	pipeline_folder[]	= { L"pipelines" };
 	const wchar_t*	shader_folder[]		= { L"shaders" };
-	Path			output				= L"temp/pipelines.bin";
+	Path			output				= L"temp";
+	
+	FileSystem::CreateDirectories( output );
+
+	output.append( L"pipelines.bin" );
 
 	PipelinesInfo	info = {};
 	info.inPipelines		= null;
@@ -131,6 +137,7 @@ bool  VRGTest::_CompilePipelines ()
 
 	_pipelinePack = _resourceMngr->LoadPipelinePack( file );
 	CHECK_ERR( _pipelinePack );
+#endif
 
 	return true;
 }

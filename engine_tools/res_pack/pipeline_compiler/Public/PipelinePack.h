@@ -12,6 +12,7 @@
 #include "graphics/Public/RenderStateEnums.h"
 #include "graphics/Public/ResourceEnums.h"
 #include "graphics/Public/VertexInputState.h"
+#include "graphics/Public/DescriptorSet.h"
 
 namespace AE::PipelineCompiler
 {
@@ -119,22 +120,9 @@ namespace AE::PipelineCompiler
 	{
 	// types
 	public:
-		enum class EDescriptorType : uint16_t
-		{
-			Unknown		= 0,
-			UniformBuffer,
-			StorageBuffer,
-			UniformTexelBuffer,
-			StorageTexelBuffer,
-			StorageImage,
-			SampledImage,					// texture without sampler
-			CombinedImage,					// sampled image + sampler
-			CombinedImage_ImmutableSampler,	// sampled image + immutable sampler
-			SubpassInput,
-			Sampler,
-			ImmutableSampler,
-			RayTracingScene
-		};
+		using EDescriptorType	= DescriptorSet::EDescriptorType;
+		using BindingIndex_t	= DescriptorSet::BindingIndex_t;
+		using ArraySize_t		= DescriptorSet::ArraySize_t;
 		
 		struct Buffer
 		{
@@ -182,8 +170,8 @@ namespace AE::PipelineCompiler
 		struct Uniform
 		{
 			EDescriptorType		type	= Default;
-			uint16_t			index;
-			uint16_t			arraySize;				// must be > 0
+			BindingIndex_t		index;
+			ArraySize_t			arraySize;				// must be > 0
 			union {
 				Buffer				buffer;
 				TexelBuffer			texelBuffer;

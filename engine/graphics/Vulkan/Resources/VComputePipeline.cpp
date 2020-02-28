@@ -76,7 +76,7 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool VComputePipelineTemplate::Create (VPipelineLayoutID layoutId, const PipelineCompiler::ComputePipelineDesc &desc, VkShaderModule module, StringView dbgName)
+	bool VComputePipelineTemplate::Create (VPipelineLayoutID layoutId, const PipelineCompiler::ComputePipelineDesc &desc, const ShaderModule &module, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( not _baseLayoutId );
@@ -103,7 +103,7 @@ namespace AE::Graphics
 		EXLOCK( _drCheck );
 
 		_baseLayoutId	= Default;
-		_shader			= VK_NULL_HANDLE;
+		_shader			= Default;
 	}
 
 }	// AE::Graphics

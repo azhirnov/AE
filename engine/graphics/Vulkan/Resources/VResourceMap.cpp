@@ -51,6 +51,8 @@ namespace AE::Graphics
 					break;
 				}
 				case EResType::DescriptorSet : {
+					UniqueID<DescriptorSetID>	id{ DescriptorSetID{ res.Index(), res.Generation() }};
+					resMngr.ReleaseResource( id, res.RefCount() );
 					break;
 				}
 				case EResType::RenderPass : {
@@ -77,6 +79,79 @@ namespace AE::Graphics
 		_items.clear();
 	}
 	
+/*
+=================================================
+	IsAlive
+=================================================
+*/
+	bool  VResourceMap::IsAlive (const VResourceManager &resMngr) const
+	{
+		using EResType = Resource::EType;
+
+		bool	alive = true;
+
+		for (auto& res : _items)
+		{
+			BEGIN_ENUM_CHECKS();
+			switch ( res.ResType() )
+			{
+				case EResType::Buffer : {
+					VBufferID	id{ res.Index(), res.Generation() };
+					alive &= resMngr.IsAlive( id );
+					break;
+				}
+				case EResType::Image : {
+					VImageID	id{ res.Index(), res.Generation() };
+					alive &= resMngr.IsAlive( id );
+					break;
+				}
+				case EResType::GraphicsPipeline : {
+					GraphicsPipelineID	id{ res.Index(), res.Generation() };
+					alive &= resMngr.IsAlive( id );
+					break;
+				}
+				case EResType::ComputePipeline : {
+					ComputePipelineID	id{ res.Index(), res.Generation() };
+					alive &= resMngr.IsAlive( id );
+					break;
+				}
+				case EResType::MeshPipeline : {
+					MeshPipelineID	id{ res.Index(), res.Generation() };
+					alive &= resMngr.IsAlive( id );
+					break;
+				}
+				case EResType::RayTracingPipeline : {
+					break;
+				}
+				case EResType::DescriptorSet : {
+					DescriptorSetID	id{ res.Index(), res.Generation() };
+					alive &= resMngr.IsAlive( id );
+					break;
+				}
+				case EResType::RenderPass : {
+					RenderPassID	id{ res.Index(), res.Generation() };
+					alive &= resMngr.IsAlive( id );
+					break;
+				}
+				case EResType::Framebuffer : {
+					VFramebufferID	id{ res.Index(), res.Generation() };
+					alive &= resMngr.IsAlive( id );
+					break;
+				}
+				case EResType::BackedCommandBuffer : {
+					BakedCommandBufferID	id{ res.Index(), res.Generation() };
+					alive &= resMngr.IsAlive( id );
+					break;
+				}
+				default :
+					AE_LOGE( "unknown resource type!" );
+					break;
+			}
+			END_ENUM_CHECKS();
+		}
+		return alive;
+	}
+
 /*
 =================================================
 	Merge

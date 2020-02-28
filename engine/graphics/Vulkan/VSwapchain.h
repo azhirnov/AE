@@ -153,7 +153,7 @@ namespace AE::Graphics
 */
 	inline GfxResourceID  VSwapchain::GetCurrentImageID () const
 	{
-		return _currImageIndex < _imageIDs.size() ? _imageIDs[_currImageIndex] : Default;
+		return _currImageIndex < _imageIDs.size() ? GfxResourceID{_imageIDs[_currImageIndex]} : Default;
 	}
 
 }	// AE::Graphics

@@ -99,10 +99,13 @@ namespace AE::Graphics
 		bool  Add (RenderPassID id);
 		bool  Add (VFramebufferID id);
 		bool  Add (BakedCommandBufferID id);
+		bool  Add (DescriptorSetID id);
 
 		void  Release (VResourceManager &);
 
 		void  Merge (INOUT VResourceMap &);
+
+		ND_ bool  IsAlive (const VResourceManager &) const;
 	};
 
 	
@@ -155,6 +158,12 @@ namespace AE::Graphics
 	{
 		return _items.insert(Resource{ id.Index(), id.Generation(), Resource::EType::BackedCommandBuffer }).second;
 	}
+		
+	inline bool  VResourceMap::Add (DescriptorSetID id)
+	{
+		return _items.insert(Resource{ id.Index(), id.Generation(), Resource::EType::DescriptorSet }).second;
+	}
+
 
 
 }	// AE::Graphics

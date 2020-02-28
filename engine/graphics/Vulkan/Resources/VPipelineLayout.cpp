@@ -24,8 +24,8 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool VPipelineLayout::Create (const VDevice &dev, const DescriptorSets_t &descSetLayouts, const PushConstants_t &pusConstants,
-								  VkDescriptorSetLayout emptyLayout, StringView dbgName)
+	bool  VPipelineLayout::Create (const VDevice &dev, const DescriptorSets_t &descSetLayouts, const PushConstants_t &pusConstants,
+								   VkDescriptorSetLayout emptyLayout, StringView dbgName)
 	{
 		using VkDescriptorSetLayouts_t	= StaticArray< VkDescriptorSetLayout, GraphicsConfig::MaxDescriptorSets >;
 		using VkPushConstantRanges_t	= FixedArray< VkPushConstantRange, GraphicsConfig::MaxPushConstants >;
@@ -91,7 +91,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void VPipelineLayout::Destroy (const VResourceManager &resMngr)
+	void  VPipelineLayout::Destroy (const VResourceManager &resMngr)
 	{
 		EXLOCK( _drCheck );
 
@@ -114,7 +114,7 @@ namespace AE::Graphics
 	GetDescriptorSetLayout
 =================================================
 */
-	bool VPipelineLayout::GetDescriptorSetLayout (const DescriptorSetName &id, OUT VDescriptorSetLayoutID &layout, OUT uint &binding) const
+	bool  VPipelineLayout::GetDescriptorSetLayout (const DescriptorSetName &id, OUT DescriptorSetLayoutID &layout, OUT uint &binding) const
 	{
 		SHAREDLOCK( _drCheck );
 
@@ -128,6 +128,23 @@ namespace AE::Graphics
 		}
 
 		return false;
+	}
+	
+/*
+=================================================
+	GetNativeDesc
+=================================================
+*/
+	void  VPipelineLayout::GetNativeDesc (OUT VulkanPipelineInfo &info) const
+	{
+		SHAREDLOCK( _drCheck );
+
+		info.layout	= BitCast<PipelineLayoutVk_t>( _layout );
+		info.dsLayouts.clear();
+
+		for (auto& ds : _descriptorSets) {
+			info.dsLayouts.insert_or_assign( ds.first, MakeTuple( ds.second.index, BitCast<DescriptorSetLayoutVk_t>(ds.second.layout) ));
+		}
 	}
 
 

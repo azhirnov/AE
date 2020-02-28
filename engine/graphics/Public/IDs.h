@@ -18,6 +18,7 @@ namespace AE::Graphics
 	using RayTracingPipelineID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 	using DescriptorSetID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 	using PipelinePackID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using DescriptorSetLayoutID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 
 
 	using UniformName			= NamedID< 32, __COUNTER__, AE_OPTIMIZE_IDS >;

@@ -5,7 +5,7 @@
 
 namespace
 {
-	void GfxResourceID_Test1 ()
+	static void  GfxResourceID_Test1 ()
 	{
 		{
 			GfxResourceID	id{ 1, 2, GfxResourceID::EType::Buffer };

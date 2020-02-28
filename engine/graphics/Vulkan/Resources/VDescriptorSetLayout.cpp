@@ -5,6 +5,7 @@
 # include "graphics/Vulkan/Resources/VDescriptorSetLayout.h"
 # include "graphics/Vulkan/VResourceManager.h"
 # include "graphics/Vulkan/VEnumCast.h"
+# include "graphics/Private/DescriptorSetHelper.h"
 
 namespace AE::Graphics
 {	
@@ -51,15 +52,12 @@ namespace AE::Graphics
 		EXLOCK( _drCheck );
 		CHECK_ERR( not _layout );
 
-		_uniforms	= uniforms;
-		_debugName	= dbgName;
+		DescriptorBinding	binding;
 
-		DescriptorBinding_t	binding;
-
-		for (uint i = 0; i < _uniforms.Get<0>(); ++i)
+		for (uint i = 0; i < uniforms.Get<0>(); ++i)
 		{
-			auto&	name	= _uniforms.Get<1>()[i];
-			auto&	un		= _uniforms.Get<2>()[i];
+			auto&	name	= uniforms.Get<1>()[i];
+			auto&	un		= uniforms.Get<2>()[i];
 
 			CHECK_ERR( name.IsDefined() );
 			CHECK_ERR( _AddUniform( un, samplerStorage, INOUT binding ));
@@ -67,12 +65,15 @@ namespace AE::Graphics
 
 		VkDescriptorSetLayoutCreateInfo	descriptor_info = {};
 		descriptor_info.sType			= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		descriptor_info.pBindings		= binding.data();
-		descriptor_info.bindingCount	= uint(binding.size());
+		descriptor_info.pBindings		= binding.desc.data();
+		descriptor_info.bindingCount	= uint(binding.desc.size());
 		VK_CHECK( dev.vkCreateDescriptorSetLayout( dev.GetVkDevice(), &descriptor_info, null, OUT &_layout ));
 
 		if ( dbgName.size() )
 			dev.SetObjectName( uint64_t(_layout), dbgName, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT );
+
+		_debugName	= dbgName;
+		_dsTemplate = DescriptorSetHelper::CreateDynamicData( uniforms, binding.dbCount );
 
 		return true;
 	}
@@ -92,13 +93,11 @@ namespace AE::Graphics
 			dev.vkDestroyDescriptorSetLayout( dev.GetVkDevice(), _layout, null );
 		}
 
-		_poolSize.clear();
 		_debugName.clear();
+		_dsTemplate.reset();
 
-		_uniforms			= Default;
-		_layout				= VK_NULL_HANDLE;
-		_dynamicOffsetCount	= 0;
-		_maxIndex			= 0;
+		_layout		= VK_NULL_HANDLE;
+		_maxIndex	= 0;
 	}
 
 /*
@@ -106,7 +105,7 @@ namespace AE::Graphics
 	_AddUniform
 =================================================
 */
-	bool VDescriptorSetLayout::_AddUniform (const Uniform &un, ArrayView<VkSampler> samplerStorage, INOUT DescriptorBinding_t &binding)
+	bool VDescriptorSetLayout::_AddUniform (const Uniform &un, ArrayView<VkSampler> samplerStorage, INOUT DescriptorBinding &binding)
 	{
 		CHECK_ERR( un.index != UMax );
 		CHECK_ERR( un.arraySize > 0 );
@@ -172,9 +171,9 @@ namespace AE::Graphics
 	_IncDescriptorCount
 =================================================
 */
-	void VDescriptorSetLayout::_IncDescriptorCount (VkDescriptorType type)
+	void VDescriptorSetLayout::_IncDescriptorCount (VkDescriptorType)
 	{
-		for (auto& size : _poolSize)
+		/*for (auto& size : _poolSize)
 		{
 			if ( size.type == type )
 			{
@@ -183,7 +182,7 @@ namespace AE::Graphics
 			}
 		}
 
-		_poolSize.emplace_back( type, 1u );
+		_poolSize.emplace_back( type, 1u );*/
 	}
 	
 /*
@@ -191,7 +190,7 @@ namespace AE::Graphics
 	_AddBuffer
 =================================================
 */
-	void VDescriptorSetLayout::_AddBuffer (const Buffer &buf, uint bindingIndex, uint arraySize, VkDescriptorType descrType, INOUT DescriptorBinding_t &binding)
+	void VDescriptorSetLayout::_AddBuffer (const Buffer &buf, uint bindingIndex, uint arraySize, VkDescriptorType descrType, INOUT DescriptorBinding &binding)
 	{
 		const bool	is_dynamic	= EnumEq( buf.state, EResourceState::_BufferDynamicOffset );
 		ASSERT( is_dynamic == (buf.dynamicOffsetIndex != UMax) );
@@ -204,15 +203,15 @@ namespace AE::Graphics
 
 		VkDescriptorSetLayoutBinding	bind = {};
 		bind.descriptorType		= descrType;
-		bind.stageFlags			= EResourceState_ToPipelineStages( buf.state );
+		bind.stageFlags			= EResourceState_ToShaderStages( buf.state );
 		bind.binding			= bindingIndex;
 		bind.descriptorCount	= arraySize;
 		
-		_dynamicOffsetCount		+= (is_dynamic ? arraySize : 0);
+		binding.dbCount			+= (is_dynamic ? arraySize : 0);
 		_maxIndex				 = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.push_back( std::move(bind) );
+		binding.desc.push_back( std::move(bind) );
 	}
 
 /*
@@ -220,18 +219,18 @@ namespace AE::Graphics
 	_AddImage
 =================================================
 */
-	void VDescriptorSetLayout::_AddImage (const Image &img, uint bindingIndex, uint arraySize, VkDescriptorType descrType, INOUT DescriptorBinding_t &binding)
+	void VDescriptorSetLayout::_AddImage (const Image &img, uint bindingIndex, uint arraySize, VkDescriptorType descrType, INOUT DescriptorBinding &binding)
 	{
 		VkDescriptorSetLayoutBinding	bind = {};
 		bind.descriptorType		= descrType;
-		bind.stageFlags			= EResourceState_ToPipelineStages( img.state );
+		bind.stageFlags			= EResourceState_ToShaderStages( img.state );
 		bind.binding			= bindingIndex;
 		bind.descriptorCount	= arraySize;
 
 		_maxIndex = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.push_back( std::move(bind) );
+		binding.desc.push_back( std::move(bind) );
 	}
 	
 /*
@@ -239,18 +238,18 @@ namespace AE::Graphics
 	_AddTexelBuffer
 =================================================
 */
-	void VDescriptorSetLayout::_AddTexelBuffer (const TexelBuffer &buf, uint bindingIndex, uint arraySize, VkDescriptorType descrType, INOUT DescriptorBinding_t &binding)
+	void VDescriptorSetLayout::_AddTexelBuffer (const TexelBuffer &buf, uint bindingIndex, uint arraySize, VkDescriptorType descrType, INOUT DescriptorBinding &binding)
 	{
 		VkDescriptorSetLayoutBinding	bind = {};
 		bind.descriptorType		= descrType;
-		bind.stageFlags			= EResourceState_ToPipelineStages( buf.state );
+		bind.stageFlags			= EResourceState_ToShaderStages( buf.state );
 		bind.binding			= bindingIndex;
 		bind.descriptorCount	= arraySize;
 
 		_maxIndex = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.push_back( std::move(bind) );
+		binding.desc.push_back( std::move(bind) );
 	}
 
 /*
@@ -258,20 +257,20 @@ namespace AE::Graphics
 	_AddCombinedImage
 =================================================
 */
-	void VDescriptorSetLayout::_AddCombinedImage (const Image &tex, uint bindingIndex, uint arraySize, INOUT DescriptorBinding_t &binding)
+	void VDescriptorSetLayout::_AddCombinedImage (const Image &tex, uint bindingIndex, uint arraySize, INOUT DescriptorBinding &binding)
 	{
 		ASSERT( EnumEq( tex.state, EResourceState::_Access_ShaderSample ));
 
 		VkDescriptorSetLayoutBinding	bind = {};
 		bind.descriptorType		= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		bind.stageFlags			= EResourceState_ToPipelineStages( tex.state );
+		bind.stageFlags			= EResourceState_ToShaderStages( tex.state );
 		bind.binding			= bindingIndex;
 		bind.descriptorCount	= arraySize;
 		
 		_maxIndex = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.push_back( std::move(bind) );
+		binding.desc.push_back( std::move(bind) );
 	}
 	
 /*
@@ -279,7 +278,7 @@ namespace AE::Graphics
 	_AddSampler
 =================================================
 */
-	void VDescriptorSetLayout::_AddSampler (const Sampler &sampler, uint bindingIndex, uint arraySize, INOUT DescriptorBinding_t &binding)
+	void VDescriptorSetLayout::_AddSampler (const Sampler &sampler, uint bindingIndex, uint arraySize, INOUT DescriptorBinding &binding)
 	{
 		VkDescriptorSetLayoutBinding	bind = {};
 		bind.descriptorType		= VK_DESCRIPTOR_TYPE_SAMPLER;
@@ -290,7 +289,7 @@ namespace AE::Graphics
 		_maxIndex = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.push_back( std::move(bind) );
+		binding.desc.push_back( std::move(bind) );
 	}
 	
 /*
@@ -299,11 +298,11 @@ namespace AE::Graphics
 =================================================
 */
 	void VDescriptorSetLayout::_AddCombinedImageWithImmutableSampler (const ImageWithSampler &tex, uint bindingIndex, uint arraySize,
-																	  ArrayView<VkSampler> samplerStorage, INOUT DescriptorBinding_t &binding)
+																	  ArrayView<VkSampler> samplerStorage, INOUT DescriptorBinding &binding)
 	{
 		VkDescriptorSetLayoutBinding	bind = {};
 		bind.descriptorType		= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		bind.stageFlags			= EResourceState_ToPipelineStages( tex.image.state );
+		bind.stageFlags			= EResourceState_ToShaderStages( tex.image.state );
 		bind.binding			= bindingIndex;
 		bind.descriptorCount	= arraySize;
 		bind.pImmutableSamplers	= samplerStorage.data() + tex.samplerOffsetInStorage;
@@ -311,7 +310,7 @@ namespace AE::Graphics
 		_maxIndex = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.push_back( std::move(bind) );
+		binding.desc.push_back( std::move(bind) );
 	}
 	
 /*
@@ -320,7 +319,7 @@ namespace AE::Graphics
 =================================================
 */
 	void VDescriptorSetLayout::_AddImmutableSampler (const ImmutableSampler &sampler, uint bindingIndex, uint arraySize,
-													 ArrayView<VkSampler> samplerStorage, INOUT DescriptorBinding_t &binding)
+													 ArrayView<VkSampler> samplerStorage, INOUT DescriptorBinding &binding)
 	{
 		VkDescriptorSetLayoutBinding	bind = {};
 		bind.descriptorType		= VK_DESCRIPTOR_TYPE_SAMPLER;
@@ -332,7 +331,7 @@ namespace AE::Graphics
 		_maxIndex = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.push_back( std::move(bind) );
+		binding.desc.push_back( std::move(bind) );
 	}
 
 /*
@@ -341,7 +340,7 @@ namespace AE::Graphics
 =================================================
 *
 	void VDescriptorSetLayout::_AddRayTracingScene (const PipelineDescription::RayTracingScene &rts, uint bindingIndex,
-													uint arraySize, EShaderStages stageFlags, INOUT DescriptorBinding_t &binding)
+													uint arraySize, EShaderStages stageFlags, INOUT DescriptorBinding &binding)
 	{
 		// calculate hash
 		_hash << HashOf( rts.state )
@@ -360,7 +359,7 @@ namespace AE::Graphics
 		_maxIndex = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.push_back( std::move(bind) );
+		binding.desc.push_back( std::move(bind) );
 	}
 	*/
 	

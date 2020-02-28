@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "graphics/Public/Common.h"
+#include "graphics/Public/IDs.h"
 
 namespace AE::Graphics
 {
@@ -15,6 +15,9 @@ namespace AE::Graphics
 	enum RenderPassVk_t				: uint64_t {};
 	enum AccelerationStructureVk_t	: uint64_t {};
 	enum DeviceMemoryVk_t			: uint64_t {};
+	enum DescriptorSetLayoutVk_t	: uint64_t {};
+	enum PipelineVk_t				: uint64_t {};
+	enum PipelineLayoutVk_t			: uint64_t {};
 	
 	enum FormatVk_t					: uint {};
 	enum BufferUsageVk_t			: uint {};
@@ -37,6 +40,9 @@ namespace AE::Graphics
 	enum AccelerationStructureVk_t	: uint64_t {};
 	#endif
 	using DeviceMemoryVk_t			= VkDeviceMemory;
+	using DescriptorSetLayoutVk_t	= VkDescriptorSetLayout;
+	using PipelineVk_t				= VkPipeline;
+	using PipelineLayoutVk_t		= VkPipelineLayout;
 	
 	using FormatVk_t				= VkFormat;
 	using BufferUsageVk_t			= VkBufferUsageFlags;
@@ -129,6 +135,20 @@ namespace AE::Graphics
 		BytesU					offset;
 		BytesU					size;
 		void *					mappedPtr	= null;
+	};
+
+
+
+	//
+	// Vulkan Pipeline Info 
+	//
+	struct VulkanPipelineInfo
+	{
+		using DSLayouts_t = FixedMap< DescriptorSetName, Tuple<uint, DescriptorSetLayoutVk_t>, 8 >;
+
+		PipelineVk_t			pipeline;
+		PipelineLayoutVk_t		layout;
+		DSLayouts_t				dsLayouts;
 	};
 
 

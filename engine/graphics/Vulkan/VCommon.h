@@ -51,7 +51,6 @@ namespace AE::Graphics
 	using VSamplerID					= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 	using VSamplerPackID				= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 
-	using VDescriptorSetLayoutID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 	using VPipelineLayoutID				= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
 
 	using VGraphicsPipelineTemplateID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;

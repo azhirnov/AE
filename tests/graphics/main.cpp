@@ -5,6 +5,7 @@
 using namespace AE::App;
 
 extern void UnitTest_GfxResourceID ();
+extern void UnitTest_DescriptorSet ();
 extern void Test_VulkanDevice ();
 extern void Test_VulkanSwapchain (IApplication &app, IWindow &wnd);
 extern void Test_VulkanRenderGraph (IApplication &app, IWindow &wnd);
@@ -14,6 +15,7 @@ extern void Test_VulkanRenderGraph (IApplication &app, IWindow &wnd);
 extern int Test_Graphics (IApplication &app, IWindow &wnd)
 {
 	UnitTest_GfxResourceID();
+	UnitTest_DescriptorSet();
 
 	Test_VulkanDevice();
 	Test_VulkanSwapchain( app, wnd );
@@ -69,6 +71,7 @@ extern int Test_Graphics (IApplication &app, IWindow &wnd)
 		void OnStart (IApplication &app) override
 		{
 			UnitTest_GfxResourceID();
+			UnitTest_DescriptorSet();
 
 			#ifdef AE_CI_BUILD
 				// CI can't create window and does not support vulkan

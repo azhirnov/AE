@@ -6,6 +6,7 @@
 #include "graphics/Public/BufferDesc.h"
 #include "graphics/Public/EResourceState.h"
 #include "graphics/Public/PipelineDesc.h"
+#include "graphics/Public/DescriptorSet.h"
 #include "graphics/Public/GfxMemAllocator.h"
 
 namespace AE::Graphics
@@ -21,6 +22,7 @@ namespace AE::Graphics
 	public:
 		using NativeBufferDesc_t	= Union< NullUnion, VulkanBufferDesc >;
 		using NativeImageDesc_t		= Union< NullUnion, VulkanImageDesc >;
+		using NativePipelineDesc_t	= Union< NullUnion, VulkanPipelineInfo >;
 		using NativeBufferHandle_t	= Union< NullUnion, BufferVk_t >;
 		using NativeImageHandle_t	= Union< NullUnion, ImageVk_t >;
 		using NativeMemInfo_t		= IGfxMemAllocator::NativeMemInfo_t;
@@ -45,6 +47,12 @@ namespace AE::Graphics
 		ND_ virtual UniqueID<GfxResourceID>		CreateImage (const NativeImageDesc_t &desc, StringView dbgName = Default) = 0;
 		ND_ virtual UniqueID<GfxResourceID>		CreateBuffer (const NativeBufferDesc_t &desc, StringView dbgName = Default) = 0;
 
+			virtual bool						InitializeDescriptorSet (GraphicsPipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const = 0;
+			virtual bool						InitializeDescriptorSet (MeshPipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const = 0;
+			virtual bool						InitializeDescriptorSet (ComputePipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const = 0;
+			virtual bool						InitializeDescriptorSet (RayTracingPipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const = 0;
+		ND_ virtual DescriptorSetID				CreateDescriptorSet (const DescriptorSet &ds) = 0;
+
 			virtual UniqueID<PipelinePackID>	LoadPipelinePack (const SharedPtr<RStream> &stream) = 0;
 			virtual bool						ReloadPipelinePack (const SharedPtr<RStream> &stream, PipelinePackID id) = 0;
 
@@ -57,6 +65,8 @@ namespace AE::Graphics
 		//ND_ virtual SamplerID					GetSampler (const SamplerName &name) = 0;
 
 		ND_ virtual bool						IsResourceAlive (GfxResourceID id) const = 0;
+		ND_ virtual bool						IsResourceAlive (DescriptorSetID id) const = 0;
+		ND_ virtual bool						IsResourceAlive (BakedCommandBufferID id) const = 0;
 
 			virtual bool						ReleaseResource (UniqueID<GfxResourceID> &id) = 0;
 			virtual bool						ReleaseResource (UniqueID<PipelinePackID> &id) = 0;
@@ -70,6 +80,11 @@ namespace AE::Graphics
 
 		//ND_ virtual NativeBufferDesc_t		GetBufferNativeDesc (GfxResourceID id) const = 0;
 		//ND_ virtual NativeImageDesc_t			GetImageNativeDesc (GfxResourceID id) const = 0;
+
+		ND_ virtual NativePipelineDesc_t		GetPipelineNativeDesc (GraphicsPipelineID id) const = 0;
+		ND_ virtual NativePipelineDesc_t		GetPipelineNativeDesc (MeshPipelineID id) const = 0;
+		ND_ virtual NativePipelineDesc_t		GetPipelineNativeDesc (ComputePipelineID id) const = 0;
+		ND_ virtual NativePipelineDesc_t		GetPipelineNativeDesc (RayTracingPipelineID id) const = 0;
 
 		ND_ virtual NativeBufferHandle_t		GetBufferHandle (GfxResourceID id) const = 0;
 		ND_ virtual NativeImageHandle_t			GetImageHandle (GfxResourceID id) const = 0;

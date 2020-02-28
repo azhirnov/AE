@@ -32,6 +32,8 @@ namespace AE::Graphics
 		using BufferBarriers_t	= HashSet< VLocalBuffer const *>;	// TODO: optimize
 		using ImageBarriers_t	= HashSet< VLocalImage const *>;
 
+		class DescriptorSetBarriers;
+
 
 	// variables
 	private:
@@ -109,6 +111,8 @@ namespace AE::Graphics
 		void  BufferBarrier (GfxResourceID buffer, EResourceState srcState, EResourceState dstState) override;
 		void  BufferBarrier (GfxResourceID buffer, EResourceState srcState, EResourceState dstState, BytesU offset, BytesU size) override;
 		
+		void  DescriptorsBarrier (DescriptorSetID ds) override;
+
 		void  SetInitialState (GfxResourceID id, EResourceState state) override;
 		void  SetInitialState (GfxResourceID id, EResourceState state, EImageLayout layout) override;
 
@@ -161,12 +165,12 @@ namespace AE::Graphics
 		template <typename ID, typename Res, typename MainPool, size_t MC>
 		ND_ Res const*  _ToLocal (ID id, INOUT LocalResPool<Res,MainPool,MC> &, StringView msg);
 		
+		void  _AddImage (const VLocalImage *img, EResourceState state, VkImageLayout layout);
 		void  _AddImage (const VLocalImage *img, EResourceState state, VkImageLayout layout, StructView<VkImageSubresourceLayers> subresLayers);
 		void  _AddImage (const VLocalImage *img, EResourceState state, VkImageLayout layout, StructView<VkImageSubresourceRange> subres);
+		void  _AddBuffer (const VLocalBuffer *buf, EResourceState state);
 		void  _AddBuffer (const VLocalBuffer *buf, EResourceState state, VkDeviceSize offset, VkDeviceSize size);
 		void  _AddBuffer (const VLocalBuffer *buf, EResourceState state, ArrayView<VkBufferImageCopy> copy);
-		void  _CheckBufferAccess (const VLocalBuffer *buf, EResourceState state, VkDeviceSize offset, VkDeviceSize size);
-		void  _CheckBufferAccess (const VLocalBuffer *buf, EResourceState state, ArrayView<VkBufferImageCopy> copy);
 		void  _CommitBarriers ();
 
 		void  _FlushLocalResourceStates ();
@@ -243,6 +247,152 @@ namespace {
 		}
 	}
 }	// namespace
+//-----------------------------------------------------------------------------
+
+
+
+	//
+	// Descriptor Set Barriers
+	//
+	class VRenderGraph::GraphicsContext::DescriptorSetBarriers
+	{
+	// types
+	private:
+		using EDescriptorType = DescriptorSet::EDescriptorType;
+
+	// variables
+	private:
+		GraphicsContext &	_gctx;
+		ArrayView<uint>		_dynamicOffsets;
+
+	// methods
+	public:
+		DescriptorSetBarriers (GraphicsContext &gctx, ArrayView<uint> offsets) : _gctx{gctx}, _dynamicOffsets{offsets} {}
+
+		// ResourceGraph //
+		void operator () (const UniformName &, EDescriptorType, const DescriptorSet::Buffer &buf);
+		void operator () (const UniformName &, EDescriptorType, const DescriptorSet::TexelBuffer &buf);
+		void operator () (const UniformName &, EDescriptorType, const DescriptorSet::Image &img);
+		void operator () (const UniformName &, EDescriptorType, const DescriptorSet::Texture &tex);
+		void operator () (const UniformName &, EDescriptorType, const DescriptorSet::Sampler &) {}
+		//void operator () (const UniformName &, const DescriptorSet::RayTracingScene &);
+	};
+
+/*
+=================================================
+	operator (Buffer)
+=================================================
+*/
+	void  VRenderGraph::GraphicsContext::DescriptorSetBarriers::operator () (const UniformName &, EDescriptorType, const DescriptorSet::Buffer &buf)
+	{
+		for (uint i = 0; i < buf.elementCount; ++i)
+		{
+			auto&				elem	= buf.elements[i];
+			VLocalBuffer const*	buffer	= _gctx.ToLocalBuffer( elem.bufferId );
+			if ( not buffer )
+				continue;
+
+			// validation
+			{
+				const VkDeviceSize	offset	= VkDeviceSize(elem.offset) + (buf.dynamicOffsetIndex < _dynamicOffsets.size() ? _dynamicOffsets[buf.dynamicOffsetIndex] : 0);		
+				const VkDeviceSize	size	= VkDeviceSize(elem.size == ~0_b ? buffer->Size() - offset : elem.size);
+
+				ASSERT( (size >= buf.staticSize) and (buf.arrayStride == 0 or (size - buf.staticSize) % buf.arrayStride == 0) );
+				ASSERT( offset < buffer->Size() );
+				ASSERT( offset + size <= buffer->Size() );
+
+				auto&	limits	= _gctx._device.GetProperties().properties.limits;
+				Unused( limits );
+
+				if ( (buf.state & EResourceState::_StateMask) == EResourceState::UniformRead )
+				{
+					ASSERT( (offset % limits.minUniformBufferOffsetAlignment) == 0 );
+					ASSERT( size <= limits.maxUniformBufferRange );
+				}else{
+					ASSERT( (offset % limits.minStorageBufferOffsetAlignment) == 0 );
+					ASSERT( size <= limits.maxStorageBufferRange );
+				}
+			}
+
+			_gctx._AddBuffer( buffer, buf.state );
+		}
+	}
+
+/*
+=================================================
+	operator (TexelBuffer)
+=================================================
+*/
+	void  VRenderGraph::GraphicsContext::DescriptorSetBarriers::operator () (const UniformName &, EDescriptorType, const DescriptorSet::TexelBuffer &texbuf)
+	{
+		for (uint i = 0; i < texbuf.elementCount; ++i)
+		{
+			auto&				elem	= texbuf.elements[i];
+			VLocalBuffer const*	buffer	= _gctx.ToLocalBuffer( elem.bufferId );
+			if ( not buffer )
+				continue;
+
+			_gctx._AddBuffer( buffer, texbuf.state );
+		}
+	}
+
+/*
+=================================================
+	operator (Image / Texture / SubpassInput)
+=================================================
+*/
+	void  VRenderGraph::GraphicsContext::DescriptorSetBarriers::operator () (const UniformName &, EDescriptorType, const DescriptorSet::Image &img)
+	{
+		for (uint i = 0; i < img.elementCount; ++i)
+		{
+			auto&				elem	= img.elements[i];
+			VLocalImage const*  image	= _gctx.ToLocalImage( elem.imageId );
+
+			if ( image )
+				_gctx._AddImage( image, img.state, EResourceState_ToImageLayout( img.state, image->AspectMask() ));
+		}
+	}
+	
+	void  VRenderGraph::GraphicsContext::DescriptorSetBarriers::operator () (const UniformName &, EDescriptorType, const DescriptorSet::Texture &tex)
+	{
+		for (uint i = 0; i < tex.elementCount; ++i)
+		{
+			auto&				elem	= tex.elements[i];
+			VLocalImage const*  image	= _gctx.ToLocalImage( elem.imageId );
+
+			if ( image )
+				_gctx._AddImage( image, tex.state, EResourceState_ToImageLayout( tex.state, image->AspectMask() ));
+		}
+	}
+
+/*
+=================================================
+	operator (RayTracingScene)
+=================================================
+*
+	void  VRenderGraph::GraphicsContext::DescriptorSetBarriers::operator () (const UniformName &, EDescriptorType, const DescriptorSet::RayTracingScene &rts)
+	{
+		for (uint i = 0; i < rts.elementCount; ++i)
+		{
+			VLocalRTScene const*  scene = _gctx._ToLocal( rts.elements[i].sceneId );
+			if ( not scene )
+				return;
+
+			_gctx._AddRTScene( scene, EResourceState::RayTracingShaderRead );
+
+			auto&	data = scene->ToGlobal()->CurrentData();
+			SHAREDLOCK( data.guard );
+			ASSERT( data.geometryInstances.size() );
+
+			for (auto& inst : data.geometryInstances)
+			{
+				if ( auto* geom = _gctx._ToLocal( inst.geometry.Get() ))
+				{
+					_gctx._AddRTGeometry( geom, EResourceState::RayTracingShaderRead );
+				}
+			}
+		}
+	}*/
 //-----------------------------------------------------------------------------
 
 
@@ -464,13 +614,13 @@ namespace {
 			if ( id.ResourceType() == GfxResourceID::EType::Buffer )
 			{
 				auto*	buf = ToLocalBuffer( id );
-				_AddBuffer( buf, state, 0, VkDeviceSize(buf->Size()) );
+				_AddBuffer( buf, state );
 			}
 			else
 			if ( id.ResourceType() == GfxResourceID::EType::Image )
 			{
 				auto*	img = ToLocalImage( id );
-				_AddImage( img, state, EResourceState_ToImageLayout( state, img->AspectMask() ), StructView<VkImageSubresourceRange>{} );
+				_AddImage( img, state, EResourceState_ToImageLayout( state, img->AspectMask() ));
 			}
 			else
 				AE_LOGE( "unsupported resource type" );
@@ -506,7 +656,7 @@ namespace {
 				auto*	img = ToLocalImage( att.imageId );
 				CHECK_ERR( img );
 
-				_AddImage( img, att.state, att.layout, StructView<VkImageSubresourceRange>{} );
+				_AddImage( img, att.state, att.layout );
 			}
 			_CommitBarriers();
 
@@ -672,31 +822,26 @@ namespace {
 	_AddImage
 =================================================
 */
+	inline void  VRenderGraph::GraphicsContext::_AddImage (const VLocalImage *img, EResourceState state, VkImageLayout layout)
+	{
+		if ( not img->IsMutable() )
+			return;
+		
+		img->AddPendingState( state, layout, ExeOrderIndex(_cmdCounter + 1) );
+		
+		_pendingBarriers.images.insert( img );
+	}
+
 	inline void  VRenderGraph::GraphicsContext::_AddImage (const VLocalImage *img, EResourceState state, VkImageLayout layout, StructView<VkImageSubresourceLayers> subresLayers)
 	{
-		if ( not img->IsMutable() )
-			return;
-		
-		img->AddPendingState( state, layout, ExeOrderIndex(_cmdCounter + 1) );
+		_AddImage( img, state, layout );
 		Unused( subresLayers );
-		
-		_pendingBarriers.images.insert( img );
 	}
 	
-/*
-=================================================
-	_AddImage
-=================================================
-*/
 	inline void  VRenderGraph::GraphicsContext::_AddImage (const VLocalImage *img, EResourceState state, VkImageLayout layout, StructView<VkImageSubresourceRange> subres)
 	{
-		if ( not img->IsMutable() )
-			return;
-
-		img->AddPendingState( state, layout, ExeOrderIndex(_cmdCounter + 1) );
+		_AddImage( img, state, layout );
 		Unused( subres );
-		
-		_pendingBarriers.images.insert( img );
 	}
 	
 /*
@@ -704,53 +849,26 @@ namespace {
 	_AddBuffer
 =================================================
 */
+	inline void  VRenderGraph::GraphicsContext::_AddBuffer (const VLocalBuffer *buf, EResourceState state)
+	{
+		if ( not buf->IsMutable() )
+			return;
+
+		buf->AddPendingState( state, ExeOrderIndex(_cmdCounter + 1) );
+
+		_pendingBarriers.buffers.insert( buf );
+	}
+
 	inline void  VRenderGraph::GraphicsContext::_AddBuffer (const VLocalBuffer *buf, EResourceState state, VkDeviceSize offset, VkDeviceSize size)
 	{
-		if ( not buf->IsMutable() )
-			return;
-
-		buf->AddPendingState( state, ExeOrderIndex(_cmdCounter + 1) );
+		_AddBuffer( buf, state );
 		Unused( offset, size );
-
-		_pendingBarriers.buffers.insert( buf );
 	}
 	
-/*
-=================================================
-	_AddBuffer
-=================================================
-*/
 	inline void  VRenderGraph::GraphicsContext::_AddBuffer (const VLocalBuffer *buf, EResourceState state, ArrayView<VkBufferImageCopy> ranges)
 	{
-		if ( not buf->IsMutable() )
-			return;
-
-		buf->AddPendingState( state, ExeOrderIndex(_cmdCounter + 1) );
+		_AddBuffer( buf, state );
 		Unused( ranges );
-		
-		_pendingBarriers.buffers.insert( buf );
-	}
-	
-/*
-=================================================
-	_CheckBufferAccess
-=================================================
-*/
-	inline void  VRenderGraph::GraphicsContext::_CheckBufferAccess (const VLocalBuffer *buf, EResourceState state, VkDeviceSize offset, VkDeviceSize size)
-	{
-		Unused( buf, state, offset, size );
-		// TODO
-	}
-	
-/*
-=================================================
-	_CheckBufferAccess
-=================================================
-*/
-	inline void  VRenderGraph::GraphicsContext::_CheckBufferAccess (const VLocalBuffer *buf, EResourceState state, ArrayView<VkBufferImageCopy> ranges)
-	{
-		Unused( buf, state, ranges );
-		// TODO
 	}
 
 /*
@@ -898,7 +1016,24 @@ namespace {
 		
 		_barrierMngr.AddBufferBarrier( src_stage, dst_stage, barrier );
 	}
-		
+	
+/*
+=================================================
+	DescriptorsBarrier
+=================================================
+*/
+	void  VRenderGraph::GraphicsContext::DescriptorsBarrier (DescriptorSetID ds)
+	{
+		auto*	desc_set = AcquireResource( ds );
+		CHECK_ERR( desc_set, void());
+
+		if ( _enableBarriers )
+		{
+			DescriptorSetBarriers	visitor{ *this, Default };
+			desc_set->ForEachUniform( visitor );
+		}
+	}
+
 /*
 =================================================
 	SetInitialState
@@ -1701,8 +1836,21 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets)
 	{
-		// TODO
-		Unused( index, ds, dynamicOffsets );
+		ASSERT( _states.computeLayout );
+
+		auto*	desc_set = AcquireResource( ds );
+		CHECK_ERR( desc_set, void());
+
+		if ( _enableBarriers )
+		{
+			DescriptorSetBarriers	visitor{ *this, dynamicOffsets };
+			desc_set->ForEachUniform( visitor );
+		}
+
+		const VkDescriptorSet	vk_ds[] = { desc_set->Handle() };
+
+		vkCmdBindDescriptorSets( _cmdbuf, VK_PIPELINE_BIND_POINT_COMPUTE, _states.computeLayout, index, uint(CountOf(vk_ds)), vk_ds, uint(dynamicOffsets.size()), dynamicOffsets.data() );
+		++_cmdCounter;
 	}
 	
 /*
