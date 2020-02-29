@@ -1,10 +1,9 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "stl/Common.h"
 #include "stl/Containers/Ptr.h"
-#include "stl/Math/BitMath.h"
 
 namespace AE::STL
 {
@@ -41,7 +40,7 @@ namespace AE::STL
 	{
 		constexpr size_t	align = alignof(R);
 
-		STATIC_ASSERT( IsPowerOfTwo( align ), "Align must be power of 2" );
+		STATIC_ASSERT( ((align & (align - 1)) == 0), "Align must be power of 2" );
 
 		return (sizeof(R) < align) or not (size_t(ptr) & (align-1));
 	}
@@ -82,13 +81,19 @@ namespace AE::STL
 	template <typename R, typename T>
 	ND_ forceinline constexpr Ptr<R const>  Cast (Ptr<T const> value)
 	{
-		return Cast<R>( value.operator->() );
+		return Cast<R>( value.get() );
 	}
 	
 	template <typename R, typename T>
 	ND_ forceinline constexpr Ptr<R>  Cast (Ptr<T> value)
 	{
-		return Cast<R>( value.operator->() );
+		return Cast<R>( value.get() );
+	}
+	
+	template <typename R, typename T>
+	ND_ forceinline constexpr R*  Cast (const UniquePtr<T> &value)
+	{
+		return Cast<R>( value.get() );
 	}
 	
 /*
@@ -135,6 +140,24 @@ namespace AE::STL
 		To	dst;
 		std::memcpy( OUT &dst, &src, sizeof(To) );
 		return dst;
+	}
+
+/*
+=================================================
+	CheckCast
+=================================================
+*/
+	template <typename To, typename From>
+	ND_ inline constexpr To  CheckCast (const From& src)
+	{
+		if constexpr( std::is_signed_v<From> and std::is_unsigned_v<To> )
+		{
+			ASSERT( src >= 0 );
+		}
+
+		ASSERT( static_cast<From>(static_cast<To>(src)) == src );
+
+		return static_cast<To>(src);
 	}
 
 

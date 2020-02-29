@@ -1,9 +1,8 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "stl/Math/Bytes.h"
-#include "stl/CompileTime/TypeTraits.h"
 
 namespace AE::STL
 {
@@ -17,6 +16,17 @@ namespace AE::STL
 	ND_ forceinline decltype(auto)  AddressOf (T &value)
 	{
 		return std::addressof( value );
+	}
+
+/*
+=================================================
+	AddressDistance
+=================================================
+*/
+	template <typename LT, typename RT>
+	ND_ forceinline BytesU  AddressDistance (LT &lhs, RT &rhs)
+	{
+		return BytesU{ size_t(AddressOf(lhs)) - size_t(AddressOf(rhs)) };
 	}
 	
 /*
@@ -53,20 +63,6 @@ namespace AE::STL
 
 		std::memcpy( dst, src, size_t(std::min(srcSize, dstSize)) );
 	}
-
-/*
-=================================================
-	AllocOnStack
-=================================================
-*
-	ND_ forceinline void* AllocOnStack (BytesU size)
-	{
-	#ifdef PLATFORM_WINDOWS
-		return _alloca( size_t(size) );
-	#else
-		return alloca( size_t(size) );
-	#endif
-	}*/
 
 
 }	// AE::STL

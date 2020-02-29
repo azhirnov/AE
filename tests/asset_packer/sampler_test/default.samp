@@ -1,0 +1,47 @@
+
+void main ()
+{
+	{
+		Sampler@	samp = Sampler();
+		samp.SetName( "NearestClamp" );
+		samp.SetFilter( EFilter_Nearest, EFilter_Nearest, EMipmapFilter_Nearest );
+		samp.SetAddressMode( EAddressMode_Clamp, EAddressMode_Clamp, EAddressMode_Clamp );
+	}
+	{
+		Sampler@	samp = Sampler();
+		samp.SetName( "NearestRepeat" );
+		samp.SetFilter( EFilter_Nearest, EFilter_Nearest, EMipmapFilter_Nearest );
+		samp.SetAddressMode( EAddressMode_Repeat, EAddressMode_Repeat, EAddressMode_Repeat );
+	}
+	{
+		Sampler@	samp = Sampler();
+		samp.SetName( "LinearClamp" );
+		samp.SetFilter( EFilter_Linear, EFilter_Linear, EMipmapFilter_Nearest );
+		samp.SetAddressMode( EAddressMode_Clamp, EAddressMode_Clamp, EAddressMode_Clamp );
+	}
+	{
+		Sampler@	samp = Sampler();
+		samp.SetName( "LinearRepeat" );
+		samp.SetFilter( EFilter_Linear, EFilter_Linear, EMipmapFilter_Nearest );
+		samp.SetAddressMode( EAddressMode_Repeat, EAddressMode_Repeat, EAddressMode_Repeat );
+	}
+	{
+		Sampler@	samp = Sampler();
+		samp.SetName( "LinearMipmapClamp" );
+		samp.SetFilter( EFilter_Linear, EFilter_Linear, EMipmapFilter_Linear );
+		samp.SetAddressMode( EAddressMode_Clamp, EAddressMode_Clamp, EAddressMode_Clamp );
+	}
+	{
+		Sampler@	samp = Sampler();
+		samp.SetName( "LinearMipmapRepeat" );
+		samp.SetFilter( EFilter_Linear, EFilter_Linear, EMipmapFilter_Linear );
+		samp.SetAddressMode( EAddressMode_Repeat, EAddressMode_Repeat, EAddressMode_Repeat );
+	}
+	{
+		Sampler@	samp = Sampler();
+		samp.SetName( "AnisotrophyRepeat" );
+		samp.SetFilter( EFilter_Linear, EFilter_Linear, EMipmapFilter_Linear );
+		samp.SetAddressMode( EAddressMode_Repeat, EAddressMode_Repeat, EAddressMode_Repeat );
+		samp.SetAnisotropy( 50.0f );	// TODO
+	}
+}

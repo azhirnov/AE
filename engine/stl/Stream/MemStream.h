@@ -1,10 +1,9 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "stl/Stream/Stream.h"
 #include <stdio.h>
-#include <filesystem>
 
 namespace AE::STL
 {
@@ -23,6 +22,7 @@ namespace AE::STL
 
 	// methods
 	public:
+		explicit MemRStream (StringView data) { _data.assign( Cast<uint8_t>(data.data()), Cast<uint8_t>(data.data() + data.size()) ); }
 		explicit MemRStream (ArrayView<uint8_t> data) : _data{data} {}
 		explicit MemRStream (Array<uint8_t> &&data) : _data{std::move(data)} {}
 		

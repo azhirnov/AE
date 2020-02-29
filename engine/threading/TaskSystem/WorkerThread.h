@@ -1,9 +1,9 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "threading/TaskSystem/TaskScheduler.h"
-#include "stl/Containers/StaticString.h"
+#include "stl/Containers/FixedString.h"
 
 namespace AE::Threading
 {
@@ -26,7 +26,7 @@ namespace AE::Threading
 		Atomic<uint>			_looping;
 		const ThreadMask		_threadMask;
 		const Milliseconds		_sleepOnIdle;
-		const StaticString<64>	_name;
+		const FixedString<64>	_name;
 
 
 	// methods

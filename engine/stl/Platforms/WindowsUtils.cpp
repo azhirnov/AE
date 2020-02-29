@@ -1,11 +1,13 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Platforms/WindowsUtils.h"
 #include "stl/Platforms/WindowsHeader.h"
 #include "stl/Algorithms/ArrayUtils.h"
 
 #ifdef PLATFORM_WINDOWS
+# include "stl/Platforms/PlatformUtils.h"
 # include <processthreadsapi.h>
+# include <thread>
 
 namespace AE::STL
 {
@@ -20,7 +22,7 @@ namespace
 	{
 	// variables
 	private:
-		HMODULE		_mod = null;
+		Library		_lib;
 
 	public:
 		decltype(&::GetThreadDescription)	getThreadDescription	= null;
@@ -31,18 +33,13 @@ namespace
 	public:
 		Kernel32Lib ()
 		{
-			_mod = ::LoadLibraryA( "kernel32.dll" );
-			if ( _mod )
-			{
-				getThreadDescription = BitCast<decltype(&::GetThreadDescription)>(::GetProcAddress( _mod, "GetThreadDescription" ));
-				setThreadDescription = BitCast<decltype(&::SetThreadDescription)>(::GetProcAddress( _mod, "SetThreadDescription" ));
-			}
-		}
+			_lib.Load( "kernel32.dll" );
 
-		~Kernel32Lib ()
-		{
-			if ( _mod )
-				::FreeLibrary( _mod );
+			if ( _lib )
+			{
+				_lib.GetProcAddr( "GetThreadDescription", OUT getThreadDescription );
+				_lib.GetProcAddr( "SetThreadDescription", OUT setThreadDescription );
+			}
 		}
 	};
 
@@ -94,7 +91,7 @@ namespace
 */
 	bool SetCurrentThreadName10 (NtStringView name)
 	{
-		auto	kernel = Kernel32dll();
+		auto&	kernel = Kernel32dll();
 
 		if ( not kernel.setThreadDescription )
 			return false;
@@ -106,6 +103,7 @@ namespace
 
 		HRESULT	hr = kernel.setThreadDescription( ::GetCurrentThread(), str );
 		ASSERT( SUCCEEDED(hr) );
+		Unused( hr );
 
 		return true;
 	}
@@ -117,7 +115,7 @@ namespace
 */
 	bool GetCurrentThreadName10 (OUT String &name)
 	{
-		auto	kernel = Kernel32dll();
+		auto&	kernel = Kernel32dll();
 		
 		if ( not kernel.getThreadDescription )
 			return false;
@@ -167,6 +165,62 @@ namespace
 
 		GetCurrentThreadName10( OUT name );
 		return name;
+	}
+	
+/*
+=================================================
+	SetThreadAffinity
+=================================================
+*/
+	bool  WindowsUtils::SetThreadAffinity (const std::thread::native_handle_type &handle, uint cpuCore)
+	{
+		DWORD_PTR	mask;
+		
+		//ASSERT( cpuCore < std::thread::hardware_concurrency() );
+
+		#if PLATFORM_BITS == 64
+		{
+			ASSERT( cpuCore < 64 );
+			mask = 1ull << (cpuCore & 63);
+		}
+		#elif PLATFORM_BITS == 32
+		{
+			ASSERT( cpuCore < 32 );
+			mask = 1u << (cpuCore & 31);
+		}
+		#endif
+
+		return ::SetThreadAffinityMask( handle, mask ) != 0;
+	}
+	
+/*
+=================================================
+	CheckErrors
+=================================================
+*/
+	bool  WindowsUtils::CheckErrors (StringView file, int line)
+	{
+		DWORD	dw = ::GetLastError();
+
+		if ( dw == 0 )
+			return true;
+		
+		char	buf[128] = {};
+		DWORD	dw_count = ::FormatMessageA(
+									FORMAT_MESSAGE_FROM_SYSTEM |
+									FORMAT_MESSAGE_IGNORE_INSERTS,
+									null,
+									dw,
+									MAKELANGID( LANG_ENGLISH, SUBLANG_DEFAULT ),
+									LPTSTR(buf),
+									uint(CountOf(buf)),
+									null );
+		
+		String	str("WinAPI error: ");
+		str += StringView{ buf, dw_count-2 };
+
+		AE_LOGE( str, file, line );
+		return false;
 	}
 
 }	// AE::STL

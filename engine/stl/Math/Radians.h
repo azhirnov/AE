@@ -1,10 +1,11 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "stl/Math/Math.h"
+#include "stl/Math/Vec.h"
 
-namespace AE::STL
+namespace AE::Math
 {
 
 	//
@@ -14,6 +15,8 @@ namespace AE::STL
 	template <typename T>
 	struct RadiansTempl
 	{
+		STATIC_ASSERT( IsScalar<T> and IsFloatPoint<T> );
+		
 	// types
 	public:
 		using Self		= RadiansTempl<T>;
@@ -29,46 +32,52 @@ namespace AE::STL
 	public:
 		constexpr RadiansTempl () : _value{} {}
 		constexpr explicit RadiansTempl (T val) : _value{val} {}
-
-		ND_ constexpr explicit operator T ()		const	{ return _value; }
-
-		ND_ constexpr static Self  Pi ()					{ return Self{T( 3.14159265358979323846 )}; }
-		ND_ constexpr static T DegToRad ()					{ return T(0.01745329251994329576923690768489); }
-		ND_ constexpr static T RadToDeg ()					{ return T(57.295779513082320876798154814105); }
-
-		ND_ Self   operator - ()					const	{ return Self{ -_value }; }
-
-			Self&  operator += (const Self rhs)				{ _value += rhs._value;  return *this; }
-			Self&  operator -= (const Self rhs)				{ _value -= rhs._value;  return *this; }
-			Self&  operator *= (const Self rhs)				{ _value *= rhs._value;  return *this; }
-			Self&  operator /= (const Self rhs)				{ _value /= rhs._value;  return *this; }
-
-			Self&  operator += (const T rhs)				{ _value += rhs;  return *this; }
-			Self&  operator -= (const T rhs)				{ _value -= rhs;  return *this; }
-			Self&  operator *= (const T rhs)				{ _value *= rhs;  return *this; }
-			Self&  operator /= (const T rhs)				{ _value /= rhs;  return *this; }
-			
-		ND_ Self   operator + (const Self rhs)		const	{ return Self{ _value + rhs._value }; }
-		ND_ Self   operator - (const Self rhs)		const	{ return Self{ _value - rhs._value }; }
-		ND_ Self   operator * (const Self rhs)		const	{ return Self{ _value * rhs._value }; }
-		ND_ Self   operator / (const Self rhs)		const	{ return Self{ _value / rhs._value }; }
-
-		ND_ Self   operator + (const T rhs)			const	{ return Self{ _value + rhs }; }
-		ND_ Self   operator - (const T rhs)			const	{ return Self{ _value - rhs }; }
-		ND_ Self   operator * (const T rhs)			const	{ return Self{ _value * rhs }; }
-		ND_ Self   operator / (const T rhs)			const	{ return Self{ _value / rhs }; }
-
-		ND_ bool	operator == (const Self rhs)	const	{ return _value == rhs._value; }
-		ND_ bool	operator != (const Self rhs)	const	{ return _value != rhs._value; }
-		ND_ bool	operator >  (const Self rhs)	const	{ return _value >  rhs._value; }
-		ND_ bool	operator <  (const Self rhs)	const	{ return _value <  rhs._value; }
-		ND_ bool	operator >= (const Self rhs)	const	{ return _value >= rhs._value; }
-		ND_ bool	operator <= (const Self rhs)	const	{ return _value <= rhs._value; }
 		
-		ND_ friend Self  operator + (T lhs, Self rhs)		{ return Self{ lhs + rhs._value }; }
-		ND_ friend Self  operator - (T lhs, Self rhs)		{ return Self{ lhs - rhs._value }; }
-		ND_ friend Self  operator * (T lhs, Self rhs)		{ return Self{ lhs * rhs._value }; }
-		ND_ friend Self  operator / (T lhs, Self rhs)		{ return Self{ lhs / rhs._value }; }
+		constexpr RadiansTempl (const Self &) = default;
+		constexpr RadiansTempl (Self &&) = default;
+
+		ND_ constexpr explicit operator T ()					const	{ return _value; }
+
+		ND_ constexpr static Self  Pi ()								{ return Self{T( 3.14159265358979323846 )}; }
+		ND_ constexpr static T DegToRad ()								{ return T(0.01745329251994329576923690768489); }
+		ND_ constexpr static T RadToDeg ()								{ return T(57.295779513082320876798154814105); }
+
+			Self&  operator = (const Self &) = default;
+			Self&  operator = (Self &&) = default;
+
+		ND_ constexpr Self   operator - ()						const	{ return Self{ -_value }; }
+
+			constexpr Self&  operator += (const Self rhs)				{ _value += rhs._value;  return *this; }
+			constexpr Self&  operator -= (const Self rhs)				{ _value -= rhs._value;  return *this; }
+			constexpr Self&  operator *= (const Self rhs)				{ _value *= rhs._value;  return *this; }
+			constexpr Self&  operator /= (const Self rhs)				{ _value /= rhs._value;  return *this; }
+
+			constexpr Self&  operator += (const T rhs)					{ _value += rhs;  return *this; }
+			constexpr Self&  operator -= (const T rhs)					{ _value -= rhs;  return *this; }
+			constexpr Self&  operator *= (const T rhs)					{ _value *= rhs;  return *this; }
+			constexpr Self&  operator /= (const T rhs)					{ _value /= rhs;  return *this; }
+			
+		ND_ constexpr Self   operator + (const Self rhs)		const	{ return Self{ _value + rhs._value }; }
+		ND_ constexpr Self   operator - (const Self rhs)		const	{ return Self{ _value - rhs._value }; }
+		ND_ constexpr Self   operator * (const Self rhs)		const	{ return Self{ _value * rhs._value }; }
+		ND_ constexpr Self   operator / (const Self rhs)		const	{ return Self{ _value / rhs._value }; }
+
+		ND_ constexpr Self   operator + (const T rhs)			const	{ return Self{ _value + rhs }; }
+		ND_ constexpr Self   operator - (const T rhs)			const	{ return Self{ _value - rhs }; }
+		ND_ constexpr Self   operator * (const T rhs)			const	{ return Self{ _value * rhs }; }
+		ND_ constexpr Self   operator / (const T rhs)			const	{ return Self{ _value / rhs }; }
+
+		ND_ constexpr bool	operator == (const Self rhs)		const	{ return _value == rhs._value; }
+		ND_ constexpr bool	operator != (const Self rhs)		const	{ return _value != rhs._value; }
+		ND_ constexpr bool	operator >  (const Self rhs)		const	{ return _value >  rhs._value; }
+		ND_ constexpr bool	operator <  (const Self rhs)		const	{ return _value <  rhs._value; }
+		ND_ constexpr bool	operator >= (const Self rhs)		const	{ return _value >= rhs._value; }
+		ND_ constexpr bool	operator <= (const Self rhs)		const	{ return _value <= rhs._value; }
+		
+		ND_ friend constexpr Self  operator + (T lhs, Self rhs)			{ return Self{ lhs + rhs._value }; }
+		ND_ friend constexpr Self  operator - (T lhs, Self rhs)			{ return Self{ lhs - rhs._value }; }
+		ND_ friend constexpr Self  operator * (T lhs, Self rhs)			{ return Self{ lhs * rhs._value }; }
+		ND_ friend constexpr Self  operator / (T lhs, Self rhs)			{ return Self{ lhs / rhs._value }; }
 	};
 
 
@@ -84,7 +93,11 @@ namespace AE::STL
 	ND_ constexpr Rad  operator "" _deg (long double value)			{ return Rad{ Rad::DegToRad() * Rad::Value_t(value) }; }
 	ND_ constexpr Rad  operator "" _deg (unsigned long long value)	{ return Rad{ Rad::DegToRad() * Rad::Value_t(value) }; }
 
+
+	template <typename T, int I>
+	using RadianVec = Vec< RadiansTempl<T>, I >;
 	
+
 /*
 =================================================
 	Abs
@@ -126,10 +139,9 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ASin (const T& x)
 	{
-		STATIC_ASSERT( IsScalarOrEnum<T> );
 		ASSERT( x >= T(-1) and x <= T(1) );
 
-		return RadiansTempl<T>{::asin( x )};
+		return RadiansTempl<T>{std::asin( x )};
 	}
 	
 /*
@@ -140,10 +152,9 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ACos (const T& x)
 	{
-		STATIC_ASSERT( IsScalarOrEnum<T> );
 		ASSERT( x >= T(-1) and x <= T(1) );
 
-		return RadiansTempl<T>{::acos( x )};
+		return RadiansTempl<T>{std::acos( x )};
 	}
 	
 /*
@@ -176,8 +187,6 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ASinH (const T& x)
 	{
-		STATIC_ASSERT( CompileTime::IsScalarOrEnum<T> );
-
 		return RadiansTempl<T>( SignOrZero( x ) * Ln( x + Sqrt( (x*x) + T(1) ) ) );
 	}
 	
@@ -189,8 +198,6 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ACosH (const T& x)
 	{
-		STATIC_ASSERT( CompileTime::IsScalarOrEnum<T> );
-
 		ASSERT( x >= T(1) );
 		return RadiansTempl<T>{Ln( x + Sqrt( (x*x) - T(1) ) )};
 	}
@@ -247,9 +254,7 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ATan (const T& y_over_x)
 	{
-		STATIC_ASSERT( IsScalarOrEnum<T> );
-
-		return RadiansTempl<T>{::atan( y_over_x )};
+		return RadiansTempl<T>{std::atan( y_over_x )};
 	}
 	
 /*
@@ -260,9 +265,7 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ATan (const T& y, const T& x)
 	{
-		STATIC_ASSERT( IsScalarOrEnum<T> );
-
-		return RadiansTempl<T>{::atan2( y, x )};
+		return RadiansTempl<T>{std::atan2( y, x )};
 	}
 	
 /*
@@ -273,8 +276,6 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ACoTan (const T& x)
 	{
-		STATIC_ASSERT( IsScalarOrEnum<T> );
-
 		return RadiansTempl<T>{SafeDiv( T(1), ATan( x ), T(0) )};
 	}
 	
@@ -286,8 +287,6 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline Radians<T>  ATanH (const T& x)
 	{
-		STATIC_ASSERT( CompileTime::IsScalarOrEnum<T> );
-
 		ASSERT( x > T(-1) and x < T(1) );
 
 		if ( Abs(x) == T(1) )	return Infinity<T>();	else
@@ -303,10 +302,8 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ACoTanH (const T& x)
 	{
-		STATIC_ASSERT( IsScalarOrEnum<T> );
-
 		return RadiansTempl<T>{SafeDiv( T(1), ATanH( x ), T(0) )};
 	}
 	
 
-}	// AE::STL
+}	// AE::Math

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Stream/FileStream.h"
 #include "stl/Algorithms/StringUtils.h"
@@ -29,29 +29,49 @@ namespace AE::STL
 	constructor
 =================================================
 */
-	FileRStream::FileRStream (StringView filename)
+	FileRStream::FileRStream (NtStringView filename)
 	{
-		fopen_s( OUT &_file, filename.data(), "rb" );
+		fopen_s( OUT &_file, filename.c_str(), "rb" );
 		
 		if ( _file )
 			_fileSize = _GetSize();
 		else
-			AE_LOGI( "Can't open file: \""s << filename << '"' );
+			AE_LOGI( "Can't open file: \""s << StringView{filename} << '"' );
 	}
 	
-	FileRStream::FileRStream (const char *filename) : FileRStream{ StringView{filename} }
+	FileRStream::FileRStream (const char *filename) : FileRStream{ NtStringView{filename} }
 	{}
 
-	FileRStream::FileRStream (const String &filename) : FileRStream{ StringView{filename} }
+	FileRStream::FileRStream (const String &filename) : FileRStream{ NtStringView{filename} }
 	{}
+	
+/*
+=================================================
+	constructor
+=================================================
+*/
+#ifdef PLATFORM_WINDOWS
+	FileRStream::FileRStream (NtWStringView filename)
+	{
+		_wfopen_s( OUT &_file, filename.c_str(), L"rb" );
+		
+		if ( _file )
+			_fileSize = _GetSize();
+	}
+	
+	FileRStream::FileRStream (const wchar_t *filename) : FileRStream{ NtWStringView{filename} }
+	{}
+
+	FileRStream::FileRStream (const WString &filename) : FileRStream{ NtWStringView{filename} }
+	{}
+#endif
 
 /*
 =================================================
 	constructor
 =================================================
 */
-#ifdef AE_STD_FILESYSTEM
-	FileRStream::FileRStream (const std::filesystem::path &path)
+	FileRStream::FileRStream (const Path &path)
 	{
 #	ifdef PLATFORM_WINDOWS
 		_wfopen_s( OUT &_file, path.c_str(), L"rb" );
@@ -64,7 +84,6 @@ namespace AE::STL
 		else
 			AE_LOGI( "Can't open file: \""s << path.string() << '"' );
 	}
-#endif
 	
 /*
 =================================================
@@ -136,27 +155,44 @@ namespace AE::STL
 	constructor
 =================================================
 */
-	FileWStream::FileWStream (StringView filename)
+	FileWStream::FileWStream (NtStringView filename)
 	{
-		fopen_s( OUT &_file, filename.data(), "wb" );
+		fopen_s( OUT &_file, filename.c_str(), "wb" );
 
 		if ( not _file )
-			AE_LOGI( "Can't open file: \""s << filename << '"' );
+			AE_LOGI( "Can't open file: \""s << StringView{filename} << '"' );
 	}
 	
-	FileWStream::FileWStream (const char *filename) : FileWStream{ StringView{filename} }
+	FileWStream::FileWStream (const char *filename) : FileWStream{ NtStringView{filename} }
 	{}
 
-	FileWStream::FileWStream (const String &filename) : FileWStream{ StringView{filename} }
+	FileWStream::FileWStream (const String &filename) : FileWStream{ NtStringView{filename} }
 	{}
+	
+/*
+=================================================
+	constructor
+=================================================
+*/
+#ifdef PLATFORM_WINDOWS
+	FileWStream::FileWStream (NtWStringView filename)
+	{
+		_wfopen_s( OUT &_file, filename.c_str(), L"wb" );
+	}
+	
+	FileWStream::FileWStream (const wchar_t *filename) : FileWStream{ NtWStringView{filename} }
+	{}
+
+	FileWStream::FileWStream (const WString &filename) : FileWStream{ NtWStringView{filename} }
+	{}
+#endif
 
 /*
 =================================================
 	constructor
 =================================================
 */
-#ifdef AE_STD_FILESYSTEM
-	FileWStream::FileWStream (const std::filesystem::path &path)
+	FileWStream::FileWStream (const Path &path)
 	{
 #	ifdef PLATFORM_WINDOWS
 		_wfopen_s( OUT &_file, path.c_str(), L"wb" );
@@ -167,7 +203,6 @@ namespace AE::STL
 		if ( not _file )
 			AE_LOGI( "Can't open file: \""s << path.string() << '"' );
 	}
-#endif
 	
 /*
 =================================================

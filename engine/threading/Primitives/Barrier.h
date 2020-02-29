@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	AE_BARRIER_MODE:
 		0 - WinAPI native barrier implementation, requires Windows 8 desctop.
@@ -103,16 +103,16 @@ namespace AE::Threading
 		void wait ()
 		{
 			// flush cache
-			std::atomic_thread_fence( memory_order_release );
+			std::atomic_thread_fence( EMemoryOrder::Release );
 
-			const Bitfield	old_value	= _counter.load( memory_order_relaxed );
+			const Bitfield	old_value	= _counter.load( EMemoryOrder::Relaxed );
 			Bitfield		expected	= old_value;
 			Bitfield		new_value	= old_value;
 
 			// increment counter
 			old_value.index ? ++new_value.counter_2 : ++new_value.counter_1;
 
-			for (; not _counter.compare_exchange_weak( INOUT expected, new_value, memory_order_relaxed );)
+			for (; not _counter.compare_exchange_weak( INOUT expected, new_value, EMemoryOrder::Relaxed );)
 			{
 				new_value = expected;
 				old_value.index ? ++new_value.counter_2 : ++new_value.counter_1;
@@ -132,7 +132,7 @@ namespace AE::Threading
 			}
 
 			for (uint i = 0;
-				 not _counter.compare_exchange_weak( INOUT expected, new_value, memory_order_relaxed );
+				 not _counter.compare_exchange_weak( INOUT expected, new_value, EMemoryOrder::Relaxed );
 				 ++i)
 			{
 				if ( expected.index != old_value.index )
@@ -147,7 +147,7 @@ namespace AE::Threading
 			}
 
 			// invalidate cache
-			std::atomic_thread_fence( memory_order_acquire );
+			std::atomic_thread_fence( EMemoryOrder::Acquire );
 		}
 	};
 
@@ -173,7 +173,7 @@ namespace AE::Threading
 		uint					_value;
 		uint					_cycle;
 		const uint				_numThreads;
-		std::mutex				_mutex;
+		Mutex					_mutex;
 		std::condition_variable	_cv;
 
 
@@ -259,7 +259,7 @@ namespace AE::Threading
 
 
 // check definitions
-#if defined (COMPILER_MSVC) or defined (COMPILER_CLANG)
+#ifdef AE_CPP_DETECT_MISSMATCH
 
 #  if AE_BARRIER_MODE == 0
 #	pragma detect_mismatch( "AE_BARRIER_MODE", "0" )
@@ -273,4 +273,4 @@ namespace AE::Threading
 #	error fix me!
 #  endif
 
-#endif	// COMPILER_MSVC or COMPILER_CLANG
+#endif	// AE_CPP_DETECT_MISSMATCH

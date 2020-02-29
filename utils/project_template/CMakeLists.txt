@@ -4,6 +4,7 @@ cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
 
 set( CMAKE_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake" )
 set( DOCS_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/../../docs" )
+set( AE_ITERATOR_DEBUG_LEVEL 1 CACHE INTERNAL "" FORCE )
 
 if (${AE_ENABLE_SIMPLE_COMPILER_OPTIONS})
 	include( "${CMAKE_FOLDER}/compilers_minimal.cmake" )
@@ -13,6 +14,7 @@ endif()
 
 include( "${CMAKE_FOLDER}/compiler_tests.cmake" )
 include( "${CMAKE_FOLDER}/ci_build.cmake" )
+include( "${CMAKE_FOLDER}/version.cmake" )
 
 #----------------------------------------------------------
 
@@ -63,6 +65,7 @@ if (PROJECTS_SHARED_CXX_FLAGS_PROFILE)
 endif()
 
 set_target_properties( "ProjectTemplate" PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
+target_compile_features( "ProjectTemplate" PUBLIC cxx_std_17 )
 
 if (AE_CI_BUILD)
 	target_compile_definitions( "ProjectTemplate" PUBLIC "AE_CI_BUILD" )
@@ -75,14 +78,20 @@ endif ()
 	
 if (NOT ${STD_VARIANT_SUPPORTED})
 	message( FATAL_ERROR "std::variant support required" )
-endif()
+endif ()
 if (NOT ${STD_STRINGVIEW_SUPPORTED})
 	message( FATAL_ERROR "std::string_view support required" )
-endif()
+endif ()
 if (NOT ${STD_OPTIONAL_SUPPORTED})
 	message( FATAL_ERROR "std::optional support required" )
-endif()
-
-if (CMAKE_VERSION VERSION_LESS 3.11.0)
-	add_dependencies( "ProjectTemplate" ExternalDependencies )
 endif ()
+if (NOT ${STD_FILESYSTEM_SUPPORTED})
+	if (${AE_ENABLE_FILESYSTEM})
+		target_link_libraries( "ProjectTemplate" PUBLIC "FileSystem-lib" )
+		message( STATUS "used alternative std::filesystem implementation" )
+	else ()
+		message( FATAL_ERROR "std::filesystem support required" )
+	endif ()
+endif ()
+
+target_compile_definitions( "ProjectTemplate" PUBLIC "AE_VERSION=AE::STL::MakeTuple( 0, 1, 1, \"${AE_COMMIT_HASH}\" )" )

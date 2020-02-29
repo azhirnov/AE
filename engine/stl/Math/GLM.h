@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -10,15 +10,33 @@
 
 #define GLM_FORCE_RADIANS
 #define GLM_ENABLE_EXPERIMENTAL
-#define GLM_FORCE_CXX14
+#define GLM_FORCE_CXX17
+#define GLM_FORCE_VEC_EQUAL_OP	// special for AE
 //#define GLM_FORCE_EXPLICIT_CTOR
-#define GLM_FORCE_XYZW_ONLY
+//#define GLM_FORCE_XYZW_ONLY
 //#define GLM_FORCE_SWIZZLE
 #define GLM_FORCE_CTOR_INIT
 #define GLM_FORCE_INLINE
+#define GLM_FORCE_ALIGNED_GENTYPES
 
 #ifdef AE_RELEASE
 #	define GLM_FORCE_INTRINSICS
+#endif
+
+// enable simd
+#if defined(PLATFORM_ANDROID)
+#	if defined(__i386__)
+#		define GLM_FORCE_ARCH_UNKNOWN
+#	elif defined(__x86_64__)
+#		define GLM_FORCE_SSE42
+#	elif defined(__aarch64__)
+#		define GLM_FORCE_NEON
+#	else
+#		define GLM_FORCE_ARCH_UNKNOWN
+#	endif
+
+#elif defined(PLATFORM_WINDOWS) or defined(PLATFORM_LINUX)
+#	define GLM_FORCE_SSE42
 #endif
 
 #ifdef COMPILER_MSVC
@@ -148,6 +166,7 @@
 #include "gtc/vec1.hpp"
 
 #include "gtx/matrix_decompose.hpp"
+#include "gtx/matrix_major_storage.hpp"
 #include "gtx/norm.hpp"
 
 #ifdef COMPILER_MSVC
@@ -155,13 +174,63 @@
 #endif
 
 
-namespace AE::STL
+namespace AE::Math
 {
-	template <typename T>	using Quat = glm::qua<T>;
-							using QuatF = Quat<float>;
-	
-	template <typename T>	using Matrix2x2 = glm::tmat2x2<T>;
-	template <typename T>	using Matrix3x3 = glm::tmat3x3<T>;
-	template <typename T>	using Matrix4x4 = glm::tmat4x4<T>;
+# if (GLM_ARCH & GLM_ARCH_SIMD_BIT)
+	static constexpr auto	GLMQuialifier	= glm::qualifier::aligned_highp;
+# else
+	static constexpr auto	GLMQuialifier	= glm::qualifier::highp;
+# endif
 
-}	// AE::STL
+	template <typename T, uint I>
+	using Vec = glm::vec< I, T, GLMQuialifier >;
+	
+	template <typename T>
+	struct Quat;
+
+	template <typename T, uint Columns, uint Rows>
+	struct Matrix;
+
+}	// AE::Math
+
+
+// check definitions
+#ifdef AE_CPP_DETECT_MISSMATCH
+
+#  ifdef GLM_FORCE_LEFT_HANDED
+#	pragma detect_mismatch( "GLM_FORCE_LEFT_HANDED", "1" )
+#  else
+#	pragma detect_mismatch( "GLM_FORCE_LEFT_HANDED", "0" )
+#  endif
+
+#  ifdef GLM_FORCE_DEPTH_ZERO_TO_ONE
+#	pragma detect_mismatch( "GLM_FORCE_DEPTH_ZERO_TO_ONE", "1" )
+#  else
+#	pragma detect_mismatch( "GLM_FORCE_DEPTH_ZERO_TO_ONE", "0" )
+#  endif
+
+#  ifdef GLM_FORCE_RADIANS
+#	pragma detect_mismatch( "GLM_FORCE_RADIANS", "1" )
+#  else
+#	pragma detect_mismatch( "GLM_FORCE_RADIANS", "0" )
+#  endif
+
+#  ifdef GLM_FORCE_CTOR_INIT
+#	pragma detect_mismatch( "GLM_FORCE_CTOR_INIT", "1" )
+#  else
+#	pragma detect_mismatch( "GLM_FORCE_CTOR_INIT", "0" )
+#  endif
+
+#  if GLM_CONFIG_CLIP_CONTROL == GLM_CLIP_CONTROL_LH_ZO
+#	pragma detect_mismatch( "GLM_CONFIG_CLIP_CONTROL", "1" )
+#  elif GLM_CONFIG_CLIP_CONTROL == GLM_CLIP_CONTROL_RH_ZO
+#	pragma detect_mismatch( "GLM_CONFIG_CLIP_CONTROL", "2" )
+#  elif GLM_CONFIG_CLIP_CONTROL == GLM_CLIP_CONTROL_LH_NO
+#	pragma detect_mismatch( "GLM_CONFIG_CLIP_CONTROL", "3" )
+#  elif GLM_CONFIG_CLIP_CONTROL == GLM_CLIP_CONTROL_RH_NO
+#	pragma detect_mismatch( "GLM_CONFIG_CLIP_CONTROL", "4" )
+#  else
+#	pragma detect_mismatch( "GLM_CONFIG_CLIP_CONTROL", "0" )
+#  endif
+
+#endif	// AE_CPP_DETECT_MISSMATCH

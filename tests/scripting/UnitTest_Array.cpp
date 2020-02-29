@@ -1,11 +1,11 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "scripting/Bindings/CoreBindings.h"
 #include "UnitTest_Common.h"
 
 namespace
 {
-	void ScriptArray_Test1 (const ScriptEnginePtr &se)
+	static void  ScriptArray_Test1 (const ScriptEnginePtr &se)
 	{
 		const char	script[] = R"#(
 			int main () {

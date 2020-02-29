@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "threading/Primitives/Barrier.h"
 #include "stl/Memory/MemUtils.h"
@@ -12,7 +12,7 @@ namespace AE::Threading
 
 /*
 =================================================
-	ArraySizeOf
+	constructor
 =================================================
 */
 	Barrier::Barrier (uint numThreads)
@@ -24,7 +24,7 @@ namespace AE::Threading
 	
 /*
 =================================================
-	ArraySizeOf
+	destructor
 =================================================
 */
 	Barrier::~Barrier ()

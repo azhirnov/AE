@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -326,12 +326,12 @@ namespace AE::STL
 	ToString (Vec)
 =================================================
 */
-	template <typename T, uint I>
+	template <typename T, int I>
 	ND_ inline String  ToString (const Vec<T,I> &value)
 	{
 		String	str = "( ";
 
-		for (uint i = 0; i < I; ++i)
+		for (int i = 0; i < I; ++i)
 		{
 			if ( i > 0 )	str << ", ";
 			str << ToString( value[i] );

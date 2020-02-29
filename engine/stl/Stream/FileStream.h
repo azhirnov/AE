@@ -1,13 +1,11 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "stl/Stream/Stream.h"
+#include "stl/Containers/NtStringView.h"
+#include "stl/Types/FileSystem.h"
 #include <stdio.h>
-
-#ifdef AE_STD_FILESYSTEM
-#   include <filesystem>
-#endif
 
 namespace AE::STL
 {
@@ -27,13 +25,18 @@ namespace AE::STL
 
 	// methods
 	public:
-		FileRStream () {}
-		FileRStream (StringView filename);
+		FileRStream (NtStringView filename);
 		FileRStream (const char *filename);
 		FileRStream (const String &filename);
-	#ifdef AE_STD_FILESYSTEM
-		FileRStream (const std::filesystem::path &path);
+		
+	#ifdef PLATFORM_WINDOWS
+		FileRStream (NtWStringView filename);
+		FileRStream (const wchar_t *filename);
+		FileRStream (const WString &filename);
 	#endif
+		
+		FileRStream () {}
+		FileRStream (const Path &path);
 		~FileRStream ();
 
 		bool	IsOpen ()	const override		{ return _file != null; }
@@ -62,13 +65,18 @@ namespace AE::STL
 
 	// methods
 	public:
-		FileWStream () {}
-		FileWStream (StringView filename);
+		FileWStream (NtStringView filename);
 		FileWStream (const char *filename);
 		FileWStream (const String &filename);
-	#ifdef AE_STD_FILESYSTEM
-		FileWStream (const std::filesystem::path &path);
+
+	#ifdef PLATFORM_WINDOWS
+		FileWStream (NtWStringView filename);
+		FileWStream (const wchar_t *filename);
+		FileWStream (const WString &filename);
 	#endif
+
+		FileWStream () {}
+		FileWStream (const Path &path);
 		~FileWStream ();
 		
 		bool	IsOpen ()	const override		{ return _file != null; }
@@ -83,7 +91,7 @@ namespace AE::STL
 
 
 // check definitions
-#if defined (COMPILER_MSVC) or defined (COMPILER_CLANG)
+#ifdef AE_CPP_DETECT_MISSMATCH
 
 # ifdef _FILE_OFFSET_BITS
 #  if _FILE_OFFSET_BITS == 64
@@ -93,10 +101,4 @@ namespace AE::STL
 #  endif
 # endif
 
-#  ifdef AE_STD_FILESYSTEM
-#	pragma detect_mismatch( "AE_STD_FILESYSTEM", "1" )
-#  else
-#	pragma detect_mismatch( "AE_STD_FILESYSTEM", "0" )
-#  endif
-
-#endif	// COMPILER_MSVC or COMPILER_CLANG
+#endif	// AE_CPP_DETECT_MISSMATCH

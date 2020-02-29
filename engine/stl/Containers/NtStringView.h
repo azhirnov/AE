@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	This string_view type guaranties that contains non-null pointer to null-terminated string (C-style string).
 	Use NtStringView only as function argument.
@@ -8,7 +8,7 @@
 
 #include "stl/Memory/MemUtils.h"
 #include "stl/Memory/UntypedAllocator.h"
-#include "stl/Containers/StaticString.h"
+#include "stl/Containers/FixedString.h"
 
 namespace AE::STL
 {
@@ -44,22 +44,23 @@ namespace AE::STL
 		NtBasicStringView (Self &&other);
 		NtBasicStringView (const Self &other);
 		NtBasicStringView (BasicStringView<T> str);
-		NtBasicStringView (const std::basic_string<T> &str);
+		NtBasicStringView (const BasicString<T> &str);
 		NtBasicStringView (const T* str);
 		NtBasicStringView (const T* str, size_t length);
-		template <size_t S> NtBasicStringView (const TStaticString<T,S> &str);
+		template <size_t S> NtBasicStringView (const TFixedString<T,S> &str);
 		~NtBasicStringView ();
 
 		// TODO: why they ignored by compiler ?
 		Self& operator = (Self &&) = delete;
 		Self& operator = (const Self &) = delete;
 		Self& operator = (BasicStringView<T>) = delete;
-		Self& operator = (const std::basic_string<T> &) = delete;
+		Self& operator = (const BasicString<T> &) = delete;
 		Self& operator = (const T*) = delete;
 
-		explicit operator StringView ()	const	{ return StringView{ _data, _length }; }
+		explicit operator BasicStringView<T> ()	const	{ return BasicStringView<T>{ _data, _length }; }
+		explicit operator BasicString<T> ()		const	{ return BasicString<T>{ _data, _length }; }
 
-		ND_ T const*	data ()			const	{ return _data; }
+		//ND_ T const*	data ()			const	{ return _data; }
 		ND_ T const*	c_str ()		const	{ return _data; }
 		ND_ size_t		size ()			const	{ return _length; }
 		ND_ size_t		length ()		const	{ return _length; }
@@ -72,6 +73,7 @@ namespace AE::STL
 
 
 	using NtStringView = NtBasicStringView< char >;
+	using NtWStringView = NtBasicStringView< wchar_t >;
 	
 
 
@@ -88,7 +90,7 @@ namespace AE::STL
 	}
 
 	template <typename T>
-	inline NtBasicStringView<T>::NtBasicStringView (const std::basic_string<T> &str) :
+	inline NtBasicStringView<T>::NtBasicStringView (const BasicString<T> &str) :
 		_data{ str.data() }, _length{ str.size() }
 	{
 		_Validate();
@@ -120,9 +122,13 @@ namespace AE::STL
 	}
 
 	template <typename T>
-	inline NtBasicStringView<T>::NtBasicStringView (const T* str) :
-		_data{ str }, _length{ str ? strlen(str) : 0 }
+	inline NtBasicStringView<T>::NtBasicStringView (const T* str) : _data{ str }
 	{
+		if constexpr( IsSameTypes< T, wchar_t >)
+			_length = (str ? std::wcslen(str) : 0);
+		else
+			_length = (str ? std::strlen(str) : 0);
+
 		_Validate();
 	}
 
@@ -135,7 +141,7 @@ namespace AE::STL
 	
 	template <typename T>
 	template <size_t S>
-	inline NtBasicStringView<T>::NtBasicStringView (const TStaticString<T,S> &str) :
+	inline NtBasicStringView<T>::NtBasicStringView (const TFixedString<T,S> &str) :
 		_data{ str.c_str() }, _length{ str.length() }
 	{}
 

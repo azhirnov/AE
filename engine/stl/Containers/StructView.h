@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -105,7 +105,7 @@ namespace AE::STL
 		uint			_stride		= 0;
 
 		DEBUG_ONLY(
-			_IViewer*	_dbgView	= null;	
+			UniquePtr<_IViewer>	_dbgView;	
 		)
 
 
@@ -133,14 +133,18 @@ namespace AE::STL
 			DEBUG_ONLY( _dbgView = _CreateView<Class, sizeof(Class)>( _array ));
 		}
 		
+		StructView (const T* ptr, size_t count) :
+			_array{ ptr }, _count{ count }, _stride{ sizeof(T) }
+		{
+			DEBUG_ONLY( _dbgView = _CreateView<T, sizeof(T)>( _array ));
+		}
+
 		StructView (const void *ptr, size_t count, uint stride) :
 			_array{ptr}, _count{count}, _stride{stride}
 		{}
 
 		~StructView ()
-		{
-			DEBUG_ONLY( delete _dbgView );
-		}
+		{}
 
 
 		ND_ size_t		size ()					const	{ return _count; }
@@ -156,6 +160,9 @@ namespace AE::STL
 
 		ND_ bool  operator == (StructView<T> rhs) const
 		{
+			if ( (_array == rhs._array) & (_count == rhs._count) & (_stride == rhs._stride) )
+				return true;
+
 			if ( size() != rhs.size() )
 				return false;
 
@@ -165,6 +172,7 @@ namespace AE::STL
 			}
 			return true;
 		}
+
 
 		ND_ StructView<T>  section (size_t first, size_t count) const
 		{
@@ -176,18 +184,18 @@ namespace AE::STL
 
 	private:
 		template <typename Class, size_t Stride>
-		ND_ static _IViewer*  _CreateView (const void *ptr)
+		ND_ static UniquePtr<_IViewer>  _CreateView (const void *ptr)
 		{
 			STATIC_ASSERT( Stride >= sizeof(T) );
 			const size_t	padding = Stride - sizeof(T);
 
 			if constexpr ( padding == 0 )
-				return new _ViewerImpl< Class >{ ptr };
+				return MakeUnique< _ViewerImpl< Class >>( ptr );
 			else
 			if constexpr ( padding % alignof(T) == 0 )
-				return new _ViewerWithPadding< Class, padding >{ ptr };
+				return MakeUnique< _ViewerWithPadding< Class, padding >>( ptr );
 			else
-				return new _ViewerWithPaddingUnaligned< Class, padding >{ ptr };
+				return MakeUnique< _ViewerWithPaddingUnaligned< Class, padding >>( ptr );
 		}
 	};
 

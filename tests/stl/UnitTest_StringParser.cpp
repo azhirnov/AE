@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Algorithms/StringParser.h"
 #include "UnitTest_Common.h"
@@ -6,7 +6,7 @@
 
 namespace
 {
-	void StringParser_ToEndOfLine ()
+	static void  StringParser_ToEndOfLine ()
 	{
 		size_t	pos = 7;
 		StringParser::ToEndOfLine( "1111\n2222\n3333333", pos );
@@ -26,7 +26,7 @@ namespace
 	}
 
 
-	void StringParser_ToBeginOfLine ()
+	static void  StringParser_ToBeginOfLine ()
 	{
 		size_t	pos = 7;
 		StringParser::ToBeginOfLine( "1111\n2222\n3333333", pos );
@@ -38,7 +38,7 @@ namespace
 	}
 
 
-	void StringParser_ToNextLine ()
+	static void  StringParser_ToNextLine ()
 	{
 		size_t	pos = 7;
 		StringParser::ToNextLine( "1111\n2222\n3333333", pos );
@@ -50,7 +50,7 @@ namespace
 	}
 
 
-	void StringParser_ToPrevLine ()
+	static void  StringParser_ToPrevLine ()
 	{
 		size_t	pos = 7;
 		StringParser::ToPrevLine( "1111\n2222\n3333333", pos );
@@ -58,7 +58,7 @@ namespace
 	}
 
 
-	void StringParser_ReadLine ()
+	static void  StringParser_ReadLine ()
 	{
 		StringView	str = "01234\r\n5678";
 		StringView	line;
@@ -71,7 +71,7 @@ namespace
 	}
 
 
-	void StringParser_ReadString ()
+	static void  StringParser_ReadString ()
 	{
 		size_t		pos = 0;
 		StringView	result;
@@ -82,7 +82,7 @@ namespace
 	}
 
 
-	void StringParser_CalculateNumberOfLines ()
+	static void  StringParser_CalculateNumberOfLines ()
 	{
 		size_t	lines = StringParser::CalculateNumberOfLines( "1\n2\n3\r\n4\r\n5\n6\n7\r8\n9\n10" );
 		TEST( lines == 10 );
@@ -95,7 +95,7 @@ namespace
 	}
 
 
-	void StringParser_MoveToLine ()
+	static void  StringParser_MoveToLine ()
 	{
 		size_t	pos = 0;
 		StringParser::MoveToLine( "1\n2\n3\r\n4\r\n5\n6\n7\r8\n9\n10", OUT pos, 0 );

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -212,7 +212,9 @@ namespace AE::Scripting
 			void operator = (const SimpleRefCounter &) = delete;
 
 		public:
-			SimpleRefCounter ()		{}
+			SimpleRefCounter ()			{}
+			virtual ~SimpleRefCounter () {}
+
 			void __AddRef ()		{ ASSERT( _counter > 0 );  ++_counter; }
 			void __Release ()		{ ASSERT( _counter > 0 );  if ( (--_counter) == 0 ) { delete this; }}
 			int  __Counter () const	{ return _counter; }
@@ -243,7 +245,8 @@ namespace AE::Scripting
 
 			ND_ bool operator == (const SharedPtr<T> &rhs)	{ return _ptr == rhs._ptr; }
 
-			ND_ T*  operator -> ()			const			{ ASSERT( _ptr ); return _ptr; }
+			ND_ T*  operator -> ()			const			{ ASSERT( _ptr );  return _ptr; }
+			ND_ T&  operator *  ()			const			{ ASSERT( _ptr );  return *_ptr; }
 			ND_ T*  Get ()					const			{ return _ptr; }
 			ND_ explicit operator bool ()	const			{ return _ptr; }
 			ND_ int UseCount ()				const			{ return _ptr ? _ptr->__Counter() : 0; }
@@ -254,13 +257,6 @@ namespace AE::Scripting
 		static T * FactoryCreate ()
 		{
 			return new T();
-		}
-
-
-		template <typename T>
-		static void Print (T *)
-		{
-			TODO("Print");
 		}
 
 
@@ -364,7 +360,7 @@ namespace AE::Scripting
 		template <typename Ret, typename ...Types>
 		struct GlobalFunction < Ret (AE_CDECL *) (Types...) >
 		{
-			using TypeList_t = typename TypeList< Types... >;
+			using TypeList_t = TypeList< Types... >;
 				
 			static void GetDescriptor (OUT String &str, StringView name, uint offsetFromStart = 0, uint offsetFromEnd = 0)
 			{
@@ -382,7 +378,7 @@ namespace AE::Scripting
 		template <typename Ret>
 		struct GlobalFunction < Ret (AE_CDECL *) () >
 		{
-			using TypeList_t = typename TypeList<>;
+			using TypeList_t = TypeList<>;
 				
 			static void GetDescriptor (OUT String &str, StringView name, uint = 0, uint = 0)
 			{
@@ -403,7 +399,7 @@ namespace AE::Scripting
 		template <typename C, typename Ret, typename ...Types>
 		struct MemberFunction < Ret (AE_THISCALL C:: *) (Types...) >
 		{
-			using TypeList_t = typename TypeList< Types... >;
+			using TypeList_t = TypeList< Types... >;
 				
 			static void GetDescriptor (OUT String &str, StringView name, uint offsetFromStart = 0, uint offsetFromEnd = 0)
 			{
@@ -419,7 +415,7 @@ namespace AE::Scripting
 		template <typename C, typename Ret>
 		struct MemberFunction < Ret (AE_THISCALL C:: *) () >
 		{
-			using TypeList_t = typename TypeList<>;
+			using TypeList_t = TypeList<>;
 				
 			static void GetDescriptor (OUT String &str, StringView name, uint offsetFromStart = 0, uint offsetFromEnd = 0)
 			{
@@ -435,7 +431,7 @@ namespace AE::Scripting
 		template <typename C, typename Ret, typename ...Types>
 		struct MemberFunction < Ret (AE_THISCALL C:: *) (Types...) const >
 		{
-			using TypeList_t = typename TypeList< Types... >;
+			using TypeList_t = TypeList< Types... >;
 				
 			static void GetDescriptor (OUT String &str, StringView name, uint offsetFromStart = 0, uint offsetFromEnd = 0)
 			{
@@ -452,7 +448,7 @@ namespace AE::Scripting
 		template <typename C, typename Ret>
 		struct MemberFunction < Ret (AE_THISCALL C:: *) () const >
 		{
-			using TypeList_t = typename TypeList<>;
+			using TypeList_t = TypeList<>;
 				
 			static void GetDescriptor (OUT String &str, StringView name, uint offsetFromStart = 0, uint offsetFromEnd = 0)
 			{
@@ -499,11 +495,11 @@ namespace AE::Scripting
 		template <typename T, bool IsObject>
 		struct ContextSetterGetter_Var
 		{
-			static T    Get (AngelScript::asIScriptContext *ctx)					{
+			static T	Get (AngelScript::asIScriptContext *ctx)					{
 				T* obj = static_cast<T *>(ctx->GetReturnObject());
 				return *obj;
 			}
-			static int  Set (AngelScript::asIScriptContext *ctx, int arg, T& value)	{ return ctx->SetArgObject( arg, reinterpret_cast<void *>(&value) ); }
+			static int	Set (AngelScript::asIScriptContext *ctx, int arg, T& value)	{ return ctx->SetArgObject( arg, reinterpret_cast<void *>(&value) ); }
 		};
 
 		template <typename T>
@@ -589,7 +585,7 @@ namespace AE::Scripting
 			static void Set (AngelScript::asIScriptContext *ctx, int index, Arg0 arg0, Args ...args)
 			{
 				AS_CALL( ContextSetterGetter<Arg0>::Set( ctx, index, arg0 ) );
-				SetContextArgs<Args...>::Set( ctx, index+1, FW<Args>(args)... );
+				SetContextArgs<Args...>::Set( ctx, index+1, std::forward<Args>(args)... );
 			}
 		};
 

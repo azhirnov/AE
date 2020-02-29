@@ -1,8 +1,8 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
-#include "stl/Math/Math.h"
+#include "stl/Math/Vec.h"
 
 namespace AE::STL
 {
@@ -70,6 +70,9 @@ namespace AE::STL
 
 		ND_ bool  operator == (ArrayView<T> rhs) const
 		{
+			if ( (_array == rhs._array) & (_count == rhs._count) )
+				return true;
+
 			if ( size() != rhs.size() )
 				return false;
 
@@ -87,7 +90,7 @@ namespace AE::STL
 
 			for (size_t i = 0; i < size(); ++i)
 			{
-				if ( _array[i] != rhs[i] )
+				if ( not (_array[i] == rhs[i]) )
 					return _array[i] > rhs[i];
 			}
 			return true;

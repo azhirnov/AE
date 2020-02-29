@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Containers/NtStringView.h"
 #include "UnitTest_Common.h"
@@ -6,10 +6,10 @@
 
 namespace
 {
-	void NtStringView_Test1 ()
+	static void  NtStringView_Test1 ()
 	{
 		const auto	Func = [] (NtStringView str, const char* expected) -> bool {
-			return strcmp( str.data(), expected ) == 0;
+			return strcmp( str.c_str(), expected ) == 0;
 		};
 
 		TEST( Func( "test", "test" ));

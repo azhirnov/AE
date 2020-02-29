@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -34,7 +34,7 @@ namespace AE::Scripting
 	{
 		String	signature;
 		ScriptTypeInfo<T>::Name( OUT signature );
-		signature << ' ' << name;
+		(signature += ' ') += name;
 
 		AS_CALL( _engine->RegisterGlobalProperty( signature.c_str(), Cast<void *>(&var) ) );
 	}
@@ -49,7 +49,7 @@ namespace AE::Scripting
 	{
 		String	signature( "const " );
 		ScriptTypeInfo<T>::Name( OUT signature );
-		signature << ' ' << name;
+		(signature += ' ') += name;
 
 		AS_CALL( _engine->RegisterGlobalProperty( signature.c_str(), Cast<void *>(const_cast<T*>(&var)) ) );
 	}
@@ -66,10 +66,12 @@ namespace AE::Scripting
 		GlobalFunction<Fn>::GetDescriptor( OUT signature, entry );
 
 		AngelScript::asIScriptContext*	ctx = null;
-		if ( not _CreateContext( signature, module, ctx ) )
+		if ( not _CreateContext( signature, module, OUT ctx ))
 		{
 			if ( ctx )
 				ctx->Release();
+
+			return null;
 		}
 
 		return ScriptFnPtr<Fn>{ new ScriptFn<Fn>{ module, ctx }};

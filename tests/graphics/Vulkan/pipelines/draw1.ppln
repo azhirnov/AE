@@ -1,0 +1,9 @@
+
+void main ()
+{
+	GraphicsPipeline@	ppln = GraphicsPipeline();
+	ppln.SetName( "draw1" );
+	ppln.SetRenderPass( "ColorPass" );
+	ppln.SetVertexShader( "draw1_vs.glsl", Version_Spirv_130, "" );
+	ppln.SetFragmentShader( "draw1_fs.glsl", Version_Spirv_130, "" );
+}

@@ -1,0 +1,8 @@
+void main ()
+{
+	{
+		RenderPass	rp;
+		rp.SetName( "ColorPass" );
+		rp.SetOutput( "out_Color", 0, EFragOutput_Float4 );
+	}
+}

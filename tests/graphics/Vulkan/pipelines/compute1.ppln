@@ -1,0 +1,7 @@
+
+void main ()
+{
+	ComputePipeline@	ppln = ComputePipeline();
+	ppln.SetName( "compute1" );
+	ppln.SetShader( "compute_1.glsl", Version_Spirv_130, "" );
+}

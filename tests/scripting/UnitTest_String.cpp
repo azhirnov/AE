@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "scripting/Bindings/CoreBindings.h"
 #include "UnitTest_Common.h"
@@ -6,7 +6,7 @@
 
 namespace
 {
-	void ScriptString_Test1 (const ScriptEnginePtr &se)
+	static void  ScriptString_Test1 (const ScriptEnginePtr &se)
 	{
 		const char	script[] = R"#(
 			int main () {
@@ -22,7 +22,7 @@ namespace
 	}
 
 
-	void ScriptString_Test2 (const ScriptEnginePtr &se)
+	static void  ScriptString_Test2 (const ScriptEnginePtr &se)
 	{
 		const char	script[] = R"#(
 			int main () {
@@ -39,7 +39,7 @@ namespace
 	}
 
 
-	void ScriptString_Test3 (const ScriptEnginePtr &se)
+	static void  ScriptString_Test3 (const ScriptEnginePtr &se)
 	{
 		const char	script[] = R"#(
 			int main () {
@@ -56,7 +56,7 @@ namespace
 	}
 
 
-	void ScriptString_Test4 (const ScriptEnginePtr &se)
+	static void  ScriptString_Test4 (const ScriptEnginePtr &se)
 	{
 		const char	script[] = R"#(
 			int main () {
@@ -73,7 +73,7 @@ namespace
 	}
 
 
-	void ScriptString_Test5 (const ScriptEnginePtr &se)
+	static void  ScriptString_Test5 (const ScriptEnginePtr &se)
 	{
 		const char	script[] = R"#(
 			int main (string str) {
@@ -90,7 +90,7 @@ namespace
 	}
 
 
-	void ScriptString_Test6 (const ScriptEnginePtr &se)
+	static void  ScriptString_Test6 (const ScriptEnginePtr &se)
 	{
 		const char	script[] = R"#(
 			string main () {

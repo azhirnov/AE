@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Algorithms/ArrayUtils.h"
 #include "UnitTest_Common.h"
@@ -6,7 +6,7 @@
 
 namespace
 {
-	void LowerBound_Test1 ()
+	static void  LowerBound_Test1 ()
 	{
 		Array<int>	arr = { 0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 7, 7, 7, 7, 8, 9, 10, 11, 12 };
 		ArrayView	view = arr;
@@ -22,7 +22,7 @@ namespace
 	}
 
 
-	void BinarySearch_Test1 ()
+	static void  BinarySearch_Test1 ()
 	{
 		Array<int>	arr = { 0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 7, 7, 7, 7, 8, 9, 10, 11, 12 };
 		ArrayView	view = arr;
@@ -39,7 +39,7 @@ namespace
 	}
 
 
-	void BinarySearch_Test2 ()
+	static void  BinarySearch_Test2 ()
 	{
 		Array<int>	arr = { 0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 7, 7, 7, 7, 8, 9, 10, 11, 12, 13 };
 		ArrayView	view = arr;
@@ -56,7 +56,7 @@ namespace
 	}
 
 
-	void BinarySearch_Test3 ()
+	static void  BinarySearch_Test3 ()
 	{
 		Array<int>	arr1 = { 0 };
 		Array<int>	arr2 = { 1, 2 };
@@ -73,7 +73,7 @@ namespace
 	}
 
 
-	void ExponentialSearch_Test1 ()
+	static void  ExponentialSearch_Test1 ()
 	{
 		Array<int>	arr = { 0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 7, 7, 7, 7, 8, 9, 10, 11, 12 };
 		ArrayView	view = arr;

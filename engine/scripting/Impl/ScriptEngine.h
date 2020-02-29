@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 //
 // see http://www.angelcode.com/angelscript/
 //
@@ -12,6 +12,7 @@
 #include "stl/Containers/NtStringView.h"
 #include "stl/CompileTime/TypeList.h"
 #include "stl/CompileTime/FunctionInfo.h"
+#include "stl/Algorithms/EnumUtils.h"
 
 // AngelScript + Addons //
 #include "angelscript.h"
@@ -63,6 +64,7 @@ namespace AE::Scripting
 			String	name;
 			String	script;
 
+			ModuleSource () {}
 			ModuleSource (StringView name, StringView script) : name{name}, script{script} {}
 			ModuleSource (String&& name, String&& script) : name{std::move(name)}, script{std::move(script)} {}
 		};
@@ -113,10 +115,10 @@ namespace AE::Scripting
 		void SetNamespace (NtStringView name);
 		void SetDefaultNamespace ();
 
-		ND_ static bool _CheckError (int err, StringView asFunc, StringView func, StringView file, int line);
+		static bool _CheckError (int err, StringView asFunc, StringView func, StringView file, int line);
 
 	private:
-		bool _CreateContext (const String &signature, const ScriptModulePtr &module, AngelScript::asIScriptContext* &ctx);
+		bool _CreateContext (const String &signature, const ScriptModulePtr &module, OUT AngelScript::asIScriptContext* &ctx);
 
 		static void _MessageCallback (const AngelScript::asSMessageInfo *msg, void *param);
 	};
@@ -132,7 +134,7 @@ namespace AE::Scripting
 	{ \
 		int __as_result = ( __VA_ARGS__ ); \
 		if ( not ::AE::Scripting::ScriptEngine::_CheckError( __as_result, AE_PRIVATE_TOSTRING( __VA_ARGS__ ), AE_FUNCTION_NAME, __FILE__, __LINE__ ) ) \
-			return false; \
+			return Default; \
 	}
 	
 

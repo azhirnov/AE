@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -431,8 +431,8 @@ namespace _ae_scripting_hidden_ {
 		ScriptTypeInfo<B>::Name( OUT signature );
 		(signature += ' ') += name;
 
-		const isize	offset = isize(&value) - isize(&self);
-		CHECK_ERR( offset >= 0 and offset < isize(sizeof(T) - sizeof(B)) );
+		const ptrdiff_t	offset = ptrdiff_t(&value) - ptrdiff_t(&self);
+		CHECK_ERR( offset >= 0 and offset < ptrdiff_t(sizeof(T) - sizeof(B)) );
 
 		AS_CALL_R( GetASEngine()->RegisterObjectProperty( _name.c_str(), signature.c_str(), int(offset) ));
 		return true;
@@ -520,7 +520,7 @@ namespace _ae_scripting_hidden_ {
 		using namespace AngelScript;
 		
 		using FuncInfo	= FunctionInfo<Func>;
-		using BackArg	= typename FuncInfo::args::Get< FuncInfo::args::Count-1 >;
+		using BackArg	= typename FuncInfo::args::template Get< FuncInfo::args::Count-1 >;
 
 		STATIC_ASSERT( _IsSame< BackArg >::value );
 

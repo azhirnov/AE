@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -8,6 +8,9 @@
 #else
 #	define AE_RELEASE
 #endif
+
+
+//#define AE_HAS_EXCEPTIONS
 
 
 #ifdef COMPILER_MSVC
@@ -175,24 +178,24 @@
 // (text, file, line)
 #ifndef AE_LOGD
 # ifdef AE_DEBUG
-#	define AE_LOGD	AE_LOGI
+#	define AE_LOGD				AE_LOGI
 # else
-#	define AE_LOGD( ... )
+#	define AE_LOGD( ... )		{}
 # endif
 #endif
 
 #ifndef AE_LOGI
 #	define AE_LOGI( ... ) \
-			AE_PRIVATE_LOGI(AE_PRIVATE_GETARG_0( __VA_ARGS__, "" ), \
-							AE_PRIVATE_GETARG_1( __VA_ARGS__, __FILE__ ), \
-							AE_PRIVATE_GETARG_2( __VA_ARGS__, __FILE__, __LINE__ ))
+			AE_PRIVATE_LOGI( AE_PRIVATE_GETARG_0( __VA_ARGS__, "" ), \
+							 AE_PRIVATE_GETARG_1( __VA_ARGS__, __FILE__ ), \
+							 AE_PRIVATE_GETARG_2( __VA_ARGS__, __FILE__, __LINE__ ))
 #endif
 
 #ifndef AE_LOGE
 #	define AE_LOGE( ... ) \
-			AE_PRIVATE_LOGE(AE_PRIVATE_GETARG_0( __VA_ARGS__, "" ), \
-							AE_PRIVATE_GETARG_1( __VA_ARGS__, __FILE__ ), \
-							AE_PRIVATE_GETARG_2( __VA_ARGS__, __FILE__, __LINE__ ))
+			AE_PRIVATE_LOGE( AE_PRIVATE_GETARG_0( __VA_ARGS__, "" ), \
+							 AE_PRIVATE_GETARG_1( __VA_ARGS__, __FILE__ ), \
+							 AE_PRIVATE_GETARG_2( __VA_ARGS__, __FILE__, __LINE__ ))
 #endif
 
 
@@ -204,8 +207,8 @@
 			AE_LOGE( _text_ ); \
 		}}
 
-#   define CHECK( _func_ ) \
-		AE_PRIVATE_CHECK( (_func_), AE_PRIVATE_TOSTRING( _func_ ) )
+#   define CHECK( ... ) \
+		AE_PRIVATE_CHECK( (__VA_ARGS__), AE_PRIVATE_TOSTRING( __VA_ARGS__ ) )
 #endif
 
 
@@ -225,10 +228,10 @@
 
 // check function return value and exit
 #ifndef CHECK_FATAL
-#	define CHECK_FATAL( _expr_ ) \
-		{if_likely (( _expr_ )) {}\
+#	define CHECK_FATAL( ... ) \
+		{if_likely (( __VA_ARGS__ )) {}\
 		  else { \
-			AE_LOGE( AE_PRIVATE_TOSTRING( _expr_ ) ); \
+			AE_LOGE( AE_PRIVATE_TOSTRING( __VA_ARGS__ ) ); \
 			AE_PRIVATE_EXIT(); \
 		}}
 #endif
@@ -247,8 +250,8 @@
 // compile time assert
 #ifndef STATIC_ASSERT
 #	define STATIC_ASSERT( ... ) \
-		static_assert(	AE_PRIVATE_GETRAW( AE_PRIVATE_GETARG_0( __VA_ARGS__ ) ), \
-						AE_PRIVATE_GETRAW( AE_PRIVATE_GETARG_1( __VA_ARGS__, AE_PRIVATE_TOSTRING(__VA_ARGS__) ) ) )
+		static_assert(	AE_PRIVATE_GETRAW( AE_PRIVATE_GETARG_0( __VA_ARGS__ )), \
+						AE_PRIVATE_GETRAW( AE_PRIVATE_GETARG_1( __VA_ARGS__, AE_PRIVATE_TOSTRING(__VA_ARGS__))) )
 #endif
 
 
@@ -265,7 +268,7 @@
 	
 
 // enable/disable checks for enums
-#ifdef COMPILER_MSVC
+#if defined(COMPILER_MSVC)
 #	define BEGIN_ENUM_CHECKS() \
 		__pragma (warning (push)) \
 		__pragma (warning (error: 4061)) /*enumerator 'identifier' in switch of enum 'enumeration' is not explicitly handled by a case label*/ \
@@ -275,9 +278,12 @@
 #	define END_ENUM_CHECKS() \
 		__pragma (warning (pop)) \
 
-#elif defined(COMPILER_CLANG) or defined(COMPILER_GCC)
-#	define BEGIN_ENUM_CHECKS()		// TODO
-#	define END_ENUM_CHECKS()	// TODO
+#elif defined(COMPILER_CLANG)
+#	define BEGIN_ENUM_CHECKS() \
+		 _Pragma( "clang diagnostic error \"-Wswitch\"" )
+
+#	define END_ENUM_CHECKS() \
+		 _Pragma( "clang diagnostic ignored \"-Wswitch\"" )
 
 #else
 #	define BEGIN_ENUM_CHECKS()
@@ -300,8 +306,8 @@
 #	define AE_THISCALL	__thiscall
 
 #elif defined(COMPILER_CLANG) or defined(COMPILER_GCC)
-#	define AE_CDECL		__attribute__((cdecl))
-#	define AE_THISCALL	__attribute__((thiscall))
+#	define AE_CDECL		//__attribute__((cdecl))
+#	define AE_THISCALL	//__attribute__((thiscall))
 #endif
 
 
@@ -326,6 +332,27 @@
 #endif
 
 
+// DLL import/export
+#if !defined(AE_DLL_EXPORT) || !defined(AE_DLL_IMPORT)
+# if defined(COMPILER_MSVC)
+#	define AE_DLL_EXPORT			__declspec( dllexport )
+#	define AE_DLL_IMPORT			__declspec( dllimport )
+
+# elif defined(COMPILER_GCC) || defined(COMPILER_CLANG)
+#  ifdef PLATFORM_WINDOWS
+#	define AE_DLL_EXPORT			__attribute__ (dllexport)
+#	define AE_DLL_IMPORT			__attribute__ (dllimport)
+#  else
+#	define AE_DLL_EXPORT			__attribute__((visibility("default")))
+#	define AE_DLL_IMPORT			__attribute__((visibility("default")))
+#  endif
+
+# else
+#	error define AE_DLL_EXPORT and AE_DLL_IMPORT for you compiler
+# endif
+#endif
+
+
 // setup for build on CI
 #ifdef AE_CI_BUILD
 
@@ -344,13 +371,12 @@
 		{if ( !(_expr_) ) { \
 			AE_LOGI( AE_PRIVATE_TOSTRING( _expr_ )); \
 			AE_PRIVATE_EXIT(); \
-			return (_ret_); \
 		}}
 
 #	undef  CHECK_FATAL
-#	define CHECK_FATAL( _expr_ ) \
-		{if ( !(_expr_) ) { \
-			AE_LOGI( AE_PRIVATE_TOSTRING( _expr_ ) ); \
+#	define CHECK_FATAL( ... ) \
+		{if ( !(__VA_ARGS__) ) { \
+			AE_LOGI( AE_PRIVATE_TOSTRING( __VA_ARGS__ ) ); \
 			AE_PRIVATE_EXIT(); \
 		}}
 
@@ -358,14 +384,23 @@
 #	define AE_PRIVATE_RETURN_ERR( _text_, _ret_ ) \
 		{AE_LOGI( _text_ ); \
 		 AE_PRIVATE_EXIT(); \
-		 return (_ret_); \
 		}
+
+# ifdef AE_DEBUG
+#	undef  ASSERT
+#	define ASSERT	CHECK
+# endif
+
+#	include <cassert>
+#	undef  assert
+#	define assert( ... ) \
+		AE_PRIVATE_CHECK( (__VA_ARGS__), AE_PRIVATE_TOSTRING( __VA_ARGS__ ))
 
 #endif
 
 
 // check definitions
-#if defined (COMPILER_MSVC) or defined (COMPILER_CLANG)
+#ifdef AE_CPP_DETECT_MISSMATCH
 
 #  ifdef AE_DEBUG
 #	pragma detect_mismatch( "AE_DEBUG", "1" )
@@ -379,16 +414,48 @@
 #	pragma detect_mismatch( "AE_FAST_HASH", "0" )
 #  endif
 
-#  ifdef AE_STD_FILESYSTEM
-#	pragma detect_mismatch( "AE_STD_FILESYSTEM", "1" )
-#  else
-#	pragma detect_mismatch( "AE_STD_FILESYSTEM", "0" )
-#  endif
-
 #  ifdef AE_CI_BUILD
 #	pragma detect_mismatch( "AE_CI_BUILD", "1" )
 #  else
 #	pragma detect_mismatch( "AE_CI_BUILD", "0" )
 #  endif
 
-#endif	// COMPILER_MSVC or COMPILER_CLANG
+// platforms
+#  ifdef PLATFORM_WINDOWS
+#	pragma detect_mismatch( "PLATFORM_WINDOWS", "1" )
+#  else
+#	pragma detect_mismatch( "PLATFORM_WINDOWS", "0" )
+#  endif
+
+#  ifdef PLATFORM_LINUX
+#	pragma detect_mismatch( "PLATFORM_LINUX", "1" )
+#  else
+#	pragma detect_mismatch( "PLATFORM_LINUX", "0" )
+#  endif
+
+#  ifdef PLATFORM_ANDROID
+#	pragma detect_mismatch( "PLATFORM_ANDROID", "1" )
+#  else
+#	pragma detect_mismatch( "PLATFORM_ANDROID", "0" )
+#  endif
+
+// compilers
+#  ifdef COMPILER_MSVC
+#	pragma detect_mismatch( "COMPILER_MSVC", "1" )
+#  else
+#	pragma detect_mismatch( "COMPILER_MSVC", "0" )
+#  endif
+
+#  ifdef COMPILER_CLANG
+#	pragma detect_mismatch( "COMPILER_CLANG", "1" )
+#  else
+#	pragma detect_mismatch( "COMPILER_CLANG", "0" )
+#  endif
+
+#  ifdef COMPILER_GCC
+#	pragma detect_mismatch( "COMPILER_GCC", "1" )
+#  else
+#	pragma detect_mismatch( "COMPILER_GCC", "0" )
+#  endif
+
+#endif	// AE_CPP_DETECT_MISSMATCH

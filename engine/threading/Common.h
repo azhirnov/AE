@@ -1,18 +1,25 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "stl/Common.h"
 
 #include <atomic>
-#include <mutex>	// for lock_guard
+#include <mutex>
+#include <shared_mutex>
 #include <thread>
 
 
-#ifdef AE_DEBUG
-#	define AE_ENABLE_DATA_RACE_CHECK
+#if not defined(AE_ENABLE_DATA_RACE_CHECK) and (defined(AE_DEBUG) or defined(AE_CI_BUILD))
+#	define AE_ENABLE_DATA_RACE_CHECK	1
 #else
-//#	define AE_OPTIMAL_MEMORY_ORDER
+#	define AE_ENABLE_DATA_RACE_CHECK	0
+#endif
+
+#if not defined(AE_OPTIMAL_MEMORY_ORDER) and not defined(AE_DEBUG)
+#	define AE_OPTIMAL_MEMORY_ORDER		1
+#else
+#	define AE_OPTIMAL_MEMORY_ORDER		0
 #endif
 
 
@@ -35,17 +42,28 @@ namespace AE::Threading
 
 	template <typename T>	using Atomic	= std::atomic< T >;
 	
+	using Mutex				= std::mutex;
+	using ThreadID			= std::thread::id;
+	using SharedMutex		= std::shared_mutex;
+	using RecursiveMutex	= std::recursive_mutex;
 
-#	ifdef AE_OPTIMAL_MEMORY_ORDER
-	static constexpr std::memory_order	memory_order_acquire	= std::memory_order_acquire;
-	static constexpr std::memory_order	memory_order_release	= std::memory_order_release;
-	static constexpr std::memory_order	memory_order_acq_rel	= std::memory_order_acq_rel;
-	static constexpr std::memory_order	memory_order_relaxed	= std::memory_order_relaxed;
+
+#	if AE_OPTIMAL_MEMORY_ORDER
+	struct EMemoryOrder
+	{
+		static constexpr std::memory_order	Acquire			= std::memory_order_acquire;
+		static constexpr std::memory_order	Release			= std::memory_order_release;
+		static constexpr std::memory_order	AcquireRelase	= std::memory_order_acq_rel;
+		static constexpr std::memory_order	Relaxed			= std::memory_order_relaxed;
+	};
 #	else
-	static constexpr std::memory_order	memory_order_acquire	= std::memory_order_seq_cst;
-	static constexpr std::memory_order	memory_order_release	= std::memory_order_seq_cst;
-	static constexpr std::memory_order	memory_order_acq_rel	= std::memory_order_seq_cst;
-	static constexpr std::memory_order	memory_order_relaxed	= std::memory_order_seq_cst;
+	struct EMemoryOrder
+	{
+		static constexpr std::memory_order	Acquire			= std::memory_order_seq_cst;
+		static constexpr std::memory_order	Release			= std::memory_order_seq_cst;
+		static constexpr std::memory_order	AcquireRelase	= std::memory_order_seq_cst;
+		static constexpr std::memory_order	Relaxed			= std::memory_order_seq_cst;
+	};
 #	endif	// AE_OPTIMAL_MEMORY_ORDER
 
 	
@@ -53,39 +71,41 @@ namespace AE::Threading
 =================================================
 	ThreadFence
 ----
-	for non-atomic and relaxed atomic accesses
+	for non-atomic and relaxed atomic accesses.
+	ThreadFence( memory_order_acquire ) - invalidate cache
+	ThreadFence( memory_order_release ) - flush cache
 =================================================
 */
-	forceinline void ThreadFence (std::memory_order mem_order)
+	forceinline void ThreadFence (std::memory_order order)
 	{
-		return std::atomic_thread_fence( mem_order );
+		return std::atomic_thread_fence( order );
 	}
 	
 /*
 =================================================
-	CompilerBarrier
+	CompilerFence
 ----
 	take effect only for compiler and CPU instruction reordering
 =================================================
 */
-	forceinline void CompilerBarrier (std::memory_order mem_order)
+	forceinline void CompilerFence (std::memory_order order)
 	{
-		return std::atomic_signal_fence( mem_order );
+		return std::atomic_signal_fence( order );
 	}
 
 }	// AE::Threading
 
 
 // check definitions
-#if defined (COMPILER_MSVC) or defined (COMPILER_CLANG)
+#ifdef AE_CPP_DETECT_MISSMATCH
 
-#  ifdef AE_OPTIMAL_MEMORY_ORDER
+#  if AE_OPTIMAL_MEMORY_ORDER
 #	pragma detect_mismatch( "AE_OPTIMAL_MEMORY_ORDER", "1" )
 #  else
 #	pragma detect_mismatch( "AE_OPTIMAL_MEMORY_ORDER", "0" )
 #  endif
 
-#  ifdef AE_ENABLE_DATA_RACE_CHECK
+#  if AE_ENABLE_DATA_RACE_CHECK
 #	pragma detect_mismatch( "AE_ENABLE_DATA_RACE_CHECK", "1" )
 #  else
 #	pragma detect_mismatch( "AE_ENABLE_DATA_RACE_CHECK", "0" )
@@ -97,4 +117,4 @@ namespace AE::Threading
 #	pragma detect_mismatch( "AE_STD_BARRIER", "0" )
 #  endif
 
-#endif	// COMPILER_MSVC or COMPILER_CLANG
+#endif	// AE_CPP_DETECT_MISSMATCH

@@ -1,15 +1,42 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Math/Math.h"
-#include "stl/Math/BitMath.h"
 #include "stl/CompileTime/Math.h"
-#include "stl/Math/Radians.h"
+#include "stl/Math/GLM.h"
+#include "stl/Platforms/CPUInfo.h"
 #include "UnitTest_Common.h"
 
 
 namespace
 {
-	void IsIntersects_Test1 ()
+	static void  CheckIntrinsics ()
+	{
+		auto&	info = CPUInfo::Get();
+		
+		#if (GLM_ARCH & GLM_ARCH_SSE3_BIT)
+			TEST( info.SSE3 );
+		#endif
+		#if (GLM_ARCH & GLM_ARCH_SSE41_BIT)
+			TEST( info.SSE41 );
+		#endif
+		#if (GLM_ARCH & GLM_ARCH_SSE42_BIT)
+			TEST( info.SSE42 );
+		#endif
+		#if (GLM_ARCH & GLM_ARCH_AVX_BIT)
+			TEST( info.AVX );
+		#endif
+		#if (GLM_ARCH & GLM_ARCH_AVX2_BIT)
+			TEST( info.AVX2 );
+		#endif
+		#if (GLM_ARCH & GLM_ARCH_NEON_BIT)
+			TEST( info.NEON );
+		#endif
+
+		TEST( info.POPCNT );
+	}
+
+
+	static void  IsIntersects_Test1 ()
 	{
 		TEST( IsIntersects( 2, 6, 5, 8 ));
 		TEST( IsIntersects( 2, 6, 0, 3 ));
@@ -19,32 +46,7 @@ namespace
 	}
 
 
-	void IntLog2_Test1 ()
-	{
-		int	val;
-		val = IntLog2( 0 );				TEST( val < 0 );
-		val = IntLog2( 0x100 );			TEST( val == 8 );
-		val = IntLog2( 0x101 );			TEST( val == 8 );
-		val = IntLog2( 0x80000000u );	TEST( val == 31 );
-	
-		STATIC_ASSERT( CT_IntLog2<0> < 0 );
-		STATIC_ASSERT( CT_IntLog2<0x100> == 8 );
-		STATIC_ASSERT( CT_IntLog2<0x101> == 8 );
-		STATIC_ASSERT( CT_IntLog2<0x80000000u> == 31 );
-		STATIC_ASSERT( CT_IntLog2<0x8000000000000000ull> == 63 );
-	}
-
-
-	void BitScanForward_Test1 ()
-	{
-		int	val;
-		val = BitScanForward( 0 );			TEST( val < 0 );
-		val = BitScanForward( 0x100 );		TEST( val == 8 );
-		val = BitScanForward( 0x101 );		TEST( val == 0 );
-	}
-
-
-	void Wrap_Test1 ()
+	static void  Wrap_Test1 ()
 	{
 		float b0 = Wrap( 1.0f, 2.0f, 5.0f );	TEST( Equals( b0, 4.0f ));
 		float b1 = Wrap( 6.0f, 2.0f, 5.0f );	TEST( Equals( b1, 3.0f ));
@@ -60,9 +62,8 @@ namespace
 
 extern void UnitTest_Math ()
 {
+	CheckIntrinsics();
 	IsIntersects_Test1();
-	IntLog2_Test1();
-	BitScanForward_Test1();
 	Wrap_Test1();
 
 	AE_LOGI( "UnitTest_Math - passed" );

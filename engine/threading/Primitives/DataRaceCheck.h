@@ -1,16 +1,16 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "threading/Common.h"
 
-#include <shared_mutex>
+#if AE_ENABLE_DATA_RACE_CHECK
 
-#ifdef AE_ENABLE_DATA_RACE_CHECK
-
-#include <atomic>
-#include <mutex>
-#include <thread>
+#if defined(PLATFORM_ANDROID) or defined(AE_CI_BUILD)
+#	define DRC_CHECK( ... )	CHECK_FATAL( __VA_ARGS__ )
+#else
+#	define DRC_CHECK( ... )	CHECK_ERR( __VA_ARGS__ )
+#endif
 
 namespace AE::Threading
 {
@@ -33,21 +33,21 @@ namespace AE::Threading
 		ND_ bool  Lock () const
 		{
 			const size_t	id		= size_t(HashOf( std::this_thread::get_id() ));
-			size_t			curr	= _state.load( memory_order_acquire );
+			size_t			curr	= _state.load( EMemoryOrder::Acquire );
 			
 			if ( curr == id )
 				return true;	// recursive lock
 
 			curr	= 0;
-			bool	locked	= _state.compare_exchange_strong( INOUT curr, id, memory_order_relaxed );
-			CHECK_ERR( curr == 0 );		// locked by another thread - race condition detected!
-			CHECK_ERR( locked );
+			bool	locked	= _state.compare_exchange_strong( INOUT curr, id, EMemoryOrder::Relaxed );
+			DRC_CHECK( curr == 0 );		// locked by another thread - race condition detected!
+			DRC_CHECK( locked );
 			return true;
 		}
 
 		void  Unlock () const
 		{
-			_state.store( 0, memory_order_relaxed );
+			_state.store( 0, EMemoryOrder::Relaxed );
 		}
 	};
 
@@ -73,19 +73,19 @@ namespace AE::Threading
 		ND_ bool  LockExclusive ()
 		{
 			bool	locked = _lockWrite.try_lock();
-			CHECK_ERR( locked );	// locked by another thread - race condition detected!
+			DRC_CHECK( locked );	// locked by another thread - race condition detected!
 
-			int		expected = _readCounter.load( memory_order_acquire );
-			CHECK_ERR( expected <= 0 );	// has read lock(s) - race condition detected!
+			int		expected = _readCounter.load( EMemoryOrder::Acquire );
+			DRC_CHECK( expected <= 0 );	// has read lock(s) - race condition detected!
 
-			_readCounter.compare_exchange_strong( INOUT expected, expected-1, memory_order_relaxed );
-			CHECK_ERR( expected <= 0 );	// has read lock(s) - race condition detected!
+			_readCounter.compare_exchange_strong( INOUT expected, expected-1, EMemoryOrder::Relaxed );
+			DRC_CHECK( expected <= 0 );	// has read lock(s) - race condition detected!
 			return true;
 		}
 
 		void  UnlockExclusive ()
 		{
-			_readCounter.fetch_add( 1, memory_order_relaxed );
+			_readCounter.fetch_add( 1, EMemoryOrder::Relaxed );
 			_lockWrite.unlock();
 		}
 
@@ -95,7 +95,7 @@ namespace AE::Threading
 			int		expected	= 0;
 			bool	locked		= false;
 			do {
-				locked = _readCounter.compare_exchange_weak( INOUT expected, expected+1, memory_order_relaxed );
+				locked = _readCounter.compare_exchange_weak( INOUT expected, expected+1, EMemoryOrder::Relaxed );
 			
 				// if has exclusive lock in current thread
 				if ( expected < 0 and _lockWrite.try_lock() )
@@ -103,7 +103,7 @@ namespace AE::Threading
 					_lockWrite.unlock();
 					return false;	// don't call 'UnlockShared'
 				}
-				CHECK_ERR( expected >= 0 );	// has write lock(s) - race condition detected!
+				DRC_CHECK( expected >= 0 );	// has write lock(s) - race condition detected!
 			}
 			while ( not locked );
 
@@ -112,11 +112,13 @@ namespace AE::Threading
 
 		void  UnlockShared () const
 		{
-			_readCounter.fetch_sub( 1, memory_order_relaxed );
+			_readCounter.fetch_sub( 1, EMemoryOrder::Relaxed );
 		}
 	};
 
 }	// AE::Threading
+
+#undef DRC_CHECK
 
 namespace std
 {
@@ -220,91 +222,6 @@ namespace std
 
 }	// std
 
-namespace AE::Threading
-{
-
-	//
-	// Value with Data Race Check
-	//
-
-	template <typename T>
-	struct DRCValue
-	{
-	// types
-	private:
-		struct Pointer
-		{
-		private:
-			DRCValue<T> *	_ptr;
-			
-			Pointer (DRCValue<T> *ptr) : _ptr{ptr}		{}
-			void _Lock ()								{ if ( _ptr ) _ptr->_drCheck.LockExclusive(); }
-			void _Unlock ()								{ if ( _ptr ) _ptr->_drCheck.UnlockExclusive(); }
-
-		public:
-			Pointer (const Pointer &other)				{ _ptr = other._ptr;  _Lock(); }
-			Pointer (Pointer &&other)					{ _ptr = other._ptr;  other._ptr = null; }
-			~Pointer ()									{ _Unlock(); }
-
-			Pointer&  operator = (const Pointer &rhs)	{ _Unlock();  _ptr = rhs._ptr;  _Lock();  return *this; }
-			Pointer&  operator = (Pointer &&rhs)		{ _Unlock();  _ptr = rhs._ptr;  rhs._ptr = null;  return *this; }
-
-			ND_ T *	operator -> ()						{ return &_ptr->_value; }
-			ND_ T&	operator * ()						{ return _ptr->_value; }
-		};
-		
-
-		struct CPointer
-		{
-		private:
-			DRCValue<T> *	_ptr;
-			
-			CPointer (DRCValue<T> *ptr) : _ptr{ptr}		{}
-			void _Lock ()								{ if ( _ptr ) _ptr->_drCheck.LockShared(); }
-			void _Unlock ()								{ if ( _ptr ) _ptr->_drCheck.UnlockShared(); }
-
-		public:
-			CPointer (const CPointer &other)			{ _ptr = other._ptr;  _Lock(); }
-			CPointer (CPointer &&other)					{ _ptr = other._ptr;  other._ptr = null; }
-			~CPointer ()								{ _Unlock(); }
-
-			CPointer&  operator = (const CPointer &rhs)	{ _Unlock();  _ptr = rhs._ptr;  _Lock();  return *this; }
-			CPointer&  operator = (CPointer &&rhs)		{ _Unlock();  _ptr = rhs._ptr;  rhs._ptr = null;  return *this; }
-
-			ND_ T const*  operator -> ()	const		{ return &_ptr->_value; }
-			ND_ T const&  operator * ()		const		{ return _ptr->_value; }
-		};
-
-
-	// variables
-	private:
-		T					_value;
-		RWDataRaceCheck		_drCheck;
-
-
-	// methods
-	public:
-		DRCValue () {}
-		DRCValue (const T &value) : _value{value}	{}
-		DRCValue (T &&value) : _value{value}		{}
-		~DRCValue ()								{ EXLOCK( _drCheck ); }
-
-		DRCValue&  operator = (const T &rhs)		{ EXLOCK( _drCheck );  _value = rhs;  return *this; }
-		DRCValue&  operator = (T &&rhs)				{ EXLOCK( _drCheck );  _value = std::move(rhs);  return *this; }
-
-		DRCValue (const DRCValue &) = delete;
-		DRCValue (DRCValue &&) = delete;
-		DRCValue&  operator = (const DRCValue &) = delete;
-		DRCValue&  operator = (DRCValue &&) = delete;
-
-		ND_ Pointer   operator -> ()				{ return Pointer{ this }; }
-		ND_ CPointer  operator -> ()		const	{ return CPointer{ this }; }
-	};
-
-
-}	// AE::Threading
-
-
 #else
 
 namespace AE::Threading
@@ -332,27 +249,6 @@ namespace AE::Threading
 		void unlock_shared () const	{}
 	};
 	
-
-	//
-	// Value with Data Race Check
-	//
-	template <typename T>
-	struct DRCValue
-	{
-		T		_value;
-
-		DRCValue () {}
-		DRCValue (const T &val) : _value{val} {}
-		DRCValue (T &&val) : _value{std::move(val)} {}
-
-		ND_ T *			operator -> ()			{ return &_value; }
-		ND_ T &			operator *  ()			{ return _value; }
-		ND_ T const*	operator -> ()	const	{ return &_value; }
-		ND_ T &			operator *  ()	const	{ return _value; }
-	};
-
-
 }	// AE::Threading
 
 #endif	// AE_ENABLE_DATA_RACE_CHECK
-

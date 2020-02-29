@@ -1,10 +1,10 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "stl/Common.h"
 
-namespace AE::STL
+namespace AE::Math
 {
 
 /*
@@ -12,7 +12,7 @@ namespace AE::STL
 	helpers
 =================================================
 */
-	namespace _ae_stl_hidden_
+	namespace _ae_math_hidden_
 	{
 		template <typename T1, typename T2, typename Result>
 		using EnableForInt		= EnableIf< IsSignedInteger<T1> and IsSignedInteger<T2>, Result >;
@@ -20,7 +20,7 @@ namespace AE::STL
 		template <typename T1, typename T2, typename Result>
 		using EnableForUInt		= EnableIf< IsUnsignedInteger<T1> and IsUnsignedInteger<T2>, Result >;
 
-	}	// _ae_stl_hidden_
+	}	// _ae_math_hidden_
 	
 /*
 =================================================
@@ -28,7 +28,7 @@ namespace AE::STL
 =================================================
 */
 	template <typename T1, typename T2>
-	ND_ forceinline constexpr _ae_stl_hidden_::EnableForInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
+	ND_ forceinline constexpr _ae_math_hidden_::EnableForInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
 	{
 		STATIC_ASSERT( IsScalar<T1> and IsScalar<T2> );
 
@@ -50,7 +50,7 @@ namespace AE::STL
 =================================================
 */
 	template <typename T1, typename T2>
-	ND_ forceinline constexpr _ae_stl_hidden_::EnableForUInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
+	ND_ forceinline constexpr _ae_math_hidden_::EnableForUInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
 	{
 		STATIC_ASSERT( IsScalar<T1> and IsScalar<T2> );
 		
@@ -100,56 +100,6 @@ namespace AE::STL
 	{
 		return value;
 	}
-
-/*
-=================================================
-	Max
-=================================================
-*/
-	template <typename LT, typename RT>
-	ND_ forceinline constexpr auto  Max (const LT &lhs, const RT &rhs)
-	{
-		using T = Conditional< IsSameTypes<LT, RT>, LT, decltype(lhs + rhs) >;
-		
-		return lhs > rhs ? T(lhs) : T(rhs);
-	}
-
-	template <typename T1, typename ...Types>
-	ND_ forceinline constexpr auto  Max (const T1 &arg0, const Types& ...args)
-	{
-		return Max( arg0, Max( args... ));
-	}
-	
-/*
-=================================================
-	Min
-=================================================
-*/
-	template <typename LT, typename RT>
-	ND_ forceinline constexpr auto  Min (const LT &lhs, const RT &rhs)
-	{
-		using T = Conditional< IsSameTypes<LT, RT>, LT, decltype(lhs + rhs) >;
-		
-		return lhs > rhs ? T(rhs) : T(lhs);
-	}
-
-	template <typename T1, typename ...Types>
-	ND_ forceinline constexpr auto  Min (const T1 &arg0, const Types& ...args)
-	{
-		return Min( arg0, Min( args... ));
-	}
-	
-/*
-=================================================
-	Clamp
-=================================================
-*/
-	template <typename ValT, typename MinT, typename MaxT>
-	ND_ forceinline constexpr auto  Clamp (const ValT &value, const MinT &minVal, const MaxT &maxVal)
-	{
-		ASSERT(All( minVal <= maxVal ));
-		return Min( maxVal, Max( value, minVal ) );
-	}
 	
 /*
 =================================================
@@ -186,11 +136,22 @@ namespace AE::STL
 	
 /*
 =================================================
+	Epsilon
+=================================================
+*/
+	template <typename T>
+	ND_ forceinline constexpr  EnableIf<IsScalar<T>, T>  Epsilon ()
+	{
+		return std::numeric_limits<T>::epsilon() * T(2);
+	}
+
+/*
+=================================================
 	Equals
 =================================================
 */
 	template <typename T>
-	ND_ forceinline constexpr EnableIf<IsScalar<T>, bool>  Equals (const T &lhs, const T &rhs, const T &err = std::numeric_limits<T>::epsilon() * T(2))
+	ND_ forceinline constexpr EnableIf<IsScalar<T>, bool>  Equals (const T &lhs, const T &rhs, const T &err = Epsilon<T>())
 	{
 		if constexpr( IsUnsignedInteger<T> )
 		{
@@ -198,26 +159,38 @@ namespace AE::STL
 		}else
 			return Abs(lhs - rhs) <= err;
 	}
-	
+
+/*
+=================================================
+	Equals
+=================================================
+*/
+	template <typename T>
+	ND_ forceinline bool  Equals (const Optional<T> &lhs, const Optional<T> &rhs)
+	{
+		return	lhs.has_value() == rhs.has_value()	and
+				(lhs.has_value() ? *lhs == *rhs : false);
+	}
+
 /*
 =================================================
 	Floor / Ceil / Trunc
 =================================================
 */
 	template <typename T>
-	ND_ forceinline constexpr EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Floor (const T& x)
+	ND_ forceinline EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Floor (const T& x)
 	{
 		return std::floor( x );
 	}
 	
 	template <typename T>
-	ND_ forceinline constexpr EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Ceil (const T& x)
+	ND_ forceinline EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Ceil (const T& x)
 	{
 		return std::ceil( x );
 	}
 	
 	template <typename T>
-	ND_ forceinline constexpr EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Trunc (const T& x)
+	ND_ forceinline EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Trunc (const T& x)
 	{
 #	if 1
 		return std::trunc( x );
@@ -232,13 +205,13 @@ namespace AE::STL
 =================================================
 */
 	template <typename T>
-	ND_ forceinline constexpr EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Round (const T& x)
+	ND_ forceinline EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Round (const T& x)
 	{
 		return std::round( x );
 	}
 
 	template <typename T>
-	ND_ forceinline constexpr auto  RoundToInt (const T& x)
+	ND_ forceinline auto  RoundToInt (const T& x)
 	{
 		STATIC_ASSERT( IsFloatPoint<T> );
 		
@@ -250,7 +223,7 @@ namespace AE::STL
 	}
 
 	template <typename T>
-	ND_ forceinline constexpr auto  RoundToUint (const T& x)
+	ND_ forceinline auto  RoundToUint (const T& x)
 	{
 		STATIC_ASSERT( IsFloatPoint<T> );
 		
@@ -269,7 +242,7 @@ namespace AE::STL
 =================================================
 */
 	template <typename T>
-	ND_ forceinline constexpr T  Fract (const T& x)
+	ND_ forceinline T  Fract (const T& x)
 	{
 		return x - Floor( x );
 	}
@@ -367,14 +340,19 @@ namespace AE::STL
 	template <auto Base, typename T>
 	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Log (const T& x)
 	{
-		ASSERT( x >= T(0) );
 		static constexpr auto log_base = std::log( Base );
-		return std::log( x ) / log_base;
+		return Ln( x ) / log_base;
+	}
+
+	template <typename T>
+	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Log (const T& x, const T& base)
+	{
+		return Ln( x ) / Ln( base );
 	}
 	
 /*
 =================================================
-	Pow / Exp
+	Pow / Exp / Exp2 / Exp10 / ExpMinus1
 =================================================
 */
 	template <typename T>
@@ -390,24 +368,45 @@ namespace AE::STL
 		return std::exp( x );
 	}
 
+	template <typename T>
+	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Exp2 (const T& x)
+	{
+		return std::exp2( x );
+	}
+
+	template <typename T>
+	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  Exp10 (const T& x)
+	{
+		return Pow( T(10), x );
+	}
+
+	template <typename T>
+	ND_ forceinline EnableIf<IsFloatPoint<T>, T>  ExpMinus1 (const T& x)
+	{
+		return std::expm1( x );
+	}
+
 /*
 =================================================
-	Wrap
+	Sign / SignOrZero
 =================================================
 */
 	template <typename T>
-	forceinline EnableIf<IsFloatPoint<T>, T>  Wrap (const T& value, const T& minValue, const T& maxValue)
+	ND_ forceinline EnableIf<IsScalar<T>, T>  Sign (const T &value)
 	{
-		// check for NaN
-		if ( minValue >= maxValue )
-			return minValue;
-
-		T	result = T( minValue + std::fmod( value - minValue, maxValue - minValue ));
-		
-		if ( result < minValue )
-			result += (maxValue - minValue);
-
-		return result;
+		if constexpr( std::is_signed_v<T> )
+			return value < T(0) ? T(-1) : T(1);
+		else
+			return T(1);
 	}
 
-}	// AE::STL
+	template <typename T>
+	ND_ forceinline EnableIf<IsScalar<T>, T>  SignOrZero (const T &value)
+	{
+		if constexpr( std::is_signed_v<T> )
+			return value < T(0) ? T(-1) : value > T(0) ? T(1) : T(0);
+		else
+			return value > T(0) ? T(1) : T(0);
+	}
+
+}	// AE::Math

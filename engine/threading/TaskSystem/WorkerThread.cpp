@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "threading/TaskSystem/WorkerThread.h"
 #include "stl/Platforms/PlatformUtils.h"
@@ -12,7 +12,7 @@ namespace AE::Threading
 =================================================
 */
 	WorkerThread::WorkerThread () :
-		WorkerThread{ ThreadMask{}.set(uint(EThread::Worker)), Milliseconds{10} }
+		WorkerThread{ ThreadMask{}.set(uint(EThread::Worker)), Milliseconds{4} }
 	{}
 
 	WorkerThread::WorkerThread (ThreadMask mask, Milliseconds sleepOnIdle, StringView name) :
@@ -26,16 +26,17 @@ namespace AE::Threading
 */
 	bool  WorkerThread::Attach (uint uid)
 	{
-		_looping.store( 1, memory_order_release );
-
 		_thread = std::thread{[this, uid] ()
 		{
-			uint	seed = uid;
+			uint	seed			= uid;
+			uint	idle_counter	= 0;
 
 			PlatformUtils::SetThreadName( _name );
 			AE_VTUNE( __itt_thread_set_name( _name.c_str() ));
-
-			for (; _looping.load( memory_order_relaxed );)
+			//CHECK( PlatformUtils::SetThreadAffinity( _thread.native_handle(), uid ));
+			
+			_looping.store( 1, EMemoryOrder::Relaxed );
+			for (; _looping.load( EMemoryOrder::Relaxed );)
 			{
 				bool	processed = false;
 
@@ -49,8 +50,12 @@ namespace AE::Threading
 
 				if ( not processed and _sleepOnIdle.count() )
 				{
-					std::this_thread::sleep_for( _sleepOnIdle );
+					idle_counter = Min( 4u, idle_counter );
+					std::this_thread::sleep_for( _sleepOnIdle * idle_counter );
+					++idle_counter;
 				}
+				else
+					idle_counter = 0;
 			}
 		}};
 		return true;
@@ -63,8 +68,10 @@ namespace AE::Threading
 */
 	void  WorkerThread::Detach ()
 	{
-		_looping.store( 0, memory_order_relaxed );
-		_thread.join();
+		if ( _looping.exchange( 0, EMemoryOrder::Relaxed ))
+		{
+			_thread.join();
+		}
 	}
 
 }	// AE::Threading

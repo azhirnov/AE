@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "scripting/Impl/ScriptEngine.h"
 #include "stl/Algorithms/StringUtils.h"
@@ -117,7 +117,7 @@ namespace AE::Scripting
 	_CreateContext
 =================================================
 */
-	bool  ScriptEngine::_CreateContext (const String &signature, const ScriptModulePtr &module, AngelScript::asIScriptContext* &ctx)
+	bool  ScriptEngine::_CreateContext (const String &signature, const ScriptModulePtr &module, OUT AngelScript::asIScriptContext* &ctx)
 	{
 		using namespace AngelScript;
 		
@@ -184,7 +184,7 @@ namespace AE::Scripting
 			//if ( code.Find( ')', OUT pos ) )
 			//	code = code.SubString( 0, pos );
 
-			const int	int_code = std::stoi( String{code} );
+			const int	int_code = std::strtol( NtStringView{code}.c_str(), null, 0 );
 
 			str << ", code name: ";
 

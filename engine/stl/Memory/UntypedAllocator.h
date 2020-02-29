@@ -1,15 +1,12 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "stl/Memory/MemUtils.h"
+#include "stl/Memory/AllocatorFwdDecl.h"
 
 namespace AE::STL
 {
-
-	template <typename T>
-	struct StdAllocator;
-
 
 	//
 	// Untyped Default Allocator
@@ -19,6 +16,8 @@ namespace AE::STL
 	{
 	// types
 		template <typename T>	using StdAllocator_t = StdAllocator<T>;
+		
+		static constexpr bool	IsThreadSafe = true;
 
 	// methods
 		ND_ AE_ALLOCATOR static void*  Allocate (BytesU size)
@@ -30,7 +29,8 @@ namespace AE::STL
 		{
 			::operator delete ( ptr, std::nothrow_t() );
 		}
-
+		
+		// deallocation with explicit size may be faster
 		static void  Deallocate (void *ptr, BytesU size)
 		{
 			::operator delete ( ptr, size_t(size) );
@@ -53,6 +53,8 @@ namespace AE::STL
 	// types
 		template <typename T>	using StdAllocator_t = StdAllocator<T>;
 
+		static constexpr bool	IsThreadSafe = true;
+
 	// methods
 		ND_ AE_ALLOCATOR static void*  Allocate (BytesU size, BytesU align)
 		{
@@ -64,6 +66,7 @@ namespace AE::STL
 			::operator delete ( ptr, std::align_val_t(size_t(align)), std::nothrow_t() );
 		}
 
+		// deallocation with explicit size may be faster
 		static void  Deallocate (void *ptr, BytesU size, BytesU align)
 		{
 			::operator delete ( ptr, size_t(size), std::align_val_t(size_t(align)) );
@@ -85,6 +88,9 @@ namespace AE::STL
 	struct StdAllocator final : std::allocator<T>
 	{
 		StdAllocator () {}
+		StdAllocator (const StdAllocator &) = default;
+		StdAllocator (StdAllocator &&) = default;
+
 		StdAllocator (const UntypedAllocator &) {}
 		StdAllocator (const UntypedAlignedAllocator &) {}
 	};

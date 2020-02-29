@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Containers/FixedMap.h"
 #include "UnitTest_Common.h"
@@ -6,7 +6,7 @@
 
 namespace
 {
-	void TimeToStringTest ()
+	static void  TimeToStringTest ()
 	{
 		String	s1 = ToString( std::chrono::seconds(10) );
 		TEST( s1 == "10.00 s" );

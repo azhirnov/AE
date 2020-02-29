@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -32,6 +32,10 @@ namespace AE::STL
 			static bool  ReadTo (StringView str, StringView endSymbol, INOUT size_t &pos, OUT StringView &result);
 
 			static bool  ReadString (StringView str, INOUT size_t &pos, OUT StringView &result);
+			
+			static void  DivideLines (StringView str, OUT Array<StringView> &lines);
+
+			static void  Tokenize (StringView str, const char divisor, OUT Array<StringView> &tokens);
 	};
 
 

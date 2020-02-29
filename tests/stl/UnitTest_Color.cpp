@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Math/Color.h"
 #include "UnitTest_Common.h"
@@ -6,7 +6,7 @@
 
 namespace
 {
-	void RGBAColor_Test1 ()
+	static void  RGBAColor_Test1 ()
 	{
 		RGBA32u		col1{ 0x12345678, 0x87654321, 0xFFFFFFFF, 0xEEEEEEEE };
 		RGBA32i		col2{ col1 };
@@ -20,11 +20,11 @@ namespace
 	}
 
 
-	void HSVColor_Test1 ()
+	static void  HSVColor_Test1 ()
 	{
 		HSVColor	hsv1{ 0.0f, 1.0f, 1.0f };
 		RGBA32f		rgba1{ hsv1 };
-		TEST(( rgba1 == RGBA32f{1.0f, 0.0f, 0.0f, 1.0f} ));
+		TEST( rgba1 == RGBA32f{1.0f, 0.0f, 0.0f, 1.0f} );
 
 		HSVColor	hsv2{ rgba1 };
 		TEST( hsv1 == hsv2 );

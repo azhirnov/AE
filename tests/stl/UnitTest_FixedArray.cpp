@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Containers/FixedArray.h"
 #include "UnitTest_Common.h"
@@ -6,7 +6,7 @@
 
 namespace
 {
-	void FixedArray_Test1 ()
+	static void  FixedArray_Test1 ()
 	{
 		FixedArray< std::shared_ptr<int>, 16 >	arr = {{
 			std::make_shared<int>(0),
@@ -32,7 +32,7 @@ namespace
 	}
 
 
-	void FixedArray_Test2 ()
+	static void  FixedArray_Test2 ()
 	{
 		using T = DebugInstanceCounter< int, 1 >;
 
@@ -62,7 +62,7 @@ namespace
 	}
 
 
-	void FixedArray_Test3 ()
+	static void  FixedArray_Test3 ()
 	{
 		using T = DebugInstanceCounter< int, 2 >;
 
