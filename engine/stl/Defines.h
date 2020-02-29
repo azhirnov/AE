@@ -343,8 +343,8 @@
 #	define AE_DLL_EXPORT			__attribute__ (dllexport)
 #	define AE_DLL_IMPORT			__attribute__ (dllimport)
 #  else
-#	define AE_DLL_EXPORT			__attribute__ (visibility("default"))
-#	define AE_DLL_IMPORT			__attribute__ (visibility("default"))
+#	define AE_DLL_EXPORT			__attribute__((visibility("default")))
+#	define AE_DLL_IMPORT			__attribute__((visibility("default")))
 #  endif
 
 # else
@@ -386,8 +386,10 @@
 		 AE_PRIVATE_EXIT(); \
 		}
 
+# ifdef AE_DEBUG
 #	undef  ASSERT
 #	define ASSERT	CHECK
+# endif
 
 #	include <cassert>
 #	undef  assert

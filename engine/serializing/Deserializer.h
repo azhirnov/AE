@@ -252,7 +252,7 @@ namespace AE::Serializing
 		uint	hash = 0;
 		bool	res  = stream->Read( OUT hash );
 
-		id = NamedID<Size, UID, true, Seed>{ hash };
+		id = NamedID<Size, UID, true, Seed>{ HashVal{ hash }};
 		return res;
 	}
 	
@@ -260,12 +260,21 @@ namespace AE::Serializing
 	template <size_t Size, uint UID, uint Seed>
 	inline bool  Deserializer::_Deserialize (INOUT NamedID<Size, UID, false, Seed> &id) const
 	{
+	#if AE_SERIALIZE_HASH_ONLY
+		uint	hash = 0;
+		bool	res  = stream->Read( OUT hash );
+
+		id = NamedID<Size, UID, false, Seed>{ HashVal{ hash }};
+		return res;
+
+	#else
 		FixedString<Size>	str;
 		if ( not _Deserialize( str ))
 			return false;
 
 		id = NamedID<Size, UID, false, Seed>{ str };
 		return true;
+	#endif
 	}
 	
 

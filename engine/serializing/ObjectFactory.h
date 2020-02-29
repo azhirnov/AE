@@ -159,7 +159,7 @@ namespace AE::Serializing
 		ObjInfo*	info = null;
 
 		#if AE_OPTIMIZE_IDS
-			auto	iter = _objects.find( SerializedID{id} );
+			auto	iter = _objects.find( SerializedID{HashVal{ id }} );
 			CHECK_ERR( iter != _objects.end() );
 			info = &iter->second;
 		#else

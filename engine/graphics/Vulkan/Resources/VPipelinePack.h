@@ -52,13 +52,13 @@ namespace AE::Graphics
 		using EMarker				= PipelineStorage::EMarker;
 		using SpecConstants_t		= PipelineCompiler::SpirvShaderCode::SpecConstants_t;
 
-		using DSLayouts_t			= Tuple< size_t, UniqueID< DescriptorSetLayoutID >* >;		// TODO: custom allocator
-		using PplnLayouts_t			= Tuple< size_t, UniqueID< VPipelineLayoutID >* >;
-		using ShaderModules_t		= Tuple< size_t, VkShaderModule*, SpecConstants_t** >;
-		using GPipelines_t			= Tuple< size_t, UniqueID< VGraphicsPipelineTemplateID >* >;
-		using MPipelines_t			= Tuple< size_t, UniqueID< VMeshPipelineTemplateID >* >;
-		using CPipelines_t			= Tuple< size_t, UniqueID< VComputePipelineTemplateID >* >;
-		using RPOutputs_t			= Tuple< size_t, UniqueID< VRenderPassOutputID >* >;
+		using DSLayouts_t			= Tuple< uint, UniqueID< DescriptorSetLayoutID >* >;		// TODO: custom allocator
+		using PplnLayouts_t			= Tuple< uint, UniqueID< VPipelineLayoutID >* >;
+		using ShaderModules_t		= Tuple< uint, VkShaderModule*, SpecConstants_t** >;
+		using GPipelines_t			= Tuple< uint, UniqueID< VGraphicsPipelineTemplateID >* >;
+		using MPipelines_t			= Tuple< uint, UniqueID< VMeshPipelineTemplateID >* >;
+		using CPipelines_t			= Tuple< uint, UniqueID< VComputePipelineTemplateID >* >;
+		using RPOutputs_t			= Tuple< uint, UniqueID< VRenderPassOutputID >* >;
 		
 		using StackAllocator_t		= StackAllocator< UntypedAlignedAllocator, 16, false >;
 	

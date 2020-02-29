@@ -29,7 +29,7 @@ namespace AE::STL
 	// methods
 	public:
 		constexpr NamedID () : _hash{_emptyHash} {}
-		explicit constexpr NamedID (uint hash) : _hash{hash} {}
+		explicit constexpr NamedID (HashVal hash) : _hash{hash} {}
 		explicit constexpr NamedID (StringView name)  : _hash{CT_Hash( name.data(), name.length(), Seed )} {}
 		explicit constexpr NamedID (const char *name) : _hash{CT_Hash( name, UMax, Seed )} {}
 
@@ -71,20 +71,21 @@ namespace AE::STL
 	// methods
 	public:
 		constexpr NamedID () : _hash{_emptyHash} {}
+		explicit constexpr NamedID (HashVal hash) : _hash{hash} {}
 		explicit constexpr NamedID (StringView name)  : _name{name}, _hash{CT_Hash( name.data(), name.length(), Seed )} {}
 		explicit constexpr NamedID (const char *name) : _name{name}, _hash{CT_Hash( name, UMax, Seed )} {}
 
 		template <size_t StrSize>
 		explicit constexpr NamedID (const FixedString<StrSize> &name) : _name{name}, _hash{CT_Hash( name.data(), name.length(), Seed )} {}
 
-		ND_ constexpr bool operator == (const Self &rhs) const		{ return _hash == rhs._hash and _name == rhs._name; }
+		ND_ constexpr bool operator == (const Self &rhs) const		{ return _hash == rhs._hash; }
 		ND_ constexpr bool operator != (const Self &rhs) const		{ return not (*this == rhs); }
-		ND_ constexpr bool operator >  (const Self &rhs) const		{ return _hash != rhs._hash ? _hash > rhs._hash : _name >  rhs._name; }
+		ND_ constexpr bool operator >  (const Self &rhs) const		{ return _hash > rhs._hash; }
 		ND_ constexpr bool operator <  (const Self &rhs) const		{ return rhs > *this; }
 		ND_ constexpr bool operator >= (const Self &rhs) const		{ return not (*this <  rhs); }
 		ND_ constexpr bool operator <= (const Self &rhs) const		{ return not (*this >  rhs); }
 
-		ND_ constexpr operator Optimized_t ()			const		{ return Optimized_t{ uint(size_t(_hash)) }; }
+		ND_ constexpr operator Optimized_t ()			const		{ return Optimized_t{ _hash }; }
 
 		ND_ constexpr StringView	GetName ()			const		{ return _name; }
 		ND_ constexpr HashVal		GetHash ()			const		{ return _hash; }

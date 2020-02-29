@@ -14,6 +14,7 @@ android {
         externalNativeBuild {
             cmake {
                 arguments '-DANDROID_STL=c++_static',
+						  '-DANDROID_ARM_NEON=ON',
                           '-DAE_ENABLE_VTUNE_API=OFF'
             }
         }

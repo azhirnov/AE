@@ -44,37 +44,37 @@ namespace AE::Graphics
 
 		auto&	dev = resMngr.GetDevice();
 
-		for (size_t i = 0, cnt = _shaderModules.Get<0>(); i < cnt; ++i) {
+		for (uint i = 0, cnt = _shaderModules.Get<0>(); i < cnt; ++i) {
 			dev.vkDestroyShaderModule( dev.GetVkDevice(), _shaderModules.Get<1>()[i], null );
 		}
 		_shaderModules = Default;
 
-		for (size_t i = 0, cnt = _dsLayouts.Get<0>(); i < cnt; ++i) {
+		for (uint i = 0, cnt = _dsLayouts.Get<0>(); i < cnt; ++i) {
 			resMngr.ReleaseResource( INOUT _dsLayouts.Get<1>()[i] );
 		}
 		_dsLayouts = Default;
 
-		for (size_t i = 0, cnt = _pplnLayouts.Get<0>(); i < cnt; ++i) {
+		for (uint i = 0, cnt = _pplnLayouts.Get<0>(); i < cnt; ++i) {
 			resMngr.ReleaseResource( INOUT _pplnLayouts.Get<1>()[i] );
 		}
 		_pplnLayouts = Default;
 
-		for (size_t i = 0, cnt = _gpipelines.Get<0>(); i < cnt; ++i) {
+		for (uint i = 0, cnt = _gpipelines.Get<0>(); i < cnt; ++i) {
 			resMngr.ReleaseResource( INOUT _gpipelines.Get<1>()[i] );
 		}
 		_gpipelines = Default;
 
-		for (size_t i = 0, cnt = _mpipelines.Get<0>(); i < cnt; ++i) {
+		for (uint i = 0, cnt = _mpipelines.Get<0>(); i < cnt; ++i) {
 			resMngr.ReleaseResource( INOUT _mpipelines.Get<1>()[i] );
 		}
 		_mpipelines = Default;
 
-		for (size_t i = 0, cnt = _cpipelines.Get<0>(); i < cnt; ++i) {
+		for (uint i = 0, cnt = _cpipelines.Get<0>(); i < cnt; ++i) {
 			resMngr.ReleaseResource( INOUT _cpipelines.Get<1>()[i] );
 		}
 		_cpipelines = Default;
 
-		for (size_t i = 0, cnt = _renderPassOutputs.Get<0>(); i < cnt; ++i) {
+		for (uint i = 0, cnt = _renderPassOutputs.Get<0>(); i < cnt; ++i) {
 			resMngr.ReleaseResource( INOUT _renderPassOutputs.Get<1>()[i] );
 		}
 		_renderPassOutputs = Default;
@@ -130,7 +130,7 @@ namespace AE::Graphics
 		if ( not count )
 			return true;
 
-		_dsLayouts = { count, _allocator.Alloc<UniqueID<DescriptorSetLayoutID>>( count )};
+		_dsLayouts = MakeTuple( count, _allocator.Alloc<UniqueID<DescriptorSetLayoutID>>( count ));
 
 		for (uint i = 0; i < count; ++i)
 		{
@@ -195,7 +195,7 @@ namespace AE::Graphics
 		if ( not count )
 			return true;
 
-		_pplnLayouts = { count, _allocator.Alloc<UniqueID<VPipelineLayoutID>>( count )};
+		_pplnLayouts = MakeTuple( count, _allocator.Alloc<UniqueID<VPipelineLayoutID>>( count ));
 
 		for (uint i = 0; i < count; ++i)
 		{
@@ -207,9 +207,9 @@ namespace AE::Graphics
 			for (size_t j = 0; j < desc.descrSets.size(); ++j)
 			{
 				auto&	src = desc.descrSets[j];
-				CHECK_ERR( size_t(src.second.uid) < _dsLayouts.Get<0>() );
+				CHECK_ERR( uint(src.second.uid) < _dsLayouts.Get<0>() );
 
-				DescriptorSetLayoutID	id			= _dsLayouts.Get<1>()[ size_t(src.second.uid) ];
+				DescriptorSetLayoutID	id			= _dsLayouts.Get<1>()[ uint(src.second.uid) ];
 				auto*					ds_layout	= resMngr.GetResource( id );
 				CHECK_ERR( ds_layout );
 
@@ -235,7 +235,7 @@ namespace AE::Graphics
 		uint	count	= 0;
 		CHECK_ERR( des( OUT marker, OUT count ) and marker == EMarker::RenderPasses );
 		
-		_renderPassOutputs = { count, _allocator.Alloc<UniqueID<VRenderPassOutputID>>( count )};
+		_renderPassOutputs = MakeTuple( count, _allocator.Alloc<UniqueID<VRenderPassOutputID>>( count ));
 
 		for (uint i = 0; i < count; ++i)
 		{
@@ -286,7 +286,7 @@ namespace AE::Graphics
 		if ( not count )
 			return true;
 
-		_shaderModules = { count, _allocator.Alloc<VkShaderModule>( count ), _allocator.Alloc<SpecConstants_t*>( count )};
+		_shaderModules = MakeTuple( count, _allocator.Alloc<VkShaderModule>( count ), _allocator.Alloc<SpecConstants_t*>( count ));
 
 		for (uint i = 0; i < count; ++i)
 		{
@@ -336,19 +336,19 @@ namespace AE::Graphics
 		if ( not count )
 			return true;
 
-		_gpipelines = { count, _allocator.Alloc<UniqueID<VGraphicsPipelineTemplateID>>( count )};
+		_gpipelines = MakeTuple( count, _allocator.Alloc<UniqueID<VGraphicsPipelineTemplateID>>( count ));
 		
 		PipelineCompiler::GraphicsPipelineDesc	desc;
 		for (uint i = 0; i < count; ++i)
 		{
 			CHECK_ERR( desc.Deserialize( des ));
-			CHECK_ERR( size_t(desc.layout) < _pplnLayouts.Get<0>() );
-			CHECK_ERR( size_t(desc.renderPass) < _renderPassOutputs.Get<0>() );
+			CHECK_ERR( uint(desc.layout) < _pplnLayouts.Get<0>() );
+			CHECK_ERR( uint(desc.renderPass) < _renderPassOutputs.Get<0>() );
 			
 			auto				bm			= stackAlloc.Push();
 			auto *				modules		= stackAlloc.Alloc<ShaderModule>( desc.shaders.size() );
-			VPipelineLayoutID	layout_id	= _pplnLayouts.Get<1>()[ size_t(desc.layout) ];
-			VRenderPassOutputID	rp_output_id= _renderPassOutputs.Get<1>()[ size_t(desc.renderPass) ];
+			VPipelineLayoutID	layout_id	= _pplnLayouts.Get<1>()[ uint(desc.layout) ];
+			VRenderPassOutputID	rp_output_id= _renderPassOutputs.Get<1>()[ uint(desc.renderPass) ];
 
 			for (size_t j = 0; j < desc.shaders.size(); ++j)
 			{
@@ -385,19 +385,19 @@ namespace AE::Graphics
 		if ( not count )
 			return true;
 		
-		_mpipelines = { count, _allocator.Alloc<UniqueID<VMeshPipelineTemplateID>>( count )};
+		_mpipelines = MakeTuple( count, _allocator.Alloc<UniqueID<VMeshPipelineTemplateID>>( count ));
 		
 		PipelineCompiler::MeshPipelineDesc	desc;
 		for (uint i = 0; i < count; ++i)
 		{
 			CHECK_ERR( desc.Deserialize( des ));
-			CHECK_ERR( size_t(desc.layout) < _pplnLayouts.Get<0>() );
-			CHECK_ERR( size_t(desc.renderPass) < _renderPassOutputs.Get<0>() );
+			CHECK_ERR( uint(desc.layout) < _pplnLayouts.Get<0>() );
+			CHECK_ERR( uint(desc.renderPass) < _renderPassOutputs.Get<0>() );
 			
 			auto				bm			= stackAlloc.Push();
 			auto *				modules		= stackAlloc.Alloc<ShaderModule>( desc.shaders.size() );
-			VPipelineLayoutID	layout_id	= _pplnLayouts.Get<1>()[ size_t(desc.layout) ];
-			VRenderPassOutputID	rp_output_id= _renderPassOutputs.Get<1>()[ size_t(desc.renderPass) ];
+			VPipelineLayoutID	layout_id	= _pplnLayouts.Get<1>()[ uint(desc.layout) ];
+			VRenderPassOutputID	rp_output_id= _renderPassOutputs.Get<1>()[ uint(desc.renderPass) ];
 
 			for (size_t j = 0; j < desc.shaders.size(); ++j)
 			{
@@ -434,15 +434,15 @@ namespace AE::Graphics
 		if ( not count )
 			return true;
 		
-		_cpipelines = { count, _allocator.Alloc<UniqueID<VComputePipelineTemplateID>>( count )};
+		_cpipelines = MakeTuple( count, _allocator.Alloc<UniqueID<VComputePipelineTemplateID>>( count ));
 		
 		PipelineCompiler::ComputePipelineDesc	desc;
 		for (uint i = 0; i < count; ++i)
 		{
 			CHECK_ERR( desc.Deserialize( des ));
-			CHECK_ERR( size_t(desc.layout) < _pplnLayouts.Get<0>() );
+			CHECK_ERR( uint(desc.layout) < _pplnLayouts.Get<0>() );
 			
-			VPipelineLayoutID	id	= _pplnLayouts.Get<1>()[ size_t(desc.layout) ];
+			VPipelineLayoutID	id	= _pplnLayouts.Get<1>()[ uint(desc.layout) ];
 			const uint			idx	= uint(desc.shader & ~PipelineCompiler::ShaderUID::SPIRV);
 
 			CHECK_ERR( EnumEq( desc.shader, PipelineCompiler::ShaderUID::SPIRV ));

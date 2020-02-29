@@ -23,12 +23,20 @@
 #	define GLM_FORCE_INTRINSICS
 #endif
 
-// enable SSE
-#if defined(PLATFORM_WINDOWS) or defined(PLATFORM_LINUX)
+// enable simd
+#if defined(PLATFORM_ANDROID)
+#	if defined(__i386__)
+#		define GLM_FORCE_ARCH_UNKNOWN
+#	elif defined(__x86_64__)
+#		define GLM_FORCE_SSE42
+#	elif defined(__aarch64__)
+#		define GLM_FORCE_NEON
+#	else
+#		define GLM_FORCE_ARCH_UNKNOWN
+#	endif
+
+#elif defined(PLATFORM_WINDOWS) or defined(PLATFORM_LINUX)
 #	define GLM_FORCE_SSE42
-#endif
-#if defined(PLATFORM_ANDROID) && defined(__ARM_NEON)
-#	define GLM_FORCE_NEON	// TODO: check is NEON supported
 #endif
 
 #ifdef COMPILER_MSVC
@@ -163,14 +171,6 @@
 
 #ifdef COMPILER_MSVC
 #	pragma warning (pop)
-#endif
-
-#if (GLM_CONFIG_ANONYMOUS_STRUCT == GLM_DISABLE) && !GLM_CONFIG_XYZW_ONLY
-#	error GLM_CONFIG_ANONYMOUS_STRUCT must be enabled!
-#endif
-
-#if GLM_CONFIG_SIMD == GLM_DISABLE
-#	error GLM_CONFIG_SIMD must be enabled!
 #endif
 
 

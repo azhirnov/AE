@@ -10,8 +10,8 @@ extern void UnitTest_FixedArray ();
 extern void UnitTest_FixedMap ();
 extern void UnitTest_FixedTupleArray ();
 extern void UnitTest_FileSystem ();
+extern void UnitTest_FixedTupleArray ();
 extern void UnitTest_LinearAllocator ();
-extern void UnitTest_StackAllocator ();
 extern void UnitTest_Math ();
 extern void UnitTest_Math_BitMath ();
 extern void UnitTest_Math_Vec ();
@@ -20,14 +20,15 @@ extern void UnitTest_Math_Transformation ();
 extern void UnitTest_Math_Rectangle ();
 extern void UnitTest_Math_Fractional ();
 extern void UnitTest_Math_PhysicalQuantity ();
+extern void UnitTest_NamedID ();
 extern void UnitTest_NtStringView ();
 extern void UnitTest_StaticString ();
 extern void UnitTest_StructView ();
 extern void UnitTest_StringParser ();
+extern void UnitTest_StackAllocator ();
 extern void UnitTest_ToString ();
 extern void UnitTest_TypeList ();
 extern void UnitTest_TypeTraits ();
-extern void UnitTest_FixedTupleArray ();
 
 #ifdef PLATFORM_ANDROID
 extern int Test_STL ()
@@ -43,9 +44,8 @@ int main ()
 	UnitTest_FixedMap();
 	UnitTest_FixedTupleArray();
 	UnitTest_FileSystem();
+	UnitTest_FixedTupleArray();
 	UnitTest_LinearAllocator();
-	UnitTest_StackAllocator();
-	
 	UnitTest_Math();
 	UnitTest_Math_BitMath();
 	UnitTest_Math_Vec();
@@ -54,15 +54,15 @@ int main ()
 	UnitTest_Math_Rectangle();
 	UnitTest_Math_Fractional();
 	UnitTest_Math_PhysicalQuantity();
-
+	UnitTest_NamedID();
 	UnitTest_NtStringView();
 	UnitTest_StaticString();
 	UnitTest_StructView();
 	UnitTest_StringParser();
 	UnitTest_ToString();
+	UnitTest_StackAllocator();
 	UnitTest_TypeList();
 	UnitTest_TypeTraits();
-	UnitTest_FixedTupleArray();
 
 	AE_LOGI( "Tests.STL finished" );
 	return 0;

@@ -191,7 +191,11 @@ namespace AE::Serializing
 	template <size_t Size, uint UID, uint Seed>
 	inline bool  Serializer::_Serialize (const NamedID<Size, UID, false, Seed> &id)
 	{
+	#if AE_SERIALIZE_HASH_ONLY
+		return stream->Write( CheckCast<uint>(size_t(id.GetHash())) );
+	#else
 		return _Serialize( id.GetName() );
+	#endif
 	}
 
 

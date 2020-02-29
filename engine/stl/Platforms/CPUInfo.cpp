@@ -9,7 +9,10 @@
 
 #ifdef PLATFORM_ANDROID
 #	include <sys/auxv.h>
+
+# ifdef __arm__
 #	include <asm/hwcap.h>
+# endif
 #endif
 
 namespace AE::STL

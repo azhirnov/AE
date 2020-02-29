@@ -18,6 +18,9 @@
 
 #include "threading/Primitives/DummyLock.h"
 
+// for NamedID
+#define AE_SERIALIZE_HASH_ONLY	1
+
 namespace AE::Serializing
 {
 	using namespace AE::STL;

@@ -116,4 +116,10 @@ namespace std
 		using type = typename tuple_element< I, std::tuple<Types...> >::type;
 	};
 
+	template <typename ...Types>
+	inline void swap (AE::STL::Tuple<Types...> &lhs, AE::STL::Tuple<Types...> &rhs) noexcept
+	{
+		return swap( static_cast<tuple< Types... > &>(lhs), static_cast<tuple< Types... > &>(rhs) );
+	}
+
 }	// std
