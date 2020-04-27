@@ -6,6 +6,7 @@ extern void UnitTest_Archetype ();
 extern void UnitTest_EntityPool ();
 extern void UnitTest_Registry ();
 extern void UnitTest_Transformation ();
+extern void UnitTest_RendererVk ();
 
 
 #ifdef PLATFORM_ANDROID
@@ -18,6 +19,7 @@ int main ()
 	UnitTest_EntityPool();
 	UnitTest_Registry();
 	UnitTest_Transformation();
+	UnitTest_RendererVk();
 
 	AE_LOGI( "Tests.ECS finished" );
 	return 0;

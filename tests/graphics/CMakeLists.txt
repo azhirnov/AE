@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
 
-file( GLOB_RECURSE SOURCES "*.*" )
+file( GLOB_RECURSE SOURCES "*.h" "*.cpp" "*.ppln" "*.samp" "*.glsl" )
 if (DEFINED ANDROID)
 	add_library( "Tests.Graphics" STATIC ${SOURCES} )
 else()

@@ -9,13 +9,19 @@
 - [x] Serialization / Deserialization
 - [x] Android
 - [x] [ECS] Core for single-threaded
-- [ ] [vulkan] wrapper (render pass cache, pipeline cache, ...)
+- [x] [vulkan] wrapper (render pass cache, pipeline cache, ...)
 - [x] [vulkan] pipeline compiler
 
 ## v0.2
 - [ ] [ECS] Game components
 - [ ] [ECS] Visibility components
 - [ ] [ECS] Render components
+- [ ] [ECS] Network replication components
+- [x] UI
+- [ ] [Vulkan] Virtual resources
+- [x] [Vulkan] Multithreaded command buffer recording
+- [ ] Shader cross compiler (GLES3, Metal)
+- [ ] Shader debugger & profiler
 
 ## v0.3
 - [ ] [ECS] Core for multi-threading
@@ -28,6 +34,7 @@
 ## Somewhen
 - [ ] Shader graph
 - [ ] Static analyzer for shader source
-- [ ] Shader cross compiler (GLES3, Metal)
 - [ ] OpenGL ES 3.x renderer
 - [ ] Metal renderer
+- [ ] Proxy renderer
+- [ ] Multiplayer, steaming

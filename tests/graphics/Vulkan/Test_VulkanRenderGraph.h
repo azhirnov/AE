@@ -66,6 +66,7 @@ private:
 	bool  Test_CopyBuffer1 ();
 	bool  Test_CopyBuffer2 ();
 	bool  Test_CopyImage1 ();
+	bool  Test_VirtualRes1 ();
 	
 	bool  Test_Draw1 ();
 	bool  Test_DrawAsync1 ();

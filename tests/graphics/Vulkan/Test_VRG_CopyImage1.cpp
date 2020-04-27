@@ -77,7 +77,7 @@ bool VRGTest::Test_CopyImage1 ()
 		}
 	};
 
-	_renderGraph->Add(
+	CHECK_ERR( _renderGraph->Add(
 		EQueueType::Graphics, {}, {},
 		[&] (IGraphicsContext &ctx, ArrayView<GfxResourceID>, ArrayView<GfxResourceID>)
 		{
@@ -94,9 +94,9 @@ bool VRGTest::Test_CopyImage1 ()
 				auto	row = ranges.GetRow( part.offset.y );
 				std::memcpy( OUT row.ptr + bpp * part.offset.x, part.content.data(), size_t(ArraySizeOf(part.content)) );
 			}
-		});
+		}));
 	
-	_renderGraph->Add(
+	CHECK_ERR( _renderGraph->Add(
 		EQueueType::Graphics, {}, {},
 		[&] (IGraphicsContext &ctx, ArrayView<GfxResourceID>, ArrayView<GfxResourceID>)
 		{
@@ -110,9 +110,10 @@ bool VRGTest::Test_CopyImage1 ()
 			ctx.CopyImage( img_1, img_2, {range} );
 
 			CHECK( ctx.ReadImage( img_2, uint3(0), img_dim, 0_mipmap, 0_layer, EImageAspect::Color, std::move(OnLoaded) ));
-		});
+		}));
 
 	CmdBatchID	batch = _renderGraph->Submit();
+	CHECK_ERR( batch );
 	
 	CHECK_ERR( _renderGraph->Wait({ batch }));
 	CHECK_ERR( cb_was_called );

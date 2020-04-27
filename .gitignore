@@ -6,3 +6,4 @@
 /tests/asset_packer/pipeline_test/_output
 /tests/asset_packer/sampler_test/_output
 /tests/graphics/Vulkan/temp
+tests/ecs-st/Vulkan/temp

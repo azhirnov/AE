@@ -65,15 +65,15 @@ bool VRGTest::Test_DrawAsync1 ()
 		data_is_correct &= TestPixel(-0.51f, -0.51f, RGBA32f{0.0f} );
 	};
 	
-	_renderGraph->Add(
+	CHECK_ERR( _renderGraph->Add(
 		EQueueType::Graphics, {}, {},
 		[&] (IGraphicsContext &ctx, ArrayView<GfxResourceID>, ArrayView<GfxResourceID>)
 		{
 			// initial layout transition
 			ctx.SetInitialState( image, EResourceState::Unknown );
-		});
+		}));
 
-	_renderGraph->Add(
+	CHECK_ERR( _renderGraph->Add(
 		EQueueType::Graphics, {}, {},
 		RenderPassDesc{ RenderPassName{"ColorPass"}, uint2{view_size} }
 			.AddTarget( RenderTargetName{"out_Color"}, image, RGBA32f(0.0f), EAttachmentStoreOp::Store )
@@ -86,16 +86,17 @@ bool VRGTest::Test_DrawAsync1 ()
 
 			ctx.BindPipeline( GetPipeline( info.renderPass ));
 			ctx.Draw( 3 );
-		});
+		}));
 	
-	_renderGraph->Add(
+	CHECK_ERR( _renderGraph->Add(
 		EQueueType::Graphics, {}, {},
 		[&] (IGraphicsContext &ctx, ArrayView<GfxResourceID>, ArrayView<GfxResourceID>)
 		{
 			CHECK( ctx.ReadImage( image, uint3(0), view_size, 0_mipmap, 0_layer, EImageAspect::Color, std::move(OnLoaded) ));
-		});
+		}));
 
 	CmdBatchID	batch = _renderGraph->Submit();
+	CHECK_ERR( batch );
 	
 	CHECK_ERR( _renderGraph->Wait({ batch }));
 	CHECK_ERR( data_is_correct );

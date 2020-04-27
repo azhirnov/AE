@@ -40,6 +40,7 @@ add_subdirectory( "engine/networking" )
 add_subdirectory( "engine/serializing" )
 add_subdirectory( "engine/platform" )
 add_subdirectory( "engine/graphics" )
+add_subdirectory( "engine/ui" )
 add_subdirectory( "engine/ecs-st" )
 
 #----------------------------------------------------------
@@ -65,6 +66,7 @@ if (${AE_ENABLE_TESTS})
 	add_subdirectory( "tests/serializing" )
 	add_subdirectory( "tests/platform" )
 	add_subdirectory( "tests/graphics" )
+	add_subdirectory( "tests/ui" )
 	add_subdirectory( "tests/ecs-st" )
 	
 	if (NOT DEFINED ANDROID)

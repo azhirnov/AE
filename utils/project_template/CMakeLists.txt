@@ -94,4 +94,4 @@ if (NOT ${STD_FILESYSTEM_SUPPORTED})
 	endif ()
 endif ()
 
-target_compile_definitions( "ProjectTemplate" PUBLIC "AE_VERSION=AE::STL::MakeTuple( 0, 1, 1, \"${AE_COMMIT_HASH}\" )" )
+target_compile_definitions( "ProjectTemplate" PUBLIC "AE_VERSION=AE::STL::MakeTuple( 0, 2, 0, \"${AE_COMMIT_HASH}\" )" )

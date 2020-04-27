@@ -100,6 +100,10 @@ namespace
 			using Types = TypeList< Comp1*, Comp1& >;
 			STATIC_ASSERT( not _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<0> >::Test< Types, 0 >() );
 			STATIC_ASSERT( not _reg_detail_::SC_CheckForDuplicateComponents< Types::Get<1> >::Test< Types, 1 >() );
+		}{
+			using Types = TypeList< Require<Comp1>, Subtractive<Comp2> >;
+			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<0> >::Test< 0, Types >() );
+			STATIC_ASSERT( _reg_detail_::CheckForDuplicateComponents< Types::Get<1> >::Test< 1, Types >() );
 		}
 	#endif	// AE_ECS_VALIDATE_SYSTEM_FN
 	}

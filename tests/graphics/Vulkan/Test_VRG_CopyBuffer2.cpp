@@ -79,7 +79,7 @@ bool VRGTest::Test_CopyBuffer2 ()
 		}
 	};
 
-	_renderGraph->Add(
+	CHECK_ERR( _renderGraph->Add(
 		EQueueType::Graphics, {}, {},
 		[&] (IGraphicsContext &ctx, ArrayView<GfxResourceID>, ArrayView<GfxResourceID>)
 		{
@@ -102,18 +102,19 @@ bool VRGTest::Test_CopyBuffer2 ()
 
 				offset += range.size;
 			}
-		});
+		}));
 
-	_renderGraph->Add(
+	CHECK_ERR( _renderGraph->Add(
 		EQueueType::Graphics, {}, {},
 		[&] (IGraphicsContext &ctx, ArrayView<GfxResourceID>, ArrayView<GfxResourceID>)
 		{
 			ctx.CopyBuffer( buf_1, buf_2, { BufferCopy{ 0_b, 0_b, buf_size }});
 			CHECK( ctx.ReadBuffer( buf_2, 0_b, buf_size, std::move(OnLoaded) ));
-		});
+		}));
 
 	CmdBatchID	batch = _renderGraph->Submit();
-	
+	CHECK_ERR( batch );
+
 	CHECK_ERR( _renderGraph->Wait({ batch }));
 	CHECK_ERR( cb_was_called );
 	CHECK_ERR( data_is_correct );

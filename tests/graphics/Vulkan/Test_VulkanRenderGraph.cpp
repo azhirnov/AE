@@ -12,10 +12,19 @@
 # include "stl/Platforms/PlatformUtils.h"
 # include "stl/Stream/FileStream.h"
 
+# include "threading/TaskSystem/WorkerThread.h"
+
 # include "pipeline_compiler/PipelineCompiler.h"
 
 using namespace AE::App;
+using namespace AE::Threading;
 
+
+/*
+=================================================
+	Test_VulkanRenderGraph
+=================================================
+*/
 extern void Test_VulkanRenderGraph (IApplication &app, IWindow &wnd)
 {
 	VRGTest		test;
@@ -38,6 +47,7 @@ VRGTest::VRGTest () :
 	_tests.emplace_back( &VRGTest::Test_CopyBuffer1 );
 	_tests.emplace_back( &VRGTest::Test_CopyBuffer2 );
 	_tests.emplace_back( &VRGTest::Test_CopyImage1 );
+	_tests.emplace_back( &VRGTest::Test_VirtualRes1 );
 	_tests.emplace_back( &VRGTest::Test_Draw1 );
 	_tests.emplace_back( &VRGTest::Test_DrawAsync1 );
 	_tests.emplace_back( &VRGTest::Test_Compute1 );
@@ -86,6 +96,10 @@ bool  VRGTest::_Create (IApplication &app, IWindow &wnd)
 	CHECK_ERR( Cast<VRenderGraph>(_renderGraph)->Initialize() );
 
 	CHECK_ERR( _CompilePipelines() );
+
+
+	CHECK_ERR( Scheduler().Setup( 1 ));
+	Scheduler().AddThread( MakeShared<WorkerThread>() );
 
 	return true;
 }
@@ -159,6 +173,8 @@ bool  VRGTest::_RunTests ()
 			_testsPassed += uint(passed);
 			_testsFailed += uint(not passed);
 			_tests.pop_front();
+
+			Scheduler().ProcessTask( IAsyncTask::EThread::Main, 0 );
 		}
 		else
 		{
@@ -195,6 +211,8 @@ void  VRGTest::_Destroy ()
 
 	CHECK( _vulkan.DestroyLogicalDevice() );
 	CHECK( _vulkan.DestroyInstance() );
+
+	Scheduler().Release();
 }
 
 #endif	// AE_ENABLE_VULKAN
