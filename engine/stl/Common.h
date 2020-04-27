@@ -94,21 +94,24 @@ namespace AE::STL
 
 	template <typename T,
 			  typename Hasher = std::hash<T>,
-			  typename KeyEq = std::equal_to<T>>
-	using HashSet		= std::unordered_set< T, Hasher, KeyEq >;
+			  typename KeyEq  = std::equal_to<T>,
+			  typename Alloc  = std::allocator<T>>
+	using HashSet		= std::unordered_set< T, Hasher, KeyEq, Alloc >;
 
 
 	template <typename Key,
 			  typename Value,
 			  typename Hasher = std::hash<Key>,
-			  typename KeyEq = std::equal_to<Key>>
-	using HashMap		= std::unordered_map< Key, Value, Hasher, KeyEq >;
+			  typename KeyEq  = std::equal_to<Key>,
+			  typename Alloc  = std::allocator<std::pair<const Key, Value>>>
+	using HashMap		= std::unordered_map< Key, Value, Hasher, KeyEq, Alloc >;
 	
 	template <typename Key,
 			  typename Value,
 			  typename Hasher = std::hash<Key>,
-			  typename KeyEq = std::equal_to<Key>>
-	using HashMultiMap	= std::unordered_multimap< Key, Value, Hasher, KeyEq >;
+			  typename KeyEq  = std::equal_to<Key>,
+			  typename Alloc  = std::allocator<std::pair<const Key, Value>>>
+	using HashMultiMap	= std::unordered_multimap< Key, Value, Hasher, KeyEq, Alloc >;
 
 	
 	

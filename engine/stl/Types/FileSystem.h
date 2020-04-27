@@ -71,6 +71,7 @@ namespace AE::STL
 	public:
 		// searches for a directory for which 'Exists( ref )' returns 'true'
 		static bool  FindAndSetCurrent (const Path &ref, uint depth);
+		static bool  FindAndSetCurrent (const Path &base, const Path &ref, uint depth);
 
 		static bool  SearchBackward (const Path &ref, uint depth, OUT Path &result);
 		static bool  SearchBackward (const Path &base, const Path &ref, uint depth, OUT Path &result);

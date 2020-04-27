@@ -16,6 +16,8 @@ namespace AE::STL
 	template <size_t ArraySize, typename ...Types>
 	struct FixedTupleArray
 	{
+		STATIC_ASSERT( ArraySize < 256 );
+
 	// types
 	private:
 		template <typename T>
@@ -74,6 +76,30 @@ namespace AE::STL
 			_PushBack<0>( std::forward<Types>(values)... );
 			++_count;
 		}
+		
+
+		constexpr bool  try_push_back (const Types&... values)
+		{
+			if ( _count < capacity() )
+			{
+				_PushBack<0>( values... );
+				++_count;
+				return true;
+			}
+			return false;
+		}
+
+		constexpr bool  try_push_back (Types&&... values)
+		{
+			if ( _count < capacity() )
+			{
+				_PushBack<0>( std::forward<Types>(values)... );
+				++_count;
+				return true;
+			}
+			return false;
+		}
+
 
 		constexpr void  emplace_back ()
 		{

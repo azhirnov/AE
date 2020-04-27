@@ -12,9 +12,14 @@ namespace AE::STL
 */
 	bool  FileSystem::FindAndSetCurrent (const Path &ref, uint depth)
 	{
+		return FindAndSetCurrent( CurrentPath(), ref, depth );
+	}
+
+	bool  FileSystem::FindAndSetCurrent (const Path &base, const Path &ref, uint depth)
+	{
 		Path	dir;
 
-		if ( Search( ref, depth, depth, OUT dir ))
+		if ( Search( base, ref, depth, depth, OUT dir ))
 			return SetCurrentPath( dir );
 		
 		return false;

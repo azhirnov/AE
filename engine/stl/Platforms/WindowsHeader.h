@@ -24,5 +24,7 @@
 # undef DeleteFile
 # undef CreateWindow
 # undef CreateDirectory
+# undef DrawText
+# undef GetMonitorInfo
 
 #endif	// PLATFORM_WINDOWS

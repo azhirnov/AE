@@ -57,6 +57,16 @@ namespace
 	{
 		TEST(All( float2(1.1f, 2.2f) == float2(0.1f, 0.2f) + float2(1.0f, 2.0f) ));
 	}
+
+	
+	static void  Vec_Test3 ()
+	{
+		bool2	a0 = int2(2) > 0;						TEST( All( a0 ));
+		bool2	a1 = int2(2) == 2;						TEST( All( a1 ));
+		bool3	a2 = int3(1, 2, 3) > int3(2, 1, 4);
+		bool3	a3 = a2 == bool3(false, true, false);	TEST( All( a3 ));
+		bool3	a4 = uint3(1) < uint3(2);				TEST( All( a4 ));
+	}
 }
 
 
@@ -64,6 +74,7 @@ extern void UnitTest_Math_Vec ()
 {
 	Vec_Test1();
 	Vec_Test2();
+	Vec_Test3();
 
 	AE_LOGI( "UnitTest_Math_Vec - passed" );
 }

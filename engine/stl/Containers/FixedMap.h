@@ -23,6 +23,8 @@ namespace AE::STL
 	template <typename Key, typename Value, size_t ArraySize>
 	struct FixedMap
 	{
+		STATIC_ASSERT( ArraySize < 256 );
+
 	// types
 	private:
 		using Self				= FixedMap< Key, Value, ArraySize >;

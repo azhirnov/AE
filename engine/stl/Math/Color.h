@@ -179,6 +179,16 @@ namespace AE::Math
 		b{ float(other.b) / 0xFFFFFFFFu }, a{ float(other.a) / 0xFFFFFFFFu }
 	{}
 
+	ND_ inline constexpr RGBAColor<float>  operator * (const RGBAColor<float> &lhs, const RGBAColor<float> &rhs)
+	{
+		RGBAColor<float>	res;
+		res.r = lhs.r * rhs.r;
+		res.g = lhs.g * rhs.g;
+		res.b = lhs.b * rhs.b;
+		res.a = lhs.a * rhs.a;
+		return res;
+	}
+
 /*
 =================================================
 	RGBA32i

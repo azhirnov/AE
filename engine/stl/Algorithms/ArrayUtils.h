@@ -66,6 +66,12 @@ namespace AE::STL
 		return BytesU( S * sizeof(T) );
 	}
 
+	template <typename T, size_t I>
+	ND_ forceinline constexpr BytesU  ArraySizeOf (const T (&)[I])
+	{
+		return BytesU{ sizeof(T) * I };
+	}
+
 /*
 =================================================
 	Distance

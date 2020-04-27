@@ -6,85 +6,9 @@
 #include "stl/Math/BitMath.h"
 #include "stl/Math/GLM.h"
 
-namespace AE::Math
+namespace glm
 {
-
-	using bool2		= Vec< bool, 2 >;
-	using bool3		= Vec< bool, 3 >;
-	using bool4		= Vec< bool, 4 >;
-
-	using byte2		= Vec< int8_t, 2 >;
-	using byte3		= Vec< int8_t, 3 >;
-	using byte4		= Vec< int8_t, 4 >;
-	
-	using ubyte2	= Vec< uint8_t, 2 >;
-	using ubyte3	= Vec< uint8_t, 3 >;
-	using ubyte4	= Vec< uint8_t, 4 >;
-
-	using short2	= Vec< int16_t, 2 >;
-	using short3	= Vec< int16_t, 3 >;
-	using short4	= Vec< int16_t, 4 >;
-	
-	using ushort2	= Vec< uint16_t, 2 >;
-	using ushort3	= Vec< uint16_t, 3 >;
-	using ushort4	= Vec< uint16_t, 4 >;
-
-	using uint2		= Vec< uint, 2 >;
-	using uint3		= Vec< uint, 3 >;
-	using uint4		= Vec< uint, 4 >;
-
-	using int2		= Vec< int, 2 >;
-	using int3		= Vec< int, 3 >;
-	using int4		= Vec< int, 4 >;
-
-	using float2	= Vec< float, 2 >;
-	using float3	= Vec< float, 3 >;
-	using float4	= Vec< float, 4 >;
-	
-	using double2	= Vec< double, 2 >;
-	using double3	= Vec< double, 3 >;
-	using double4	= Vec< double, 4 >;
-	
-/*
-=================================================
-	IsVec
-=================================================
-*/
-	namespace _ae_math_hidden_
-	{
-		template <typename T>
-		struct _IsVec {
-			static constexpr bool	value = false;
-		};
-
-		template <typename T, int I>
-		struct _IsVec< Vec<T,I> > {
-			static constexpr bool	value = true;
-		};
-	}
-
-	template <typename T>
-	static constexpr bool  IsVec = _ae_math_hidden_::_IsVec<T>::value;
-	
-/*
-=================================================
-	VecSize
-=================================================
-*/
-	namespace _ae_math_hidden_
-	{
-		template <typename T>
-		struct _VecSize {
-		};
-
-		template <typename T, int I>
-		struct _VecSize< Vec<T,I> > {
-			static constexpr int	value = I;
-		};
-	}
-
-	template <typename T>
-	static constexpr uint  VecSize = _ae_math_hidden_::_VecSize<T>::value;
+	using namespace AE::Math;
 	
 /*
 =================================================
@@ -168,23 +92,11 @@ namespace AE::Math
 	{
 		return glm::notEqual( lhs, Vec<T,I>{rhs} );
 	}
-	
-	template <typename T, int I>
-	ND_ forceinline GLM_CONSTEXPR Vec<bool,I>  operator >= (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
-	{
-		return glm::greaterThanEqual( lhs, rhs );
-	}
 
 	template <typename T, int I, typename S>
 	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<S>, Vec<bool,I>>  operator >= (const Vec<T,I> &lhs, const S &rhs)
 	{
 		return glm::greaterThanEqual( lhs, Vec<T,I>{rhs} );
-	}
-	
-	template <typename T, int I>
-	ND_ forceinline GLM_CONSTEXPR Vec<bool,I>  operator <= (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
-	{
-		return glm::lessThanEqual( lhs, rhs );
 	}
 
 	template <typename T, int I, typename S>
@@ -193,22 +105,10 @@ namespace AE::Math
 		return glm::lessThanEqual( lhs, Vec<T,I>{rhs} );
 	}
 	
-	template <typename T, int I>
-	ND_ forceinline GLM_CONSTEXPR Vec<bool,I>  operator > (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
-	{
-		return glm::greaterThan( lhs, rhs );
-	}
-	
 	template <typename T, int I, typename S>
 	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<S>, Vec<bool,I>>  operator > (const Vec<T,I> &lhs, const S &rhs)
 	{
 		return glm::greaterThan( lhs, Vec<T,I>{rhs} );
-	}
-	
-	template <typename T, int I>
-	ND_ forceinline GLM_CONSTEXPR Vec<bool,I>  operator < (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
-	{
-		return glm::lessThan( lhs, rhs );
 	}
 	
 	template <typename T, int I, typename S>
@@ -216,6 +116,113 @@ namespace AE::Math
 	{
 		return glm::lessThan( lhs, Vec<T,I>{rhs} );
 	}
+	
+	template <typename T, int I>
+	ND_ forceinline GLM_CONSTEXPR Vec<bool,I>  operator >= (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	{
+		return glm::greaterThanEqual( lhs, rhs );
+	}
+
+	template <typename T, int I>
+	ND_ forceinline GLM_CONSTEXPR Vec<bool,I>  operator <= (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	{
+		return glm::lessThanEqual( lhs, rhs );
+	}
+	
+	template <typename T, int I>
+	ND_ forceinline GLM_CONSTEXPR Vec<bool,I>  operator > (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	{
+		return glm::greaterThan( lhs, rhs );
+	}
+	
+	template <typename T, int I>
+	ND_ forceinline GLM_CONSTEXPR Vec<bool,I>  operator < (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	{
+		return glm::lessThan( lhs, rhs );
+	}
+
+}	// glm
+
+
+namespace AE::Math
+{
+
+	using bool2		= Vec< bool, 2 >;
+	using bool3		= Vec< bool, 3 >;
+	using bool4		= Vec< bool, 4 >;
+
+	using byte2		= Vec< int8_t, 2 >;
+	using byte3		= Vec< int8_t, 3 >;
+	using byte4		= Vec< int8_t, 4 >;
+	
+	using ubyte2	= Vec< uint8_t, 2 >;
+	using ubyte3	= Vec< uint8_t, 3 >;
+	using ubyte4	= Vec< uint8_t, 4 >;
+
+	using short2	= Vec< int16_t, 2 >;
+	using short3	= Vec< int16_t, 3 >;
+	using short4	= Vec< int16_t, 4 >;
+	
+	using ushort2	= Vec< uint16_t, 2 >;
+	using ushort3	= Vec< uint16_t, 3 >;
+	using ushort4	= Vec< uint16_t, 4 >;
+
+	using uint2		= Vec< uint, 2 >;
+	using uint3		= Vec< uint, 3 >;
+	using uint4		= Vec< uint, 4 >;
+
+	using int2		= Vec< int, 2 >;
+	using int3		= Vec< int, 3 >;
+	using int4		= Vec< int, 4 >;
+
+	using float2	= Vec< float, 2 >;
+	using float3	= Vec< float, 3 >;
+	using float4	= Vec< float, 4 >;
+	
+	using double2	= Vec< double, 2 >;
+	using double3	= Vec< double, 3 >;
+	using double4	= Vec< double, 4 >;
+	
+/*
+=================================================
+	IsVec
+=================================================
+*/
+	namespace _ae_math_hidden_
+	{
+		template <typename T>
+		struct _IsVec {
+			static constexpr bool	value = false;
+		};
+
+		template <typename T, int I>
+		struct _IsVec< Vec<T,I> > {
+			static constexpr bool	value = true;
+		};
+	}
+
+	template <typename T>
+	static constexpr bool  IsVec = _ae_math_hidden_::_IsVec<T>::value;
+	
+/*
+=================================================
+	VecSize
+=================================================
+*/
+	namespace _ae_math_hidden_
+	{
+		template <typename T>
+		struct _VecSize {
+		};
+
+		template <typename T, int I>
+		struct _VecSize< Vec<T,I> > {
+			static constexpr int	value = I;
+		};
+	}
+
+	template <typename T>
+	static constexpr uint  VecSize = _ae_math_hidden_::_VecSize<T>::value;
 
 /*
 =================================================
@@ -443,13 +450,13 @@ namespace AE::Math
 =================================================
 */
 	template <typename T, int I>
-	ND_ forceinline Vec<T,I>  Clamp (const Vec<T,I> &value, const Vec<T,I> &minVal, const Vec<T,I> &maxVal)
+	ND_ forceinline GLM_CONSTEXPR Vec<T,I>  Clamp (const Vec<T,I> &value, const Vec<T,I> &minVal, const Vec<T,I> &maxVal)
 	{
 		return glm::clamp( value, minVal, maxVal );
 	}
 	
 	template <typename T, int I>
-	ND_ forceinline Vec<T,I>  Clamp (const Vec<T,I> &value, const T &minVal, const T &maxVal)
+	ND_ forceinline GLM_CONSTEXPR Vec<T,I>  Clamp (const Vec<T,I> &value, const T &minVal, const T &maxVal)
 	{
 		return glm::clamp( value, Vec<T,I>{minVal}, Vec<T,I>{maxVal} );
 	}
@@ -467,7 +474,7 @@ namespace AE::Math
 =================================================
 */
 	template <typename T, int I>
-	ND_ forceinline EnableIf<IsFloatPoint<T>, Vec<T,I>>  Wrap (const Vec<T,I>& v, const T& minValue, const T& maxValue)
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsFloatPoint<T>, Vec<T,I>>  Wrap (const Vec<T,I>& v, const T& minValue, const T& maxValue)
 	{
 		Vec<T,I>	res;
 		for (int i = 0; i < I; ++i) {
@@ -477,7 +484,7 @@ namespace AE::Math
 	}
 	
 	template <typename T>
-	forceinline EnableIf<IsFloatPoint<T>, T>  Wrap (const T& value, const T& minValue, const T& maxValue)
+	forceinline constexpr EnableIf<IsFloatPoint<T>, T>  Wrap (const T& value, const T& minValue, const T& maxValue)
 	{
 		// check for NaN
 		if ( minValue >= maxValue )
@@ -497,7 +504,7 @@ namespace AE::Math
 =================================================
 */
 	template <typename T, int I>
-	ND_ forceinline EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Round (const Vec<T,I>& v)
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Round (const Vec<T,I>& v)
 	{
 		Vec<T,I>	res;
 		for (int i = 0; i < I; ++i) {
@@ -507,7 +514,7 @@ namespace AE::Math
 	}
 	
 	template <typename T, int I>
-	ND_ forceinline auto  RoundToInt (const Vec<T,I>& v)
+	ND_ forceinline GLM_CONSTEXPR auto  RoundToInt (const Vec<T,I>& v)
 	{
 		using R = decltype(RoundToInt(T()));
 
@@ -519,7 +526,7 @@ namespace AE::Math
 	}
 	
 	template <typename T, int I>
-	ND_ forceinline auto  RoundToUint (const Vec<T,I>& v)
+	ND_ forceinline GLM_CONSTEXPR auto  RoundToUint (const Vec<T,I>& v)
 	{
 		using R = decltype(RoundToUint(T()));
 
@@ -536,13 +543,13 @@ namespace AE::Math
 =================================================
 */
 	template <typename T, int I>
-	ND_ forceinline EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Length (const Vec<T,I> &v)
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Length (const Vec<T,I> &v)
 	{
 		return glm::length( v );
 	}
 	
 	template <typename T, int I>
-	ND_ forceinline EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  LengthSqr (const Vec<T,I> &v)
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  LengthSqr (const Vec<T,I> &v)
 	{
 		return glm::length2( v );
 	}
@@ -553,13 +560,13 @@ namespace AE::Math
 =================================================
 */
 	template <typename T, int I>
-	ND_ forceinline EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Distance (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  Distance (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
 	{
 		return glm::distance( lhs, rhs );
 	}
 	
 	template <typename T, int I>
-	ND_ forceinline EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  DistanceSqr (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<T> and IsFloatPoint<T>, T>  DistanceSqr (const Vec<T,I> &lhs, const Vec<T,I> &rhs)
 	{
 		return glm::distance2( lhs, rhs );
 	}
@@ -570,11 +577,117 @@ namespace AE::Math
 =================================================
 */
 	template <typename T, int I>
-	ND_ forceinline EnableIf<IsScalar<T> and IsFloatPoint<T>, Vec<T,I>>  Normalize (const Vec<T,I> &v)
+	ND_ forceinline GLM_CONSTEXPR EnableIf<IsScalar<T> and IsFloatPoint<T>, Vec<T,I>>  Normalize (const Vec<T,I> &v)
 	{
 		return glm::normalize( v );
 	}
+	
+/*
+=================================================
+	SafeDiv
+=================================================
+*/
+	template <typename T, int I, typename S>
+	ND_ forceinline GLM_CONSTEXPR Vec<T,I>  SafeDiv (const Vec<T,I>& lhs, const Vec<T,I>& rhs, const S& defVal)
+	{
+		Vec<T,I>	res;
+		for (int i = 0; i < I; ++i) {
+			res[i] = SafeDiv( lhs[i], rhs[i], defVal );
+		}
+		return res;
+	}
+	
+	template <typename T, int I, typename S1, typename S2,
+			  typename = EnableIf<IsScalar<S1> and IsScalar<S2>>
+			 >
+	ND_ forceinline GLM_CONSTEXPR Vec<T,I>  SafeDiv (const Vec<T,I>& lhs, const S1& rhs, const S2& defVal)
+	{
+		return SafeDiv( lhs, Vec<T,I>{rhs}, T(defVal) );
+	}
+	
+	template <typename T, int I, typename S1,
+			  typename = EnableIf<IsScalar<S1>>
+			 >
+	ND_ forceinline GLM_CONSTEXPR Vec<T,I>  SafeDiv (const Vec<T,I>& lhs, const S1& rhs)
+	{
+		return SafeDiv( lhs, Vec<T,I>{rhs}, T(0) );
+	}
 
+	template <typename T, int I>
+	ND_ forceinline GLM_CONSTEXPR Vec<T,I>  SafeDiv (const Vec<T,I>& lhs, const Vec<T,I>& rhs)
+	{
+		return SafeDiv( lhs, rhs, T(0) );
+	}
+
+	template <typename T1, typename T2, typename T3,
+			  typename = EnableIf<IsScalarOrEnum<T1> and IsScalarOrEnum<T2> and IsScalarOrEnum<T3>>
+			 >
+	ND_ forceinline constexpr auto  SafeDiv (const T1& lhs, const T2& rhs, const T3& defVal)
+	{
+		using T = decltype( lhs + rhs + defVal );
+
+		return not Equals( rhs, T(0) ) ? (T(lhs) / T(rhs)) : T(defVal);
+	}
+	
+	template <typename T1, typename T2,
+			  typename = EnableIf<IsScalarOrEnum<T1> and IsScalarOrEnum<T2>>
+			 >
+	ND_ forceinline constexpr auto  SafeDiv (const T1& lhs, const T2& rhs)
+	{
+		return SafeDiv( lhs, rhs, T1(0) );
+	}
+	
+/*
+=================================================
+	BaryLerp
+----
+	barycentric interpolation
+=================================================
+*/
+	template <typename T, typename A, typename B, typename C>
+	ND_ forceinline constexpr auto  BaryLerp (const A& a, const B& b, const C& c, const Vec<T,3> &barycentrics)
+	{
+		STATIC_ASSERT( IsFloatPoint<T> );
+		return a * barycentrics.x + b * barycentrics.y + c * barycentrics.z;
+	}
+	
+/*
+=================================================
+	BiLerp
+----
+	bilinear interpolation
+=================================================
+*/
+	template <typename T, typename Coord>
+	ND_ forceinline constexpr auto  BiLerp (const Coord& x1y1, const Coord& x2y1, const Coord& x1y2, const Coord& x2y2, const Vec<T,2> &factor)
+	{
+		STATIC_ASSERT( IsFloatPoint<T> );
+		return Lerp( Lerp( x1y1, x2y1, factor.x ),
+					 Lerp( x1y2, x2y2, factor.x ), factor.y );
+	}
+	
+/*
+=================================================
+	Remap
+=================================================
+*/
+	template <typename T>
+	ND_ forceinline constexpr auto  Remap (const Vec<T,2> &src, const Vec<T,2> &dst, const T& x)
+	{
+		STATIC_ASSERT( IsFloatPoint<T> );
+		return (x - src[0]) / (src[1] - src[0]) * (dst[1] - dst[0]) + dst[0];
+	}
+	
+/*
+=================================================
+	RemapClamped
+=================================================
+*/
+	template <typename T>
+	ND_ forceinline constexpr auto  RemapClamped (const Vec<T,2> &src, const Vec<T,2> &dst, const T& x)
+	{
+		return Clamp( Remap( src, dst, x ), dst[0], dst[1] );
+	}
 
 }	// AE::Math
 

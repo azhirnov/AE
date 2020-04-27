@@ -13,18 +13,23 @@ namespace AE::STL
 	//
 
 	template <typename T, size_t ArraySize>
-	struct alignas(Max(alignof(T), sizeof(void*))) FixedArray
+	struct FixedArray
 	{
+		STATIC_ASSERT( ArraySize < 256 );
+
 	// types
 	public:
 		using iterator			= T *;
 		using const_iterator	= const T *;
 		using Self				= FixedArray< T, ArraySize >;
 
+	private:
+		using Count_t			= Conditional< alignof(T) < 4, uint8_t, uint32_t >;
+
 
 	// variables
 	private:
-		size_t			_count	= 0;
+		Count_t			_count	= 0;
 		union {
 			T			_array[ ArraySize ];
 			char		_data[ ArraySize * sizeof(T) ];		// don't use this field!
@@ -61,7 +66,7 @@ namespace AE::STL
 		{
 			ASSERT( not _IsMemoryAliased( other.begin(), other.end() ) );
 
-			for (size_t i = 0; i < _count; ++i) {
+			for (size_t i = 0, cnt = _count; i < cnt; ++i) {
 				PlacementNew<T>( data() + i, std::move(other._array[i]) );
 			}
 			other.clear();
@@ -73,7 +78,7 @@ namespace AE::STL
 		}
 
 
-		ND_ constexpr operator ArrayView<T> ()					const	{ return ArrayView<T>{ data(), _count }; }
+		ND_ constexpr operator ArrayView<T> ()					const	{ return ArrayView<T>{ data(), size() }; }
 
 		ND_ constexpr size_t			size ()					const	{ return _count; }
 		ND_ constexpr bool				empty ()				const	{ return _count == 0; }
@@ -123,7 +128,7 @@ namespace AE::STL
 			clear();
 			_count = rhs._count;
 
-			for (size_t i = 0; i < _count; ++i) {
+			for (size_t i = 0, cnt = _count; i < cnt; ++i) {
 				PlacementNew<T>( data() + i, std::move(rhs._array[i]) );
 			}
 			rhs.clear();
@@ -245,7 +250,7 @@ namespace AE::STL
 				}
 			}
 
-			_count = newSize;
+			_count = Count_t(newSize);
 		}
 
 

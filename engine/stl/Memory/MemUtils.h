@@ -37,8 +37,37 @@ namespace AE::STL
 	template <typename T, typename ...Types>
 	forceinline T *  PlacementNew (OUT void *ptr, Types&&... args)
 	{
-		ASSERT( CheckPointerAlignment<T>( ptr ) );
-		return ( new(ptr) T{ std::forward<Types &&>(args)... } );
+		ASSERT( CheckPointerAlignment<T>( ptr ));
+		return ( new(ptr) T{ std::forward<Types>(args)... } );
+	}
+	
+/*
+=================================================
+	PlacementDelete
+=================================================
+*/
+	template <typename T>
+	forceinline void  PlacementDelete (INOUT T &val)
+	{
+		val.~T();
+
+		DEBUG_ONLY( std::memset( &val, 0xFE, sizeof(val) ));
+	}
+	
+/*
+=================================================
+	Reconstruct
+=================================================
+*/
+	template <typename T, typename ...Args>
+	forceinline void  Reconstruct (INOUT T &value, Args&& ...args)
+	{
+		ASSERT( CheckPointerAlignment<T>( &value ));
+
+		value.~T();
+		DEBUG_ONLY( std::memset( &value, 0xFE, sizeof(value) ));
+
+		new(&value) T{ std::forward<Args>(args)... };
 	}
 
 /*

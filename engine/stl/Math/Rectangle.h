@@ -47,8 +47,8 @@ namespace AE::Math
 		constexpr explicit Rectangle (const Rectangle<B> &other) :
 			left{T(other.left)}, top{T(other.top)}, right{T(other.right)}, bottom{T(other.bottom)} {}
 
-		Self& LeftTop (const Vec2_t& v);
-		Self& RightBottom (const Vec2_t& v);
+		Self&  LeftTop (const Vec2_t& v);
+		Self&  RightBottom (const Vec2_t& v);
 
 		ND_ constexpr const T			Width ()		const	{ return right - left; }
 		ND_ constexpr const T			Height ()		const	{ return bottom - top; }

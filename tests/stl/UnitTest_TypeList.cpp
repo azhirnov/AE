@@ -35,6 +35,11 @@ extern void UnitTest_TypeList ()
 	}
 	{
 		using TL = TypeList< int, float, bool, double >;
+		STATIC_ASSERT( IsTypeList< TL > );
+		STATIC_ASSERT( not IsTypeList< int > );
+	}
+	{
+		using TL = TypeList< int, float, bool, double >;
 		STATIC_ASSERT( IsSameTypes< TL::Get<0>, int > );
 		STATIC_ASSERT( IsSameTypes< TL::Get<1>, float > );
 		STATIC_ASSERT( IsSameTypes< TL::Get<2>, bool > );

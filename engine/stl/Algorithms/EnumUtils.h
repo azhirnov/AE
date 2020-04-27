@@ -53,7 +53,6 @@ namespace AE::STL
 	{
 		STATIC_ASSERT( IsScalarOrEnum< T1 > );
 		STATIC_ASSERT( IsScalarOrEnum< T2 > );
-		ASSERT( rhs != T2(0) );
 
 		return ( EnumToUInt(lhs) & EnumToUInt(rhs) ) == EnumToUInt(rhs);
 	}

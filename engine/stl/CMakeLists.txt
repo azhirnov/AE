@@ -8,6 +8,7 @@ target_include_directories( "STL" PUBLIC ".." )
 target_link_libraries( "STL" PUBLIC "ProjectTemplate" )
 target_link_libraries( "STL" PUBLIC "GLM-lib" )
 target_link_libraries( "STL" PUBLIC "Brotli-lib" )
+target_link_libraries( "STL" PUBLIC "Utf8Proc-lib" )
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 	target_link_libraries( "STL" PUBLIC "dl;pthread" )

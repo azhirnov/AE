@@ -168,6 +168,7 @@
 #include "gtx/matrix_decompose.hpp"
 #include "gtx/matrix_major_storage.hpp"
 #include "gtx/norm.hpp"
+#include "gtx/easing.hpp"
 
 #ifdef COMPILER_MSVC
 #	pragma warning (pop)

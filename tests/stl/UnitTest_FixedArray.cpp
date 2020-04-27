@@ -78,6 +78,22 @@ namespace
 		}
 		TEST( T::CheckStatistic() );
 	}
+
+
+	static void  FixedArray_Test4 ()
+	{
+		constexpr size_t	a1 = sizeof(FixedArray<char, 8>);
+		constexpr size_t	a2 = alignof(FixedArray<char, 8>);
+
+		STATIC_ASSERT( a1 == 9 );
+		STATIC_ASSERT( a2 == 1 );
+		
+		constexpr size_t	b1 = sizeof(FixedArray<double, 8>);
+		constexpr size_t	b2 = alignof(FixedArray<double, 8>);
+
+		STATIC_ASSERT( b1 == 8*9 );
+		STATIC_ASSERT( b2 == 8 );
+	}
 }
 
 
@@ -86,5 +102,6 @@ extern void UnitTest_FixedArray ()
 	FixedArray_Test1();
 	FixedArray_Test2();
 	FixedArray_Test3();
+	FixedArray_Test4();
 	AE_LOGI( "UnitTest_FixedArray - passed" );
 }

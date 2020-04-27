@@ -89,7 +89,7 @@ namespace AE::STL
 
 		ND_ constexpr StringView	GetName ()			const		{ return _name; }
 		ND_ constexpr HashVal		GetHash ()			const		{ return _hash; }
-		ND_ constexpr bool			IsDefined ()		const		{ return not _name.empty(); }
+		ND_ constexpr bool			IsDefined ()		const		{ return _hash != _emptyHash; }
 		ND_ constexpr static bool	IsOptimized ()					{ return false; }
 		ND_ constexpr static uint	GetSeed ()						{ return Seed; }
 	};

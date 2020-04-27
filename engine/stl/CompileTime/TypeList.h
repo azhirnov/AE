@@ -175,5 +175,37 @@ namespace _ae_stl_hidden_
 	struct TypeList< Tuple<Types...> > final : TypeList< Types... >
 	{};
 
+	
+namespace _ae_stl_hidden_
+{
+	template <typename T>
+	struct _IsTypeList {
+		static constexpr bool	value = false;
+	};
+
+	template <typename... Types>
+	struct _IsTypeList< TypeList<Types...>> {
+		static constexpr bool	value = true;
+	};
+
+}	// _ae_stl_hidden_
+
+	template <typename T>
+	static constexpr bool	IsTypeList = _ae_stl_hidden_::_IsTypeList< T >::value;
 
 }	// AE::STL
+
+namespace AE::STL::TypeListUtils
+{
+	
+	template <typename T>
+	struct GetTypeSize {
+		static constexpr size_t	value = sizeof(T);
+	};
+		
+	template <typename T>
+	struct GetTypeAlign {
+		static constexpr size_t	value = alignof(T);
+	};
+
+}	// AE::STL::TypeListUtils

@@ -14,6 +14,8 @@ namespace AE::STL
 	template <typename CharT, size_t StringSize>
 	struct TFixedString
 	{
+		STATIC_ASSERT( StringSize <= 512 );
+
 	// type
 	public:
 		using value_type		= CharT;
@@ -21,11 +23,14 @@ namespace AE::STL
 		using const_iterator	= CharT const *;
 		using View_t			= BasicStringView< CharT >;
 		using Self				= TFixedString< CharT, StringSize >;
+		
+	private:
+		using Length_t			= Conditional< alignof(CharT) < 4, uint8_t, uint32_t >;
 
 
 	// variables
 	private:
-		size_t		_length	= 0;
+		Length_t	_length	= 0;
 		CharT		_array [StringSize] = {};
 
 
@@ -58,7 +63,7 @@ namespace AE::STL
 		}
 
 
-		ND_ constexpr operator View_t ()					const	{ return View_t{ _array, length() }; }
+		ND_ constexpr operator View_t ()					const	{ return View_t{ data(), length() }; }
 
 		ND_ constexpr size_t		size ()					const	{ return _length; }
 		ND_ constexpr size_t		length ()				const	{ return size(); }
@@ -99,7 +104,7 @@ namespace AE::STL
 				std::memset( &_array[_length], 0, newSize - _length );
 			}
 
-			_length = newSize;
+			_length = Length_t(newSize);
 		}
 	};
 
