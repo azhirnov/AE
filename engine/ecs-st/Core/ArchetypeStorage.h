@@ -69,7 +69,7 @@ namespace AE::ECS
 		ND_ bool  IsValid (EntityID id, Index_t index) const;
 			void  Clear ();
 			void  Reserve (size_t size);
-			void  Reorder (Index_t offset, ArrayView<Index_t> newOrder);
+			//void  Reorder (Index_t offset, ArrayView<Index_t> newOrder);
 
 			void  Lock ();
 			void  Unlock ();

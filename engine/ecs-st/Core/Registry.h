@@ -532,7 +532,7 @@ DEBUG_ONLY(
 
 		if ( new_size > storage->Capacity() )
 		{
-			storage->Reserve( Min( (new_size*3 + new_size-1) / 2, storage->Capacity()*2 ));
+			storage->Reserve( Max( (new_size*3 + new_size-1) / 2, storage->Capacity()*2 ));
 		}
 	}
 
@@ -755,22 +755,34 @@ DEBUG_ONLY(
 			static constexpr bool	value = false;
 		};
 		
+		template <bool isTL, typename LT, typename ...RTs>
+		struct CompareMultiComponents_Helper
+		{
+			static constexpr bool	value = TypeList<RTs...>::template HasType<LT>;
+		};
+
+		template <typename LTs, typename ...RTs>
+		struct CompareMultiComponents_Helper< true, LTs, RTs... >
+		{
+			static constexpr bool	value = TypeList<RTs...>::template ForEach_Or< LTs::template HasType >;
+		};
+
 		template <typename LTs, typename ...RTs>
 		struct CompareMultiComponents< LTs, Subtractive<RTs...> >
 		{
-			static constexpr bool	value = TypeList<RTs...>::template ForEach_Or< LTs::template HasType >;
+			static constexpr bool	value = CompareMultiComponents_Helper< IsTypeList<LTs>, LTs, RTs... >::value;
 		};
 		
 		template <typename LTs, typename ...RTs>
 		struct CompareMultiComponents< LTs, Require<RTs...> >
 		{
-			static constexpr bool	value = TypeList<RTs...>::template ForEach_Or< LTs::template HasType >;
+			static constexpr bool	value = CompareMultiComponents_Helper< IsTypeList<LTs>, LTs, RTs... >::value;
 		};
 		
 		template <typename LTs, typename ...RTs>
 		struct CompareMultiComponents< LTs, RequireAny<RTs...> >
 		{
-			static constexpr bool	value = TypeList<RTs...>::template ForEach_Or< LTs::template HasType >;
+			static constexpr bool	value = CompareMultiComponents_Helper< IsTypeList<LTs>, LTs, RTs... >::value;
 		};
 
 
@@ -783,6 +795,7 @@ DEBUG_ONLY(
 			{
 				if constexpr( I == ExceptIdx )
 				{
+					// skip 'I'
 					return Cmp< I+1 >();
 				}
 				else
