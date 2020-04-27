@@ -165,13 +165,14 @@ namespace AE::Graphics
 	{
 		auto&	dev = _resMngr.GetDevice();
 
-		CHECK( _fences.size() );
-		VK_CHECK( dev.vkWaitForFences( dev.GetVkDevice(), uint(_fences.size()), _fences.data(), true, UMax ));
+		if ( _fences.size() )
+		{
+			VK_CHECK( dev.vkWaitForFences( dev.GetVkDevice(), uint(_fences.size()), _fences.data(), true, UMax ));
+			_resMngr.ReleaseFences( _fences );
+			_fences.clear();
+		}
 
-		_resMngr.ReleaseFences( _fences );
 		_resMngr.ReleaseSemaphores( _semaphores );
-
-		_fences.clear();
 		_semaphores.clear();
 
 		return true;

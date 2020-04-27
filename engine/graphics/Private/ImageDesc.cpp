@@ -134,21 +134,57 @@ namespace AE::Graphics
 	VirtualImageDesc::ToPhysical
 =================================================
 */
-	ImageDesc  VirtualImageDesc::ToPhysical (uint2 viewportSize, EImageUsage usage) const
+	ImageDesc  VirtualImageDesc::ToPhysical (uint2 viewportSize, EVirtualResourceUsage usage) const
 	{
 		ImageDesc	result;
 		result.imageType	= this->imageType;
 		result.flags		= this->flags;
 		result.format		= this->format;
-		result.usage		= usage;
+		result.usage		= Zero;
 		result.arrayLayers	= this->arrayLayers;
 		result.maxLevel		= this->maxLevel;
 		result.samples		= this->samples;
 		result.queues		= Default;
 		result.memType		= EMemoryType::DeviceLocal;
 
+		for (uint t = 1; t <= uint(usage); t <<= 1)
+		{
+			if ( not EnumEq( usage, EVirtualResourceUsage(t) ))
+				continue;
+
+			BEGIN_ENUM_CHECKS();
+			switch( EVirtualResourceUsage(t) )
+			{
+				case EVirtualResourceUsage::TransferSrc :				result.usage |= EImageUsage::TransferSrc;				break;
+				case EVirtualResourceUsage::TransferDst :				result.usage |= EImageUsage::TransferDst;				break;
+				case EVirtualResourceUsage::Storage :					result.usage |= EImageUsage::Storage;					break;
+				case EVirtualResourceUsage::Sampled :					result.usage |= EImageUsage::Sampled;					break;
+				case EVirtualResourceUsage::ColorAttachment :			result.usage |= EImageUsage::ColorAttachment;			break;
+				case EVirtualResourceUsage::DepthStencilAttachment :	result.usage |= EImageUsage::DepthStencilAttachment;	break;
+				case EVirtualResourceUsage::ShadingRate :				result.usage |= EImageUsage::ShadingRate;				break;
+				case EVirtualResourceUsage::FragmentDensityMap :		result.usage |= EImageUsage::FragmentDensityMap;		break;
+				case EVirtualResourceUsage::Present :					break;	// TODO ???
+				case EVirtualResourceUsage::Uniform :
+				case EVirtualResourceUsage::UniformTexel :
+				case EVirtualResourceUsage::StorageTexel :
+				case EVirtualResourceUsage::IndexBuffer :
+				case EVirtualResourceUsage::VertexBuffer :
+				case EVirtualResourceUsage::IndirectBuffer :
+				case EVirtualResourceUsage::RayTracing :
+				case EVirtualResourceUsage::ShaderDeviceAddress :
+				case EVirtualResourceUsage::Unknown :
+				default :
+					ASSERT(!"unsupported virtual resource usage!");
+					break;
+			}
+			END_ENUM_CHECKS();
+		}
+
 		if ( All( this->dimension == ~0u ))
+		{
 			result.dimension = uint3{ dimScale.Mul_RTN( viewportSize ), 1 };
+			ASSERT( All( result.dimension > uint3(0) ));
+		}
 		else
 			result.dimension = dimension;
 
@@ -182,11 +218,43 @@ namespace AE::Graphics
 =================================================
 */
 	ImageViewDesc::ImageViewDesc (const ImageDesc &desc) :
-		viewType{ desc.imageType },	format{ desc.format },
+		format{ desc.format },
 		baseLevel{},				levelCount{ desc.maxLevel.Get() },
 		baseLayer{},				layerCount{ desc.arrayLayers.Get() },
 		swizzle{ "RGBA"_swizzle },	aspectMask{ EPixelFormat_ToImageAspect( format )}
-	{}
+	{
+		BEGIN_ENUM_CHECKS();
+		switch ( desc.imageType )
+		{
+			case EImage::_1D :
+				if ( layerCount > 1 )
+					viewType = EImageView::_1DArray;
+				else
+					viewType = EImageView::_1D;
+				break;
+
+			case EImage::_2D :
+				if ( layerCount > 6 and EnumEq( desc.flags, EImageFlags::CubeCompatible ))
+					viewType = EImageView::CubeArray;
+				else
+				if ( layerCount == 6 and EnumEq( desc.flags, EImageFlags::CubeCompatible ))
+					viewType = EImageView::Cube;
+				else
+				if ( layerCount > 1 )
+					viewType = EImageView::_2DArray;
+				else
+					viewType = EImageView::_2D;
+				break;
+
+			case EImage::_3D :
+				viewType = EImageView::_3D;
+				break;
+
+			case EImage::Unknown :
+				break;
+		}
+		END_ENUM_CHECKS();
+	}
 	
 /*
 =================================================
@@ -219,10 +287,10 @@ namespace AE::Graphics
 					break;
 
 				case EImage::_2D :
-					if ( layerCount > 6 and EnumEq( desc.flags, EImageFlags::CubeCompatibple ))
+					if ( layerCount > 6 and EnumEq( desc.flags, EImageFlags::CubeCompatible ))
 						viewType = EImageView::CubeArray;
 					else
-					if ( layerCount == 6 and EnumEq( desc.flags, EImageFlags::CubeCompatibple ))
+					if ( layerCount == 6 and EnumEq( desc.flags, EImageFlags::CubeCompatible ))
 						viewType = EImageView::Cube;
 					else
 					if ( layerCount > 1 )

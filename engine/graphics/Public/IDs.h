@@ -8,31 +8,41 @@
 
 namespace AE::Graphics
 {
-	using RenderPassID			= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using CmdBatchID			= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using BakedCommandBufferID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+namespace _ae_graphics_hidden_
+{
+	static constexpr uint	GraphicsIDs_Start	= 0x10000000;
+	static constexpr uint	VulkanIDs_Start		= 0x20000000;
 
-	using GraphicsPipelineID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using MeshPipelineID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using ComputePipelineID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using RayTracingPipelineID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using DescriptorSetID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using PipelinePackID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using DescriptorSetLayoutID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	static constexpr uint	NamedIDs_Start		= 0x10000000;
+
+}	// _ae_graphics_hidden_
 
 
-	using UniformName			= NamedID< 32, __COUNTER__, AE_OPTIMIZE_IDS >;
-	using PushConstantName		= NamedID< 32, __COUNTER__, AE_OPTIMIZE_IDS >;
-	using SpecializationName	= NamedID< 32, __COUNTER__, AE_OPTIMIZE_IDS >;
-	using DescriptorSetName		= NamedID< 32, __COUNTER__, AE_OPTIMIZE_IDS >;
-	using PipelineName			= NamedID< 64, __COUNTER__, AE_OPTIMIZE_IDS >;
+	using RenderPassID			= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::GraphicsIDs_Start + 1 >;
+	using CmdBatchID			= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::GraphicsIDs_Start + 2 >;
+	using BakedCommandBufferID	= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::GraphicsIDs_Start + 3 >;
+
+	using GraphicsPipelineID	= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::GraphicsIDs_Start + 4 >;
+	using MeshPipelineID		= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::GraphicsIDs_Start + 5 >;
+	using ComputePipelineID		= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::GraphicsIDs_Start + 6 >;
+	using RayTracingPipelineID	= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::GraphicsIDs_Start + 7 >;
+	using DescriptorSetID		= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::GraphicsIDs_Start + 8 >;
+	using PipelinePackID		= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::GraphicsIDs_Start + 9 >;
+	using DescriptorSetLayoutID	= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::GraphicsIDs_Start + 10 >;
+
+
+	using UniformName			= NamedID< 32, _ae_graphics_hidden_::NamedIDs_Start + 1,  AE_OPTIMIZE_IDS >;
+	using PushConstantName		= NamedID< 32, _ae_graphics_hidden_::NamedIDs_Start + 2,  AE_OPTIMIZE_IDS >;
+	using SpecializationName	= NamedID< 32, _ae_graphics_hidden_::NamedIDs_Start + 3,  AE_OPTIMIZE_IDS >;
+	using DescriptorSetName		= NamedID< 32, _ae_graphics_hidden_::NamedIDs_Start + 4,  AE_OPTIMIZE_IDS >;
+	using PipelineName			= NamedID< 64, _ae_graphics_hidden_::NamedIDs_Start + 5,  AE_OPTIMIZE_IDS >;
 	
-	using VertexName			= NamedID< 32, __COUNTER__, AE_OPTIMIZE_IDS >;
-	using VertexBufferName		= NamedID< 32, __COUNTER__, AE_OPTIMIZE_IDS >;
+	using VertexName			= NamedID< 32, _ae_graphics_hidden_::NamedIDs_Start + 6,  AE_OPTIMIZE_IDS >;
+	using VertexBufferName		= NamedID< 32, _ae_graphics_hidden_::NamedIDs_Start + 7,  AE_OPTIMIZE_IDS >;
 
-	using SamplerName			= NamedID< 64, __COUNTER__, AE_OPTIMIZE_IDS >;
-	using RenderTargetName		= NamedID< 32, __COUNTER__, AE_OPTIMIZE_IDS >;
-	using RenderPassName		= NamedID< 32, __COUNTER__, AE_OPTIMIZE_IDS >;
+	using SamplerName			= NamedID< 64, _ae_graphics_hidden_::NamedIDs_Start + 8,  AE_OPTIMIZE_IDS >;
+	using RenderTargetName		= NamedID< 32, _ae_graphics_hidden_::NamedIDs_Start + 9,  AE_OPTIMIZE_IDS >;
+	using RenderPassName		= NamedID< 32, _ae_graphics_hidden_::NamedIDs_Start + 10, AE_OPTIMIZE_IDS >;
 
 
 	static constexpr RenderTargetName	RenderTarget_Depth {"Depth"};
@@ -90,7 +100,7 @@ namespace AE::Graphics
 
 	// methods
 	public:
-		constexpr GfxResourceID () {}
+		constexpr GfxResourceID () : _value{UMax} {}
 
 		constexpr GfxResourceID (const Self &other) :
 			_value{other._value}
@@ -163,6 +173,7 @@ namespace AE::Graphics
 		ND_ bool			IsValid ()						const	{ return bool(_id); }
 
 		ND_ ID_t const&		operator * ()					const	{ return _id; }
+		ND_ ID_t const*		operator -> ()					const	{ return &_id; }
 
 		ND_ bool			operator == (const Self &rhs)	const	{ return _id == rhs._id; }
 		ND_ bool			operator != (const Self &rhs)	const	{ return _id != rhs._id; }

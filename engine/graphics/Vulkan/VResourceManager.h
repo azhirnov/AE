@@ -172,13 +172,13 @@ namespace AE::Graphics
 		UniqueID<DescriptorSetLayoutID>	_emptyDSLayout;
 
 		// cached resources validation
-		/*struct {
+		struct {
 			Atomic<uint>			createdFramebuffers			{0};
 			Atomic<uint>			lastCheckedFramebuffer		{0};
 
-			Atomic<uint>			createdPplnResources		{0};
-			Atomic<uint>			lastCheckedPipelineResource	{0};
-		}						_validation;*/
+			Atomic<uint>			createdDescriptorSets		{0};
+			Atomic<uint>			lastCheckedDescriptorSet	{0};
+		}						_validation;
 
 
 	// public
@@ -208,6 +208,7 @@ namespace AE::Graphics
 		bool						InitializeDescriptorSet (MeshPipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const override;
 		bool						InitializeDescriptorSet (ComputePipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const override;
 		bool						InitializeDescriptorSet (RayTracingPipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const override;
+		bool						InitializeDescriptorSet (const PipelineName &pplnName, const DescriptorSetName &dsName, OUT DescriptorSet &ds) const override;
 		DescriptorSetID				CreateDescriptorSet (const DescriptorSet &ds) override;
 
 		UniqueID<PipelinePackID>	LoadPipelinePack (const SharedPtr<RStream> &stream) override;
@@ -238,6 +239,7 @@ namespace AE::Graphics
 		ND_ VkSampler				GetVkSampler (const SamplerName &name) const;
 
 		ND_ VkFence					CreateFence ();
+		ND_ VkSemaphore				CreateSemaphore ();
 
 		bool	ReleaseResource (UniqueID<GfxResourceID> &id)			override;
 		bool	ReleaseResource (UniqueID<PipelinePackID> &id)			override	{ return _ReleaseResource( id.Release() ) == 0; }
@@ -262,10 +264,12 @@ namespace AE::Graphics
 		NativePipelineDesc_t		GetPipelineNativeDesc (ComputePipelineID id) const override;
 		NativePipelineDesc_t		GetPipelineNativeDesc (RayTracingPipelineID id) const override;
 
-		bool				GetMemoryInfo (GfxResourceID id, OUT NativeMemInfo_t &info) const override;
+		bool						GetMemoryInfo (GfxResourceID id, OUT NativeMemInfo_t &info) const override;
+		
+		template <typename IT, typename GT, uint UID>
+		ND_ auto					AcquireResource (HandleTmpl<IT, GT, UID> id);
 
-		template <typename ID>
-		ND_ UniqueID<ID>	AcquireResource (ID id);
+		ND_ UniqueID<GfxResourceID>	AcquireResource (GfxResourceID id);
 
 		template <typename I, typename G, uint U>
 		ND_ bool			IsAlive (HandleTmpl<I,G,U> id) const;
@@ -296,6 +300,8 @@ namespace AE::Graphics
 
 		bool  CreateStagingBuffer (EBufferUsage usage, OUT GfxResourceID &id, OUT StagingBufferIdx &index);
 		void  ReleaseStagingBuffer (StagingBufferIdx index);
+		
+		void  RunResourceValidation (uint maxIterations) override;
 
 
 	private:
@@ -449,9 +455,11 @@ namespace AE::Graphics
 	AcquireResource
 =================================================
 */
-	template <typename ID>
-	inline UniqueID<ID>  VResourceManager::AcquireResource (ID id)
+	template <typename IT, typename GT, uint UID>
+	inline auto  VResourceManager::AcquireResource (HandleTmpl<IT, GT, UID> id)
 	{
+		using Unique_t = UniqueID< HandleTmpl< IT, GT, UID >>;
+
 		ASSERT( id );
 		
 		auto&	pool = _GetResourcePool( id );
@@ -461,13 +469,13 @@ namespace AE::Graphics
 			auto&	data = pool[ id.Index() ];
 
 			if ( not data.IsCreated() or data.GetGeneration() != id.Generation() )
-				return Default;
+				return Unique_t{};
 
 			data.AddRef();
-			return UniqueID<ID>{ id };
+			return Unique_t{ id };
 		}
 
-		return Default;
+		return Unique_t{};
 	}
 
 /*
@@ -546,7 +554,8 @@ namespace AE::Graphics
 	template <typename ID>
 	inline int  VResourceManager::_ReleaseResource (ID id, uint refCount)
 	{
-		ASSERT( id );
+		if ( not id )
+			return -1;
 
 		auto&	pool = _GetResourcePool( id );
 		

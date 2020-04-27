@@ -9,6 +9,8 @@ namespace AE::Graphics
 	
 	enum class EBlendFactor : uint
 	{
+		// src - from shader
+		// dst - from render target
 		// result = srcColor * srcBlend [blendOp] dstColor * dstBlend;
 		Zero,						// 0
 		One,						// 1
@@ -37,6 +39,8 @@ namespace AE::Graphics
 
 	enum class EBlendOp : uint
 	{
+		// src - from shader
+		// dst - from render target
 		// result = srcColor * srcBlend [blendOp] dstColor * dstBlend;
 		Add,			// S+D
 		Sub,			// S-D

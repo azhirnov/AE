@@ -192,8 +192,7 @@ namespace AE::Graphics
 */
 	void VDescriptorSetLayout::_AddBuffer (const Buffer &buf, uint bindingIndex, uint arraySize, VkDescriptorType descrType, INOUT DescriptorBinding &binding)
 	{
-		const bool	is_dynamic	= EnumEq( buf.state, EResourceState::_BufferDynamicOffset );
-		ASSERT( is_dynamic == (buf.dynamicOffsetIndex != UMax) );
+		const bool	is_dynamic	= buf.dynamicOffsetIndex != UMax;
 
 		if ( is_dynamic ) {
 			descrType = 

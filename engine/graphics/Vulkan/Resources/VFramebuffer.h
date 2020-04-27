@@ -26,7 +26,7 @@ namespace AE::Graphics
 	private:
 		HashVal					_hash;
 		VkFramebuffer			_framebuffer	= VK_NULL_HANDLE;
-		UniqueID<RenderPassID>	_renderPassId;
+		RenderPassID			_renderPassId;
 
 		uint2					_dimension;
 		ImageLayer				_layers;
@@ -40,7 +40,7 @@ namespace AE::Graphics
 	// methods
 	public:
 		VFramebuffer () {}
-		VFramebuffer (ArrayView<Pair<VImageID, ImageViewDesc>> attachments, UniqueID<RenderPassID> rp, uint2 dim, uint layers);
+		VFramebuffer (ArrayView<Pair<VImageID, ImageViewDesc>> attachments, RenderPassID rp, uint2 dim, uint layers);
 		~VFramebuffer ();
 		
 		bool Create (VResourceManager &, StringView dbgName);

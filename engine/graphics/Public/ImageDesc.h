@@ -97,7 +97,7 @@ namespace AE::Graphics
 		VirtualImageDesc&  SetDimensionAndType (const uint2 &value)		{ return SetDimensionAndType( uint3{ value, 0 }); }
 		VirtualImageDesc&  SetDimensionAndType (const uint3 &value);
 
-		ND_ ImageDesc  ToPhysical (uint2 viewportSize, EImageUsage usage) const;
+		ND_ ImageDesc  ToPhysical (uint2 viewportSize, EVirtualResourceUsage usage) const;
 	};
 
 

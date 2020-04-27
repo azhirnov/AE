@@ -45,7 +45,6 @@ namespace AE::Graphics
 				continue;
 
 			CHECK_ERR( name.IsDefined() );
-			CHECK_ERR( not src.image.IsVirtual() );
 
 			// get image description
 			ImageDesc	img_dec;
@@ -60,7 +59,7 @@ namespace AE::Graphics
 			{
 				VVirtualImage const*	img = resMngr.GetResource( VVirtualImageID{ src.image.Index(), src.image.Generation() });
 				CHECK_ERR( img );
-				img_dec = img->Description().ToPhysical( uint2(_area.Size()), EImageUsage::All );
+				img_dec = img->Description().ToPhysical( uint2(_area.Size()), EVirtualResourceUsage::Unknown );
 			}
 			else
 				RETURN_ERR( "unsupported resource type" );

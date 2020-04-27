@@ -43,23 +43,23 @@ namespace AE::Graphics
 	enum class StagingBufferIdx : uint {};
 
 	
-	using VDependencyID					= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using VImageID						= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using VBufferID						= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using VVirtualImageID				= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using VVirtualBufferID				= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using VSamplerID					= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using VSamplerPackID				= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using VDependencyID					= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::VulkanIDs_Start + 1 >;
+	using VImageID						= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::VulkanIDs_Start + 2 >;
+	using VBufferID						= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::VulkanIDs_Start + 3 >;
+	using VVirtualImageID				= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::VulkanIDs_Start + 4 >;
+	using VVirtualBufferID				= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::VulkanIDs_Start + 5 >;
+	using VSamplerID					= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::VulkanIDs_Start + 6 >;
+	using VSamplerPackID				= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::VulkanIDs_Start + 7 >;
 
-	using VPipelineLayoutID				= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using VPipelineLayoutID				= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::VulkanIDs_Start + 8 >;
 
-	using VGraphicsPipelineTemplateID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using VMeshPipelineTemplateID		= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using VComputePipelineTemplateID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	//using VRayTracingPipelineTemplateID	= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using VGraphicsPipelineTemplateID	= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::VulkanIDs_Start + 9 >;
+	using VMeshPipelineTemplateID		= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::VulkanIDs_Start + 10 >;
+	using VComputePipelineTemplateID	= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::VulkanIDs_Start + 11 >;
+	//using VRayTracingPipelineTemplateID	= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::VulkanIDs_Start + 12 >;
 	
-	using VFramebufferID				= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
-	using VRenderPassOutputID			= HandleTmpl< uint16_t, uint16_t, __COUNTER__ >;
+	using VFramebufferID				= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::VulkanIDs_Start + 13 >;
+	using VRenderPassOutputID			= HandleTmpl< uint16_t, uint16_t, _ae_graphics_hidden_::VulkanIDs_Start + 14 >;
 
 
 	struct VConfig

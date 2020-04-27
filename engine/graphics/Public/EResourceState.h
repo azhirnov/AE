@@ -37,7 +37,7 @@ namespace AE::Graphics
 		_Access_BuildRayTracingAS,			// build/update acceleration structure for ray tracing
 		_Access_RTASBuildingBuffer,			// vertex, index, ..., scratch buffer that used when build/update acceleration structure
 		_AccessLast,
-		_AccessMask				= (1 << 8) - 1,
+		_AccessMask				= (1 << 7) - 1,
 
 		// shader stages
 		_VertexShader			= 1 << 8,
@@ -48,14 +48,19 @@ namespace AE::Graphics
 		_ComputeShader			= 1 << 13,
 		_MeshTaskShader			= 1 << 14,
 		_MeshShader				= 1 << 15,
-		_RayTracingShader		= 1 << 16,		// AnyHitShader, ClosestHitShader, MissShader, and other
+		_RayGenShader			= 1 << 16,
+		_RayAnyHitShader		= 1 << 17,
+		_RayClosestHitShader	= 1 << 18,
+		_RayMissShader			= 1 << 19,
+		_RayIntersectionShader	= 1 << 20,
+		_RayCallableShader		= 1 << 21,
+		_RayTracingShaders		= _RayGenShader | _RayAnyHitShader | _RayClosestHitShader | _RayMissShader | _RayIntersectionShader | _RayCallableShader,
 		_AllGraphics			= _VertexShader | _TessControlShader | _TessEvaluationShader |
 								  _GeometryShader | _FragmentShader | _MeshTaskShader | _MeshShader,
-		_ShaderMask				= _AllGraphics | _ComputeShader | _RayTracingShader,
+		_ShaderMask				= _AllGraphics | _ComputeShader | _RayTracingShaders,
 
 		// flags
-		// unused range: 17..24
-		_BufferDynamicOffset	= 1 << 25,
+		// unused range: 21..25
 
 		// for ColorAttachment, DepthStencilAttachment
 		InvalidateBefore		= 1 << 26,				// discard image content before executing command
@@ -111,13 +116,13 @@ namespace AE::Graphics
 		RTASBuildingBufferRead			= _Access_RTASBuildingBuffer | _Read,
 		RTASBuildingBufferReadWrite		= _Access_RTASBuildingBuffer | _Read | _Write,
 
-		RayTracingShaderRead			= ShaderRead | _RayTracingShader,
+		RayTracingShaderRead			= ShaderRead | _RayTracingShaders,
 
 		ShadingRateImageRead			= _Access_ShadingRateImage | _Read,
 	};
 
 	AE_BIT_OPERATORS( EResourceState );
 	
-	STATIC_ASSERT( EResourceState::_AccessLast < EResourceState::_AccessMask );
+	STATIC_ASSERT( EResourceState::_AccessLast <= EResourceState::_AccessMask );
 
 }	// AE::Graphics

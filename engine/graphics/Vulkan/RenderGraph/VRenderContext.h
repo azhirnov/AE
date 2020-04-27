@@ -9,10 +9,6 @@ namespace AE::Graphics
 
 	class VRenderGraph::RenderContext final : public VulkanDeviceFn, public IAsyncRenderContext
 	{
-	// types
-	private:
-
-
 	// variables
 	private:
 		VkCommandBuffer				_cmdbuf			= VK_NULL_HANDLE;
@@ -23,15 +19,19 @@ namespace AE::Graphics
 		VResourceMap				_resources;
 
 		// cached states
-		VkPipelineLayout			_curLayout		= VK_NULL_HANDLE;
-		VkPipeline					_curPipeline	= VK_NULL_HANDLE;
+		struct {
+			VkPipelineLayout			pplnLayout		= VK_NULL_HANDLE;
+			VkPipeline					pipeline		= VK_NULL_HANDLE;
 
-		VkBuffer					_indexBuffer	= VK_NULL_HANDLE;
-		BytesU						_indexOffset;
+			VkBuffer					indexBuffer		= VK_NULL_HANDLE;
+			BytesU						indexOffset;
+		}							_states;
 
 		UniqueID<BakedCommandBufferID>	_cachedCommands;
 		VBakedCommandBuffer const*		_renderCommands	= null;
 		VCommandPoolPtr					_cmdPool;
+
+		CmdBatchID					_batchId;
 
 		bool						_isAsync	: 1;
 		bool						_isCached	: 1;
@@ -40,7 +40,7 @@ namespace AE::Graphics
 
 	// methods
 	public:
-		RenderContext (VResourceManager &resMngr, const VLogicalRenderPass &logicalRP);
+		RenderContext (VResourceManager &resMngr, const VLogicalRenderPass &logicalRP, CmdBatchID batchId);
 
 		void  Begin (VkCommandBuffer primaryCmdBuf);
 		void  BeginAsync (const VCommandPoolPtr &pool);
@@ -95,7 +95,7 @@ namespace AE::Graphics
 
 	private:
 		template <typename ID>
-		ND_ auto*  _AcquireResource (ID id);
+		ND_ auto*  _AcquireResource (ID id, bool quit = false);
 
 		ND_ bool  _IsAsync ()					const	{ return _isAsync; }
 		ND_ bool  _IsCached ()					const	{ return _isCached; }
@@ -109,9 +109,9 @@ namespace AE::Graphics
 	constructor
 =================================================
 */
-	VRenderGraph::RenderContext::RenderContext (VResourceManager &resMngr, const VLogicalRenderPass &logicalRP) :
-		_resMngr{ resMngr },	_logicalRP{ logicalRP },
-		_isAsync{ false },		_isCached{ false },		_hasErrors{ false }
+	VRenderGraph::RenderContext::RenderContext (VResourceManager &resMngr, const VLogicalRenderPass &logicalRP, CmdBatchID batchId) :
+		_resMngr{ resMngr },	_logicalRP{ logicalRP },	_batchId{ batchId },
+		_isAsync{ false },		_isCached{ false },			_hasErrors{ false }
 	{
 		VulkanDeviceFn_Init( resMngr.GetDevice() );
 	}
@@ -155,7 +155,7 @@ namespace AE::Graphics
 		_renderCommands = null;
 		_cmdbuf			= VK_NULL_HANDLE;
 		
-		if ( _hasErrors and _cachedCommands )
+		if ( _hasErrors )
 		{
 			_resMngr.ReleaseResource( _cachedCommands );
 			RETURN_ERR( "command buffer recorded with errors" );
@@ -170,9 +170,9 @@ namespace AE::Graphics
 =================================================
 */
 	template <typename ID>
-	inline auto*  VRenderGraph::RenderContext::_AcquireResource (ID id)
+	inline auto*  VRenderGraph::RenderContext::_AcquireResource (ID id, bool quit)
 	{
-		return _resMngr.GetResource( id, _resources.Add( id ));
+		return _resMngr.GetResource( id, _resources.Add( id ), quit );
 	}
 
 /*
@@ -183,13 +183,12 @@ namespace AE::Graphics
 	IRenderContext::NativeContext_t  VRenderGraph::RenderContext::GetNativeContext ()
 	{
 		auto*	render_pass	= _AcquireResource( _logicalRP.GetRenderPass() );
-		auto*	framebuffer	= _AcquireResource( _logicalRP.GetFramebuffer() );
-		CHECK_ERR( render_pass and framebuffer, NativeContext_t{} );
+		auto*	framebuffer	= _AcquireResource( _logicalRP.GetFramebuffer(), true );
 
 		VulkanRenderContext	vctx;
 		vctx.cmdBuffer		= BitCast<CommandBufferVk_t>(_cmdbuf);
-		vctx.renderPass		= BitCast<RenderPassVk_t>(render_pass->Handle());
-		vctx.framebuffer	= BitCast<FramebufferVk_t>(framebuffer->Handle());
+		vctx.renderPass		= BitCast<RenderPassVk_t>(render_pass ? render_pass->Handle() : VK_NULL_HANDLE);
+		vctx.framebuffer	= BitCast<FramebufferVk_t>(framebuffer ? framebuffer->Handle() : VK_NULL_HANDLE);
 		vctx.subpassIndex	= _logicalRP.GetSubpassIndex();
 		return vctx;
 	}
@@ -204,6 +203,8 @@ namespace AE::Graphics
 		RenderContextInfo	result;
 		result.renderPass	= _logicalRP.GetRenderPass();
 		result.subpassIndex	= _logicalRP.GetSubpassIndex();
+		result.layerCount	= uint(_logicalRP.GetViewports().size());
+		result.batchId		= _batchId;
 		return result;
 	}
 	
@@ -214,11 +215,11 @@ namespace AE::Graphics
 */
 	void  VRenderGraph::RenderContext::ResetStates ()
 	{
-		_curLayout		= VK_NULL_HANDLE;
-		_curPipeline	= VK_NULL_HANDLE;
+		_states.pplnLayout	= VK_NULL_HANDLE;
+		_states.pipeline	= VK_NULL_HANDLE;
 
-		_indexBuffer	= VK_NULL_HANDLE;
-		_indexOffset	= 0_b;
+		_states.indexBuffer	= VK_NULL_HANDLE;
+		_states.indexOffset	= 0_b;
 	}
 	
 /*
@@ -233,12 +234,12 @@ namespace AE::Graphics
 		auto*	gppln = _AcquireResource( ppln );
 		CHECK_ERR( gppln, void());
 
-		if ( _curPipeline == gppln->Handle() )
+		if ( _states.pipeline == gppln->Handle() )
 			return;
 
-		_curPipeline	= gppln->Handle();
-		_curLayout		= gppln->Layout();
-		vkCmdBindPipeline( _cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, _curPipeline );
+		_states.pipeline	= gppln->Handle();
+		_states.pplnLayout	= gppln->Layout();
+		vkCmdBindPipeline( _cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, _states.pipeline );
 	}
 	
 /*
@@ -253,12 +254,12 @@ namespace AE::Graphics
 		auto*	mppln = _AcquireResource( ppln );
 		CHECK_ERR( mppln, void());
 
-		if ( _curPipeline == mppln->Handle() )
+		if ( _states.pipeline == mppln->Handle() )
 			return;
 
-		_curPipeline	= mppln->Handle();
-		_curLayout		= mppln->Layout();
-		vkCmdBindPipeline( _cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, _curPipeline );
+		_states.pipeline	= mppln->Handle();
+		_states.pplnLayout	= mppln->Layout();
+		vkCmdBindPipeline( _cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, _states.pipeline );
 	}
 		
 /*
@@ -269,10 +270,14 @@ namespace AE::Graphics
 	void  VRenderGraph::RenderContext::BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets)
 	{
 		ASSERT( not _IsCached() );
+		ASSERT( _states.pplnLayout );
 
-		Unused( index, ds, dynamicOffsets );
-		// TODO
-		//vkCmdBindDescriptorSets( _cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, _curLayout, index, 1, ds, uint(dynamicOffsets.size()), dynamicOffsets.data() );
+		auto*	desc_set = _AcquireResource( ds );
+		CHECK_ERR( desc_set, void());
+
+		const VkDescriptorSet	vk_ds[] = { desc_set->Handle() };
+
+		vkCmdBindDescriptorSets( _cmdbuf, VK_PIPELINE_BIND_POINT_GRAPHICS, _states.pplnLayout, index, uint(CountOf(vk_ds)), vk_ds, uint(dynamicOffsets.size()), dynamicOffsets.data() );
 	}
 	
 /*
@@ -284,7 +289,7 @@ namespace AE::Graphics
 	{
 		ASSERT( not _IsCached() );
 
-		vkCmdPushConstants( _cmdbuf, _curLayout, VEnumCast(stages), uint(offset), uint(size), values );
+		vkCmdPushConstants( _cmdbuf, _states.pplnLayout, VEnumCast(stages), uint(offset), uint(size), values );
 	}
 		
 /*
@@ -406,12 +411,12 @@ namespace AE::Graphics
 		auto*	buf = _AcquireResource( VBufferID{ buffer.Index(), buffer.Generation() });
 		CHECK_ERR( buf, void());
 
-		if ( (_indexBuffer == buf->Handle()) & (_indexOffset == offset) )
+		if ( (_states.indexBuffer == buf->Handle()) & (_states.indexOffset == offset) )
 			return;
 
-		_indexBuffer	= buf->Handle();
-		_indexOffset	= offset;
-		vkCmdBindIndexBuffer( _cmdbuf, _indexBuffer, VkDeviceSize(_indexOffset), VEnumCast(indexType) );
+		_states.indexBuffer	= buf->Handle();
+		_states.indexOffset	= offset;
+		vkCmdBindIndexBuffer( _cmdbuf, _states.indexBuffer, VkDeviceSize(_states.indexOffset), VEnumCast(indexType) );
 	}
 	
 /*
@@ -648,7 +653,7 @@ namespace AE::Graphics
 		_renderCommands	= null;
 		_cmdbuf			= VK_NULL_HANDLE;
 		
-		if ( _hasErrors and _cachedCommands )
+		if ( _hasErrors )
 		{
 			_resMngr.ReleaseResource( _cachedCommands );
 			RETURN_ERR( "command buffer recorded with errors" );

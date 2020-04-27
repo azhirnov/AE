@@ -27,7 +27,6 @@ namespace AE::Graphics
 			uint						descriptorIndex;
 		};
 
-		using Element_t			= Union< VkDescriptorBufferInfo, VkDescriptorImageInfo, VkAccelerationStructureNV >;
 		using DynamicDataPtr	= DescriptorSet::DynamicDataPtr;
 		using DescSetRef		= VDescriptorManager::DescSetRef;
 		using EDescriptorType	= DescriptorSet::EDescriptorType;

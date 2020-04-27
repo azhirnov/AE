@@ -4,10 +4,10 @@ namespace AE::Graphics
 {
 
 	//
-	// Indirect Graphics Context
+	// Direct Graphics Context
 	//
 
-	class VRenderGraph::IndirectGraphicsContext
+	class VRenderGraph::DirectGraphicsContext
 	{
 	};
 

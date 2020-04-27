@@ -138,12 +138,12 @@ namespace AE::Graphics
 				case EShaderStages::Compute :			result |= EResourceState::_ComputeShader;			break;
 				case EShaderStages::MeshTask :			result |= EResourceState::_MeshTaskShader;			break;
 				case EShaderStages::Mesh :				result |= EResourceState::_MeshShader;				break;
-				case EShaderStages::RayGen :
-				case EShaderStages::RayAnyHit :
-				case EShaderStages::RayClosestHit :
-				case EShaderStages::RayMiss :
-				case EShaderStages::RayIntersection :
-				case EShaderStages::RayCallable :		result |= EResourceState::_RayTracingShader;		break;
+				case EShaderStages::RayGen :			result |= EResourceState::_RayGenShader;			break;
+				case EShaderStages::RayAnyHit :			result |= EResourceState::_RayAnyHitShader;			break;
+				case EShaderStages::RayClosestHit :		result |= EResourceState::_RayClosestHitShader;		break;
+				case EShaderStages::RayMiss :			result |= EResourceState::_RayMissShader;			break;
+				case EShaderStages::RayIntersection :	result |= EResourceState::_RayIntersectionShader;	break;
+				case EShaderStages::RayCallable :		result |= EResourceState::_RayCallableShader;		break;
 				case EShaderStages::_Last :
 				case EShaderStages::All :
 				case EShaderStages::AllGraphics :

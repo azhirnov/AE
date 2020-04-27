@@ -138,6 +138,9 @@ namespace AE::Graphics
 	inline RenderPassDesc&  RenderPassDesc::AddViewport (const Rectangle<T> &rect, float minDepth, float maxDepth)
 	{
 		ASSERT( rect.IsValid() );
+		ASSERT( All( area.LeftTop() <= int2(rect.LeftTop()) ));
+		ASSERT( All( area.RightBottom() >= int2(rect.RightBottom()) ));
+
 		viewports.push_back({ RectF{rect}, minDepth, maxDepth });
 		return *this;
 	}
@@ -146,6 +149,10 @@ namespace AE::Graphics
 	template <typename T>
 	inline RenderPassDesc&  RenderPassDesc::AddViewport (const Vec<T,2> &size, float minDepth, float maxDepth)
 	{
+		ASSERT( All( int2(size) > 0 ));
+		ASSERT( All( area.LeftTop() <= 0 ));
+		ASSERT( All( area.RightBottom() >= int2(size) ));
+
 		viewports.push_back({ RectF{float2(), float2(size)}, minDepth, maxDepth });
 		return *this;
 	}

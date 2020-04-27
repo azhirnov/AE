@@ -1944,6 +1944,9 @@ namespace {
 			#elif defined VK_EXT_debug_report
 				VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 			#endif
+			#ifdef VK_KHR_device_group_creation
+				VK_KHR_DEVICE_GROUP_CREATION_EXTENSION_NAME,
+			#endif
 		};
 		return instance_extensions;
 	}

@@ -26,7 +26,9 @@ namespace AE::Graphics
 =================================================
 */
 	VSwapchain::VSwapchain (const VDevice &dev) :
-		_device{ dev }
+		_device{ dev },
+		_semaphoreId{ 0 },
+		_currImageIndex{ UMax }
 	{
 		VulkanDeviceFn_Init( _device );
 	}
@@ -63,14 +65,24 @@ namespace AE::Graphics
 	AcquireNextImage
 =================================================
 */
-	VkResult  VSwapchain::AcquireNextImage (VkSemaphore imageAvailable)
+	VkResult  VSwapchain::AcquireNextImage (OUT VkSemaphore &imageAvailable)
 	{
-		CHECK_ERR( _vkSwapchain and imageAvailable, VK_RESULT_MAX_ENUM );
+		CHECK_ERR( _vkSwapchain, VK_RESULT_MAX_ENUM );
 		CHECK_ERR( not IsImageAcquired(), VK_RESULT_MAX_ENUM );
 
 		_currImageIndex = UMax;
+		imageAvailable  = _semaphores[_semaphoreId];
 
-		return vkAcquireNextImageKHR( _device.GetVkDevice(), _vkSwapchain, UMax, imageAvailable, VK_NULL_HANDLE, OUT &_currImageIndex );
+		uint		index = UMax;
+		VkResult	res	  = vkAcquireNextImageKHR( _device.GetVkDevice(), _vkSwapchain, UMax, imageAvailable, VK_NULL_HANDLE, OUT &index );
+
+		if ( res == VK_SUCCESS )
+		{
+			ASSERT( index < _images.size() );
+			_currImageIndex = index;
+		}
+
+		return res;
 	}
 	
 /*
@@ -97,6 +109,7 @@ namespace AE::Graphics
 		present_info.pWaitSemaphores	= renderFinished.data();
 
 		_currImageIndex	= UMax;
+		_semaphoreId++;
 
 		VkResult	res = vkQueuePresentKHR( queue->handle, &present_info );
 
@@ -392,7 +405,7 @@ namespace AE::Graphics
 		if ( resMngr )
 		{
 			for (auto& id : _imageIDs) {
-				resMngr->ReleaseResource( id );
+				CHECK( resMngr->ReleaseResource( id ));
 			}
 		}
 
@@ -421,6 +434,8 @@ namespace AE::Graphics
 		if ( not old_swapchain )
 			_PrintInfo();
 
+		CHECK_ERR( _CreateSemaphores() );
+
 		return true;
 	}
 	
@@ -441,12 +456,14 @@ namespace AE::Graphics
 				
 				AE_LOGD( "Destroyed Vulkan swapchain" );
 			}
+
+			_DestroySemaphores();
 		}
 		
 		if ( resMngr )
 		{
 			for (auto& id : _imageIDs) {
-				resMngr->ReleaseResource( id );
+				CHECK( resMngr->ReleaseResource( id ));
 			}
 		}
 
@@ -509,11 +526,11 @@ namespace AE::Graphics
 			desc.currentLayout	= BitCast<ImageLayoutVk_t>( VK_IMAGE_LAYOUT_UNDEFINED );
 			desc.defaultLayout	= BitCast<ImageLayoutVk_t>( VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
 			desc.flags			= ImageFlagsVk_t(0);
-			desc.format			= BitCast<FormatVk_t>( AEEnumCast( _colorFormat ));
+			desc.format			= BitCast<FormatVk_t>( _colorFormat );
 			desc.imageType		= BitCast<ImageTypeVk_t>( VK_IMAGE_TYPE_2D );
 			desc.maxLevels		= 1;
 			desc.samples		= BitCast<SampleCountVk_t>( VK_SAMPLE_COUNT_1_BIT );
-			desc.usage			= BitCast<ImageUsageVk_t>( AEEnumCast( _colorImageUsage ));
+			desc.usage			= BitCast<ImageUsageVk_t>( _colorImageUsage );
 			desc.canBeDestroyed	= false;	// images created by swapchain, so don't destroy they
 
 			for (size_t i = 0; i < count; ++i)
@@ -764,6 +781,43 @@ namespace AE::Graphics
 			<< "\n  image usage:     " << ToString( _colorImageUsage )
 			<< "\n  min image count: " << ToString( _minImageCount )
 		);
+	}
+	
+/*
+=================================================
+	_CreateSemaphores
+=================================================
+*/
+	bool  VSwapchainInitializer::_CreateSemaphores ()
+	{
+		VkSemaphoreCreateInfo	info = {};
+		info.sType	= VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		for (auto& id : _semaphores)
+		{
+			if ( id != VK_NULL_HANDLE )
+				continue;
+
+			VK_CHECK( vkCreateSemaphore( _device.GetVkDevice(), &info, null, &id ));
+		}
+		return true;
+	}
+	
+/*
+=================================================
+	_DestroySemaphores
+=================================================
+*/
+	void  VSwapchainInitializer::_DestroySemaphores ()
+	{
+		for (auto& id : _semaphores)
+		{
+			if ( id )
+			{
+				vkDestroySemaphore( _device.GetVkDevice(), id, null );
+				id = VK_NULL_HANDLE;
+			}
+		}
 	}
 
 

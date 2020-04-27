@@ -190,7 +190,7 @@ namespace AE::Graphics
 			StringView					message;
 			bool						isError		= false;
 		};
-		using DebugReport_t = std::function< void (const DebugReport &) >;
+		using DebugReport_t = Function< void (const DebugReport &) >;
 
 
 	// variable

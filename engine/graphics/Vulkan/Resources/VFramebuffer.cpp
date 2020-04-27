@@ -59,8 +59,8 @@ namespace AE::Graphics
 	constructor
 =================================================
 */
-	VFramebuffer::VFramebuffer (ArrayView<Pair<VImageID, ImageViewDesc>> attachments, UniqueID<RenderPassID> rp, uint2 dim, uint layers) :
-		_renderPassId{ std::move(rp) },
+	VFramebuffer::VFramebuffer (ArrayView<Pair<VImageID, ImageViewDesc>> attachments, RenderPassID rp, uint2 dim, uint layers) :
+		_renderPassId{ rp },
 		_dimension{ dim },
 		_layers{ ImageLayer{layers} },
 		_attachments{ attachments }
@@ -71,7 +71,7 @@ namespace AE::Graphics
 
 		// calc hash
 		_hash =  HashOf( _attachments );
-		_hash << HashOf( *_renderPassId );
+		_hash << HashOf( _renderPassId );
 		_hash << HashOf( _dimension );
 		_hash << HashOf( _layers );
 	}
@@ -115,6 +115,8 @@ namespace AE::Graphics
 		
 		VK_CHECK( dev.vkCreateFramebuffer( dev.GetVkDevice(), &fb_info, null, OUT &_framebuffer ));
 		
+		Unused( resMngr.AcquireResource( _renderPassId ).Release() );
+
 		_debugName = dbgName;
 		return true;
 	}
@@ -128,13 +130,13 @@ namespace AE::Graphics
 	{
 		EXLOCK( _drCheck );
 
-		if ( _framebuffer ) {
+		if ( _framebuffer )
+		{
 			auto&	dev = resMngr.GetDevice();
 			dev.vkDestroyFramebuffer( dev.GetVkDevice(), _framebuffer, null );
-		}
-
-		if ( _renderPassId ) {
-			resMngr.ReleaseResource( INOUT _renderPassId );
+			
+			UniqueID<RenderPassID>	rp{ _renderPassId };
+			resMngr.ReleaseResource( INOUT rp );
 		}
 
 		_framebuffer	= VK_NULL_HANDLE;

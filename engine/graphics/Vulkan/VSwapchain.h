@@ -6,6 +6,7 @@
 
 # include "graphics/Vulkan/VDevice.h"
 # include "graphics/Public/ResourceManager.h"
+# include "graphics/Public/RenderGraph.h"
 
 namespace AE::App
 {
@@ -19,7 +20,7 @@ namespace AE::Graphics
 	// Vulkan Swapchain
 	//
 
-	class VSwapchain : public VulkanDeviceFn, public Noncopyable
+	class VSwapchain : public ISwapchain, public VulkanDeviceFn, public Noncopyable
 	{
 	// types
 	public:
@@ -42,9 +43,12 @@ namespace AE::Graphics
 		VkSwapchainKHR					_vkSwapchain		= VK_NULL_HANDLE;
 		VkSurfaceKHR					_vkSurface			= VK_NULL_HANDLE;
 
-		uint							_currImageIndex		= UMax;
+		uint							_semaphoreId		: 1;
+		uint							_currImageIndex		: 8;
 		Images_t						_images;
 		ImageIDs_t						_imageIDs;
+
+		StaticArray< VkSemaphore, 2 >	_semaphores;
 
 		VkFormat						_colorFormat		= VK_FORMAT_UNDEFINED;
 		VkColorSpaceKHR					_colorSpace			= VK_COLOR_SPACE_MAX_ENUM_KHR;
@@ -60,11 +64,11 @@ namespace AE::Graphics
 		explicit VSwapchain (const VDevice &dev);
 
 	public:
-		~VSwapchain ();
+		~VSwapchain () override;
 
-		ND_ bool IsSupported (VQueuePtr queue) const;
+		ND_ bool  IsSupported (VQueuePtr queue) const;
 
-		ND_ VkResult  AcquireNextImage (VkSemaphore imageAvailable);
+		ND_ VkResult  AcquireNextImage (OUT VkSemaphore &imageAvailable);
 		ND_ VkResult  Present (VQueuePtr queue, ArrayView<VkSemaphore> renderFinished);
 		
 		ND_ VkSurfaceKHR				GetVkSurface ()					const	{ return _vkSurface; }
@@ -98,41 +102,44 @@ namespace AE::Graphics
 	public:
 		explicit VSwapchainInitializer (const VDevice &dev);
 
-		bool CreateSurface (const App::NativeWindow &, StringView dbgName = {});
-		void DestroySurface ();
+		bool  CreateSurface (const App::NativeWindow &, StringView dbgName = {});
+		void  DestroySurface ();
 
-		ND_ bool IsSupported (VkSampleCountFlagBits samples, VkPresentModeKHR presentMode,
+		ND_ bool  IsSupported (VkSampleCountFlagBits samples, VkPresentModeKHR presentMode,
 							  VkFormat colorFormat, VkImageUsageFlagBits colorImageUsage) const;
 		
-		bool ChooseColorFormat (INOUT VkFormat &colorFormat, INOUT VkColorSpaceKHR &colorSpace) const;
+		bool  ChooseColorFormat (INOUT VkFormat &colorFormat, INOUT VkColorSpaceKHR &colorSpace) const;
 
-		bool Create (IResourceManager *						resMngr,
-					 const uint2							&viewSize,
-					 const VkFormat							colorFormat			= VK_FORMAT_B8G8R8A8_UNORM,
-					 const VkColorSpaceKHR					colorSpace			= VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
-					 const uint								minImageCount		= 2,
-					 const VkPresentModeKHR					presentMode			= VK_PRESENT_MODE_FIFO_KHR,
-					 const VkSurfaceTransformFlagBitsKHR	transform			= VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
-					 const VkCompositeAlphaFlagBitsKHR		compositeAlpha		= VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-					 const VkImageUsageFlagBits				colorImageUsage		= DefaultImageUsage,
-					 StringView								dbgName				= {});
+		bool  Create (IResourceManager *					resMngr,
+					  const uint2							&viewSize,
+					  const VkFormat						colorFormat			= VK_FORMAT_B8G8R8A8_UNORM,
+					  const VkColorSpaceKHR					colorSpace			= VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+					  const uint							minImageCount		= 2,
+					  const VkPresentModeKHR				presentMode			= VK_PRESENT_MODE_FIFO_KHR,
+					  const VkSurfaceTransformFlagBitsKHR	transform			= VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+					  const VkCompositeAlphaFlagBitsKHR		compositeAlpha		= VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+					  const VkImageUsageFlagBits			colorImageUsage		= DefaultImageUsage,
+					  StringView							dbgName				= {});
 
-		void Destroy (IResourceManager* resMngr);
+		void  Destroy (IResourceManager* resMngr);
 
-		bool Recreate (IResourceManager* resMngr, const uint2 &size);
+		bool  Recreate (IResourceManager* resMngr, const uint2 &size);
 		
 		ND_ static ArrayView<const char*>  GetInstanceExtensions ();
 
 	private:
-		bool _CreateColorAttachment (IResourceManager* resMngr);
-		void _PrintInfo () const;
+		bool  _CreateColorAttachment (IResourceManager* resMngr);
+		void  _PrintInfo () const;
 
-		bool _GetImageUsage (OUT VkImageUsageFlags &imageUsage,	VkPresentModeKHR presentMode, VkFormat colorFormat, const VkSurfaceCapabilitiesKHR &surfaceCaps) const;
-		bool _GetCompositeAlpha (INOUT VkCompositeAlphaFlagBitsKHR &compositeAlpha, const VkSurfaceCapabilitiesKHR &surfaceCaps) const;
-		void _GetPresentMode (INOUT VkPresentModeKHR &presentMode) const;
-		void _GetSwapChainExtent (INOUT VkExtent2D &extent, const VkSurfaceCapabilitiesKHR &surfaceCaps) const;
-		void _GetSurfaceTransform (INOUT VkSurfaceTransformFlagBitsKHR &transform, const VkSurfaceCapabilitiesKHR &surfaceCaps) const;
-		void _GetSurfaceImageCount (INOUT uint &minImageCount, const VkSurfaceCapabilitiesKHR &surfaceCaps) const;
+		bool  _CreateSemaphores ();
+		void  _DestroySemaphores ();
+
+		bool  _GetImageUsage (OUT VkImageUsageFlags &imageUsage,	VkPresentModeKHR presentMode, VkFormat colorFormat, const VkSurfaceCapabilitiesKHR &surfaceCaps) const;
+		bool  _GetCompositeAlpha (INOUT VkCompositeAlphaFlagBitsKHR &compositeAlpha, const VkSurfaceCapabilitiesKHR &surfaceCaps) const;
+		void  _GetPresentMode (INOUT VkPresentModeKHR &presentMode) const;
+		void  _GetSwapChainExtent (INOUT VkExtent2D &extent, const VkSurfaceCapabilitiesKHR &surfaceCaps) const;
+		void  _GetSurfaceTransform (INOUT VkSurfaceTransformFlagBitsKHR &transform, const VkSurfaceCapabilitiesKHR &surfaceCaps) const;
+		void  _GetSurfaceImageCount (INOUT uint &minImageCount, const VkSurfaceCapabilitiesKHR &surfaceCaps) const;
 	};
 
 	

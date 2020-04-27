@@ -26,11 +26,22 @@ namespace AE::Graphics
 			HashMap< Index_t, Index_t >						toLocal;
 		};
 
-		using LocalImages_t		= LocalResPool< VLocalImage,	VResourceManager::ImagePool_t,		16 >;
-		using LocalBuffers_t	= LocalResPool< VLocalBuffer,	VResourceManager::BufferPool_t,		16 >;
+		using LocalImages_t		= LocalResPool< VLocalImage,	VResourceManager::ImagePool_t,	16 >;
+		using LocalBuffers_t	= LocalResPool< VLocalBuffer,	VResourceManager::BufferPool_t,	16 >;
 		
 		using BufferBarriers_t	= HashSet< VLocalBuffer const *>;	// TODO: optimize
 		using ImageBarriers_t	= HashSet< VLocalImage const *>;
+
+
+		struct PendingPresent
+		{
+			ISwapchain *	swapchain	= null;
+			VkSemaphore		semaphore	= VK_NULL_HANDLE;
+		};
+		
+		using PendingPresent_t	 = FixedArray< PendingPresent, 8 >;
+		using WaitSemaphores_t	 = FixedTupleArray< 8, VkSemaphore, VkPipelineStageFlags >;
+		using SignalSemaphores_t = FixedArray< VkSemaphore, 8 >;
 
 		class DescriptorSetBarriers;
 
@@ -44,7 +55,8 @@ namespace AE::Graphics
 		VDevice const&				_device;
 		VResourceManager &			_resMngr;
 		LinearAllocator<>			_allocator;
-		
+		VirtualToReal_t &			_virtualToReal;
+
 		VResourceMap				_resources;
 
 		VBarrierManager				_barrierMngr;
@@ -57,6 +69,11 @@ namespace AE::Graphics
 		VCommandPoolPtr				_cmdPool;
 		Ptr<VCommandBatch>			_cmdBatch;
 		UniqueID<BakedCommandBufferID>	_cachedCommands;
+		CmdBatchID					_batchId;
+
+		PendingPresent_t			_pendingPresent;
+		WaitSemaphores_t			_waitSemaphores;
+		SignalSemaphores_t			_signalSemaphores;
 
 		VkPipelineStageFlagBits		_allSrcStages			= Zero;
 		VkPipelineStageFlagBits		_allDstStages			= Zero;
@@ -74,23 +91,24 @@ namespace AE::Graphics
 
 	// methods
 	public:
-		explicit GraphicsContext (VResourceManager &resMngr, VQueuePtr queue);
+		explicit GraphicsContext (VResourceManager &resMngr, VirtualToReal_t &virtToReal, VQueuePtr queue);
 		~GraphicsContext ();
 
 		ND_ VkCommandBuffer			GetCommandBuffer ()		const	{ return _cmdbuf; }
 		ND_ VQueuePtr				GetQueue ()				const	{ return _queue; }
 		ND_ VCommandBatch*			GetBatch ()				const	{ return _cmdBatch.get(); }
+		ND_ CmdBatchID				GetBatchId ()			const	{ return _batchId; }
 		ND_ VDevice const&			GetDevice ()			const	{ return _device; }
 		ND_ VResourceManager const&	GetResourceManager ()	const	{ return _resMngr; }
 
 		template <typename ID>
-		ND_ auto*				AcquireResource (ID id);
+		ND_ auto*					AcquireResource (ID id);
 		
-		ND_ VLocalBuffer const*	ToLocalBuffer (GfxResourceID id);
-		ND_ VLocalImage  const*	ToLocalImage (GfxResourceID id);
+		ND_ VLocalBuffer const*		ToLocalBuffer (GfxResourceID id);
+		ND_ VLocalImage  const*		ToLocalImage (GfxResourceID id);
 
 		bool  Create ();
-		bool  Begin (VCommandBatch *, VCommandPoolManager &);
+		bool  Begin (VCommandBatch *, CmdBatchID, VCommandPoolManager &);
 		bool  Submit ();
 		bool  LastSubmit ();
 
@@ -101,9 +119,12 @@ namespace AE::Graphics
 
 		void  MergeResources (VResourceMap &);
 
+		void  FlushLocalResourceStates ();
+
 
 	// ITransferContext
 		NativeContext_t  GetNativeContext () override;
+		ContextInfo		 GetContextInfo () override;
 		
 		void  ImageBarrier (GfxResourceID image, EResourceState srcState, EResourceState dstState) override;
 		void  ImageBarrier (GfxResourceID image, EResourceState srcState, EResourceState dstState, const ImageSubresourceRange &subRes) override;
@@ -119,31 +140,35 @@ namespace AE::Graphics
 		void  GlobalBarrier () override;
 
 		GfxResourceID   GetOutput (GfxResourceID id) override;
-		void  SetOutput (GfxResourceID id, GfxResourceID res) override;
+		bool  SetOutput (GfxResourceID id, GfxResourceID res) override;
 		
 		void  ClearColorImage (GfxResourceID image, const ClearColor_t &color, ArrayView<ImageSubresourceRange> ranges) override;
 		void  ClearDepthStencilImage (GfxResourceID image, const DepthStencil &depthStencil, ArrayView<ImageSubresourceRange> ranges) override;
 		void  FillBuffer (GfxResourceID buffer, BytesU offset, BytesU size, uint data) override;
 
-		void  UpdateBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint8_t> data) override;
+		void  UpdateBuffer (GfxResourceID buffer, BytesU offset, BytesU size, const void* data) override;
 		
-		bool  UpdateHostBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint8_t> data) override;
+		bool  UpdateHostBuffer (GfxResourceID buffer, BytesU offset, BytesU size, const void* data) override;
 		bool  MapHostBuffer (GfxResourceID buffer, BytesU offset, INOUT BytesU &size, OUT void* &mapped) override;
 		
 		bool  ReadBuffer (GfxResourceID buffer, BytesU offset, BytesU size, Function<void (const BufferView &)>&& fn) override;
 		bool  ReadImage (GfxResourceID image, const uint3 &offset, const uint3 &size, MipmapLevel mipLevel,
 						 ImageLayer arrayLayer, EImageAspect aspectMask, Function<void (const ImageView &)>&& fn) override;
 		
+		bool  UploadBuffer (GfxResourceID buffer, BytesU offset, BytesU size, const void* data) override;
 		bool  UploadBuffer (GfxResourceID buffer, BytesU offset, BytesU size, OUT BufferView &ranges) override;
 		bool  UploadImage (GfxResourceID image, const uint3 &offset, const uint3 &size, MipmapLevel mipLevel,
 						   ImageLayer arrayLayer, EImageAspect aspectMask, OUT ImageView &ranges) override; 
+		
+		bool  AllocBuffer (BytesU size, BytesU alignment, OUT GfxResourceID &buffer, OUT BytesU &offset, OUT void* &mapped) override;
 
 		void  CopyBuffer (GfxResourceID srcBuffer, GfxResourceID dstBuffer, ArrayView<BufferCopy> ranges) override;
 		void  CopyImage (GfxResourceID srcImage, GfxResourceID dstImage, ArrayView<ImageCopy> ranges) override;
 		void  CopyBufferToImage (GfxResourceID srcBuffer, GfxResourceID dstImage, ArrayView<BufferImageCopy> ranges) override;
 		void  CopyImageToBuffer (GfxResourceID srcImage, GfxResourceID dstBuffer, ArrayView<BufferImageCopy> ranges) override;
 		
-		void  Present (GfxResourceID image, MipmapLevel level, ImageLayer layer) override;
+		GfxResourceID  AcquireImage (ISwapchain *swapchain) override;
+		bool  Present (ISwapchain *swapchain) override;
 
 
 	// IComputeContext
@@ -172,8 +197,6 @@ namespace AE::Graphics
 		void  _AddBuffer (const VLocalBuffer *buf, EResourceState state, VkDeviceSize offset, VkDeviceSize size);
 		void  _AddBuffer (const VLocalBuffer *buf, EResourceState state, ArrayView<VkBufferImageCopy> copy);
 		void  _CommitBarriers ();
-
-		void  _FlushLocalResourceStates ();
 
 		template <typename ID, typename ResPool>
 		void  _FlushLocalResourceStates (ResPool &);
@@ -297,7 +320,13 @@ namespace {
 				const VkDeviceSize	offset	= VkDeviceSize(elem.offset) + (buf.dynamicOffsetIndex < _dynamicOffsets.size() ? _dynamicOffsets[buf.dynamicOffsetIndex] : 0);		
 				const VkDeviceSize	size	= VkDeviceSize(elem.size == ~0_b ? buffer->Size() - offset : elem.size);
 
-				ASSERT( (size >= buf.staticSize) and (buf.arrayStride == 0 or (size - buf.staticSize) % buf.arrayStride == 0) );
+				if ( buf.arrayStride == 0 ) {
+					ASSERT( size == buf.staticSize );
+				} else {
+					ASSERT( size >= buf.staticSize );
+					ASSERT( (size - buf.staticSize) % buf.arrayStride == 0 );
+				}
+
 				ASSERT( offset < buffer->Size() );
 				ASSERT( offset + size <= buffer->Size() );
 
@@ -402,8 +431,8 @@ namespace {
 	constructor
 =================================================
 */
-	VRenderGraph::GraphicsContext::GraphicsContext (VResourceManager &resMngr, VQueuePtr queue) :
-		_device{ resMngr.GetDevice() }, _resMngr{ resMngr }, _queue{ queue }
+	VRenderGraph::GraphicsContext::GraphicsContext (VResourceManager &resMngr, VirtualToReal_t &virtToReal, VQueuePtr queue) :
+		_device{ resMngr.GetDevice() }, _resMngr{ resMngr }, _virtualToReal{ virtToReal }, _queue{ queue }
 	{
 		VulkanDeviceFn_Init( _device );
 	}
@@ -474,12 +503,13 @@ namespace {
 	Begin
 =================================================
 */
-	bool  VRenderGraph::GraphicsContext::Begin (VCommandBatch *batch, VCommandPoolManager &cmdPoolMngr)
+	bool  VRenderGraph::GraphicsContext::Begin (VCommandBatch *batch, CmdBatchID batchId, VCommandPoolManager &cmdPoolMngr)
 	{
 		CHECK_ERR( not _cmdbuf );
 		CHECK_ERR( not _cmdBatch );
 
-		_cmdBatch = batch;
+		_cmdBatch	= batch;
+		_batchId	= batchId;
 
 		if ( not _cmdPool )
 		{
@@ -530,10 +560,22 @@ namespace {
 
 			_cmdbuf		= VK_NULL_HANDLE;
 			_cmdBatch	= null;
+			_batchId	= Default;
 			return true;
 		}
 
-		_FlushLocalResourceStates();
+		FlushLocalResourceStates();
+		
+		// flush staging buffer cache
+		// TODO: optimize
+		{
+			VkMemoryBarrier	barrier = {};
+			barrier.sType			= VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+			barrier.srcAccessMask	= VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask	= VK_ACCESS_HOST_READ_BIT;
+
+			vkCmdPipelineBarrier( _cmdbuf, _allSrcStages, VK_PIPELINE_STAGE_HOST_BIT, 0, 1, &barrier, 0, null, 0, null );
+		}
 
 		VK_CHECK( vkEndCommandBuffer( _cmdbuf ));
 
@@ -549,13 +591,22 @@ namespace {
 			submit_info.sType					= VK_STRUCTURE_TYPE_SUBMIT_INFO;
 			submit_info.commandBufferCount		= 1;
 			submit_info.pCommandBuffers			= &_cmdbuf;
-			submit_info.waitSemaphoreCount		= 0;
-			submit_info.pWaitSemaphores			= null;
-			submit_info.pWaitDstStageMask		= null;
-			submit_info.signalSemaphoreCount	= 0;
-			submit_info.pSignalSemaphores		= null;
+			submit_info.waitSemaphoreCount		= uint(_waitSemaphores.size());
+			submit_info.pWaitSemaphores			= _waitSemaphores.get<0>().data();
+			submit_info.pWaitDstStageMask		= _waitSemaphores.get<1>().data();
+			submit_info.signalSemaphoreCount	= uint(_signalSemaphores.size());
+			submit_info.pSignalSemaphores		= _signalSemaphores.data();
 
 			VK_CHECK( vkQueueSubmit( _queue->handle, 1, &submit_info, fence ));
+		}
+
+		// present
+		for (auto& present : _pendingPresent)
+		{
+			if ( auto* sw = DynCast<VSwapchain>( present.swapchain ))
+			{
+				VK_CALL( sw->Present( _queue, {present.semaphore} ));
+			}
 		}
 		
 		_resMngr.GetResource( _cachedCommands )->SetResources( std::move(_resources) );
@@ -564,7 +615,12 @@ namespace {
 		_cmdBatch->AddFence( fence );
 		_cmdBatch->AddCmdBuffer( std::move(_cachedCommands) );
 
+		_signalSemaphores.clear();
+		_waitSemaphores.clear();
+		_pendingPresent.clear();
+
 		_cmdBatch	= null;
+		_batchId	= Default;
 		_cmdbuf		= VK_NULL_HANDLE;
 		_cmdCounter	= 0;
 		return true;
@@ -603,6 +659,7 @@ namespace {
 */
 	bool  VRenderGraph::GraphicsContext::Execute (const VLogicalRenderPass &logicalRP, UniqueID<BakedCommandBufferID> renderCommands)
 	{
+		ASSERT( _cmdbuf );
 		CHECK( _resources.Add( renderCommands ));
 
 		auto*	cmds = _resMngr.GetResource( renderCommands.Release() );
@@ -644,6 +701,8 @@ namespace {
 */
 	bool  VRenderGraph::GraphicsContext::BeginPass (const VLogicalRenderPass &logicalRP, VkSubpassContents contents)
 	{
+		ASSERT( _cmdbuf );
+
 		if ( logicalRP.GetSubpassIndex() == 0 )
 		{
 			auto*	framebuffer = AcquireResource( logicalRP.GetFramebuffer() );
@@ -653,7 +712,19 @@ namespace {
 
 			for (auto& att : logicalRP.GetColorTargets())
 			{
-				auto*	img = ToLocalImage( att.imageId );
+				GfxResourceID	id;
+
+				if ( att.imageId.IsVirtual() )
+				{
+					auto	iter = _virtualToReal.find( att.imageId );
+					CHECK_ERR( iter != _virtualToReal.end() );
+
+					id = iter->second.real;
+				}
+				else
+					id = att.imageId;
+
+				auto*	img = ToLocalImage( id );
 				CHECK_ERR( img );
 
 				_AddImage( img, att.state, att.layout );
@@ -702,6 +773,7 @@ namespace {
 	{
 		if ( logicalRP.IsLastSubpass() )
 		{
+			ASSERT( _cmdbuf );
 			vkCmdEndRenderPass( _cmdbuf );
 		}
 	}
@@ -718,26 +790,17 @@ namespace {
 
 /*
 =================================================
-	_FlushLocalResourceStates
+	FlushLocalResourceStates
 =================================================
 */
-	void  VRenderGraph::GraphicsContext::_FlushLocalResourceStates ()
+	void  VRenderGraph::GraphicsContext::FlushLocalResourceStates ()
 	{
+		ASSERT( _cmdbuf );
+
 		_FlushLocalResourceStates<VBufferID>( _localRes.buffers );
 		_FlushLocalResourceStates<VImageID>( _localRes.images );
 
 		_barrierMngr.ForceCommit( _device, _cmdbuf, _allSrcStages, _allDstStages );
-		
-		// flush staging buffer cache
-		// TODO: optimize
-		{
-			VkMemoryBarrier	barrier = {};
-			barrier.sType			= VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-			barrier.srcAccessMask	= VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask	= VK_ACCESS_HOST_READ_BIT;
-
-			vkCmdPipelineBarrier( _cmdbuf, _allSrcStages, VK_PIPELINE_STAGE_HOST_BIT, 0, 1, &barrier, 0, null, 0, null );
-		}
 	}
 	
 	template <typename ID, typename ResPool>
@@ -773,11 +836,9 @@ namespace {
 			return result;
 		}
 
-		auto*	res  = _resMngr.GetResource( id, true );
+		auto*	res  = _resMngr.GetResource( id, _resources.Add( id ));
 		if ( not res )
 			return null;
-
-		_resources.Add( id );
 
 		CHECK_ERR( localRes.pool.Assign( OUT local ));
 
@@ -878,6 +939,8 @@ namespace {
 */
 	inline void  VRenderGraph::GraphicsContext::_CommitBarriers ()
 	{
+		ASSERT( _cmdbuf );
+
 		for (auto& buf : _pendingBarriers.buffers) {
 			buf->CommitBarrier( _barrierMngr );
 		}
@@ -898,11 +961,26 @@ namespace {
 */
 	ITransferContext::NativeContext_t  VRenderGraph::GraphicsContext::GetNativeContext ()
 	{
+		ASSERT( _cmdbuf );
+
 		VulkanContext	vctx;
 		vctx.cmdBuffer	= BitCast<CommandBufferVk_t>(_cmdbuf);
 		return vctx;
 	}
 	
+/*
+=================================================
+	GetContextInfo
+=================================================
+*/
+	ITransferContext::ContextInfo  VRenderGraph::GraphicsContext::GetContextInfo ()
+	{
+		ContextInfo		info;
+		info.batchId	= _batchId;
+		info.queue		= _queue->type;
+		return info;
+	}
+
 /*
 =================================================
 	ImageBarrier
@@ -1106,6 +1184,7 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::GlobalBarrier ()
 	{
+		ASSERT( _cmdbuf );
 		CHECK_ERR( not _enableBarriers, void());
 
 		VkMemoryBarrier		barrier = {};
@@ -1123,7 +1202,37 @@ namespace {
 */
 	GfxResourceID  VRenderGraph::GraphicsContext::GetOutput (GfxResourceID id)
 	{
-		// TODO
+		if ( id.IsVirtual() )
+		{
+			auto	iter = _virtualToReal.find( id );
+			CHECK_ERR( iter != _virtualToReal.end() );
+
+			// auto-resolve
+			if_unlikely( not iter->second.real )
+			{
+				if ( id.ResourceType() == GfxResourceID::EType::VirtualBuffer )
+				{
+					auto*	virt = _resMngr.GetResource( VVirtualBufferID{ id.Index(), id.Generation() });
+
+					iter->second.real = _resMngr.CreateBuffer( virt->Description().ToPhysical( iter->second.usage ), virt->GetDebugName(), null );	// TODO: virtual allocator
+					CHECK_ERR( iter->second.real );
+				}
+				else
+				if ( id.ResourceType() == GfxResourceID::EType::VirtualImage )
+				{
+					auto*	virt = _resMngr.GetResource( VVirtualImageID{ id.Index(), id.Generation() });
+
+					iter->second.real = _resMngr.CreateImage( virt->Description().ToPhysical( uint2{}, iter->second.usage ),
+															  EResourceState::Unknown, virt->GetDebugName(), null );
+					CHECK_ERR( iter->second.real );
+				}
+				else
+					RETURN_ERR( "unknown virtual resource type" );
+			}
+
+			return iter->second.real;
+		}
+
 		return id;
 	}
 	
@@ -1132,10 +1241,49 @@ namespace {
 	SetOutput
 =================================================
 */
-	void  VRenderGraph::GraphicsContext::SetOutput (GfxResourceID id, GfxResourceID res)
+	bool  VRenderGraph::GraphicsContext::SetOutput (GfxResourceID id, GfxResourceID res)
 	{
-		Unused( id, res );
-		// TODO
+		ASSERT( id.IsValid() );
+
+		auto&	result = _virtualToReal[id];
+		CHECK_ERR( not result.real.IsValid() );
+
+		if ( id.ResourceType() == GfxResourceID::EType::VirtualImage )
+		{
+			CHECK_ERR( res.ResourceType() == GfxResourceID::EType::Image );
+
+			auto*	virt		= _resMngr.GetResource( VVirtualImageID{ id.Index(), id.Generation() });
+			auto*	real		= _resMngr.GetResource( VImageID{ res.Index(), res.Generation() });
+			auto	virt_desc	= virt->Description().ToPhysical( uint2{}, result.usage );	// TODO
+			auto&	real_desc	= real->Description();
+
+			CHECK_ERR( virt_desc.imageType	== real_desc.imageType );
+			CHECK_ERR( EnumEq( real_desc.flags, virt_desc.flags ));
+			CHECK_ERR( All( virt_desc.dimension == real_desc.dimension ));
+			CHECK_ERR( virt_desc.format == real_desc.format );
+			CHECK_ERR( EnumEq( real_desc.usage, virt_desc.usage ));
+			CHECK_ERR( virt_desc.arrayLayers == real_desc.arrayLayers );
+			CHECK_ERR( virt_desc.maxLevel == real_desc.maxLevel );
+			CHECK_ERR( virt_desc.samples == real_desc.samples );
+		}
+		else
+		if ( id.ResourceType() == GfxResourceID::EType::VirtualBuffer )
+		{
+			CHECK_ERR( res.ResourceType() == GfxResourceID::EType::Buffer );
+
+			auto*	virt		= _resMngr.GetResource( VVirtualBufferID{ id.Index(), id.Generation() });
+			auto*	real		= _resMngr.GetResource( VBufferID{ res.Index(), res.Generation() });
+			auto	virt_desc	= virt->Description().ToPhysical( result.usage );
+			auto&	real_desc	= real->Description();
+			
+			CHECK_ERR( virt_desc.size == real_desc.size );
+			CHECK_ERR( EnumEq( real_desc.usage, virt_desc.usage ));
+		}
+		else
+			RETURN_ERR( "unsupported virtual resource type" );
+		
+		result.real = _resMngr.AcquireResource( res );
+		return true;
 	}
 	
 /*
@@ -1145,6 +1293,8 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::ClearColorImage (GfxResourceID image, const ClearColor_t &color, ArrayView<ImageSubresourceRange> ranges)
 	{
+		ASSERT( _cmdbuf );
+
 		auto*	img = ToLocalImage( image );
 		CHECK_ERR( img, void());
 
@@ -1178,6 +1328,8 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::ClearDepthStencilImage (GfxResourceID image, const DepthStencil &depthStencil, ArrayView<ImageSubresourceRange> ranges)
 	{
+		ASSERT( _cmdbuf );
+
 		auto*	img = ToLocalImage( image );
 		CHECK_ERR( img, void());
 
@@ -1209,6 +1361,8 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::FillBuffer (GfxResourceID buffer, BytesU offset, BytesU size, uint data)
 	{
+		ASSERT( _cmdbuf );
+
 		auto*	buf = ToLocalBuffer( buffer );
 		CHECK_ERR( buf, void());
 
@@ -1232,9 +1386,10 @@ namespace {
 	UpdateBuffer
 =================================================
 */
-	void  VRenderGraph::GraphicsContext::UpdateBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint8_t> data)
+	void  VRenderGraph::GraphicsContext::UpdateBuffer (GfxResourceID buffer, BytesU offset, BytesU size, const void* data)
 	{
-		BytesU	size = ArraySizeOf(data);
+		ASSERT( _cmdbuf );
+
 		auto*	buf  = ToLocalBuffer( buffer );
 		CHECK_ERR( buf, void());
 
@@ -1249,7 +1404,7 @@ namespace {
 		}
 		_CommitBarriers();
 
-		vkCmdUpdateBuffer( _cmdbuf, buf->Handle(), VkDeviceSize(offset), VkDeviceSize(size), data.data() );
+		vkCmdUpdateBuffer( _cmdbuf, buf->Handle(), VkDeviceSize(offset), VkDeviceSize(size), data );
 		++_cmdCounter;
 	}
 	
@@ -1258,15 +1413,12 @@ namespace {
 	UpdateHostBuffer
 =================================================
 */
-	bool  VRenderGraph::GraphicsContext::UpdateHostBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint8_t> data)
+	bool  VRenderGraph::GraphicsContext::UpdateHostBuffer (GfxResourceID buffer, BytesU offset, BytesU size, const void* data)
 	{
-		BytesU	size	= ArraySizeOf(data);
 		void *	mapped	= null;
-
 		CHECK_ERR( MapHostBuffer( buffer, offset, INOUT size, OUT mapped ));
-		CHECK_ERR( ArraySizeOf(data) == size );
 
-		std::memcpy( mapped, data.data(), size_t(size) );
+		std::memcpy( mapped, data, size_t(size) );
 		return true;
 	}
 	
@@ -1482,6 +1634,29 @@ namespace {
 	UploadBuffer
 =================================================
 */
+	bool  VRenderGraph::GraphicsContext::UploadBuffer (GfxResourceID buffer, BytesU offset, BytesU size, const void* data)
+	{
+		BufferView	ranges;
+		CHECK_ERR( UploadBuffer( buffer, offset, size, OUT ranges ));
+
+		BytesU	off;
+		for (auto& part : ranges.Parts())
+		{
+			BytesU	part_size = Min( part.size, size - off );
+
+			std::memcpy( part.ptr, data + off, size_t(part_size) );
+			off += part_size;
+		}
+		ASSERT( off == size );
+
+		return true;
+	}
+	
+/*
+=================================================
+	UploadBuffer
+=================================================
+*/
 	bool  VRenderGraph::GraphicsContext::UploadBuffer (GfxResourceID dstBuffer, const BytesU offset, BytesU size, OUT BufferView &outRanges)
 	{
 		outRanges.clear();
@@ -1650,6 +1825,19 @@ namespace {
 		outRanges = ImageView{ std::move(view), image_size, row_pitch, slice_pitch, img->Description().format, aspectMask };
 		return true;
 	}
+	
+/*
+=================================================
+	AllocBuffer
+=================================================
+*/
+	bool  VRenderGraph::GraphicsContext::AllocBuffer (BytesU size, BytesU alignment, OUT GfxResourceID &buffer, OUT BytesU &offset, OUT void* &mapped)
+	{
+		BufferView::Data	result;
+		bool	res = _cmdBatch->GetWritable( size, 1_b, alignment, size, OUT buffer, OUT offset, OUT result );
+		mapped = result.ptr;
+		return res;
+	}
 
 /*
 =================================================
@@ -1658,6 +1846,8 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::CopyBuffer (GfxResourceID srcBuffer, GfxResourceID dstBuffer, ArrayView<BufferCopy> ranges)
 	{
+		ASSERT( _cmdbuf );
+
 		auto*	src_buf = ToLocalBuffer( srcBuffer );
 		auto*	dst_buf = ToLocalBuffer( dstBuffer );
 		CHECK_ERR( src_buf and dst_buf, void());
@@ -1702,6 +1892,8 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::CopyImage (GfxResourceID srcImage, GfxResourceID dstImage, ArrayView<ImageCopy> ranges)
 	{
+		ASSERT( _cmdbuf );
+
 		auto*	src_img = ToLocalImage( srcImage );
 		auto*	dst_img = ToLocalImage( dstImage );
 		CHECK_ERR( src_img and dst_img, void());
@@ -1750,6 +1942,8 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::CopyBufferToImage (GfxResourceID srcBuffer, GfxResourceID dstImage, ArrayView<BufferImageCopy> ranges)
 	{
+		ASSERT( _cmdbuf );
+
 		auto*	src_buf = ToLocalBuffer( srcBuffer );
 		auto*	dst_img = ToLocalImage( dstImage );
 		CHECK_ERR( src_buf and dst_img, void());
@@ -1778,6 +1972,8 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::CopyImageToBuffer (GfxResourceID srcImage, GfxResourceID dstBuffer, ArrayView<BufferImageCopy> ranges)
 	{
+		ASSERT( _cmdbuf );
+
 		auto*	src_img = ToLocalImage( srcImage );
 		auto*	dst_buf = ToLocalBuffer( dstBuffer );
 		CHECK_ERR( src_img and dst_buf, void());
@@ -1801,13 +1997,54 @@ namespace {
 	
 /*
 =================================================
+	AcquireImage
+=================================================
+*/
+	GfxResourceID  VRenderGraph::GraphicsContext::AcquireImage (ISwapchain *swapchain)
+	{
+		CHECK_ERR( swapchain );
+
+		if ( auto* sw = DynCast<VSwapchain>( swapchain ))
+		{
+			VkSemaphore		sem = VK_NULL_HANDLE;
+			VK_CHECK( sw->AcquireNextImage( OUT sem ));
+
+			CHECK( _waitSemaphores.try_push_back( sem, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ));
+
+			GfxResourceID	id  = sw->GetCurrentImageID();
+			auto*			img = ToLocalImage( id );
+			CHECK_ERR( img );
+
+			img->SetInitialState( EResourceState::Unknown );
+
+			return id;
+		}
+
+		RETURN_ERR( "unknown swapchain type!" );
+	}
+	
+/*
+=================================================
 	Present
 =================================================
 */
-	void  VRenderGraph::GraphicsContext::Present (GfxResourceID image, MipmapLevel level, ImageLayer layer)
+	bool  VRenderGraph::GraphicsContext::Present (ISwapchain *swapchain)
 	{
-		// TODO
-		Unused( image, level, layer );
+		CHECK_ERR( swapchain );
+
+		if ( auto* sw = DynCast<VSwapchain>( swapchain ))
+		{
+			VkSemaphore	sem = _resMngr.CreateSemaphore();
+			
+			_cmdBatch->AddSemaphore( sem );
+			CHECK( _signalSemaphores.try_push_back( sem ));
+
+			CHECK( _pendingPresent.try_push_back({ swapchain, sem }));
+
+			return true;
+		}
+		
+		RETURN_ERR( "unknown swapchain type!" );
 	}
 	
 /*
@@ -1817,6 +2054,8 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::BindPipeline (ComputePipelineID ppln)
 	{
+		ASSERT( _cmdbuf );
+
 		auto*	cppln = AcquireResource( ppln );
 		CHECK_ERR( cppln, void());
 
@@ -1836,6 +2075,7 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets)
 	{
+		ASSERT( _cmdbuf );
 		ASSERT( _states.computeLayout );
 
 		auto*	desc_set = AcquireResource( ds );
@@ -1860,6 +2100,8 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::PushConstant (BytesU offset, BytesU size, const void *values, EShaderStages stages)
 	{
+		ASSERT( _cmdbuf );
+
 		vkCmdPushConstants( _cmdbuf, _states.computeLayout, VEnumCast(stages), uint(offset), uint(size), values );
 		++_cmdCounter;
 	}
@@ -1871,6 +2113,7 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::Dispatch (const uint3 &groupCount)
 	{
+		ASSERT( _cmdbuf );
 		ASSERT( _states.computePipeline );
 		
 		_CommitBarriers();
@@ -1886,6 +2129,7 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::DispatchIndirect (GfxResourceID buffer, BytesU offset)
 	{
+		ASSERT( _cmdbuf );
 		ASSERT( _states.computePipeline );
 
 		auto*	buf = ToLocalBuffer( buffer );
@@ -1907,6 +2151,7 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::DispatchBase (const uint3 &baseGroup, const uint3 &groupCount)
 	{
+		ASSERT( _cmdbuf );
 		ASSERT( _states.computePipeline );
 		
 		_CommitBarriers();
@@ -1922,6 +2167,8 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::BlitImage (GfxResourceID srcImage, GfxResourceID dstImage, EBlitFilter filter, ArrayView<ImageBlit> regions)
 	{
+		ASSERT( _cmdbuf );
+
 		auto*	src_img = ToLocalImage( srcImage );
 		auto*	dst_img = ToLocalImage( dstImage );
 		CHECK_ERR( src_img and dst_img, void());
@@ -1970,6 +2217,8 @@ namespace {
 */
 	void  VRenderGraph::GraphicsContext::ResolveImage (GfxResourceID srcImage, GfxResourceID dstImage, ArrayView<ImageResolve> regions)
 	{
+		ASSERT( _cmdbuf );
+
 		auto*	src_img = ToLocalImage( srcImage );
 		auto*	dst_img = ToLocalImage( dstImage );
 		CHECK_ERR( src_img and dst_img, void());

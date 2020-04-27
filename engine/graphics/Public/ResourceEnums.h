@@ -110,7 +110,7 @@ namespace AE::Graphics
 
 	enum class EImageFlags : uint
 	{
-		CubeCompatibple		= 1 << 0,
+		CubeCompatible		= 1 << 0,
 		_Last,
 		
 		Unknown				= 0,

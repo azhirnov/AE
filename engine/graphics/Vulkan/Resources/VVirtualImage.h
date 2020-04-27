@@ -20,6 +20,8 @@ namespace AE::Graphics
 		VirtualImageDesc	_desc;
 
 		DebugName_t			_debugName;
+		
+		RWDataRaceCheck		_drCheck;
 
 
 	// methods
@@ -28,18 +30,24 @@ namespace AE::Graphics
 		~VVirtualImage () {}
 
 
-		bool Create (const VirtualImageDesc &desc, StringView dbgName)
+		bool  Create (const VirtualImageDesc &desc, StringView dbgName)
 		{
+			EXLOCK( _drCheck );
+
 			_desc		= desc;
 			_debugName	= dbgName;
 			return true;
 		}
 
 
-		void Destroy (const VResourceManager &)
-		{}
+		void  Destroy (const VResourceManager &)
+		{
+			EXLOCK( _drCheck );
+		}
 
-		ND_ VirtualImageDesc const&		Description ()	const	{ return _desc; }
+
+		ND_ VirtualImageDesc const&		Description ()	const	{ SHAREDLOCK( _drCheck );  return _desc; }
+		ND_ StringView					GetDebugName ()	const	{ SHAREDLOCK( _drCheck );  return _debugName; }
 	};
 
 

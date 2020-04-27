@@ -44,6 +44,8 @@ namespace AE::Graphics
 	// methods
 		VirtualBufferDesc () {}
 		explicit VirtualBufferDesc (BytesU size) : size{size} {}
+
+		ND_ BufferDesc  ToPhysical (EVirtualResourceUsage usage) const;
 	};
 
 

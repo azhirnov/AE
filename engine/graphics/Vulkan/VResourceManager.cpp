@@ -4,7 +4,6 @@
 
 # include "graphics/Vulkan/VResourceManager.h"
 # include "graphics/Vulkan/VEnumCast.h"
-
 # include "graphics/Vulkan/Allocators/VUniMemAllocator.h"
 
 # include "graphics/Private/DescriptorSetHelper.h"
@@ -146,8 +145,8 @@ namespace {
 				transfer_heap_size += props.memoryHeaps[i].size;
 		}
 
-		BytesU	un_size = uniform_heap_size  / StagingBufferfPool_t::Capacity();
-		BytesU	tr_size = transfer_heap_size / StagingBufferfPool_t::Capacity();
+		BytesU	un_size = uniform_heap_size  / StagingBufferfPool_t::capacity();
+		BytesU	tr_size = transfer_heap_size / StagingBufferfPool_t::capacity();
 
 		if ( un_size > 256_Mb )
 			un_size = 64_Mb;
@@ -479,6 +478,32 @@ namespace {
 		}
 		RETURN_ERR( "unsupported resource type" );
 	}
+	
+/*
+=================================================
+	AcquireResource
+=================================================
+*/
+	UniqueID<GfxResourceID>  VResourceManager::AcquireResource (GfxResourceID id)
+	{
+		using EType = GfxResourceID::EType;
+
+		BEGIN_ENUM_CHECKS();
+		switch ( id.ResourceType() )
+		{
+			case EType::Buffer :				Unused( AcquireResource( VBufferID{ id.Index(), id.Generation() }).Release() );			break;
+			case EType::Image :					Unused( AcquireResource( VImageID{ id.Index(), id.Generation() }).Release() );			break;
+			case EType::VirtualBuffer :			Unused( AcquireResource( VVirtualBufferID{ id.Index(), id.Generation() }).Release() );	break;
+			case EType::VirtualImage :			Unused( AcquireResource( VVirtualImageID{ id.Index(), id.Generation() }).Release() );	break;
+			case EType::RayTracingGeometry :	//Unused( AcquireResource( VBufferID{ id.Index(), id.Generation() }).Release() );		break;
+			case EType::RayTracingScene :		//Unused( AcquireResource( VBufferID{ id.Index(), id.Generation() }).Release() );		break;
+			case EType::Unknown :
+			case EType::_Count :				RETURN_ERR( "unknown resource type" );
+		}
+		END_ENUM_CHECKS();
+
+		return UniqueID<GfxResourceID>{ id };
+	}
 
 /*
 =================================================
@@ -547,6 +572,25 @@ namespace {
 		VK_CHECK( _device.vkCreateFence( _device.GetVkDevice(), &info, null, OUT &fence ));
 		return fence;
 	}
+	
+/*
+=================================================
+	CreateSemaphore
+=================================================
+*/
+	VkSemaphore  VResourceManager::CreateSemaphore ()
+	{
+		VkSemaphore	sem = VK_NULL_HANDLE;
+
+		if ( _semaphorePool.Extract( OUT sem ))
+			return sem;
+
+		VkSemaphoreCreateInfo	info = {};
+		info.sType	= VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			
+		VK_CHECK( _device.vkCreateSemaphore( _device.GetVkDevice(), &info, null, &sem ));
+		return sem;
+	}
 
 /*
 =================================================
@@ -612,9 +656,23 @@ namespace {
 	CreateImage
 =================================================
 */
-	UniqueID<GfxResourceID>  VResourceManager::CreateImage (const VirtualImageDesc &, StringView)
+	UniqueID<GfxResourceID>  VResourceManager::CreateImage (const VirtualImageDesc &desc, StringView dbgName)
 	{
-		return Default;
+		VVirtualImageID		id;
+		CHECK_ERR( _Assign( OUT id ));
+
+		auto&	data = _GetResourcePool( id )[ id.Index() ];
+		Replace( data );
+		
+		if ( not data.Create( desc, dbgName ))
+		{
+			_Unassign( id );
+			RETURN_ERR( "failed when creating virtual image" );
+		}
+		
+		data.AddRef();
+
+		return UniqueID<GfxResourceID>{ GfxResourceID{ id.Index(), id.Generation(), GfxResourceID::EType::VirtualImage }};
 	}
 	
 /*
@@ -622,9 +680,23 @@ namespace {
 	CreateBuffer
 =================================================
 */
-	UniqueID<GfxResourceID>  VResourceManager::CreateBuffer (const VirtualBufferDesc &, StringView)
+	UniqueID<GfxResourceID>  VResourceManager::CreateBuffer (const VirtualBufferDesc &desc, StringView dbgName)
 	{
-		return Default;
+		VVirtualBufferID	id;
+		CHECK_ERR( _Assign( OUT id ));
+
+		auto&	data = _GetResourcePool( id )[ id.Index() ];
+		Replace( data );
+
+		if ( not data.Create( desc, dbgName ))
+		{
+			_Unassign( id );
+			RETURN_ERR( "failed when creating virtual buffer" );
+		}
+		
+		data.AddRef();
+
+		return UniqueID<GfxResourceID>{ GfxResourceID{ id.Index(), id.Generation(), GfxResourceID::EType::VirtualBuffer }};
 	}
 
 /*
@@ -784,6 +856,76 @@ namespace {
 		return false;
 		//return _InitPipelineResources( ppln, name, OUT ds );
 	}
+	
+/*
+=================================================
+	InitializeDescriptorSet
+=================================================
+*/
+	bool  VResourceManager::InitializeDescriptorSet (const PipelineName &pplnName, const DescriptorSetName &dsName, OUT DescriptorSet &ds) const
+	{
+		const auto	InitDS = [this] (const DescriptorSetName &dsName, VPipelineLayoutID pplnLayout, OUT DescriptorSet &ds) -> bool
+		{
+			auto*	ppln_layout = GetResource( pplnLayout );
+			CHECK_ERR( ppln_layout );
+
+			DescriptorSetLayoutID	layout_id;
+			uint					binding;
+
+			if ( not ppln_layout->GetDescriptorSetLayout( dsName, OUT layout_id, OUT binding ))
+				return false;
+
+			VDescriptorSetLayout const*	ds_layout = GetResource( layout_id );
+			CHECK_ERR( ds_layout );
+
+			CHECK_ERR( DescriptorSetHelper::Initialize( OUT ds, layout_id, binding, ds_layout->GetDescriptorTemplate() ));
+			return true;
+		};
+
+		// search in graphics pipelines
+		{
+			EXLOCK( _pipelineRefs.graphics.guard );
+
+			auto	iter = _pipelineRefs.graphics.map.find( pplnName );
+			if ( iter != _pipelineRefs.graphics.map.end() )
+			{
+				auto*	ppln_templ = GetResource( iter->second );
+				CHECK_ERR( ppln_templ );
+
+				return InitDS( dsName, ppln_templ->GetLayoutID(), OUT ds );
+			}
+		}
+
+		// search in mesh pipelines
+		{
+			EXLOCK( _pipelineRefs.mesh.guard );
+
+			auto	iter = _pipelineRefs.mesh.map.find( pplnName );
+			if ( iter != _pipelineRefs.mesh.map.end() )
+			{
+				auto*	ppln_templ = GetResource( iter->second );
+				CHECK_ERR( ppln_templ );
+
+				return InitDS( dsName, ppln_templ->GetLayoutID(), OUT ds );
+			}
+		}
+
+		// search in compute pipelines
+		{
+			EXLOCK( _pipelineRefs.compute.guard );
+
+			auto	iter = _pipelineRefs.compute.map.find( pplnName );
+			if ( iter != _pipelineRefs.compute.map.end() )
+			{
+				auto*	ppln_templ = GetResource( iter->second );
+				CHECK_ERR( ppln_templ );
+
+				return InitDS( dsName, ppln_templ->GetLayoutID(), OUT ds );
+			}
+		}
+
+		RETURN_ERR( "can't find pipeline" );
+	}
 
 /*
 =================================================
@@ -857,11 +999,11 @@ namespace {
 	{
 		return _CreateCachedResource<VFramebufferID>( "failed when creating framebuffer",
 										[&] (auto& data) {
-											return Replace( data, attachments, AcquireResource(rp), dim, layers );
+											return Replace( data, attachments, rp, dim, layers );
 										},
 										[&] (auto& data) {
 											if ( data.Create( *this, dbgName )) {
-												//_validation.createdFramebuffers.fetch_add( 1, memory_order_relaxed );	// TODO
+												_validation.createdFramebuffers.fetch_add( 1, EMemoryOrder::Relaxed );
 												return true;
 											}
 											return false;
@@ -884,7 +1026,7 @@ namespace {
 								   [&] (auto& data) { return Replace( data, desc ); },
 								   [&] (auto& data) {
 										if (data.Create( *this, *layout, false )) {
-											//_validation.createdPplnResources.fetch_add( 1, memory_order_relaxed );
+											_validation.createdDescriptorSets.fetch_add( 1, EMemoryOrder::Relaxed );
 											return true;
 										}
 										return false;
@@ -1862,8 +2004,8 @@ namespace {
 
 		GraphicsPipelineID	id = _GetGraphicsPipeline( name, desc, OUT ppln_templ_id, OUT render_pass_id );
 
-		if ( ppln_templ_id )	ReleaseResource( ppln_templ_id );
-		if ( render_pass_id )	ReleaseResource( render_pass_id );
+		ReleaseResource( ppln_templ_id );
+		ReleaseResource( render_pass_id );
 		return id;
 	}
 
@@ -1991,10 +2133,13 @@ namespace {
 		UniqueID<VMeshPipelineTemplateID>	ppln_templ_id;
 		UniqueID<RenderPassID>				render_pass_id;
 
+		ASSERT( not desc.hasMeshGroupSize );	// TODO
+		ASSERT( not desc.hasTaskGroupSize );
+
 		MeshPipelineID	id = _GetMeshPipeline( name, desc, OUT ppln_templ_id, OUT render_pass_id );
 
-		if ( ppln_templ_id )	ReleaseResource( ppln_templ_id );
-		if ( render_pass_id )	ReleaseResource( render_pass_id );
+		ReleaseResource( ppln_templ_id );
+		ReleaseResource( render_pass_id );
 		return id;
 	}
 
@@ -2102,7 +2247,7 @@ namespace {
 
 		ComputePipelineID	id = _GetComputePipeline( name, desc, OUT ppln_templ_id );
 
-		if ( ppln_templ_id )	ReleaseResource( ppln_templ_id );
+		ReleaseResource( ppln_templ_id );
 		return id;
 	}
 
@@ -2113,6 +2258,7 @@ namespace {
 */
 	RayTracingPipelineID  VResourceManager::GetRayTracingPipeline (const PipelineName &, const RayTracingPipelineDesc &)
 	{
+		// TODO
 		return Default;
 	}
 
@@ -2476,6 +2622,68 @@ namespace {
 		_staging.write.Release( dtor, true );
 		_staging.read.Release( dtor, true );
 		_staging.uniform.Release( dtor, true );
+	}
+	
+/*
+=================================================
+	RunResourceValidation
+=================================================
+*/
+	void  VResourceManager::RunResourceValidation (uint maxIterations)
+	{
+		static constexpr uint	scale = MaxCached / 16;
+
+		const auto	UpdateCounter = [] (INOUT Atomic<uint> &counter, uint maxValue) -> uint
+		{
+			if ( not maxValue )
+				return 0;
+
+			uint	expected = 0;
+			uint	count	 = 0;
+			for (; not counter.compare_exchange_weak( INOUT expected, expected - count, EMemoryOrder::Relaxed );) {
+				count = Min( maxValue, expected * scale );
+			}
+			return count;
+		};
+
+		const auto	UpdateLastIndex = [] (INOUT Atomic<uint> &lastIndex, uint count, uint size)
+		{
+			uint	new_value = count;
+			uint	expected  = 0;
+			for (; not lastIndex.compare_exchange_weak( INOUT expected, new_value, EMemoryOrder::Relaxed );) {
+				new_value = expected + count;
+				new_value = new_value >= size ? new_value - size : new_value;
+				ASSERT( new_value < size );
+			}
+			return expected;
+		};
+
+		const auto	ValidateResources = [this, &UpdateCounter, &UpdateLastIndex, maxIterations] (INOUT Atomic<uint> &counter, INOUT Atomic<uint> &lastIndex, auto& pool)
+		{
+			const uint	max_iter = UpdateCounter( INOUT counter, maxIterations );
+			if ( max_iter )
+			{
+				const uint	max_count = uint(pool.size());
+				const uint	last_idx  = UpdateLastIndex( INOUT lastIndex, max_iter, max_count );
+
+				for (uint i = 0; i < max_iter; ++i)
+				{
+					uint	j		= last_idx + i;	j = (j >= max_count ? j - max_count : j);
+					Index_t	index	= Index_t(j);
+
+					auto&	res = pool [index];
+					if ( res.IsCreated() and not res.Data().IsAllResourcesAlive( *this ))
+					{
+						pool.RemoveFromCache( index );
+						res.Destroy( *this );
+						pool.Unassign( index );
+					}
+				}
+			}
+		};
+
+		ValidateResources( _validation.createdDescriptorSets, _validation.lastCheckedDescriptorSet, _resPool.descSetCache );
+		ValidateResources( _validation.createdFramebuffers, _validation.lastCheckedFramebuffer, _resPool.framebufferCache );
 	}
 
 

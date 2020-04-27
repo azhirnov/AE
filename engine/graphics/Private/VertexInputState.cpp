@@ -150,6 +150,44 @@ namespace AE::Graphics
 //-----------------------------------------------------------------------------
 
 
+	
+/*
+=================================================
+	Add
+=================================================
+*/
+	VertexInputState&  VertexInputState::Add (const VertexName &id, EVertexType type, BytesU offset, const VertexBufferName &bufferId)
+	{
+		ASSERT( id.IsDefined() );
+		ASSERT( _vertices.count( id ) == 0 );
+
+		auto	iter = _bindings.find( bufferId );
+		CHECK_ERR( iter != _bindings.end(), *this );
+
+		_vertices.insert_or_assign( id, VertexInput{ type, Bytes<uint>(offset), iter->second.index });
+		return *this;
+	}
+	
+/*
+=================================================
+	Bind
+=================================================
+*/
+	VertexInputState&  VertexInputState::Bind (const VertexBufferName &bufferId, Bytes<uint> stride, uint index, EVertexInputRate rate)
+	{
+		//ASSERT( _bindings.count( bufferId ) == 0 );
+
+		if ( index == BindingIndex_Auto )
+			index = uint(_bindings.size());
+
+		_bindings.insert_or_assign( bufferId, BufferBinding( index, stride, rate ));
+		return *this;
+	}
+
+	VertexInputState&  VertexInputState::Bind (const VertexBufferName &bufferId, BytesU stride, uint index, EVertexInputRate rate)
+	{
+		return Bind( bufferId, Bytes<uint>{stride}, index, rate );
+	}
 
 /*
 =================================================

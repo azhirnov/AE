@@ -12,6 +12,7 @@
 #include "stl/Containers/Union.h"
 #include "stl/Containers/FixedMap.h"
 #include "stl/Containers/FixedString.h"
+#include "stl/Containers/FixedTupleArray.h"
 #include "stl/CompileTime/Math.h"
 #include "stl/Stream/Stream.h"
 

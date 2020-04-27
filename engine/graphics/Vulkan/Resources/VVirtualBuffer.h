@@ -21,6 +21,8 @@ namespace AE::Graphics
 
 		DebugName_t			_debugName;
 
+		RWDataRaceCheck		_drCheck;
+
 
 	// methods
 	public:
@@ -30,6 +32,8 @@ namespace AE::Graphics
 
 		bool Create (const VirtualBufferDesc &desc, StringView dbgName)
 		{
+			EXLOCK( _drCheck );
+
 			_desc		= desc;
 			_debugName	= dbgName;
 			return true;
@@ -37,10 +41,13 @@ namespace AE::Graphics
 
 
 		void Destroy (const VResourceManager &)
-		{}
+		{
+			EXLOCK( _drCheck );
+		}
 
 
-		ND_ VirtualBufferDesc const&	Description ()	const	{ return _desc; }
+		ND_ VirtualBufferDesc const&	Description ()	const	{ SHAREDLOCK( _drCheck );  return _desc; }
+		ND_ StringView					GetDebugName ()	const	{ SHAREDLOCK( _drCheck );  return _debugName; }
 	};
 
 

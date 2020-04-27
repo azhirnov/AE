@@ -48,17 +48,17 @@ namespace AE::Graphics
 */
 	bool  MeshPipelineDesc::operator == (const MeshPipelineDesc &rhs) const
 	{
-		return	(renderPassId				== rhs.renderPassId)				&
-				(subpassIndex				== rhs.subpassIndex)				&
-				(viewportCount				== rhs.viewportCount)				&
-				(renderState				== rhs.renderState)					&
-				(dynamicState				== rhs.dynamicState)				&
-				(taskGroupSize.has_value()	== rhs.taskGroupSize.has_value())	&
-				(taskGroupSize.has_value() ?
-					All( *taskGroupSize		== *rhs.taskGroupSize ) : true)		&
-				(meshGroupSize.has_value()	== rhs.meshGroupSize.has_value())	&
-				(meshGroupSize.has_value() ?
-					All( *meshGroupSize	== *rhs.meshGroupSize ) : true)			&
+		return	(renderPassId			== rhs.renderPassId)				&
+				(subpassIndex			== rhs.subpassIndex)				&
+				(viewportCount			== rhs.viewportCount)				&
+				(renderState			== rhs.renderState)					&
+				(dynamicState			== rhs.dynamicState)				&
+				(hasTaskGroupSize		== rhs.hasTaskGroupSize)			&
+				(hasTaskGroupSize ?
+					All( taskGroupSize	== rhs.taskGroupSize ) : true)		&
+				(hasMeshGroupSize		== rhs.hasMeshGroupSize)			&
+				(hasMeshGroupSize ?
+					All( meshGroupSize	== rhs.meshGroupSize ) : true)		&
 				(specialization		== rhs.specialization);
 	}
 	

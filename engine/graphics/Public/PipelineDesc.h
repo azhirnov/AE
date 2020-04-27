@@ -51,8 +51,10 @@ namespace AE::Graphics
 		uint					viewportCount		= 1;
 		RenderState				renderState;
 		EPipelineDynamicState	dynamicState		= EPipelineDynamicState::Viewport | EPipelineDynamicState::Scissor;
-		Optional<uint3>			taskGroupSize;
-		Optional<uint3>			meshGroupSize;
+		uint3					taskGroupSize;
+		uint3					meshGroupSize;
+		bool					hasTaskGroupSize	= false;
+		bool					hasMeshGroupSize	= false;
 		SpecValues_t			specialization;
 
 	// methods

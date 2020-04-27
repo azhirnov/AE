@@ -290,13 +290,14 @@ namespace AE::Graphics
 
 		for (uint i = 0; i < count; ++i)
 		{
-			auto	bm			= stackAlloc.Push();
-			uint	code_size	= 0;
-			auto&	module		= _shaderModules.Get<1>()[i];
-			auto&	spec_ref	= _shaderModules.Get<2>()[i];
-
+			auto			bm			= stackAlloc.Push();
+			uint			code_size	= 0;
+			auto&			module		= _shaderModules.Get<1>()[i];
+			auto&			spec_ref	= _shaderModules.Get<2>()[i];
 			SpecConstants_t	spec;
-			CHECK_ERR( des( OUT spec, OUT code_size ));
+			uint			ver;
+
+			CHECK_ERR( des( OUT ver, OUT spec, OUT code_size ));
 
 			if ( spec.size() )
 			{
@@ -338,9 +339,10 @@ namespace AE::Graphics
 
 		_gpipelines = MakeTuple( count, _allocator.Alloc<UniqueID<VGraphicsPipelineTemplateID>>( count ));
 		
-		PipelineCompiler::GraphicsPipelineDesc	desc;
 		for (uint i = 0; i < count; ++i)
 		{
+			PipelineCompiler::GraphicsPipelineDesc	desc;
+
 			CHECK_ERR( desc.Deserialize( des ));
 			CHECK_ERR( uint(desc.layout) < _pplnLayouts.Get<0>() );
 			CHECK_ERR( uint(desc.renderPass) < _renderPassOutputs.Get<0>() );
@@ -387,9 +389,10 @@ namespace AE::Graphics
 		
 		_mpipelines = MakeTuple( count, _allocator.Alloc<UniqueID<VMeshPipelineTemplateID>>( count ));
 		
-		PipelineCompiler::MeshPipelineDesc	desc;
 		for (uint i = 0; i < count; ++i)
 		{
+			PipelineCompiler::MeshPipelineDesc	desc;
+
 			CHECK_ERR( desc.Deserialize( des ));
 			CHECK_ERR( uint(desc.layout) < _pplnLayouts.Get<0>() );
 			CHECK_ERR( uint(desc.renderPass) < _renderPassOutputs.Get<0>() );
@@ -436,9 +439,10 @@ namespace AE::Graphics
 		
 		_cpipelines = MakeTuple( count, _allocator.Alloc<UniqueID<VComputePipelineTemplateID>>( count ));
 		
-		PipelineCompiler::ComputePipelineDesc	desc;
 		for (uint i = 0; i < count; ++i)
 		{
+			PipelineCompiler::ComputePipelineDesc	desc;
+
 			CHECK_ERR( desc.Deserialize( des ));
 			CHECK_ERR( uint(desc.layout) < _pplnLayouts.Get<0>() );
 			

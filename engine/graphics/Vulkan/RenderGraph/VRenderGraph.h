@@ -25,21 +25,31 @@ namespace AE::Graphics
 	// types
 	private:
 		class GraphicsContext;
-		class IndirectGraphicsContext;
+		class DirectGraphicsContext;
 		class RenderContext;
 
 		struct BaseCmd;
+		class  RenderTask;
 
 		struct CtxPerQueue
 		{
-			UniquePtr<GraphicsContext>			direct;		// direct write to vulkan command buffer
-			UniquePtr<IndirectGraphicsContext>	indirect;	// writes to software command buffer and then to vulkan cmdbuf
+			UniquePtr<GraphicsContext>			indirect;	// direct write to vulkan command buffer
+			UniquePtr<DirectGraphicsContext>	direct;		// writes to software command buffer and then to vulkan cmdbuf
 		};
 
-		using VirtualResWrite_t		= HashMap< GfxResourceID, BaseCmd* >;
-		using VirtualResUsage_t		= HashMap< GfxResourceID, EVirtualResourceUsage >;
+		struct VirtualResInfo
+		{
+			EVirtualResourceUsage		usage	= Zero;
+			UniqueID<GfxResourceID>		real;
+		};
+
+		using VirtualResWrite_t		= HashMap< GfxResourceID, BaseCmd* /*,
+												std::hash<GfxResourceID>, std::equal_to<GfxResourceID>, StdLinearAllocator<Pair<const GfxResourceID, BaseCmd*>>*/ >;
+
+		using VirtualToReal_t		= HashMap< GfxResourceID, VirtualResInfo /*,
+												std::hash<GfxResourceID>, std::equal_to<GfxResourceID>, StdLinearAllocator<Pair<const GfxResourceID, VirtualResInfo>>*/ >;
+
 		using CtxPerQueue_t			= StaticArray< CtxPerQueue, uint(EQueueType::_Count) >;
-		
 		using SubmittedBatches_t	= Array< CmdBatchID >;	// TODO: ring buffer
 		using CmdBatchPool_t		= Threading::LfIndexedPool< VCommandBatch, uint, 32, 16 >;
 
@@ -53,8 +63,9 @@ namespace AE::Graphics
 
 		Mutex					_cmdGuard;
 		Array< BaseCmd *>		_commands;			// TODO: use LfIndexedPool + UnassignAll()
+		Array<AsyncTask>		_asyncCommands;
 		VirtualResWrite_t		_resWriteCmd;		// TODO: lock-free ?
-		VirtualResUsage_t		_resUsage;
+		VirtualToReal_t			_virtualToReal;
 
 		CtxPerQueue_t			_contexts;
 
@@ -111,7 +122,7 @@ namespace AE::Graphics
 				  TransferCommandFn_t &&	pass,
 				  StringView				dbgName) override;
 		
-		CmdBatchID Submit () override;
+		CmdBatchID  Submit () override;
 		
 		bool  Wait (ArrayView<CmdBatchID> ids) override;
 		bool  WaitIdle () override;
@@ -135,7 +146,7 @@ namespace AE::Graphics
 		void  _SortCommands (OUT Array<BaseCmd*> &ordered);
 		bool  _MergeRenderPasses (ArrayView<BaseCmd*> ordered);
 		bool  _AcquireNextBatch (OUT CmdBatchID &, OUT VCommandBatch* &batch);
-		bool  _ExecuteCommands (ArrayView<BaseCmd*> ordered, VCommandBatch *batch);
+		bool  _ExecuteCommands (ArrayView<BaseCmd*> ordered, VCommandBatch *batch, CmdBatchID batchId);
 		void  _RecycleCmdBatches ();
 	};
 

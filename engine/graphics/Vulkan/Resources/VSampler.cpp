@@ -259,7 +259,7 @@ namespace {
 			VkSamplerCreateInfo	info = {};
 			CreateSampler( resMngr.GetDevice(), desc, OUT info );
 
-			_samplers[i].Set( resMngr.CreateSampler( info ));
+			_samplers[i] = resMngr.CreateSampler( info );
 			CHECK_ERR( _samplers[i] );
 		}
 

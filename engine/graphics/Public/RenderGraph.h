@@ -4,7 +4,7 @@
 	Use they in single thread or in multiple threads with sync primitives.
 
 	IRenderGraph - is wrapper for command queues.
-	All methods is thread safe.
+	All methods are thread safe.
 */
 
 #pragma once
@@ -12,11 +12,12 @@
 #include "graphics/Public/Queue.h"
 #include "graphics/Public/ImageDesc.h"
 #include "graphics/Public/BufferDesc.h"
+#include "graphics/Public/PipelineDesc.h"
+#include "graphics/Public/RenderPassDesc.h"
 #include "graphics/Public/IDs.h"
 #include "graphics/Public/EResourceState.h"
 #include "graphics/Public/ResourceEnums.h"
 #include "graphics/Public/RenderStateEnums.h"
-#include "graphics/Public/RenderPassDesc.h"
 #include "graphics/Public/ShaderEnums.h"
 #include "graphics/Public/VertexEnums.h"
 #include "graphics/Public/BufferView.h"
@@ -27,6 +28,12 @@
 
 namespace AE::Graphics
 {
+	class ISwapchain
+	{
+	public:
+		virtual ~ISwapchain () {}
+	};
+
 
 	//
 	// Render Context interface
@@ -43,6 +50,7 @@ namespace AE::Graphics
 			RenderPassID	renderPass;
 			uint			subpassIndex	= 0;
 			uint			layerCount		= 0;	// same as viewportCount for pipeline description
+			CmdBatchID		batchId;
 		};
 
 
@@ -165,7 +173,101 @@ namespace AE::Graphics
 		// so you can add pending barriers that will be executed before render pass
 		virtual void  Barrier (ArrayView< Pair<GfxResourceID, EResourceState>>) = 0;
 	};
+	
 
+
+	//
+	// Direct Render Context interface
+	//
+
+	class IDirectRenderContext
+	{
+	// interface
+	public:
+		// pipeline and shader resources
+		virtual void  BindPipeline (const PipelineName &name, const GraphicsPipelineDesc &desc) = 0;
+		virtual void  BindPipeline (const PipelineName &name, const MeshPipelineDesc &desc) = 0;
+		virtual void  BindDescriptorSet (uint index, DescriptorSetID ds, ArrayView<uint> dynamicOffsets = Default) = 0;
+		virtual void  PushConstant (BytesU offset, BytesU size, const void *values, EShaderStages stages = EShaderStages::AllGraphics) = 0;
+
+		// dynamic states
+		virtual void  SetScissor (uint first, ArrayView<RectI> scissors) = 0;
+		//virtual void  SetViewport () = 0;
+		virtual void  SetDepthBias (float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor) = 0;
+		virtual void  SetLineWidth (float lineWidth) = 0;
+		virtual void  SetDepthBounds (float minDepthBounds, float maxDepthBounds) = 0;
+		virtual void  SetStencilCompareMask (EStencilFace faceMask, uint compareMask) = 0;
+		virtual void  SetStencilWriteMask (EStencilFace faceMask, uint writeMask) = 0;
+		virtual void  SetStencilReference (EStencilFace faceMask, uint reference) = 0;
+		virtual void  SetBlendConstants (const RGBA32f &color) = 0;
+		/*
+		// dynamic state extensions
+		virtual void  SetSampleLocationsEXT () = 0;
+		virtual void  SetDiscardRectangleEXT () = 0;
+		virtual void  SetViewportWScalingNV () = 0;
+		virtual void  SetExclusiveScissorNV () = 0;
+
+		// shading rate image extension
+		virtual void  SetViewportShadingRatePaletteNV () = 0;
+		virtual void  BindShadingRateImageNV () = 0;
+		virtual void  SetCoarseSampleOrderNV () = 0;
+		*/
+		// draw commands
+		virtual void  BindIndexBuffer (GfxResourceID buffer, BytesU offset, EIndex indexType) = 0;
+		virtual void  BindVertexBuffer (uint index, GfxResourceID buffer, BytesU offset) = 0;
+		virtual void  BindVertexBuffers (uint firstBinding, ArrayView<Pair<GfxResourceID, BytesU>> bufferAndOffset) = 0;
+
+		virtual void  Draw (uint vertexCount,
+							uint instanceCount = 1,
+							uint firstVertex   = 0,
+							uint firstInstance = 0) = 0;
+
+		virtual void  DrawIndexed (uint indexCount,
+								   uint instanceCount = 1,
+								   uint firstIndex    = 0,
+								   int  vertexOffset  = 0,
+								   uint firstInstance = 0) = 0;
+
+		virtual void  DrawIndirect (GfxResourceID buffer,
+									BytesU		  offset,
+									uint		  drawCount,
+									BytesU		  stride) = 0;
+
+		virtual void  DrawIndexedIndirect (GfxResourceID	buffer,
+										   BytesU			offset,
+										   uint				drawCount,
+										   BytesU			stride) = 0;
+
+		// extension
+		virtual void  DrawIndirectCount (GfxResourceID	buffer,
+										 BytesU			offset,
+										 GfxResourceID	countBuffer,
+										 BytesU			countBufferOffset,
+										 uint			maxDrawCount,
+										 BytesU			stride) = 0;
+
+		virtual void  DrawIndexedIndirectCount (GfxResourceID	buffer,
+												BytesU			offset,
+												GfxResourceID	countBuffer,
+												BytesU			countBufferOffset,
+												uint			maxDrawCount,
+												BytesU			stride) = 0;
+
+		// mesh draw commands (extension)
+		virtual void  DrawMeshTasksNV (uint taskCount, uint firstTask = 0) = 0;
+
+		virtual void  DrawMeshTasksIndirectNV (GfxResourceID	buffer,
+											   BytesU			offset,
+											   uint				drawCount,
+											   BytesU			stride) = 0;
+
+		virtual void  DrawMeshTasksIndirectCountNV (GfxResourceID	buffer,
+													BytesU			offset,
+													GfxResourceID	countBuffer,
+													BytesU			countBufferOffset,
+													uint			maxDrawCount,
+													BytesU			stride) = 0;
+	};
 
 
 	//
@@ -222,11 +324,18 @@ namespace AE::Graphics
 			uint3					imageOffset;
 			uint3					imageExtent;
 		};
+		
+		struct ContextInfo
+		{
+			EQueueType		queue;
+			CmdBatchID		batchId;
+		};
 
 
 	// interface
 	public:
 		ND_ virtual NativeContext_t  GetNativeContext () = 0;
+		ND_ virtual ContextInfo		 GetContextInfo () = 0;
 		
 		// if disabled context will commit all pending barriers and stop tracking for new barriers.
 		// if enabled context starts tracking for all resources
@@ -249,16 +358,16 @@ namespace AE::Graphics
 		virtual void  GlobalBarrier () = 0;
 		
 		ND_ virtual GfxResourceID   GetOutput (GfxResourceID id) = 0;
-		virtual void  SetOutput (GfxResourceID id, GfxResourceID res) = 0;
+		virtual bool  SetOutput (GfxResourceID id, GfxResourceID res) = 0;
 		
 		virtual void  ClearColorImage (GfxResourceID image, const ClearColor_t &color, ArrayView<ImageSubresourceRange> ranges) = 0;
 		virtual void  ClearDepthStencilImage (GfxResourceID image, const DepthStencil &depthStencil, ArrayView<ImageSubresourceRange> ranges) = 0;
 		virtual void  FillBuffer (GfxResourceID buffer, BytesU offset, BytesU size, uint data) = 0;
 
-		virtual void  UpdateBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint8_t> data) = 0;
+		virtual void  UpdateBuffer (GfxResourceID buffer, BytesU offset, BytesU size, const void* data) = 0;
 		
 		// update mapped memory
-		virtual bool  UpdateHostBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint8_t> data) = 0;
+		virtual bool  UpdateHostBuffer (GfxResourceID buffer, BytesU offset, BytesU size, const void* data) = 0;
 		virtual bool  MapHostBuffer (GfxResourceID buffer, BytesU offset, INOUT BytesU &size, OUT void* &mapped) = 0;
 
 		// read from GPU memory using staging buffer
@@ -267,28 +376,43 @@ namespace AE::Graphics
 								 ImageLayer arrayLayer, EImageAspect aspectMask, Function<void (const ImageView &)>&& fn) = 0;
 
 		// upload data to GPU using staging buffer
-		//virtual bool  UploadBuffer (GfxResourceID buffer, BytesU offset, ArrayView<uint> data) = 0;
+		virtual bool  UploadBuffer (GfxResourceID buffer, BytesU offset, BytesU size, const void* data) = 0;
 		virtual bool  UploadBuffer (GfxResourceID buffer, BytesU offset, BytesU size, OUT BufferView &ranges) = 0;
 		virtual bool  UploadImage (GfxResourceID image, const uint3 &offset, const uint3 &size, MipmapLevel mipLevel,
 								   ImageLayer arrayLayer, EImageAspect aspectMask, OUT ImageView &ranges) = 0; 
+		
+		// allocate space in the staging buffer
+		virtual bool  AllocBuffer (BytesU size, BytesU alignment, OUT GfxResourceID &buffer, OUT BytesU &offset, OUT void* &mapped) = 0;
 
 		virtual void  CopyBuffer (GfxResourceID srcBuffer, GfxResourceID dstBuffer, ArrayView<BufferCopy> ranges) = 0;
 		virtual void  CopyImage (GfxResourceID srcImage, GfxResourceID dstImage, ArrayView<ImageCopy> ranges) = 0;
 		virtual void  CopyBufferToImage (GfxResourceID srcBuffer, GfxResourceID dstImage, ArrayView<BufferImageCopy> ranges) = 0;
 		virtual void  CopyImageToBuffer (GfxResourceID srcImage, GfxResourceID dstBuffer, ArrayView<BufferImageCopy> ranges) = 0;
 
+		// acquire next swapchain image
+		ND_ virtual GfxResourceID  AcquireImage (ISwapchain *swapchain) = 0;
+
 		// present command may be unsupported on transfer queue, use 'GetPresentQueues()' to get supported queues.
-		virtual void  Present (GfxResourceID image, MipmapLevel level = Default, ImageLayer layer = Default) = 0;
+		virtual bool  Present (ISwapchain *swapchain) = 0;
+
 
 	public:
 		template <typename T>
+		bool  AllocBuffer (BytesU size, BytesU alignment, OUT GfxResourceID &buffer, OUT BytesU &offset, OUT T* &mapped) {
+			void*	ptr = null;
+			bool	res = AllocBuffer( size, alignment, OUT buffer, OUT offset, OUT ptr );
+			mapped = Cast<T>( ptr );
+			return res;
+		}
+
+		template <typename T>
 		void  UpdateBuffer (GfxResourceID buffer, BytesU offset, ArrayView<T> data) {
-			return UpdateBuffer( buffer, offset, ArrayView<uint8_t>{ Cast<uint8_t>(data.data()), data.size()*sizeof(T) });
+			return UpdateBuffer( buffer, offset, ArraySizeOf(data), data.data() );
 		}
 		
 		template <typename T>
 		bool  UpdateHostBuffer (GfxResourceID buffer, BytesU offset, ArrayView<T> data) {
-			return UpdateHostBuffer( buffer, offset, ArrayView<uint8_t>{ Cast<uint8_t>(data.data()), data.size()*sizeof(T) });
+			return UpdateHostBuffer( buffer, offset, ArraySizeOf(data), data.data() );
 		}
 	};
 
@@ -366,13 +490,17 @@ namespace AE::Graphics
 	// types
 	public:
 		// on input - resolved resource, on output - virtual and should be resolved
-		using RenderPassDrawFn_t	= Function<void (IRenderContext      &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
-		using AsyncDrawFn_t			= Function<void (IAsyncRenderContext &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;	// TODO: add AsyncTask
-		using GraphicsCommandFn_t	= Function<void (IGraphicsContext    &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
-		using ComputeCommandFn_t	= Function<void (IComputeContext     &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
-		using TransferCommandFn_t	= Function<void (ITransferContext    &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
+		using RenderPassDrawFn_t	= Function<void (IRenderContext       &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
+		using AsyncDrawFn_t			= Function<void (IAsyncRenderContext  &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;	// TODO: add AsyncTask
+		using DirectDrawFn_t		= Function<void (IDirectRenderContext &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
+		using GraphicsCommandFn_t	= Function<void (IGraphicsContext     &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
+		using ComputeCommandFn_t	= Function<void (IComputeContext      &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
+		using TransferCommandFn_t	= Function<void (ITransferContext     &ctx, ArrayView<GfxResourceID> input, ArrayView<GfxResourceID> output)>;
+
+		
 
 		using VirtualResources_t	= ArrayView<Pair< GfxResourceID, EVirtualResourceUsage >>;
+		using GfxResources_t		= ArrayView< GfxResourceID >;
 
 
 	// interface
@@ -381,10 +509,40 @@ namespace AE::Graphics
 
 		ND_ virtual EQueueMask  GetPresentQueues () = 0;
 
-		// indirect commands
-		// TODO
 
-		// direct commands
+	// direct commands //
+		// All callbacks executed immediatlly, commands recorded to software command buffer.
+		// Virtual resources are not sopported.
+		/*
+		virtual bool  Add (EQueueType				queue,
+						   GfxResources_t			input,
+						   GfxResources_t			output,
+						   RenderPassDesc const&	rpDesc,
+						   DirectDrawFn_t &&		draw,
+						   StringView				dbgName) = 0;
+
+		virtual bool  Add (EQueueType				queue,
+						   GfxResources_t			input,
+						   GfxResources_t			output,
+						   GraphicsCommandFn_t &&	pass,
+						   StringView				dbgName = Default) = 0;
+
+		virtual bool  Add (EQueueType				queue,
+						   GfxResources_t			input,
+						   GfxResources_t			output,
+						   ComputeCommandFn_t &&	pass,
+						   StringView				dbgName = Default) = 0;
+
+		virtual bool  Add (EQueueType				queue,
+						   GfxResources_t			input,
+						   GfxResources_t			output,
+						   TransferCommandFn_t &&	pass,
+						   StringView				dbgName = Default) = 0;
+		*/
+
+
+	// indirect commands //
+		// All callbacks executed on 'Submit()' call after render graph building.
 		template <typename FN>
 		bool  Add (EQueueType				queue,
 				   VirtualResources_t		input,
@@ -411,13 +569,14 @@ namespace AE::Graphics
 						   TransferCommandFn_t &&	pass,
 						   StringView				dbgName = Default) = 0;
 
-		virtual CmdBatchID  Submit () = 0;
 
 		// wait on CPU side
 		virtual bool  Wait (ArrayView<CmdBatchID> batches) = 0;
 		virtual bool  WaitIdle () = 0;
 
 		ND_ virtual bool  IsComplete (ArrayView<CmdBatchID> batches) = 0;
+
+		virtual CmdBatchID  Submit () = 0;
 
 
 	private:

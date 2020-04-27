@@ -541,7 +541,7 @@ namespace AE::Graphics
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
 			{
-				case EImageFlags::CubeCompatibple :		flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;	break;
+				case EImageFlags::CubeCompatible :		flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;	break;
 				case EImageFlags::_Last :
 				case EImageFlags::Unknown :
 				default :								RETURN_ERR( "unknown image flag", Zero );
@@ -943,9 +943,12 @@ namespace AE::Graphics
 		#endif
 
 		#ifdef VK_NV_ray_tracing
-		if ( EnumEq( value, EResourceState::_RayTracingShader ))		result |= VK_SHADER_STAGE_RAYGEN_BIT_NV | VK_SHADER_STAGE_ANY_HIT_BIT_NV |
-																				  VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV | VK_SHADER_STAGE_MISS_BIT_NV |
-																				  VK_SHADER_STAGE_INTERSECTION_BIT_NV | VK_SHADER_STAGE_CALLABLE_BIT_NV;
+		if ( EnumEq( value, EResourceState::_RayGenShader ))			result |= VK_SHADER_STAGE_RAYGEN_BIT_NV;
+		if ( EnumEq( value, EResourceState::_RayAnyHitShader ))			result |= VK_SHADER_STAGE_ANY_HIT_BIT_NV;
+		if ( EnumEq( value, EResourceState::_RayClosestHitShader ))		result |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
+		if ( EnumEq( value, EResourceState::_RayMissShader ))			result |= VK_SHADER_STAGE_MISS_BIT_NV;
+		if ( EnumEq( value, EResourceState::_RayIntersectionShader ))	result |= VK_SHADER_STAGE_INTERSECTION_BIT_NV;
+		if ( EnumEq( value, EResourceState::_RayCallableShader ))		result |= VK_SHADER_STAGE_CALLABLE_BIT_NV;
 		#endif
 
 		return result;
@@ -997,7 +1000,7 @@ namespace AE::Graphics
 				if ( EnumEq( value, EResourceState::_MeshShader ))				result |= VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV;
 				#endif
 				#ifdef VK_NV_ray_tracing
-				if ( EnumEq( value, EResourceState::_RayTracingShader ))		result |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV;
+				if ( EnumAny( value, EResourceState::_RayTracingShaders ))		result |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV;
 				#endif
 				return result;
 			}
@@ -1136,10 +1139,10 @@ namespace AE::Graphics
 
 /*
 =================================================
-	FG_PRIVATE_VKPIXELFORMATS
+	AE_PRIVATE_VKPIXELFORMATS
 =================================================
 */
-#	define FG_PRIVATE_VKPIXELFORMATS( _builder_ ) \
+#	define AE_PRIVATE_VKPIXELFORMATS( _builder_ ) \
 		_builder_( RGBA16_SNorm,		VK_FORMAT_R16G16B16A16_SNORM ) \
 		_builder_( RGBA8_SNorm,			VK_FORMAT_R8G8B8A8_SNORM ) \
 		_builder_( RGB16_SNorm,			VK_FORMAT_R16G16B16_SNORM ) \
@@ -1274,7 +1277,7 @@ namespace AE::Graphics
 		BEGIN_ENUM_CHECKS();
 		switch ( value )
 		{
-			FG_PRIVATE_VKPIXELFORMATS( FMT_BUILDER )
+			AE_PRIVATE_VKPIXELFORMATS( FMT_BUILDER )
 			case EPixelFormat::_Count :
 			case EPixelFormat::Unknown :	break;
 		}
@@ -1297,7 +1300,7 @@ namespace AE::Graphics
 		
 		switch ( value )
 		{
-			FG_PRIVATE_VKPIXELFORMATS( FMT_BUILDER )
+			AE_PRIVATE_VKPIXELFORMATS( FMT_BUILDER )
 		}
 
 #		undef FMT_BUILDER
@@ -1399,7 +1402,7 @@ namespace AE::Graphics
 			BEGIN_ENUM_CHECKS();
 			switch ( VkImageCreateFlagBits(t) )
 			{
-				case VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT :		result |= EImageFlags::CubeCompatibple;
+				case VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT :		result |= EImageFlags::CubeCompatible;
 
 				case VK_IMAGE_CREATE_SPARSE_BINDING_BIT :
 				case VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT :

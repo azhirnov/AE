@@ -47,10 +47,11 @@ namespace AE::Graphics
 		ND_ virtual UniqueID<GfxResourceID>		CreateImage (const NativeImageDesc_t &desc, StringView dbgName = Default) = 0;
 		ND_ virtual UniqueID<GfxResourceID>		CreateBuffer (const NativeBufferDesc_t &desc, StringView dbgName = Default) = 0;
 
-			virtual bool						InitializeDescriptorSet (GraphicsPipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const = 0;
-			virtual bool						InitializeDescriptorSet (MeshPipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const = 0;
-			virtual bool						InitializeDescriptorSet (ComputePipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const = 0;
-			virtual bool						InitializeDescriptorSet (RayTracingPipelineID ppln, const DescriptorSetName &name, OUT DescriptorSet &ds) const = 0;
+			virtual bool						InitializeDescriptorSet (GraphicsPipelineID ppln, const DescriptorSetName &dsName, OUT DescriptorSet &ds) const = 0;
+			virtual bool						InitializeDescriptorSet (MeshPipelineID ppln, const DescriptorSetName &dsName, OUT DescriptorSet &ds) const = 0;
+			virtual bool						InitializeDescriptorSet (ComputePipelineID ppln, const DescriptorSetName &dsName, OUT DescriptorSet &ds) const = 0;
+			virtual bool						InitializeDescriptorSet (RayTracingPipelineID ppln, const DescriptorSetName &dsName, OUT DescriptorSet &ds) const = 0;
+			virtual bool						InitializeDescriptorSet (const PipelineName &pplnName, const DescriptorSetName &dsName, OUT DescriptorSet &ds) const = 0;
 		ND_ virtual DescriptorSetID				CreateDescriptorSet (const DescriptorSet &ds) = 0;
 
 			virtual UniqueID<PipelinePackID>	LoadPipelinePack (const SharedPtr<RStream> &stream) = 0;
@@ -68,6 +69,7 @@ namespace AE::Graphics
 		ND_ virtual bool						IsResourceAlive (DescriptorSetID id) const = 0;
 		ND_ virtual bool						IsResourceAlive (BakedCommandBufferID id) const = 0;
 
+		// returns 'true' if resource has been destroyed (when ref counter is zero).
 			virtual bool						ReleaseResource (UniqueID<GfxResourceID> &id) = 0;
 			virtual bool						ReleaseResource (UniqueID<PipelinePackID> &id) = 0;
 			virtual bool						ReleaseResource (UniqueID<BakedCommandBufferID> &id) = 0;
@@ -90,6 +92,8 @@ namespace AE::Graphics
 		ND_ virtual NativeImageHandle_t			GetImageHandle (GfxResourceID id) const = 0;
 
 			virtual bool						GetMemoryInfo (GfxResourceID id, OUT NativeMemInfo_t &info) const = 0;
+
+			virtual void						RunResourceValidation (uint maxIterations = 200) = 0;
 	};
 
 

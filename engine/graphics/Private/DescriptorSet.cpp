@@ -485,7 +485,16 @@ namespace AE::Graphics
 		{
 			auto&	buf	= res->elements[ index ];
 
-			ASSERT( size == ~0_b or ((size >= res->staticSize) and (res->arrayStride == 0 or (size - res->staticSize) % res->arrayStride == 0)) );
+			if ( size != ~0_b )
+			{
+				if ( res->arrayStride == 0 ) {
+					ASSERT( size == res->staticSize );
+				} else {
+					ASSERT( size >= res->staticSize );
+					ASSERT( (size - res->staticSize) % res->arrayStride == 0 );
+				}
+			}
+
 			ASSERT( index < res->elementCapacity );
 
 			_changed |= (buf.bufferId != buffer or buf.size != size or res->elementCount <= index);
@@ -925,7 +934,7 @@ namespace {
 	DescriptorSet::DynamicDataPtr  DescriptorSetHelper::CloneDynamicData (const DescriptorSet &ds)
 	{
 		if ( not ds._dataPtr )
-			return Default;
+			return {};
 
 		auto&	data	= ds._dataPtr;
 		auto*	result	= Cast<DescriptorSet::DynamicData>( Allocator::Allocate( data->memSize ));

@@ -237,7 +237,7 @@ namespace AE::Graphics
 		}
 
 		const bool	is_uniform	= ((buf.state & EResourceState::_StateMask) == EResourceState::UniformRead);
-		const bool	is_dynamic	= EnumEq( buf.state, EResourceState::_BufferDynamicOffset );
+		const bool	is_dynamic	= buf.dynamicOffsetIndex != UMax;
 
 		VkWriteDescriptorSet&	wds = list.descriptors[list.descriptorIndex++];
 		wds = {};
