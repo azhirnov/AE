@@ -16,7 +16,7 @@ namespace AE::App
 	{
 		String			title;
 		uint2			size		= {640, 480};
-		Monitor::ID		monitor		= Default;
+		Monitor::ID		monitorId	= Default;
 		bool			resizable	= false;
 		bool			fullscreen	= false;
 	};
@@ -84,11 +84,12 @@ namespace AE::App
 	public:
 		virtual void  Close () = 0;
 
-		ND_ virtual uint2	GetSurfaceSize () const = 0;
-		ND_ virtual EState	GetState () const = 0;
+		ND_ virtual uint2				GetSurfaceSize () const = 0;
+		ND_ virtual EState				GetState () const = 0;
+		ND_ virtual Monitor				GetMonitor () const = 0;
 
-		ND_ virtual InputEventQueue const&	GetInputEventQueue () = 0;	// TODO: return shared pointer ?
-		ND_ virtual NativeWindow			GetNative () = 0;
+		ND_ virtual InputEventQueue&	GetInputEventQueue () = 0;	// TODO: return shared pointer ?
+		ND_ virtual NativeWindow		GetNative () = 0;
 
 		// desctop only
 		virtual void  SetSize (const uint2 &size) = 0;

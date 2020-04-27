@@ -51,13 +51,14 @@ namespace AE::App
 		AndroidWindow ();
 		~AndroidWindow ();
 
-		void					Close () override;
+		void				Close () override;
 
-		uint2					GetSurfaceSize () const override;
-		EState					GetState () const override			{ return _wndState; }
+		uint2				GetSurfaceSize () const override;
+		EState				GetState () const override;
+		Monitor				GetMonitor () const override;
 
-		InputEventQueue const&	GetInputEventQueue () override;
-		NativeWindow			GetNative () override;
+		InputEventQueue&	GetInputEventQueue () override;
+		NativeWindow		GetNative () override;
 
 		// desctop only
 		void  SetSize (const uint2 &) override {}

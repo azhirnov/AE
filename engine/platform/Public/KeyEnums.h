@@ -36,6 +36,8 @@ namespace AE::App
 		// mouse wheel
 		MouseWheelUp,
 		MouseWheelDown,
+		MouseWheelLeft,
+		MouseWheelRight,
 
 		// keys
 		n0,
@@ -121,6 +123,8 @@ namespace AE::App
 		F10,
 		F11,
 		F12,
+
+		_Count
 	};
 
 }	// AE::App

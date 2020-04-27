@@ -68,6 +68,8 @@ namespace AE::App
 		ArrayView<const char*>	GetVulkanInstanceExtensions () override;
 		
 		void					Terminate () override;
+		
+		EGraphicsApi			GetSupportedGAPI () override;
 
 		void					Update ();
 		

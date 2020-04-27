@@ -18,35 +18,30 @@ namespace AE::App
 	{
 		friend class ApplicationGLFW;
 
-	// types
-	private:
-		using Milliseconds	= InputEventQueue::Milliseconds;
-		using TimePoint_t	= std::chrono::high_resolution_clock::time_point;
-
-
 	// variables
 	private:
-		GLFWwindow *			_window		= null;
-		UniquePtr<IWndListener>	_listener;
-		InputEventQueueWriter	_eventQueue;
-		const TimePoint_t		_appStartTime;
-		EState					_wndState	= Default;
+		GLFWwindow *				_window				= null;
+		UniquePtr<IWndListener>		_listener;
+		InputEventQueueWriter		_eventQueue;
+		EState						_wndState			= Default;
+		ApplicationGLFW &			_app;
 
-		DataRaceCheck			_drCheck;
+		DataRaceCheck				_drCheck;
 
 
 	// methods
 	public:
 		~WindowGLFW ();
 		
-		void					Close () override;
+		void				Close () override;
 		
-		uint2					GetSurfaceSize () const override;
-		EState					GetState () const override			{ return _wndState; }
+		uint2				GetSurfaceSize () const override;
+		EState				GetState () const override;
+		Monitor				GetMonitor () const override;
 
-		InputEventQueue const&	GetInputEventQueue () override;
-		NativeWindow			GetNative () override;
-		
+		InputEventQueue&	GetInputEventQueue () override;
+		NativeWindow		GetNative () override;
+
 		void  SetSize (const uint2 &size) override;
 		void  SetPosition (const int2 &pos) override;
 		void  SetPosition (Monitor::ID monitor, const int2 &pos) override;
@@ -54,7 +49,7 @@ namespace AE::App
 
 
 	private:
-		WindowGLFW (UniquePtr<IWndListener>, TimePoint_t);
+		explicit WindowGLFW (ApplicationGLFW &app, UniquePtr<IWndListener>);
 
 		bool  _Create (const WindowDesc &desc);
 		void  _Destroy ();
@@ -71,8 +66,6 @@ namespace AE::App
 		static void _GLFW_IconifyCallback (GLFWwindow* wnd, int iconified);
 		
 		ND_ static EKey  _MapKey (int key);
-
-		ND_ Milliseconds  _Timestamp ();
 	};
 
 

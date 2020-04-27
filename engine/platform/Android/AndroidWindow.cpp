@@ -11,9 +11,9 @@
 namespace AE::App
 {
 namespace {
-	EKey  _MapKey (jint keyCode);
-	EKeyState  _MapKeyAction (jint action);
-	InputEventQueueWriter::TouchEvent::EAction  _MapTouchAction (jint action);
+	static EKey  _MapKey (jint keyCode);
+	static EKeyState  _MapKeyAction (jint action);
+	static InputEventQueueWriter::TouchEvent::EAction  _MapTouchAction (jint action);
 }
 	
 /*
@@ -25,6 +25,7 @@ namespace {
 	{
 		auto*	app = _GetAppInstance();
 		ASSERT( app );
+		EXLOCK( app->_drCheck );
 
 		for (auto& obj_wnd : app->_windows)
 		{
@@ -42,6 +43,7 @@ namespace {
 	{
 		auto*	app = _GetAppInstance();
 		ASSERT( app );
+		EXLOCK( app->_drCheck );
 
 		auto	wnd = MakeShared<AndroidWindow>();
 		return { wnd, app->_AddWindow( wnd )};
@@ -54,7 +56,7 @@ namespace {
 */
 namespace {
 	template <typename T>
-	ND_ SharedPtr<AndroidWindow>  GetAppWindow (T uid)
+	ND_ static SharedPtr<AndroidWindow>  GetAppWindow (T uid)
 	{
 		return AndroidApplication::_GetAppWindow( uid );
 	}
@@ -100,6 +102,28 @@ namespace {
 	{
 		EXLOCK( _drCheck );
 		return _surfSize;
+	}
+	
+/*
+=================================================
+	GetState
+=================================================
+*/
+	IWindow::EState  AndroidWindow::GetState () const
+	{
+		EXLOCK( _drCheck );
+		return _wndState;
+	}
+	
+/*
+=================================================
+	GetMonitor
+=================================================
+*/
+	Monitor  AndroidWindow::GetMonitor () const
+	{
+		// TODO
+		return Default;
 	}
 
 /*
@@ -427,9 +451,12 @@ namespace {
 	{
 		if ( auto window = GetAppWindow( wndId ))
 		{
+			EXLOCK( window->_drCheck );
+
 			InputEventQueue::KeyEvent	ev;
-			ev.key		= _MapKey( keycode );
-			ev.state	= _MapKeyAction( action );
+			ev.key			= _MapKey( keycode );
+			ev.state		= _MapKeyAction( action );
+			ev.timestamp	= Clock().Timestamp();
 
 			window->_eventQueue.Push( ev );
 		}
@@ -448,11 +475,14 @@ namespace {
 	{
 		if ( auto window = GetAppWindow( wndId ))
 		{
+			EXLOCK( window->_drCheck );
+
 			JavaArray<jfloat>	touches{ touchData, /*readOnly*/true, JavaEnv{env} };
 
 			InputEventQueue::TouchEvent	ev;
-			ev.count	= uint8_t(count);
-			ev.action	= _MapTouchAction( action );
+			ev.count		= uint8_t(count);
+			ev.action		= _MapTouchAction( action );
+			ev.timestamp	= Clock().Timestamp();
 
 			for (int i = 0, j = 0; i < count; ++i)
 			{
@@ -485,7 +515,7 @@ namespace {
 =================================================
 */
 namespace {
-	EKey  _MapKey (jint keyCode)
+	static EKey  _MapKey (jint keyCode)
 	{
 		switch ( keyCode )
 		{
@@ -609,7 +639,7 @@ namespace {
 =================================================
 */
 namespace {
-	EKeyState  _MapKeyAction (jint action)
+	static EKeyState  _MapKeyAction (jint action)
 	{
 		constexpr int ACTION_DOWN		= 0;
 		constexpr int ACTION_UP			= 1;
@@ -632,7 +662,7 @@ namespace {
 namespace {
 	using ETouchAction = InputEventQueueWriter::TouchEvent::EAction;
 
-	ETouchAction  _MapTouchAction (jint action)
+	static ETouchAction  _MapTouchAction (jint action)
 	{
 		constexpr int ACTION_DOWN		= 0;
 		constexpr int ACTION_UP			= 1;

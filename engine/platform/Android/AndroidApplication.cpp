@@ -6,6 +6,7 @@
 
 # include "threading/TaskSystem/TaskScheduler.h"
 # include "graphics/Vulkan/VSwapchain.h"
+# include "stl/Platforms/PlatformUtils.h"
 
 namespace AE::App
 {
@@ -17,7 +18,7 @@ namespace AE::App
 */
 namespace {
 
-	ND_ AndroidApplication&  GetApp ()
+	ND_ static AndroidApplication&  GetApp ()
 	{
 		auto*	app = AndroidApplication::_GetAppInstance();
 		ASSERT( app );
@@ -138,6 +139,27 @@ namespace {
 	
 /*
 =================================================
+	GetSupportedGAPI
+=================================================
+*/
+	EGraphicsApi  AndroidApplication::GetSupportedGAPI ()
+	{
+		EGraphicsApi	result = EGraphicsApi::OpenGLES_2;
+
+		Library		vk_lib;
+		Library		gl_lib;
+
+		if ( vk_lib.Load( "libvulkan.so" ))
+			result |= EGraphicsApi::Vulkan;
+
+		if ( gl_lib.Load( "libGLESv3.so" ))
+			result |= EGraphicsApi::OpenGLES_3;
+
+		return result;
+	}
+
+/*
+=================================================
 	Update
 =================================================
 */
@@ -238,6 +260,7 @@ namespace {
 															jstring internalAppData, jstring internalCache,
 															jstring externalAppData, jstring externalCache, jstring externalStorage)
 	{
+		// TODO
 	}
 	
 /*

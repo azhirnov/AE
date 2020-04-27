@@ -8,6 +8,8 @@
 
 extern int main ();
 
+typedef struct GLFWmonitor GLFWmonitor;
+
 namespace AE::App
 {
 
@@ -22,8 +24,6 @@ namespace AE::App
 		using Window		= WeakPtr< WindowGLFW >;
 		using WindowArray_t	= FixedArray< Window, 8 >;
 
-		using TimePoint_t	= WindowGLFW::TimePoint_t;
-
 
 	// variables
 	private:
@@ -31,7 +31,6 @@ namespace AE::App
 		UniquePtr< IAppListener >	_listener;
 		WindowArray_t				_windows;
 		const ThreadID				_mainThread;
-		const TimePoint_t			_appStartTime;
 
 		DataRaceCheck				_drCheck;
 
@@ -47,8 +46,12 @@ namespace AE::App
 		ArrayView<const char*>	GetVulkanInstanceExtensions () override;
 		
 		void					Terminate () override;
+		
+		EGraphicsApi			GetSupportedGAPI () override;
 
 		static int				Run (UniquePtr<IAppListener>);
+
+		static bool				GetMonitorInfo (GLFWmonitor*, OUT Monitor &);
 
 	private:
 		ApplicationGLFW (UniquePtr<IAppListener>);

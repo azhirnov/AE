@@ -7,6 +7,7 @@
 # endif
 
 # include "platform/GLFW/WindowGLFW.h"
+# include "platform/GLFW/ApplicationGLFW.h"
 # include "stl/Platforms/WindowsHeader.h"
 
 # include "GLFW/glfw3.h"
@@ -20,9 +21,8 @@ namespace AE::App
 	constructor
 =================================================
 */
-	WindowGLFW::WindowGLFW (UniquePtr<IWndListener> listener, TimePoint_t startTime) :
-		_listener{ std::move(listener) },
-		_appStartTime{ startTime }
+	WindowGLFW::WindowGLFW (ApplicationGLFW &app, UniquePtr<IWndListener> listener) :
+		_listener{ std::move(listener) }, _app{ app }
 	{
 	}
 	
@@ -59,6 +59,8 @@ namespace AE::App
 */
 	uint2  WindowGLFW::GetSurfaceSize () const
 	{
+		EXLOCK( _drCheck );
+
 		uint2	result;
 
 		if ( _window )
@@ -67,13 +69,62 @@ namespace AE::App
 		}
 		return result;
 	}
+	
+/*
+=================================================
+	GetState
+=================================================
+*/
+	IWindow::EState  WindowGLFW::GetState () const
+	{
+		EXLOCK( _drCheck );
+		return _wndState;
+	}
+	
+/*
+=================================================
+	GetMonitor
+=================================================
+*/
+	Monitor  WindowGLFW::GetMonitor () const
+	{
+		if ( not _window )
+			return Default;
+		
+		int				count;
+		GLFWmonitor**	monitors	= glfwGetMonitors( OUT &count );
+		Monitor			cur_monitor;
+
+		for (int i = 0; i < count; ++i)
+		{
+			int2	mpos;
+			int2	msize;
+			glfwGetMonitorWorkarea( monitors[i], OUT &mpos.x, OUT &mpos.y, OUT &msize.x, OUT &msize.y );
+
+			int2	wpos;
+			int2	wsize;
+			glfwGetWindowPos( _window, OUT &wpos.x, OUT &wpos.y );
+			glfwGetWindowSize( _window, OUT &wsize.x, OUT &wsize.y );
+
+			wpos += wsize / 2;
+
+			if ( RectI{mpos, mpos + msize}.Intersects( wpos ))
+			{
+				ApplicationGLFW::GetMonitorInfo( monitors[i], OUT cur_monitor );
+				cur_monitor.id = Monitor::ID(i);
+				break;
+			}
+		}
+		
+		return cur_monitor;
+	}
 
 /*
 =================================================
 	GetInputEventQueue
 =================================================
 */
-	InputEventQueue const&  WindowGLFW::GetInputEventQueue ()
+	InputEventQueue&  WindowGLFW::GetInputEventQueue ()
 	{
 		EXLOCK( _drCheck );
 		return _eventQueue;
@@ -86,6 +137,8 @@ namespace AE::App
 */
 	NativeWindow  WindowGLFW::GetNative ()
 	{
+		EXLOCK( _drCheck );
+
 		NativeWindow	result;
 
 		if ( _window )
@@ -176,21 +229,28 @@ namespace AE::App
 
 		glfwWindowHint( GLFW_CLIENT_API, GLFW_NO_API );
 		
-		GLFWmonitor*	monitor	= null;
+		GLFWmonitor*	monitor		= null;
 		int				count;
-		GLFWmonitor**	monitors = glfwGetMonitors( OUT &count );
+		GLFWmonitor**	monitors	= glfwGetMonitors( OUT &count );
 		int2			monitor_pos;
+		int2			window_size	= int2(desc.size);
 
-		if ( monitors and int(desc.monitor) < count )
+		if ( monitors and int(desc.monitorId) >= 0 and int(desc.monitorId) < count )
+			monitor = monitors[ int(desc.monitorId) ];
+		else
+			monitor = glfwGetPrimaryMonitor();
+
+		if ( monitor )
 		{
-			monitor = monitors[ int(desc.monitor) ];
-
 			int2	size;
 			glfwGetMonitorWorkarea( monitor, OUT &monitor_pos.x, OUT &monitor_pos.y, OUT &size.x, OUT &size.y );
 
-			monitor_pos += (size - int2(desc.size)) / 2;
+			window_size  = Min( window_size, size );
+			monitor_pos += Max( int2(0), (size - window_size) / 2 );
 		}
 
+		if ( not desc.fullscreen )
+			monitor = null;	// keep monitor only for fullscreen mode
 
 		glfwWindowHint( GLFW_RESIZABLE, desc.resizable ? GLFW_TRUE : GLFW_FALSE );
 		glfwWindowHint( GLFW_VISIBLE, GLFW_TRUE );
@@ -200,10 +260,10 @@ namespace AE::App
 		glfwWindowHint( GLFW_SCALE_TO_MONITOR, GLFW_TRUE );
 		glfwWindowHint( GLFW_CLIENT_API, GLFW_NO_API );
 
-		_window = glfwCreateWindow( int(desc.size.x),
-									int(desc.size.y),
-									desc.title.data(),
-									desc.fullscreen ? monitor : null,
+		_window = glfwCreateWindow( window_size.x,
+									window_size.y,
+									desc.title.c_str(),
+									monitor,
 									null );
 		CHECK_ERR( _window );
 		
@@ -268,17 +328,6 @@ namespace AE::App
 
 		_listener->OnUpdate( *this );
 		return true;
-	}
-	
-/*
-=================================================
-	_Timestamp
-=================================================
-*/
-	WindowGLFW::Milliseconds  WindowGLFW::_Timestamp ()
-	{
-		EXLOCK( _drCheck );
-		return std::chrono::duration_cast<Milliseconds>( TimePoint_t::clock::now() - _appStartTime );
 	}
 	
 /*
@@ -425,7 +474,9 @@ namespace AE::App
 	void  WindowGLFW::_GLFW_RefreshCallback (GLFWwindow* wnd)
 	{
 		auto*	self = static_cast<WindowGLFW *>(glfwGetWindowUserPointer( wnd ));
-		
+		EXLOCK( self->_drCheck );
+
+		Unused( self );
 		//for (auto& listener : self->_listeners) {
 		//	listener->OnRefresh();
 		//}
@@ -439,8 +490,8 @@ namespace AE::App
 	void  WindowGLFW::_GLFW_ResizeCallback (GLFWwindow* wnd, int w, int h)
 	{
 		auto*	self = static_cast<WindowGLFW *>(glfwGetWindowUserPointer( wnd ));
-		
 		EXLOCK( self->_drCheck );
+		
 		self->_listener->OnResize( *self, uint2{w, h} );
 	}
 
@@ -452,13 +503,14 @@ namespace AE::App
 	void  WindowGLFW::_GLFW_KeyCallback (GLFWwindow* wnd, int key, int, int action, int)
 	{
 		auto*	self = static_cast<WindowGLFW *>(glfwGetWindowUserPointer( wnd ));
+		EXLOCK( self->_drCheck );
 
 		InputEventQueue::KeyEvent	ev;
 		ev.key		= _MapKey( key );
 		ev.state	= (action == GLFW_PRESS   ? EKeyState::Down :
 					   action == GLFW_RELEASE ? EKeyState::Up   :
 												EKeyState::Hold);
-		ev.timestamp = self->_Timestamp();
+		ev.timestamp = Clock().Timestamp();
 
 		self->_eventQueue.Push( ev );
 	}
@@ -471,13 +523,14 @@ namespace AE::App
 	void  WindowGLFW::_GLFW_MouseButtonCallback (GLFWwindow* wnd, int button, int action, int)
 	{
 		auto*	self = static_cast<WindowGLFW *>(glfwGetWindowUserPointer( wnd ));
+		EXLOCK( self->_drCheck );
 		
 		InputEventQueue::KeyEvent	ev;
 		ev.key		= _MapKey( button );
 		ev.state	= (action == GLFW_PRESS   ? EKeyState::Down :
 					   action == GLFW_RELEASE ? EKeyState::Up   :
 												EKeyState::Hold);
-		ev.timestamp = self->_Timestamp();
+		ev.timestamp = Clock().Timestamp();
 
 		self->_eventQueue.Push( ev );
 	}
@@ -490,10 +543,11 @@ namespace AE::App
 	void  WindowGLFW::_GLFW_CursorPosCallback (GLFWwindow* wnd, double xpos, double ypos)
 	{
 		auto*	self = static_cast<WindowGLFW *>(glfwGetWindowUserPointer( wnd ));
+		EXLOCK( self->_drCheck );
 		
 		InputEventQueue::MouseEvent	ev;
 		ev.pos		 = { int(xpos), int(ypos) };
-		ev.timestamp = self->_Timestamp();
+		ev.timestamp = Clock().Timestamp();
 
 		self->_eventQueue.Push( ev );
 	}
@@ -503,16 +557,26 @@ namespace AE::App
 	_GLFW_MouseWheelCallback
 =================================================
 */
-	void  WindowGLFW::_GLFW_MouseWheelCallback (GLFWwindow* wnd, double, double dy)
+	void  WindowGLFW::_GLFW_MouseWheelCallback (GLFWwindow* wnd, double dx, double dy)
 	{
 		auto*	self = static_cast<WindowGLFW *>(glfwGetWindowUserPointer( wnd ));
+		EXLOCK( self->_drCheck );
 		
 		InputEventQueue::KeyEvent	ev;
-		ev.key		= dy > 0.0 ? EKey::MouseWheelUp : EKey::MouseWheelDown;
-		ev.state	= EKeyState::Up;
-		ev.timestamp = self->_Timestamp();
+		ev.state	 = EKeyState::Up;
+		ev.timestamp = Clock().Timestamp();
+		
+		if ( Abs(dy) > 0.0 )
+		{
+			ev.key = dy > 0.0 ? EKey::MouseWheelUp : EKey::MouseWheelDown;
+			self->_eventQueue.Push( ev );
+		}
 
-		self->_eventQueue.Push( ev );
+		if ( Abs(dx) > 0.0 )
+		{
+			ev.key = dx > 0.0 ? EKey::MouseWheelRight : EKey::MouseWheelLeft;
+			self->_eventQueue.Push( ev );
+		}
 	}
 	
 /*
@@ -523,6 +587,7 @@ namespace AE::App
 	void  WindowGLFW::_GLFW_IconifyCallback (GLFWwindow* wnd, int iconified)
 	{
 		auto*	self = static_cast<WindowGLFW *>(glfwGetWindowUserPointer( wnd ));
+		EXLOCK( self->_drCheck );
 
 		if ( iconified == GLFW_TRUE )
 			self->_SetState( EState::InBackground );

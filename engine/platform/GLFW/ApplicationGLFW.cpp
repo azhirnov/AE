@@ -5,6 +5,7 @@
 # include "threading/TaskSystem/TaskScheduler.h"
 # include "platform/GLFW/ApplicationGLFW.h"
 # include "stl/Algorithms/StringUtils.h"
+# include "stl/Platforms/PlatformUtils.h"
 # include "GLFW/glfw3.h"
 
 namespace AE::App
@@ -30,8 +31,7 @@ namespace {
 	ApplicationGLFW::ApplicationGLFW (UniquePtr<IAppListener> listener) :
 		_isRunning{ true },
 		_listener{ std::move(listener) },
-		_mainThread{ std::this_thread::get_id() },
-		_appStartTime{ TimePoint_t::clock::now() }
+		_mainThread{ std::this_thread::get_id() }
 	{
 		glfwSetErrorCallback( &GLFW_ErrorCallback );
 	}
@@ -65,7 +65,7 @@ namespace {
 		CHECK_ERR( _isRunning.load( EMemoryOrder::Relaxed ));
 		CHECK_ERR( listener );
 
-		SharedPtr<WindowGLFW>	wnd{ new WindowGLFW{ std::move(listener), _appStartTime }};
+		SharedPtr<WindowGLFW>	wnd{ new WindowGLFW{ *this, std::move(listener) }};
 		CHECK_ERR( wnd->_Create( desc ));
 
 		_windows.push_back( wnd );
@@ -118,41 +118,65 @@ namespace {
 
 		for (int i = 0; i < count; ++i)
 		{
-			int2	pos;
-			int2	size;
-			glfwGetMonitorWorkarea( monitors[i], OUT &pos.x, OUT &pos.y, OUT &size.x, OUT &size.y );
+			GetMonitorInfo( monitors[i], OUT result[i] );
 
-			int2	size_mm;
-			glfwGetMonitorPhysicalSize( monitors[i], OUT &size_mm.x, OUT &size_mm.y );
-
-			float2	scale;
-			glfwGetMonitorContentScale( monitors[i], OUT &scale.x, OUT &scale.y );
-
-			result[i].id			= Monitor::ID(i);
-			result[i].workArea		= RectI{ pos, pos + size };
-			result[i].physicalSize	= float2(size_mm) * 1.0e-3f;
-			result[i].scale			= scale;
-
-			if ( const GLFWvidmode* mode = glfwGetVideoMode( monitors[i] ))
-			{
-				result[i].region	= RectI{ pos, pos + int2{ mode->width, mode->height }};
-				result[i].freq		= mode->refreshRate;
-				result[i].colorBits	= ubyte3{ mode->redBits, mode->greenBits, mode->blueBits };
-			}
-			else
-			{
-				result[i].region	= result[i].workArea;
-			}
-
-			// calc PPI
-			result[i].ppi = float2(result[i].region.Size()) / result[i].physicalSize * 0.0254f;
-
-			result[i].name = glfwGetMonitorName( monitors[i] );
+			result[i].id = Monitor::ID(i);
 		}
 
 		return result;
 	}
 	
+/*
+=================================================
+	GetMonitorInfo
+=================================================
+*/
+	bool  ApplicationGLFW::GetMonitorInfo (GLFWmonitor* ptr, OUT Monitor &result)
+	{
+		CHECK_ERR( ptr );
+
+		int2	pos;
+		int2	size;
+		glfwGetMonitorWorkarea( ptr, OUT &pos.x, OUT &pos.y, OUT &size.x, OUT &size.y );
+
+		int2	size_mm;
+		glfwGetMonitorPhysicalSize( ptr, OUT &size_mm.x, OUT &size_mm.y );
+
+		float2	scale;
+		glfwGetMonitorContentScale( ptr, OUT &scale.x, OUT &scale.y );
+
+		result.workArea		= RectI{ pos, pos + size };
+		result.physicalSize	= float2(size_mm) * 1.0e-3f;
+		result.scale		= scale;
+
+		if ( const GLFWvidmode* mode = glfwGetVideoMode( ptr ))
+		{
+			result.region	= RectI{ pos, pos + int2{ mode->width, mode->height }};
+			result.freq		= mode->refreshRate;
+			result.colorBits	= ubyte3{ mode->redBits, mode->greenBits, mode->blueBits };
+		}
+		else
+		{
+			result.region	= result.workArea;
+		}
+
+		// calc PPI
+		const float	meter_to_inch = 0.0254f;
+		result.ppi = float2(result.region.Size()) / result.physicalSize * meter_to_inch;
+
+		result.name = glfwGetMonitorName( ptr );
+
+		// set native handle
+		#ifdef PLATFORM_WINDOWS
+			POINT	pt = { pos.x+1, pos.y+1 };
+			result.native = BitCast<Monitor::NativeMonitor_t>( ::MonitorFromPoint( pt, MONITOR_DEFAULTTONULL ));
+		#else
+			AE_COMPILATION_MESSAGE( "no implementation for current platform!" );
+		#endif
+
+		return true;
+	}
+
 /*
 =================================================
 	GetVulkanInstanceExtensions
@@ -214,6 +238,32 @@ namespace {
 		_isRunning.store( false, EMemoryOrder::Relaxed );
 	}
 	
+/*
+=================================================
+	GetSupportedGAPI
+=================================================
+*/
+	EGraphicsApi  ApplicationGLFW::GetSupportedGAPI ()
+	{
+	#ifdef PLATFORM_WINDOWS
+		const char	vk_lib_name[] = "vulkan-1.dll";
+		const char	gl_lib_name[] = "opengl32.dll";
+	#endif
+
+		EGraphicsApi	result = Zero;
+
+		Library		vk_lib;
+		Library		gl_lib;
+
+		if ( vk_lib.Load( vk_lib_name ))
+			result |= EGraphicsApi::Vulkan;
+
+		if ( gl_lib.Load( gl_lib_name ))
+			result |= EGraphicsApi::OpenGL;
+
+		return result;
+	}
+
 /*
 =================================================
 	Run

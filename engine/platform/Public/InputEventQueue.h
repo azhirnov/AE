@@ -3,6 +3,7 @@
 #pragma once
 
 #include "platform/Public/KeyEnums.h"
+#include "platform/Public/Clock.h"
 
 namespace AE::App
 {
@@ -15,12 +16,10 @@ namespace AE::App
 	{
 	// types
 	public:
-		using Milliseconds	= std::chrono::duration<uint, std::milli>;
-
 		struct EventBase
 		{
 			uint			eventType	= UMax;
-			Milliseconds	timestamp;
+			Nanoseconds		timestamp;
 		};
 
 		struct KeyEvent : EventBase
@@ -70,18 +69,8 @@ namespace AE::App
 
 
 	protected:
-		template <typename T>
-		struct _GetTypeSize {
-			static constexpr size_t	value = sizeof(T);
-		};
-		
-		template <typename T>
-		struct _GetTypeAlign {
-			static constexpr size_t	value = alignof(T);
-		};
-
-		static constexpr size_t	_MaxStorageSize		= MsgTypes_t::ForEach_Max< _GetTypeSize >();
-		static constexpr size_t	_MaxStorageAlign	= MsgTypes_t::ForEach_Max< _GetTypeAlign >();
+		static constexpr size_t	_MaxStorageSize		= MsgTypes_t::ForEach_Max< TypeListUtils::GetTypeSize >();
+		static constexpr size_t	_MaxStorageAlign	= MsgTypes_t::ForEach_Max< TypeListUtils::GetTypeAlign >();
 		
 		using _MsgStorage_t = std::aligned_storage_t< _MaxStorageSize, _MaxStorageAlign >;
 
@@ -98,6 +87,7 @@ namespace AE::App
 	// variables
 	protected:
 		Array< MsgStorage >		_queue;		// TODO: use lock-free queue
+		Threading::Mutex		_guard;
 
 
 	// methods
@@ -106,6 +96,8 @@ namespace AE::App
 
 		ND_ bool  Pop (OUT MsgStorage &msg)
 		{
+			EXLOCK( _guard );
+
 			if ( _queue.size() )
 			{
 				std::memcpy( OUT &msg, &_queue.front(), sizeof(MsgStorage) );
@@ -127,9 +119,11 @@ namespace AE::App
 	// methods
 	public:
 		template <typename T>
-		void Push (T &msg)
+		void  Push (T &msg)
 		{
 			STATIC_ASSERT( MsgTypes_t::HasType<T> );
+	
+			EXLOCK( _guard );
 			ASSERT( _queue.size() < 1024 );
 
 			msg.eventType = MsgTypes_t::Index<T>;

@@ -83,7 +83,7 @@ namespace
 			CHECK_FATAL( monitors.size() >= 1 );
 
 			WindowDesc	desc;
-			desc.monitor	= Monitor::ID(1);	// try to show window on second monitor
+			desc.monitorId	= Monitor::ID(1);	// try to show window on second monitor
 
 			_window = app.CreateWindow( MakeUnique<WndListener>(), desc );
 			CHECK_FATAL( _window );
