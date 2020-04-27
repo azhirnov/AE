@@ -128,7 +128,7 @@ namespace {
 	SetName
 =================================================
 */
-	void BasePipeline::SetName (const String &value)
+	void  BasePipeline::SetName (const String &value)
 	{
 		_name = PipelineName{ value };
 
@@ -140,7 +140,7 @@ namespace {
 	Define
 =================================================
 */
-	void BasePipeline::Define (const String &value)
+	void  BasePipeline::Define (const String &value)
 	{
 		//CHECK( _defines.size() < _defines.capacity() );
 
@@ -153,7 +153,7 @@ namespace {
 	AddLayout
 =================================================
 */
-	bool BasePipeline::AddLayout (const ShaderInfo &sh, OUT size_t &merged)
+	bool  BasePipeline::AddLayout (const ShaderInfo &sh, OUT size_t &merged)
 	{
 		merged = 0;
 
@@ -201,7 +201,7 @@ namespace {
 	MergeLayouts
 =================================================
 */
-	bool BasePipeline::MergeLayouts (const ShaderInfo &sh, OUT size_t &merged) const
+	bool  BasePipeline::MergeLayouts (const ShaderInfo &sh, OUT size_t &merged) const
 	{
 		merged = 0;
 
@@ -271,7 +271,7 @@ namespace {
 	SetVertexShader
 =================================================
 */
-	void GraphicsPipelineScriptBinding::SetVertexShader (const String &shaderFile, EShaderVersion version, const String &defines)
+	void  GraphicsPipelineScriptBinding::SetVertexShader (const String &shaderFile, EShaderVersion version, const String &defines)
 	{
 		CHECK( not vertex.IsDefined() );
 		vertex.filename	= StringToWString( shaderFile );
@@ -285,7 +285,7 @@ namespace {
 	SetTessControlShader
 =================================================
 */
-	void GraphicsPipelineScriptBinding::SetTessControlShader (const String &shaderFile, EShaderVersion version, const String &defines)
+	void  GraphicsPipelineScriptBinding::SetTessControlShader (const String &shaderFile, EShaderVersion version, const String &defines)
 	{
 		CHECK( not tessControl.IsDefined() );
 		tessControl.filename	= StringToWString( shaderFile );
@@ -299,7 +299,7 @@ namespace {
 	SetTessEvalShader
 =================================================
 */
-	void GraphicsPipelineScriptBinding::SetTessEvalShader (const String &shaderFile, EShaderVersion version, const String &defines)
+	void  GraphicsPipelineScriptBinding::SetTessEvalShader (const String &shaderFile, EShaderVersion version, const String &defines)
 	{
 		CHECK( not tessEval.IsDefined() );
 		tessEval.filename	= StringToWString( shaderFile );
@@ -313,7 +313,7 @@ namespace {
 	SetGeometryShader
 =================================================
 */
-	void GraphicsPipelineScriptBinding::SetGeometryShader (const String &shaderFile, EShaderVersion version, const String &defines)
+	void  GraphicsPipelineScriptBinding::SetGeometryShader (const String &shaderFile, EShaderVersion version, const String &defines)
 	{
 		CHECK( not geometry.IsDefined() );
 		geometry.filename	= StringToWString( shaderFile );
@@ -327,7 +327,7 @@ namespace {
 	SetFragmentShader
 =================================================
 */
-	void GraphicsPipelineScriptBinding::SetFragmentShader (const String &shaderFile, EShaderVersion version, const String &defines)
+	void  GraphicsPipelineScriptBinding::SetFragmentShader (const String &shaderFile, EShaderVersion version, const String &defines)
 	{
 		CHECK( not fragment.IsDefined() );
 		fragment.filename	= StringToWString( shaderFile );
@@ -341,7 +341,7 @@ namespace {
 	MergePass1
 =================================================
 */
-	bool GraphicsPipelineScriptBinding::MergePass1 (INOUT size_t &merged)
+	bool  GraphicsPipelineScriptBinding::MergePass1 (INOUT size_t &merged)
 	{
 		size_t	count;
 		CHECK_ERR( AddLayout( vertex,      OUT count ));	merged += count;
@@ -357,7 +357,7 @@ namespace {
 	MergePass2
 =================================================
 */
-	bool GraphicsPipelineScriptBinding::MergePass2 (INOUT size_t &merged) const
+	bool  GraphicsPipelineScriptBinding::MergePass2 (INOUT size_t &merged) const
 	{
 		size_t	count;
 		CHECK_ERR( MergeLayouts( vertex,      OUT count ));	merged += count;
@@ -373,7 +373,7 @@ namespace {
 	ValidatePrimitiveTopology
 =================================================
 */
-	static void ValidatePrimitiveTopology (INOUT GraphicsPipelineDesc::TopologyBits_t &topology)
+	static void  ValidatePrimitiveTopology (INOUT GraphicsPipelineDesc::TopologyBits_t &topology)
 	{
 		if ( topology.test(uint(EPrimitive::Patch)) )
 		{
@@ -414,7 +414,7 @@ namespace {
 	MergePrimitiveTopology
 =================================================
 */
-	static void MergePrimitiveTopology (const GraphicsPipelineDesc::TopologyBits_t &src, INOUT GraphicsPipelineDesc::TopologyBits_t &dst)
+	static void  MergePrimitiveTopology (const GraphicsPipelineDesc::TopologyBits_t &src, INOUT GraphicsPipelineDesc::TopologyBits_t &dst)
 	{
 		for (size_t i = 0; i < src.size(); ++i)
 		{
@@ -428,7 +428,7 @@ namespace {
 	Build
 =================================================
 */
-	bool GraphicsPipelineScriptBinding::Build ()
+	bool  GraphicsPipelineScriptBinding::Build ()
 	{
 		auto&					shader_storage	= *ShaderStorage::Instance();
 		auto&					ppln_storage	= *shader_storage.storage;
@@ -521,7 +521,7 @@ namespace {
 	SetTaskShader
 =================================================
 */
-	void MeshPipelineScriptBinding::SetTaskShader (const String &shaderFile, EShaderVersion version, const String &defines)
+	void  MeshPipelineScriptBinding::SetTaskShader (const String &shaderFile, EShaderVersion version, const String &defines)
 	{
 		CHECK( not task.IsDefined() );
 		task.filename	= StringToWString( shaderFile );
@@ -535,7 +535,7 @@ namespace {
 	SetMeshShader
 =================================================
 */
-	void MeshPipelineScriptBinding::SetMeshShader (const String &shaderFile, EShaderVersion version, const String &defines)
+	void  MeshPipelineScriptBinding::SetMeshShader (const String &shaderFile, EShaderVersion version, const String &defines)
 	{
 		CHECK( not mesh.IsDefined() );
 		mesh.filename	= StringToWString( shaderFile );
@@ -549,7 +549,7 @@ namespace {
 	SetFragmentShader
 =================================================
 */
-	void MeshPipelineScriptBinding::SetFragmentShader (const String &shaderFile, EShaderVersion version, const String &defines)
+	void  MeshPipelineScriptBinding::SetFragmentShader (const String &shaderFile, EShaderVersion version, const String &defines)
 	{
 		CHECK( not fragment.IsDefined() );
 		fragment.filename	= StringToWString( shaderFile );
@@ -563,7 +563,7 @@ namespace {
 	MergePass1
 =================================================
 */
-	bool MeshPipelineScriptBinding::MergePass1 (INOUT size_t &merged)
+	bool  MeshPipelineScriptBinding::MergePass1 (INOUT size_t &merged)
 	{
 		size_t	count;
 		CHECK_ERR( AddLayout( task,     OUT count ));	merged += count;
@@ -577,7 +577,7 @@ namespace {
 	MergePass2
 =================================================
 */
-	bool MeshPipelineScriptBinding::MergePass2 (INOUT size_t &merged) const
+	bool  MeshPipelineScriptBinding::MergePass2 (INOUT size_t &merged) const
 	{
 		size_t	count;
 		CHECK_ERR( MergeLayouts( task,     OUT count ));	merged += count;
@@ -591,7 +591,7 @@ namespace {
 	Build
 =================================================
 */
-	bool MeshPipelineScriptBinding::Build ()
+	bool  MeshPipelineScriptBinding::Build ()
 	{
 		auto&				shader_storage	= *ShaderStorage::Instance();
 		auto&				ppln_storage	= *shader_storage.storage;
@@ -664,7 +664,7 @@ namespace {
 	SetShader
 =================================================
 */
-	void ComputePipelineScriptBinding::SetShader (const String &shaderFile, EShaderVersion version, const String &defines)
+	void  ComputePipelineScriptBinding::SetShader (const String &shaderFile, EShaderVersion version, const String &defines)
 	{
 		CHECK( not shader.IsDefined() );
 		shader.filename	= StringToWString( shaderFile );
@@ -678,7 +678,7 @@ namespace {
 	MergePass1
 =================================================
 */
-	bool ComputePipelineScriptBinding::MergePass1 (INOUT size_t &merged)
+	bool  ComputePipelineScriptBinding::MergePass1 (INOUT size_t &merged)
 	{
 		size_t	count;
 		CHECK_ERR( AddLayout( shader, OUT count ));	merged += count;
@@ -690,7 +690,7 @@ namespace {
 	MergePass2
 =================================================
 */
-	bool ComputePipelineScriptBinding::MergePass2 (INOUT size_t &merged) const
+	bool  ComputePipelineScriptBinding::MergePass2 (INOUT size_t &merged) const
 	{
 		size_t	count;
 		CHECK_ERR( MergeLayouts( shader, OUT count ));	merged += count;
@@ -702,7 +702,7 @@ namespace {
 	Build
 =================================================
 */
-	bool ComputePipelineScriptBinding::Build ()
+	bool  ComputePipelineScriptBinding::Build ()
 	{
 		auto&				shader_storage	= *ShaderStorage::Instance();
 		auto&				ppln_storage	= *shader_storage.storage;
@@ -744,7 +744,7 @@ namespace {
 	SetName
 =================================================
 */
-	void RenderPassScriptBinding::SetName (const String &value)
+	void  RenderPassScriptBinding::SetName (const String &value)
 	{
 		name = value;
 
@@ -756,7 +756,7 @@ namespace {
 	SetOutput
 =================================================
 */
-	void RenderPassScriptBinding::SetOutput (const String &id, uint index, EFragOutput value)
+	void  RenderPassScriptBinding::SetOutput (const String &id, uint index, EFragOutput value)
 	{
 		CHECK( info.fragmentOutputs.insert_or_assign( RenderTargetName{id}, FragmentOutput{ index, value }).second );
 	}
@@ -781,7 +781,7 @@ namespace {
 	_AddShader
 =================================================
 */
-	void ShaderStorage::_AddShader (INOUT ShaderInfo &info, const ShaderDefines_t &pplnDefines, const String &renderPassSrc)
+	void  ShaderStorage::_AddShader (INOUT ShaderInfo &info, const ShaderDefines_t &pplnDefines, const String &renderPassSrc)
 	{
 		if ( not info.IsDefined() )
 			return;
@@ -836,7 +836,7 @@ namespace {
 =================================================
 */
 namespace {
-	String  RenderPassToString (const RenderPassScriptBinding &rp)
+	static String  RenderPassToString (const RenderPassScriptBinding &rp)
 	{
 		String	result;
 
@@ -860,13 +860,14 @@ namespace {
 		result << rp.source;
 		return result;
 	}
-}
+}	// namespace
+
 /*
 =================================================
 	CacheShaders
 =================================================
 */
-	bool ShaderStorage::CacheShaders ()
+	bool  ShaderStorage::CacheShaders ()
 	{
 		_renderPassMap.clear();
 		for (auto& rp : renderPasses)
@@ -930,7 +931,7 @@ namespace {
 	MergePipelines
 =================================================
 */
-	bool ShaderStorage::MergePipelines ()
+	bool  ShaderStorage::MergePipelines ()
 	{
 		// graphics
 		for (;;)
@@ -995,7 +996,7 @@ namespace {
 	BuildPipelines
 =================================================
 */
-	bool ShaderStorage::BuildPipelines ()
+	bool  ShaderStorage::BuildPipelines ()
 	{
 		for (auto& ppln : gpipelines) {
 			CHECK_ERR( ppln->Build() );

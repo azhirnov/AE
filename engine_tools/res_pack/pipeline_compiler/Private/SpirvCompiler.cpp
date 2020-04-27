@@ -284,31 +284,38 @@ namespace AE::PipelineCompiler
 		const EProfile					sh_profile		= ECoreProfile;
 		const EShSource					sh_source		= EShSourceGlsl;
 
+		if ( spirvVersion < 130 )
+		{
+			_spirvTraget	= SPV_ENV_VULKAN_1_0;
+			client_version	= EShTargetVulkan_1_0;
+			vk_version		= 100;
+		}
+		else
+		if ( spirvVersion >= 130 )
+		{
+			_spirvTraget	= SPV_ENV_VULKAN_1_1;
+			client_version	= EShTargetVulkan_1_1;
+			vk_version		= 110;
+		}
+
 		switch ( spirvVersion )
 		{
-			case 120 : {
-				_spirvTraget	= SPV_ENV_VULKAN_1_0;
-				client_version	= EShTargetVulkan_1_0;
+			case 100 :
+				target_version	= EShTargetSpv_1_0;
+				break;
+			case 110 :
+				target_version	= EShTargetSpv_1_1;
+				break;
+			case 120 :
 				target_version	= EShTargetSpv_1_2;
-				vk_version		= 100;
 				break;
-			}
-
-			case 130 : {
-				_spirvTraget	= SPV_ENV_VULKAN_1_1;
-				client_version	= EShTargetVulkan_1_1;
+			case 130 :
 				target_version	= EShTargetSpv_1_3;
-				vk_version		= 110;
 				break;
-			}
-
-			case 140 : {
-				_spirvTraget	= SPV_ENV_VULKAN_1_1;
-				client_version	= EShTargetVulkan_1_1;
+			case 140 :
+				_spirvTraget	= SPV_ENV_VULKAN_1_1_SPIRV_1_4;
 				target_version	= EShTargetSpv_1_4;
-				vk_version		= 110;
 				break;
-			}
 			default :
 				RETURN_ERR( "unsupported SPIRV version" );
 		}
@@ -924,14 +931,14 @@ namespace AE::PipelineCompiler
 							ASSERT( not annot.writeDiscard );
 							found = true;
 							if ( annot.dynamicOffset )
-								iter->buffer.state |= EResourceState::_BufferDynamicOffset;
+								iter->buffer.dynamicOffsetIndex = 0;
 							break;
 							
 						case EDescriptorType::StorageBuffer :
 							ASSERT( annot.dynamicOffset or annot.writeDiscard );
 							found = true;
 							if ( annot.writeDiscard )	iter->buffer.state |= EResourceState::InvalidateBefore;
-							if ( annot.dynamicOffset )	iter->buffer.state |= EResourceState::_BufferDynamicOffset;
+							if ( annot.dynamicOffset )	iter->buffer.dynamicOffsetIndex = 0;
 							break;
 							
 						case EDescriptorType::UniformTexelBuffer :

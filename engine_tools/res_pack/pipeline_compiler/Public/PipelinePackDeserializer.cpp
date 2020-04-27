@@ -239,7 +239,7 @@ namespace {
 */
 	bool SpirvShaderCode::Deserialize (Serializing::Deserializer const& des)
 	{
-		return des( OUT spec, OUT code );
+		return des( OUT version, OUT spec, OUT code );
 	}
 //-----------------------------------------------------------------------------
 	

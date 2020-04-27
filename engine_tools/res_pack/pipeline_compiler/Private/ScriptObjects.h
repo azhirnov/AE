@@ -12,14 +12,16 @@ namespace AE::PipelineCompiler
 
 	using Filename			= WString;
 	using ShaderDefines_t	= Array< String >;	// FixedArray< String, 16 >
+	
 
-
-	enum class EShaderVersion
+	enum class EShaderVersion : uint
 	{
 		_SPIRV		= 1 << 28,
-		_Mask		= 0xF << 28,
-
-		Spirv_120	= 120 | _SPIRV,		// Vulkan 1.0
+		_Mask		= 0xFu << 28,
+		
+		Spirv_100	= 100 | _SPIRV,		// Vulkan 1.0
+		Spirv_110	= 110 | _SPIRV,
+		Spirv_120	= 120 | _SPIRV,
 		Spirv_130	= 130 | _SPIRV,		// Vulkan 1.1
 		Spirv_140	= 140 | _SPIRV,		// Vulkan 1.1 extension
 

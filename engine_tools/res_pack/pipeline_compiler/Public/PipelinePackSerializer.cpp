@@ -140,10 +140,10 @@ namespace AE::PipelineCompiler
 						bool	dst_has_dyn_idx = (dst_un.buffer.dynamicOffsetIndex != UMax);
 						bool	src_has_dyn_idx = (src_un.buffer.dynamicOffsetIndex != UMax);
 
-						CHECK_ERR( dst_has_dyn_idx			== src_has_dyn_idx );
-						CHECK_ERR( dst_un.buffer.staticSize	== src_un.buffer.staticSize );
+						CHECK_ERR( dst_has_dyn_idx				== src_has_dyn_idx );
+						CHECK_ERR( dst_un.buffer.staticSize		== src_un.buffer.staticSize );
 						CHECK_ERR( dst_un.buffer.arrayStride	== src_un.buffer.arrayStride );
-						CHECK_ERR( EnumEq( dst_un.buffer.state, src_un.buffer.state, EResourceState::_ShaderMask ));
+						CHECK_ERR( EnumEq( dst_un.buffer.state, src_un.buffer.state, ~EResourceState::_ShaderMask ));
 
 						merged += (dst_un.buffer.state != src_un.buffer.state);
 
@@ -153,7 +153,7 @@ namespace AE::PipelineCompiler
 					case EDescriptorType::UniformTexelBuffer :
 					case EDescriptorType::StorageTexelBuffer :
 					{
-						CHECK_ERR( EnumEq( dst_un.texelBuffer.state, src_un.texelBuffer.state, EResourceState::_ShaderMask ));
+						CHECK_ERR( EnumEq( dst_un.texelBuffer.state, src_un.texelBuffer.state, ~EResourceState::_ShaderMask ));
 
 						merged += (dst_un.texelBuffer.state != src_un.texelBuffer.state);
 
@@ -162,7 +162,7 @@ namespace AE::PipelineCompiler
 					}
 					case EDescriptorType::StorageImage :
 					{
-						CHECK_ERR( EnumEq( dst_un.storageImage.state, src_un.storageImage.state, EResourceState::_ShaderMask ));
+						CHECK_ERR( EnumEq( dst_un.storageImage.state, src_un.storageImage.state, ~EResourceState::_ShaderMask ));
 						CHECK_ERR( dst_un.storageImage.type == src_un.storageImage.type );
 						
 						merged += (dst_un.storageImage.state != src_un.storageImage.state);
@@ -172,7 +172,7 @@ namespace AE::PipelineCompiler
 					}
 					case EDescriptorType::SampledImage :
 					{
-						CHECK_ERR( EnumEq( dst_un.sampledImage.state, src_un.sampledImage.state, EResourceState::_ShaderMask ));
+						CHECK_ERR( EnumEq( dst_un.sampledImage.state, src_un.sampledImage.state, ~EResourceState::_ShaderMask ));
 						CHECK_ERR( dst_un.sampledImage.type == src_un.sampledImage.type );
 						
 						merged += (dst_un.sampledImage.state != src_un.sampledImage.state);
@@ -182,7 +182,7 @@ namespace AE::PipelineCompiler
 					}
 					case EDescriptorType::CombinedImage :
 					{
-						CHECK_ERR( EnumEq( dst_un.combinedImage.state, src_un.combinedImage.state, EResourceState::_ShaderMask ));
+						CHECK_ERR( EnumEq( dst_un.combinedImage.state, src_un.combinedImage.state, ~EResourceState::_ShaderMask ));
 						CHECK_ERR( dst_un.combinedImage.type == src_un.combinedImage.type );
 						
 						merged += (dst_un.combinedImage.state != src_un.combinedImage.state);
@@ -195,7 +195,7 @@ namespace AE::PipelineCompiler
 						CHECK_ERR( dst_un.combinedImageWithSampler.samplerOffsetInStorage + dst_un.arraySize <= samplerStorage.size() );
 						CHECK_ERR( src_un.combinedImageWithSampler.samplerOffsetInStorage + src_un.arraySize <= other.samplerStorage.size() );
 						
-						CHECK_ERR( EnumEq( dst_un.combinedImageWithSampler.image.state, src_un.combinedImageWithSampler.image.state, EResourceState::_ShaderMask ));
+						CHECK_ERR( EnumEq( dst_un.combinedImageWithSampler.image.state, src_un.combinedImageWithSampler.image.state, ~EResourceState::_ShaderMask ));
 						CHECK_ERR( dst_un.combinedImageWithSampler.image.type == src_un.combinedImageWithSampler.image.type );
 						
 						merged += (dst_un.combinedImageWithSampler.image.state != src_un.combinedImageWithSampler.image.state);
@@ -213,7 +213,7 @@ namespace AE::PipelineCompiler
 					}
 					case EDescriptorType::SubpassInput :
 					{
-						CHECK_ERR( EnumEq( dst_un.subpassInput.state, src_un.subpassInput.state, EResourceState::_ShaderMask ));
+						CHECK_ERR( EnumEq( dst_un.subpassInput.state, src_un.subpassInput.state, ~EResourceState::_ShaderMask ));
 						CHECK_ERR( dst_un.subpassInput.type == src_un.subpassInput.type );
 						
 						merged += (dst_un.subpassInput.state != src_un.subpassInput.state);
@@ -420,7 +420,7 @@ namespace {
 */
 	bool SpirvShaderCode::Serialize (Serializing::Serializer &ser) const
 	{
-		return ser( spec, code );
+		return ser( version, spec, code );
 	}
 //-----------------------------------------------------------------------------
 	
@@ -469,6 +469,40 @@ namespace {
 		_spirvShaders.reserve( 128 );
 		_spirvShaderMap.reserve( 128 );
 	}
+	
+/*
+=================================================
+	UpdateBufferDynamicOffsets
+=================================================
+*/
+	static void  UpdateBufferDynamicOffsets (INOUT DescriptorSetLayoutDesc &desc)
+	{
+		using EDescriptorType = DescriptorSet::EDescriptorType;
+		
+		FixedArray< DescriptorSetLayoutDesc::Uniform *, 128 >	sorted;
+
+		for (auto& un : desc.uniforms)
+		{
+			switch ( un.second.type )
+			{
+				case EDescriptorType::UniformBuffer :
+				case EDescriptorType::StorageBuffer :
+					if ( un.second.buffer.dynamicOffsetIndex != UMax )
+					{
+						CHECK( sorted.try_push_back( &un.second ));
+					}
+					break;
+			}
+		}
+		
+		std::sort( sorted.begin(), sorted.end(), [](auto& lhs, auto& rhs) { return lhs->index < rhs->index; });
+		
+		uint	index = 0;
+		for (auto* un : sorted)
+		{
+			un->buffer.dynamicOffsetIndex = index++;
+		}
+	}
 
 /*
 =================================================
@@ -479,6 +513,8 @@ namespace {
 	{
 		std::sort( desc.uniforms.begin(), desc.uniforms.end(),
 				   [](auto& lhs, auto& rhs) { return lhs.first < rhs.first; });
+
+		UpdateBufferDynamicOffsets( INOUT desc );
 
 		const size_t	hash	= size_t(DescriptorSetLayoutHash( desc ));
 		auto			iter	= _dsLayoutMap.find( hash );
@@ -629,9 +665,9 @@ namespace {
 	AddShader
 =================================================
 */
-	ShaderUID  PipelineStorage::AddShader (Array<uint> &&spirv, const SpecConstants_t &spec)
+	ShaderUID  PipelineStorage::AddShader (uint version, Array<uint> &&spirv, const SpecConstants_t &spec)
 	{
-		SpirvShaderCode	code	{ std::move(spirv), spec };
+		SpirvShaderCode	code	{ version, std::move(spirv), spec };
 		const size_t	hash	= size_t(SpirvShaderCodeHash( code ));
 		auto			iter	= _spirvShaderMap.find( hash );
 		

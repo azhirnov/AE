@@ -149,7 +149,7 @@ namespace
 		TEST( ppln_layouts[1].descrSets[0].second.index == 1 );
 		TEST( ppln_layouts[1].descrSets[0].second.uid == DescrSetUID(0) );
 		
-		TEST( ppln_layouts[2].descrSets[0].first == DescriptorSetName{"0"} );
+		TEST( ppln_layouts[2].descrSets[0].first == DescriptorSetName{"Compute"} );
 		TEST( ppln_layouts[2].descrSets[0].second.index == 0 );
 		TEST( ppln_layouts[2].descrSets[0].second.uid == DescrSetUID(2) );
 

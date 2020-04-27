@@ -1,4 +1,10 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+/*
+	Annotations:
+		@set <N> "<name>"	- descriptor set name
+		@discard			- discard previous data (only for storage image/buffer)
+		@dynamic-offset		- use dynamic offset for buffer (only for uniform & storage buffer)
+*/
 
 #pragma once
 

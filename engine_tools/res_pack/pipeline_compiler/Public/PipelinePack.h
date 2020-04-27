@@ -406,6 +406,7 @@ namespace AE::PipelineCompiler
 
 	// variables
 	public:
+		uint				version = 0;
 		Array<uint>			code;
 		SpecConstants_t		spec;
 
@@ -413,7 +414,7 @@ namespace AE::PipelineCompiler
 	// methods
 	public:
 		SpirvShaderCode () {}
-		SpirvShaderCode (Array<uint> &&code, const SpecConstants_t &spec) : code{std::move(code)}, spec{spec} {}
+		SpirvShaderCode (uint ver, Array<uint> &&code, const SpecConstants_t &spec) : version{ver}, code{std::move(code)}, spec{spec} {}
 
 		// ISerializable
 		bool Serialize (Serializing::Serializer &) const override;
@@ -546,7 +547,7 @@ namespace AE::PipelineCompiler
 		ND_ PipelineUID			AddPipeline (const PipelineName &name, GraphicsPipelineDesc &&);
 		ND_ PipelineUID			AddPipeline (const PipelineName &name, MeshPipelineDesc &&);
 		ND_ PipelineUID			AddPipeline (const PipelineName &name, ComputePipelineDesc &&);
-		ND_ ShaderUID			AddShader (Array<uint> &&spirv, const SpecConstants_t &spec);
+		ND_ ShaderUID			AddShader (uint version, Array<uint> &&spirv, const SpecConstants_t &spec);
 		ND_ RenderPassUID		AddRenderPass (const RenderPassName &name, const RenderPassInfo &info);
 
 

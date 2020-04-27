@@ -318,10 +318,10 @@ namespace AE::PipelineCompiler
 			{
 				case EDescriptorType::UniformBuffer :
 				case EDescriptorType::StorageBuffer :
-					if ( l_un.buffer.state			!= r_un.buffer.state				or
-						 //l_un.buffer.dynamicOffsetIndex	!= r_un.buffer.dynamicOffsetIndex	or
-						 l_un.buffer.staticSize		!= r_un.buffer.staticSize			or
-						 l_un.buffer.arrayStride	!= r_un.buffer.arrayStride )
+					if ( l_un.buffer.state				!= r_un.buffer.state				or
+						 l_un.buffer.dynamicOffsetIndex	!= r_un.buffer.dynamicOffsetIndex	or
+						 l_un.buffer.staticSize			!= r_un.buffer.staticSize			or
+						 l_un.buffer.arrayStride		!= r_un.buffer.arrayStride )
 					{
 						return false;
 					}

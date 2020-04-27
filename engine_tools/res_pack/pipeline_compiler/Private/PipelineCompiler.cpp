@@ -46,6 +46,8 @@ namespace
 		{
 			EnumBinder<EShaderVersion>	binder{ se };
 			CHECK_ERR( binder.Create() );
+			CHECK_ERR( binder.AddValue( "Spirv_100", EShaderVersion::Spirv_100 ));
+			CHECK_ERR( binder.AddValue( "Spirv_110", EShaderVersion::Spirv_110 ));
 			CHECK_ERR( binder.AddValue( "Spirv_120", EShaderVersion::Spirv_120 ));
 			CHECK_ERR( binder.AddValue( "Spirv_130", EShaderVersion::Spirv_130 ));
 			CHECK_ERR( binder.AddValue( "Spirv_140", EShaderVersion::Spirv_140 ));
@@ -352,14 +354,16 @@ namespace
 		Array<uint>		spirv;
 		for (auto& sh : ShaderStorage::Instance()->uniqueShaders)
 		{
-			if ( not spv_comp.Compile( sh.first.type, ToSpirvVersion( sh.first.version ), "main", sh.second.source, OUT spirv, OUT log ))
+			const uint	ver = ToSpirvVersion( sh.first.version );
+
+			if ( not spv_comp.Compile( sh.first.type, ver, "main", sh.second.source, OUT spirv, OUT log ))
 			{
 				sh.second.compiled = false;
 				AE_LOGI( "Failed to compile shader '"s << Path{ sh.first.filename }.string() << "':\n" << log );
 				continue;
 			}
 
-			sh.second.uid = ShaderStorage::Instance()->storage->AddShader( std::move(spirv), sh.second.reflection.layout.specConstants );
+			sh.second.uid = ShaderStorage::Instance()->storage->AddShader( ver, std::move(spirv), sh.second.reflection.layout.specConstants );
 		}
 
 		// merge descriptor set layouts
