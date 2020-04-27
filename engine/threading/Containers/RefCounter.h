@@ -96,12 +96,45 @@ namespace AE::Threading
 		ND_ explicit operator bool ()			const	{ return _ptr; }
 
 	private:
-		RC (T* ptr, int) : _ptr{ptr} {}
-
 		void  _Inc ();
 		void  _Dec ();
 	};
 
+
+
+	//
+	// Reference Counter Atomic Pointer
+	//
+	/*
+	template <typename T>
+	struct AtomicRC
+	{
+	// variables
+	private:
+		Atomic< T *>	_ptr {null};
+
+
+	// methods
+	public:
+		AtomicRC () {}
+		AtomicRC (std::nullptr_t) {}
+
+		AtomicRC (T* ptr)							{ _IncSet( ptr ); }
+		AtomicRC (Ptr<T> ptr)						{ _IncSet( ptr.get() ); }
+		AtomicRC (AtomicRC<T> &&other)				{ _ptr = other._ptr.exchange( null, EMemoryOrder::Relaxed ); }
+		AtomicRC (const AtomicRC<T> &other)			{ _IncSet( other._ptr.load( EMemoryOrder::Relaxed )); }
+		
+		~AtomicRC ()								{ _ResetDec(); }
+		
+		//ND_ T *	get ()						const	{ return _ptr.load( EMemoryOrder::Relaxed ); }		// unsafe
+		ND_ T *		release ()							{ return _ptr.exchange( null, EMemoryOrder::Relaxed ); }
+		//ND_ int	use_count ()				const	{ T* p = _ptr.load();  return p ? p->_counter.load( EMemoryOrder::Relaxed ) : 0; }	// unsafe
+
+	private:
+		void  _IncSet (T *ptr);
+		void  _IncSetDec (T *ptr);
+		void  _ResetDec ();
+	};*/
 //-----------------------------------------------------------------------------
 
 
@@ -151,6 +184,51 @@ namespace AE::Threading
 	}
 //-----------------------------------------------------------------------------
 
+	
+/*
+=================================================
+	_IncSet
+=================================================
+*
+	template <typename T>
+	forceinline void  AtomicRC<T>::_IncSet (T *ptr)
+	{
+		if ( ptr )
+			ptr->AddRef();
+
+		_ptr.store( ptr );
+	}
+	
+/*
+=================================================
+	_IncSetDec
+=================================================
+*
+	template <typename T>
+	forceinline void  AtomicRC<T>::_IncSetDec (T *ptr)
+	{
+		if ( ptr )
+			ptr->AddRef();
+
+		T*	old = _ptr.exchange( ptr, EMemoryOrder::Relaxed );
+
+		if ( old )
+			old->ReleaseRef();
+	}
+	
+/*
+=================================================
+	_ResetDec
+=================================================
+*
+	template <typename T>
+	forceinline void  AtomicRC<T>::_ResetDec ()
+	{
+		T*	old = _ptr.exchange( null, EMemoryOrder::Relaxed );
+		if ( old )
+			old->ReleaseRef();
+	}
+//-----------------------------------------------------------------------------
 
 
 /*
@@ -161,7 +239,7 @@ namespace AE::Threading
 	template <typename T>
 	forceinline auto  EnableRC<T>::GetRC ()
 	{
-		return RC<T>{ this, 0 };
+		return RC<T>{ Cast<T>(this) };
 	}
 	
 /*

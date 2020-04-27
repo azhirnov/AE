@@ -193,6 +193,10 @@ namespace AE::Threading
 
 		InterlockDependency			_interlockDep;
 
+		// TODO: profiling:
+		// - added to queue time
+		// - start execution time
+
 
 	// methods
 	public:

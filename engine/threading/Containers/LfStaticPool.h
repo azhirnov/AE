@@ -75,6 +75,9 @@ namespace AE::Threading
 		Self&  operator = (const Self &) = delete;
 		Self&  operator = (Self &&) = delete;
 
+
+		ND_ static constexpr size_t  capacity ()	{ return Count; }
+
 		
 		void Clear ()
 		{

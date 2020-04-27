@@ -301,7 +301,7 @@ namespace AE::Scripting
 		using Value_t	= typename Vec_t::value_type;
 
 		binder.Operators()
-			.Unary( EUnaryOperator::Not, static_cast<T (*)(const T&) >(&operator !) )
+			.Unary( EUnaryOperator::Not, static_cast<T (*)(const T&) >(&glm::operator !) )
 			.Equals( &VecFunc::template Equal< Vec_t > )
 			.Compare( &VecFunc::template Cmp< Vec_t > );
 

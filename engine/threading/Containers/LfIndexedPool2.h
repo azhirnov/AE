@@ -116,6 +116,10 @@ namespace AE::Threading
 		template <typename FN>
 		ND_ bool  Assign (OUT Index_t &outIndex, FN &&ctor);
 		ND_ bool  Assign (OUT Index_t &outIndex)						{ return Assign( OUT outIndex, [](Value_t* ptr, Index_t) { PlacementNew<Value_t>( ptr ); }); }
+		
+		template <typename FN>
+		ND_ bool  AssignAt (Index_t index, OUT Value_t* &outValue, FN &&ctor);
+		ND_ bool  AssignAt (Index_t index, OUT Value_t* &outValue)		{ return AssignAt( index, OUT outValue, [](Value_t* ptr, Index_t) { PlacementNew<Value_t>( ptr ); }); }
 
 			bool  Unassign (Index_t index);
 	
@@ -123,7 +127,9 @@ namespace AE::Threading
 
 		ND_ Value_t&  operator [] (Index_t index);
 		
-		ND_ static constexpr size_t  Capacity ()						{ return ChunkSize * MaxChunks; }
+		ND_ static constexpr size_t  capacity ()						{ return ChunkSize * MaxChunks; }
+		
+		ND_ static constexpr BytesU  MaxSize ()							{ return (MaxChunks * SizeOf<ValueChunk_t>) + sizeof(*this); }
 
 
 	private:
@@ -283,15 +289,18 @@ namespace AE::Threading
 		// find available index
 		for (uint j = 0; j < HighWaitCount; ++j)
 		{
-			HiLevelBits_t	available	= info.hiLevel.load( EMemoryOrder::Relaxed );
-			int				idx			= BitScanForward( ~available );
+			HiLevelBits_t	available	= ~info.hiLevel.load( EMemoryOrder::Relaxed );
+			int				idx			= BitScanForward( available );
 
-			if ( idx >= 0 )
+			for (; idx >= 0;)
 			{
 				ASSERT( size_t(idx) < info.lowLevel.size() );
 
 				if ( _AssignInLowLevel( OUT outIndex, chunkIndex, idx, *data, ctor ))
 					return true;
+
+				available &= ~(HiLevelBits_t(1) << idx);
+				idx = BitScanForward( available );
 			}
 		}
 		return false;
@@ -364,13 +373,97 @@ namespace AE::Threading
 	
 /*
 =================================================
+	AssignAt
+=================================================
+*/
+	template <typename V, typename I, size_t CS, size_t MC, typename A>
+	template <typename FN>
+	inline bool  LfIndexedPool2<V,I,CS,MC,A>::AssignAt (Index_t index, OUT Value_t* &outValue, FN &&ctor)
+	{
+		if_unlikely( index >= capacity() )
+			return false;
+		
+		const uint		chunk_idx	= index / ChunkSize;
+		const uint		arr_idx		= index % ChunkSize;
+		const uint		hi_lvl_idx	= arr_idx / LowLevel_Count;
+		const uint		low_lvl_idx	= arr_idx % LowLevel_Count;
+		LowLevelBits_t	mask		= LowLevelBits_t(1) << low_lvl_idx;
+		auto&			info		= _chunkInfo[ chunk_idx ];
+		auto&			created		= info.lowLevel[ hi_lvl_idx ];
+		auto&			level		= info.lowLevel[ hi_lvl_idx ];
+		ValueChunk_t*	data		= _chunkData[ chunk_idx ].load( EMemoryOrder::Relaxed );
+		
+		// allocate
+		if_unlikely( data == null )
+		{
+			data = Cast<ValueChunk_t>(_allocator.Allocate( SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> ));
+
+			// set new pointer and invalidate cache
+			for (ValueChunk_t* expected = null;
+				 not _chunkData[ chunk_idx ].compare_exchange_weak( INOUT expected, data, EMemoryOrder::Acquire );)
+			{
+				// another thread has been allocated this chunk
+				if ( expected != null and expected != data )
+				{
+					_allocator.Deallocate( data, SizeOf<ValueChunk_t>, AlignOf<ValueChunk_t> );
+					data = expected;
+					break;
+				}
+			}
+		}
+
+		LowLevelBits_t	old_bits = level.fetch_or( mask, EMemoryOrder::Relaxed );	// 0 -> 1
+
+		if ( (old_bits & mask) )
+		{
+			// another thread has been assign this bit.
+			// wait until the value is initialized.
+			for (uint i = 0; (created.load( EMemoryOrder::Relaxed ) & mask) != mask; ++i)
+			{
+				if ( i > 1000 )
+				{
+					i = 0;
+					std::this_thread::yield();
+				}
+			}
+
+			// invalidate cache to make visible all changes on value
+			ThreadFence( EMemoryOrder::Acquire );
+		}
+		else
+		{
+			// if assigned
+			if_unlikely( old_bits == ~mask )
+				_UpdateHiLevel( chunk_idx, hi_lvl_idx );
+
+			if ( not (created.fetch_or( mask, EMemoryOrder::Relaxed ) & mask) )	// 0 -> 1
+			{
+				ctor( &data[arr_idx], index );
+
+				// other threads may access by this index without sync, only with cache invalidation
+				ThreadFence( EMemoryOrder::Release );
+			}
+			else
+			{
+				// already created.
+				// invalidate cache to make visible all changes on value.
+				ThreadFence( EMemoryOrder::Acquire );
+			}
+		}
+		
+		outValue = &data[arr_idx];
+		return true;
+	}
+
+/*
+=================================================
 	Unassign
 =================================================
 */
 	template <typename V, typename I, size_t CS, size_t MC, typename A>
 	inline bool  LfIndexedPool2<V,I,CS,MC,A>::Unassign (Index_t index)
 	{
-		if_unlikely( index >= Capacity() )
+		if_unlikely( index >= capacity() )
 			return false;
 		
 		const uint		chunk_idx	= index / ChunkSize;
@@ -414,7 +507,7 @@ namespace AE::Threading
 	template <typename V, typename I, size_t CS, size_t MC, typename A>
 	inline bool  LfIndexedPool2<V,I,CS,MC,A>::IsAssigned (Index_t index)
 	{
-		if ( index < Capacity() )
+		if ( index < capacity() )
 		{
 			const uint		chunk_idx	= index / ChunkSize;
 			const uint		elem_idx	= (index % ChunkSize) / LowLevel_Count;
@@ -437,7 +530,7 @@ namespace AE::Threading
 	template <typename V, typename I, size_t CS, size_t MC, typename A>
 	inline V&  LfIndexedPool2<V,I,CS,MC,A>::operator [] (Index_t index)
 	{
-		ASSERT( index < Capacity() );
+		ASSERT( index < capacity() );
 		ASSERT( IsAssigned( index ));
 		
 		const uint		chunk_idx	= index / ChunkSize;

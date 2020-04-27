@@ -31,5 +31,6 @@ namespace AE::Serializing
 	
 	struct Serializer;
 	struct Deserializer;
+	class ObjectFactory;
 
 }	// AE::Serializing

@@ -249,7 +249,7 @@ namespace AE::Threading
 		// Must be externally synchronized with all threads that using 'index'
 		bool  Unassign (Index_t index)
 		{
-			if ( index < Capacity() )
+			if ( index < capacity() )
 			{
 				const uint	chunk_idx	= index / AtomicSize;
 				const uint	bit_idx		= index % AtomicSize;
@@ -264,7 +264,7 @@ namespace AE::Threading
 
 		ND_ bool  IsAssigned (Index_t index)
 		{
-			if ( index < Capacity() )
+			if ( index < capacity() )
 			{
 				const uint	chunk_idx	= index / AtomicSize;
 				const uint	bit_idx		= index % AtomicSize;
@@ -280,7 +280,7 @@ namespace AE::Threading
 		// but write access must be externally synchronized.
 		ND_ Value_t&  operator [] (Index_t index)
 		{
-			ASSERT( index < Capacity() );
+			ASSERT( index < capacity() );
 			ASSERT( IsAssigned( index ));
 
 			const uint		chunk_idx	= index / ChunkSize;
@@ -316,6 +316,12 @@ namespace AE::Threading
 			}
 			return count;
 		}
+		
+
+		ND_ static constexpr BytesU  MaxSize ()
+		{
+			return (MaxChunks * SizeOf<ValueChunk_t>) + sizeof(*this);
+		}
 
 
 		ND_ BytesU  DynamicSize () const
@@ -330,7 +336,7 @@ namespace AE::Threading
 		}
 
 
-		ND_ static constexpr size_t  Capacity ()
+		ND_ static constexpr size_t  capacity ()
 		{
 			return ChunkSize * MaxChunks;
 		}

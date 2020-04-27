@@ -263,10 +263,12 @@ namespace AE::Threading
 			return _indexCount.size() * ChunkSize;
 		}
 
+
 		ND_ static constexpr size_t  capacity ()
 		{
 			return MaxChunks * ChunkSize;
 		}
+
 
 		ND_ bool  empty () const
 		{
@@ -278,6 +280,12 @@ namespace AE::Threading
 					return false;
 			}
 			return true;
+		}
+		
+
+		ND_ static constexpr BytesU  MaxDynamicSize ()
+		{
+			return capacity() * (SizeOf<ValueType> + SizeOf<IndexType>);
 		}
 
 

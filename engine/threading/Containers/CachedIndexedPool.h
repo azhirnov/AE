@@ -126,6 +126,13 @@ namespace AE::Threading
 		}
 
 
+		ND_ static constexpr BytesU  MaxDynamicSize ()
+		{
+			return	capacity() * (SizeOf<ValueType> + SizeOf<IndexType>) +
+					(capacity() * SizeOf<typename Cache_t::value_type>);
+		}
+
+
 		template <typename ArrayType>
 		ND_ size_t  Assign (size_t count, INOUT ArrayType &arr)			{ return _pool.Assign( count, INOUT arr ); }
 		

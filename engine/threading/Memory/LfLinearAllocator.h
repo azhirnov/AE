@@ -146,6 +146,12 @@ namespace AE::Threading
 			return null;
 		}
 
+
+		ND_ static constexpr BytesU  MaxSize ()
+		{
+			return MaxChunks * ChunkSize;
+		}
+
 		// TODO: Discard
 	};
 
