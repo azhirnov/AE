@@ -1,0 +1,14 @@
+cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
+
+file( GLOB SOURCES "*.*" )
+if (DEFINED ANDROID)
+	add_library( "Tests.UI" STATIC ${SOURCES} )
+else()
+	add_executable( "Tests.UI" ${SOURCES} )
+endif()
+source_group( TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} )
+set_property( TARGET "Tests.UI" PROPERTY FOLDER "EngineTests" )
+target_link_libraries( "Tests.UI" PUBLIC "UI" )
+target_compile_definitions( "Tests.UI" PUBLIC AE_TEST_UI )
+	
+add_test( NAME "Tests.UI" COMMAND "Tests.UI" )
