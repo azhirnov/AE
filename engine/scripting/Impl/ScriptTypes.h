@@ -165,7 +165,7 @@ namespace AE::Scripting
 						 ),
 						 MULTILINE_ARG(
 							Base_t::Name( s );
-							s += " &out";
+							s += " &inout";
 						 ));
 		
 	AE_DECL_SCRIPT_WRAP( const T *,
@@ -187,7 +187,7 @@ namespace AE::Scripting
 						 ),
 						 MULTILINE_ARG(
 							Base_t::Name( s );
-							s += " &out";
+							s += " &inout";
 						 ));
 #	undef MULTILINE_ARG
 

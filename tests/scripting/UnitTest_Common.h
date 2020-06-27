@@ -24,11 +24,11 @@ Run (const ScriptEnginePtr &se, StringView script, const String &entry, OUT R &r
 	return true;
 }
 
-template <typename Fn, typename R, typename ...Args>
+template <typename Fn, typename ...Args>
 ND_ inline EnableIf< IsSameTypes<typename FunctionInfo<Fn>::result, void>, bool >
 Run (const ScriptEnginePtr &se, StringView script, const String &entry, Args&& ...args)
 {
-	auto mod = se->CreateModule({ {"def", script} });
+	auto mod = se->CreateModule({ ScriptEngine::ModuleSource{"def", script} });
 	auto scr = se->CreateScript<Fn>( entry, mod );
 	return scr->Run( std::forward<Args>(args)... );
 }

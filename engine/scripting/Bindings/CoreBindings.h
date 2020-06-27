@@ -3,9 +3,15 @@
 #pragma once
 
 #include "scripting/Impl/ScriptEngine.inl.h"
+#include "scriptarray.h"
 
 #include "stl/Math/Vec.h"
 #include "stl/Math/Color.h"
+
+namespace AngelScript
+{
+	class CScriptArray;
+}
 
 namespace AE::Scripting
 {
@@ -24,6 +30,8 @@ namespace AE::Scripting
 		static void BindLog (const ScriptEnginePtr &se);
 	};
 
+
+	// Math
 
 	AE_DECL_SCRIPT_TYPE( AE::Math::bool2,		"bool2" );
 	AE_DECL_SCRIPT_TYPE( AE::Math::int2,		"int2" );
@@ -49,6 +57,147 @@ namespace AE::Scripting
 	AE_DECL_SCRIPT_TYPE( AE::Math::RGBA8u,		"RGBA8u" );
 	AE_DECL_SCRIPT_TYPE( AE::Math::DepthStencil,"DepthStencil" );
 	AE_DECL_SCRIPT_TYPE( AE::Math::HSVColor,	"HSVColor" );
+	
+
+	// Array
+	
+	template <typename T>
+	class ScriptArray final : protected AngelScript::CScriptArray
+	{
+	// types
+	private:
+		static constexpr bool	is_pod	= not ScriptTypeInfo<T>::is_object and not ScriptTypeInfo<T>::is_ref_counted;
+	public:
+		using iterator			= T *;
+		using const_iterator	= T const *;
+
+
+	// methods
+	public:
+		ScriptArray () = delete;
+		ScriptArray (ScriptArray &&) = delete;
+		ScriptArray (const ScriptArray &) = delete;
+		
+		ScriptArray&  operator = (ScriptArray &&) = delete;
+		ScriptArray&  operator = (const ScriptArray &) = delete;
+
+		ND_ size_t						size ()					const	{ return this->GetSize(); }
+		ND_ bool						empty ()				const	{ return this->IsEmpty(); }
+
+		ND_ EnableIf<is_pod, T *>		data ()							{ return static_cast<T *>( this->GetBuffer() ); };
+		ND_ EnableIf<is_pod, T const*>	data ()					const	{ return static_cast<T const*>( const_cast< ScriptArray<T> *>(this)->GetBuffer() ); };
+
+		ND_ EnableIf<is_pod, T *>		begin ()						{ return data(); }
+		ND_ EnableIf<is_pod, T const*>	begin ()				const	{ return data(); }
+		ND_ EnableIf<is_pod, T *>		end ()							{ return data() + size(); }
+		ND_ EnableIf<is_pod, T const*>	end ()					const	{ return data() + size(); }
+
+		ND_ operator ArrayView<T> ()							const	{ return ArrayView<T>{ data(), size() }; }
+
+		ND_ EnableIf<is_pod, T &>		operator [] (size_t i)			{ ASSERT( i < size() );  return data()[i]; }
+		ND_ EnableIf<is_pod, T const &>	operator [] (size_t i)	const	{ ASSERT( i < size() );  return data()[i]; }
+
+		void  push_back (T value)		{ this->InsertLast( &value ); }
+
+		void  resize (size_t newSize)	{ this->Resize( uint(newSize) ); }
+		void  reserve (size_t newSize)	{ this->Reserve( uint(newSize) ); }
+	};
+	
+
+	template <>
+	class ScriptArray< String > final : protected AngelScript::CScriptArray
+	{
+	// types
+	public:
+		struct iterator
+		{
+			friend class ScriptArray<String>;
+
+		private:
+			ScriptArray<String> *	_arr	= null;
+			size_t					_index	= UMax;
+
+			iterator (ScriptArray<String> &arr, size_t i) : _arr{&arr}, _index{i} {}
+			
+		public:
+			iterator () {}
+			iterator (const iterator &) = default;
+
+			ND_ String&			operator * ()					{ ASSERT( _arr ); return (*_arr)[_index]; }
+			ND_ String const&	operator * ()			  const	{ ASSERT( _arr ); return (*_arr)[_index]; }
+
+			ND_ bool	operator == (const iterator &rhs) const { return (_arr == rhs._arr) and (_index == rhs._index); }
+			ND_ bool	operator != (const iterator &rhs) const { return not (*this == rhs); }
+
+			iterator&			operator ++ ()					{ ++_index;  return *this; }
+			iterator			operator ++ (int)				{ iterator res{*this};  ++_index;  return *this; }
+		};
+		
+
+		struct const_iterator
+		{
+			friend class ScriptArray<String>;
+
+		private:
+			ScriptArray<String> const*	_arr	= null;
+			size_t						_index	= UMax;
+
+			const_iterator (const ScriptArray<String> &arr, size_t i) : _arr{&arr}, _index{i} {}
+			
+		public:
+			const_iterator () {}
+			const_iterator (const const_iterator &) = default;
+			
+			ND_ String const&	operator * ()			{ ASSERT( _arr ); return (*_arr)[_index]; }
+			ND_ String const&	operator * ()	const	{ ASSERT( _arr ); return (*_arr)[_index]; }
+			
+			ND_ bool	operator == (const const_iterator &rhs) const { return (_arr == rhs._arr) and (_index == rhs._index); }
+			ND_ bool	operator != (const const_iterator &rhs) const { return not (*this == rhs); }
+
+			const_iterator&		operator ++ ()			{ ++_index;  return *this; }
+			const_iterator		operator ++ (int)		{ const_iterator res{*this};  ++_index;  return *this; }
+		};
+
+
+	// methods
+	public:
+		ScriptArray () = delete;
+		ScriptArray (ScriptArray &&) = delete;
+		ScriptArray (const ScriptArray &) = delete;
+		
+		ScriptArray&  operator = (ScriptArray &&) = delete;
+		ScriptArray&  operator = (const ScriptArray &) = delete;
+		
+		ND_ size_t			size ()					const	{ return this->GetSize(); }
+		ND_ bool			empty ()				const	{ return this->IsEmpty(); }
+
+		ND_ iterator		begin ()						{ return iterator{ *this, 0 }; }
+		ND_ const_iterator	begin ()				const	{ return const_iterator{ *this, 0 }; }
+		ND_ iterator		end ()							{ return iterator{ *this, size() }; }
+		ND_ const_iterator	end ()					const	{ return const_iterator{ *this, size() }; }
+
+		ND_ String &		operator [] (size_t i)			{ ASSERT( i < size() );  return *static_cast<String *>( this->At( uint(i) ) ); }
+		ND_ String const &	operator [] (size_t i)	const	{ ASSERT( i < size() );  return *static_cast<String const *>( this->At( uint(i) ) ); }
+		
+		void  push_back (const String &value)	{ this->InsertLast( const_cast<String *>( &value )); }
+
+		void  resize (size_t newSize)			{ this->Resize( uint(newSize) ); }
+		void  reserve (size_t newSize)			{ this->Reserve( uint(newSize) ); }
+	};
+
+
+	template <typename T>
+	struct ScriptTypeInfo< ScriptArray<T> >
+	{
+		using type = T;
+
+		static constexpr bool is_object = true;
+		static constexpr bool is_ref_counted = false;
+
+		static void Name (INOUT String &s)		{ s+= "array<"; ScriptTypeInfo<T>::Name( INOUT s ); s += ">"; }
+		static void ArgName (INOUT String &s)	{ s+= "array<"; ScriptTypeInfo<T>::Name( INOUT s ); s += ">"; }
+		static uint SizeOf ()					{ return 0; }
+	};
 
 
 }	// AE::Scripting

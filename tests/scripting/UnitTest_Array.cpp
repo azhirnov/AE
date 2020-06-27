@@ -22,6 +22,77 @@ namespace
 		TEST( Run< int() >( se, script, "main", OUT res ));
 		TEST( res == 3 );
 	}
+
+
+	static void  ScriptArray_Test2 (const ScriptEnginePtr &se)
+	{
+		struct Utils {
+			static void CheckArray (ScriptArray<int> &arr)
+			{
+				TEST( arr.size() == 2 );
+				TEST( arr[0] == 1 );
+				TEST( arr[1] == 2 );
+
+				for (auto& e : arr) {
+					Unused( e );
+				}
+			};
+		};
+
+		const char	script[] = R"#(
+			void main () {
+				array<int>	arr;
+				arr.push_back( 1 );
+				arr.push_back( 2 );
+				CheckArray( arr );
+			}
+		)#";
+		
+		se->AddFunction( &Utils::CheckArray, "CheckArray" );
+
+		TEST( Run< void() >( se, script, "main" ));
+	}
+
+
+	static void  ScriptArray_Test3 (const ScriptEnginePtr &se)
+	{
+		struct Utils {
+			static void CheckArray (ScriptArray<String> &arr)
+			{
+				TEST( arr.size() == 2 );
+				TEST( arr[0] == "1" );
+				TEST( arr[1] == "2" );
+				arr.push_back( "3" );
+				
+				TEST( arr.size() == 3 );
+				TEST( arr[0] == "1" );
+				TEST( arr[1] == "2" );
+				TEST( arr[2] == "3" );
+
+				for (auto& e : arr) {
+					Unused( e );
+				}
+			};
+		};
+
+		const char	script[] = R"#(
+			int main () {
+				array<string>	arr;
+				arr.push_back( "1" );
+				arr.push_back( "2" );
+				CheckArray( arr );
+				if ( arr[2] != "3" )
+					return 0;
+				return arr.size();
+			}
+		)#";
+		
+		se->AddFunction( &Utils::CheckArray, "CheckArray" );
+		
+		int	res = 0;
+		TEST( Run< int() >( se, script, "main", OUT res ));
+		TEST( res == 3 );
+	}
 }
 
 
@@ -31,8 +102,11 @@ extern void UnitTest_Array ()
 	TEST( se->Create() );
 
 	CoreBindings::BindArray( se );
+	CoreBindings::BindString( se );
 
 	ScriptArray_Test1( se );
+	ScriptArray_Test2( se );
+	ScriptArray_Test3( se );
 
 	AE_LOGI( "UnitTest_Array - passed" );
 }

@@ -122,7 +122,28 @@ namespace AE::Scripting
 
 		static void _MessageCallback (const AngelScript::asSMessageInfo *msg, void *param);
 	};
+
+
+
+	//
+	// Script Engine Multithreading Scope
+	//
+	struct ScriptEngineMultithreadingScope
+	{
+		ScriptEngineMultithreadingScope ();
+		~ScriptEngineMultithreadingScope ();
+	};
 	
+
+	//
+	// Script Thread Scope
+	//
+	struct ScriptThreadScope
+	{
+		ScriptThreadScope () {}
+		~ScriptThreadScope ();
+	};
+
 
 #	define AS_CALL( ... ) \
 	{ \

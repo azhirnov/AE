@@ -285,5 +285,35 @@ namespace AE::Scripting
 		AE_LOGE( str, file, line );
 		return false;
 	}
+//-----------------------------------------------------------------------------
+
+	
+/*
+=================================================
+	helpers to use multiple ScriptEngine instances in different threads
+	see https://www.angelcode.com/angelscript/sdk/docs/manual/doc_adv_multithread.html
+=================================================
+*/
+	ScriptEngineMultithreadingScope::ScriptEngineMultithreadingScope ()
+	{
+		AngelScript::asPrepareMultithread();
+	}
+
+	ScriptEngineMultithreadingScope::~ScriptEngineMultithreadingScope ()
+	{
+		AngelScript::asUnprepareMultithread();
+	}
+	
+/*
+=================================================
+	helpers to use cleanup resources associated with current thread
+	see https://www.angelcode.com/angelscript/sdk/docs/manual/doc_adv_multithread.html
+=================================================
+*/
+	ScriptThreadScope::~ScriptThreadScope ()
+	{
+		AngelScript::asThreadCleanup();
+	}
+
 
 }	// AE::Scripting
