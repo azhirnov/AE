@@ -4,8 +4,24 @@
 
 #include "stl/Defines.h"
 
+// mem leak check
+#if defined(COMPILER_MSVC) && defined(AE_ENABLE_MEMLEAK_CHECKS)
+#	define _CRTDBG_MAP_ALLOC
+#	include <stdlib.h>
+#	include <crtdbg.h>
+
+	// call at exit
+	// returns 'true' if no mem leaks
+#	define AE_CHECK_MEMLEAKS()	(::_CrtDumpMemoryLeaks() != TRUE)
+#else
+
+#	define AE_DUMP_MEMLEAKS()	(true)
+#endif
+
 // Config
-#define AE_FAST_HASH	0
+#ifndef AE_FAST_HASH
+#	define AE_FAST_HASH		0
+#endif
 
 #ifndef AE_OPTIMIZE_IDS
 # ifdef AE_DEBUG

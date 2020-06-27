@@ -23,6 +23,8 @@ extern int Test_Platform (IApplication &app, IWindow &wnd)
 	UniquePtr<IApplication::IAppListener>  AE_OnAppCreated ()
 	{
 		#ifndef AE_CI_BUILD
+		std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
+		
 			Test_GLFW();
 		#endif
 

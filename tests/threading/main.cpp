@@ -19,6 +19,8 @@ extern int Test_Threading ()
 int main ()
 #endif
 {
+	std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
+
 	UnitTest_IndexedPool();
 	UnitTest_LfLinearAllocator();
 	UnitTest_LfIndexedPool();
@@ -28,6 +30,7 @@ int main ()
 	UnitTest_TaskDeps();
 	UnitTest_Promise();
 
+	// too slow
 #if (not defined(AE_CI_BUILD)) and (not defined(PLATFORM_ANDROID))
 	PerfTest_Threading();
 #endif

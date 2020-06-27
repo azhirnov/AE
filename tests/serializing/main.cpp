@@ -11,6 +11,8 @@ extern int Test_Serializing ()
 int main ()
 #endif
 {
+	std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
+
 	UnitTest_Serialization();
 
 	AE_LOGI( "Tests.Serializing finished" );

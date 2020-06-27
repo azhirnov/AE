@@ -9,6 +9,8 @@ extern void Test_SamplerPacker ();
 
 int main ()
 {
+	std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
+
 	const Path	curr = FileSystem::CurrentPath();
 
 	Test_PipelineCompiler();

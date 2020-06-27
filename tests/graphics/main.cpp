@@ -96,6 +96,8 @@ extern int Test_Graphics (IApplication &app, IWindow &wnd)
 
 	UniquePtr<IApplication::IAppListener>  AE_OnAppCreated ()
 	{
+		std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
+
 		return MakeUnique<AppListener>();
 	}
 
