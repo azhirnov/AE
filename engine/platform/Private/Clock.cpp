@@ -20,7 +20,7 @@ namespace AE::App
 	Timestamp
 =================================================
 */
-	Nanoseconds  AppClock::Timestamp () const
+	nanoseconds  AppClock::Timestamp () const
 	{
 		return TimePoint_t::clock::now() - _start;
 	}

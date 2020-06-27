@@ -63,7 +63,6 @@
 
 namespace AE::Threading
 {
-	using Nanoseconds				= std::chrono::nanoseconds;
 	using AsyncTask					= SharedPtr< class IAsyncTask >;
 	using TaskDependencyManagerPtr	= SharedPtr< class ITaskDependencyManager >;
 
@@ -378,7 +377,7 @@ namespace AE::Threading
 		template <typename ...Deps>
 		bool  Run (const AsyncTask &task, const Tuple<Deps...> &deps = Default);
 
-		ND_ bool  Wait (ArrayView<AsyncTask> tasks, Nanoseconds timeout = Nanoseconds{30'000'000'000});
+		ND_ bool  Wait (ArrayView<AsyncTask> tasks, nanoseconds timeout = nanoseconds{30'000'000'000});
 
 		bool  Cancel (const AsyncTask &task);
 

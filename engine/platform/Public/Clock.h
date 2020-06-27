@@ -6,9 +6,6 @@
 
 namespace AE::App
 {
-	using Nanoseconds	= std::chrono::nanoseconds;
-
-
 
 	//
 	// Clock
@@ -30,7 +27,7 @@ namespace AE::App
 	public:
 		AppClock ();
 
-		ND_ Nanoseconds  Timestamp () const;
+		ND_ nanoseconds  Timestamp () const;
 
 		ND_ static AppClock&  Instance ();
 	};

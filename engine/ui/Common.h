@@ -35,7 +35,6 @@ namespace AE::UI
 	using AE::Graphics::FilledCircle2D;
 	using AE::Graphics::NinePatch2D;
 
-	using AE::App::Nanoseconds;
 	using AE::App::EKeyState;
 	using AE::App::EKey;
 

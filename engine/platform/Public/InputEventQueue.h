@@ -19,7 +19,7 @@ namespace AE::App
 		struct EventBase
 		{
 			uint			eventType	= UMax;
-			Nanoseconds		timestamp;
+			nanoseconds		timestamp;
 		};
 
 		struct KeyEvent : EventBase

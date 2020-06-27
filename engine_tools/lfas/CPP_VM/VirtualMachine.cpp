@@ -195,7 +195,7 @@ namespace LFAS::CPP
 		if ( delay > 10 )
 			return;
 
-		std::this_thread::sleep_for( std::chrono::milliseconds{delay} );
+		std::this_thread::sleep_for( milliseconds{delay} );
 	}
 	
 /*

@@ -565,7 +565,7 @@ DEBUG_ONLY(
 	use it only for debugging and testing
 =================================================
 */
-	bool  TaskScheduler::Wait (ArrayView<AsyncTask> tasks, Nanoseconds timeout)
+	bool  TaskScheduler::Wait (ArrayView<AsyncTask> tasks, nanoseconds timeout)
 	{
 		const auto	start_time	= TimePoint_t::clock::now();
 
@@ -575,10 +575,10 @@ DEBUG_ONLY(
 			{
 				if ( i > 2000 )
 				{
-					std::this_thread::sleep_for( std::chrono::microseconds{100} );
+					std::this_thread::sleep_for( microseconds{100} );
 					i = 0;
 
-					const Nanoseconds	dt = TimePoint_t::clock::now() - start_time;
+					const nanoseconds	dt = TimePoint_t::clock::now() - start_time;
 
 					if ( dt >= timeout )
 						return false;	// time out
@@ -757,7 +757,7 @@ DEBUG_ONLY(
 			double	factor	= (work_time ? stall / (stall + work) : 1.0);
 
 			AE_LOGI( String(name)
-				<< " queue total work: " << ToString( Nanoseconds(work_time) )
+				<< " queue total work: " << ToString( nanoseconds(work_time) )
 				<< ", stall: " << ToString( factor * 100.0, 2 ) << " %"
 				<< ", queue count: " << ToString( tq.queues.size() ) );
 		)

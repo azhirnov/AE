@@ -102,7 +102,7 @@ namespace AE::UI
 		_inputState.BeforeUpdate();
 		
 		const uint		active_count = uint(_activeTouches.count());
-		Nanoseconds		time		 = App::Clock().Timestamp();
+		nanoseconds		time		 = App::Clock().Timestamp();
 
 		_RecognizeTaps( active_count, time );
 		_RecognizeDragging( active_count, time );
@@ -190,7 +190,7 @@ namespace AE::UI
 	_OnTouch
 =================================================
 */
-	void  GestureRecognizer::_OnTouch (const uint id, const float2 &pos, const float pressure, const ETouchAction act, const Nanoseconds time)
+	void  GestureRecognizer::_OnTouch (const uint id, const float2 &pos, const float pressure, const ETouchAction act, const nanoseconds time)
 	{
 		const bool	moved	= (act == ETouchAction::Move);
 		const bool	pressed = (act == ETouchAction::Down or moved);
@@ -238,17 +238,17 @@ namespace AE::UI
 	_RecognizeTaps
 =================================================
 */
-	void  GestureRecognizer::_RecognizeTaps (const uint activeCount, const Nanoseconds time)
+	void  GestureRecognizer::_RecognizeTaps (const uint activeCount, const nanoseconds time)
 	{
 		static constexpr float			MaxDistanceSqr		= 4.0f;				// dips^2
-		static constexpr Nanoseconds	MaxPressTime		{ 2'000'000'000 };	// 2 sec
-		static constexpr Nanoseconds	DoubleTapTimeDelta	{ 500'000'000 };	// 0.5 sec
+		static constexpr nanoseconds	MaxPressTime		{ 2'000'000'000 };	// 2 sec
+		static constexpr nanoseconds	DoubleTapTimeDelta	{ 500'000'000 };	// 0.5 sec
 
 		if ( not _tapRecognizer.isActive )
 			return;
 		
 		Touch const&	touch	= _touches[ _tapRecognizer.touchId ];
-		Nanoseconds		dt		= (time - touch.startTime);
+		nanoseconds		dt		= (time - touch.startTime);
 		float			dist	= DistanceSqr( touch.pos, touch.startPos );
 			
 		// cancel on multitouch
@@ -297,7 +297,7 @@ namespace AE::UI
 			else
 			// double tap
 			{
-				_tapRecognizer.lastTapTime	= Nanoseconds{0};	// to forbid triple tap
+				_tapRecognizer.lastTapTime	= nanoseconds{0};	// to forbid triple tap
 
 				InputState::GestureData		tap_gesture;
 				tap_gesture.type			= InputState::EGesture::DoubleTap;
@@ -312,7 +312,7 @@ namespace AE::UI
 	_RecognizeDragging
 =================================================
 */
-	void  GestureRecognizer::_RecognizeDragging (uint activeCount, Nanoseconds)
+	void  GestureRecognizer::_RecognizeDragging (uint activeCount, nanoseconds)
 	{
 		static constexpr float	MinDistanceSqr	= 1.0f;		// dips^2
 

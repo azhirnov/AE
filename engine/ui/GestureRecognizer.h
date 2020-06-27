@@ -24,8 +24,8 @@ namespace AE::UI
 			float2			pos;
 			float2			delta;		// dips
 			float			pressure	= 0.0f;
-			Nanoseconds		time		{};		// time when button pressed
-			Nanoseconds		startTime	{};
+			nanoseconds		time		{};		// time when button pressed
+			nanoseconds		startTime	{};
 			bool			motion	: 1;
 			bool			pressed : 1;
 			
@@ -48,7 +48,7 @@ namespace AE::UI
 		uint				_firstTouchId	= UMax;
 
 		struct {
-			Nanoseconds			lastTapTime	{0};
+			nanoseconds			lastTapTime	{0};
 			uint				touchId		= 0;
 			bool				isActive	= false;
 		}					_tapRecognizer;
@@ -74,10 +74,10 @@ namespace AE::UI
 
 	private:
 		void  _OnKey (EKey code, EKeyState state);
-		void  _OnTouch (uint id, const float2 &pos, float pressure, ETouchAction act, Nanoseconds time);
+		void  _OnTouch (uint id, const float2 &pos, float pressure, ETouchAction act, nanoseconds time);
 
-		void  _RecognizeTaps (uint activeCount, Nanoseconds time);
-		void  _RecognizeDragging (uint activeCount, Nanoseconds time);
+		void  _RecognizeTaps (uint activeCount, nanoseconds time);
+		void  _RecognizeDragging (uint activeCount, nanoseconds time);
 	};
 
 

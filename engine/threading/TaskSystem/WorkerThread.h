@@ -17,7 +17,6 @@ namespace AE::Threading
 	// types
 	public:
 		using ThreadMask	= BitSet< uint(EThread::_Count) >;
-		using Milliseconds	= std::chrono::duration<uint, std::milli>;
 
 
 	// variables
@@ -25,14 +24,14 @@ namespace AE::Threading
 		std::thread				_thread;
 		Atomic<uint>			_looping;
 		const ThreadMask		_threadMask;
-		const Milliseconds		_sleepOnIdle;
+		const milliseconds		_sleepOnIdle;
 		const FixedString<64>	_name;
 
 
 	// methods
 	public:
 		WorkerThread ();
-		WorkerThread (ThreadMask mask, Milliseconds sleepOnIdle, StringView name = "thread");
+		WorkerThread (ThreadMask mask, milliseconds sleepOnIdle, StringView name = "thread");
 
 		bool  Attach (uint uid) override;
 		void  Detach () override;

@@ -112,7 +112,13 @@ namespace AE::STL
 			  typename KeyEq  = std::equal_to<Key>,
 			  typename Alloc  = std::allocator<std::pair<const Key, Value>>>
 	using HashMultiMap	= std::unordered_multimap< Key, Value, Hasher, KeyEq, Alloc >;
+	
 
+	// Uppercase names reserved by physical quantity wrappers
+	using seconds		= std::chrono::seconds;
+	using milliseconds	= std::chrono::milliseconds;
+	using microseconds	= std::chrono::microseconds;
+	using nanoseconds	= std::chrono::nanoseconds;
 	
 	
 /*

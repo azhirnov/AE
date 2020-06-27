@@ -12,10 +12,10 @@ namespace AE::Threading
 =================================================
 */
 	WorkerThread::WorkerThread () :
-		WorkerThread{ ThreadMask{}.set(uint(EThread::Worker)), Milliseconds{4} }
+		WorkerThread{ ThreadMask{}.set(uint(EThread::Worker)), milliseconds{4} }
 	{}
 
-	WorkerThread::WorkerThread (ThreadMask mask, Milliseconds sleepOnIdle, StringView name) :
+	WorkerThread::WorkerThread (ThreadMask mask, milliseconds sleepOnIdle, StringView name) :
 		_threadMask{ mask }, _sleepOnIdle{ sleepOnIdle }, _name{ name }
 	{}
 

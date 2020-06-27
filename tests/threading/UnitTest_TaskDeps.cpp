@@ -307,7 +307,7 @@ namespace
 		
 		TEST( scheduler->Wait( {task1} ));
 		TEST( task1->Status() == IAsyncTask::EStatus::Completed );
-		TEST( not scheduler->Wait( {task2}, Nanoseconds{100'000} ));
+		TEST( not scheduler->Wait( {task2}, nanoseconds{100'000} ));
 
 		flag.store( true );
 		
@@ -435,7 +435,7 @@ namespace
 			if ( shared.completedTasks.load() >= total_tasks )
 				break;
 
-			std::this_thread::sleep_for( std::chrono::milliseconds{100} );
+			std::this_thread::sleep_for( milliseconds{100} );
 		}
 
 		TEST( shared.values.size() == total_tasks/3 );

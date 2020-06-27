@@ -100,7 +100,7 @@ namespace
 			for (size_t i = 0; i < num_threads; ++i) {
 				scheduler->AddThread( MakeShared<WorkerThread>(
 					WorkerThread::ThreadMask{}.set(uint(WorkerThread::EThread::Worker)),
-					WorkerThread::Milliseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
+					milliseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
 				));
 			}
 
@@ -189,7 +189,7 @@ namespace
 			for (size_t i = 0; i < num_threads; ++i) {
 				scheduler->AddThread( MakeShared<WorkerThread>(
 					WorkerThread::ThreadMask{}.set(uint(WorkerThread::EThread::Worker)),
-					WorkerThread::Milliseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
+					milliseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
 				));
 			}
 
