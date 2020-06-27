@@ -16,7 +16,7 @@ set( AE_ORIGIN_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../.." CACHE INTERNAL "" FORCE 
 set( AE_EXTERNAL_PATH "${AE_ORIGIN_PATH}/external" CACHE INTERNAL "" FORCE )
 
 include( "${AE_ORIGIN_PATH}/cmake/external.cmake" )
-add_subdirectory( "${AE_ORIGIN_PATH}/utils/project_template" "project_template" )
+add_subdirectory( "../project_template" "project_template" )
 add_subdirectory( "${AE_ORIGIN_PATH}/engine/stl" "stl" )
 target_compile_definitions( "STL" PUBLIC "AE_OPTIMIZE_IDS=0" )
 add_subdirectory( "${AE_ORIGIN_PATH}/engine/scripting" "scripting" )
