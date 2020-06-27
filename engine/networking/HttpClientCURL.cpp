@@ -1,7 +1,7 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_CURL
-# include "networking/NetworkManager.h"
+# include "networking/HttpClient.h"
 # include "threading/Primitives/DataRaceCheck.h"
 # include "stl/Algorithms/StringUtils.h"
 # include "stl/Algorithms/Cast.h"
@@ -34,14 +34,14 @@ namespace AE::Networking
 {
 	using TimePoint_t	= std::chrono::high_resolution_clock::time_point;
 	using Duration_t	= TimePoint_t::clock::duration;
-	using Settings_t	= NetworkManager::Settings;
+	using Settings_t	= HttpClient::Settings;
 
 
 	//
 	// CURL Request Task
 	//
 
-	class CurlRequestTask final : public RequestTask
+	class CurlRequestTask final : public HttpRequest
 	{
 	// variables
 	private:
@@ -61,8 +61,8 @@ namespace AE::Networking
 
 	// methods
 	public:
-		CurlRequestTask (const RequestDesc &desc, const Settings_t &settings);
-		CurlRequestTask (RequestDesc &&desc, const Settings_t &settings);
+		CurlRequestTask (const HttpRequestDesc &desc, const Settings_t &settings);
+		CurlRequestTask (HttpRequestDesc &&desc, const Settings_t &settings);
 		~CurlRequestTask ();
 
 			void Run () override;
@@ -73,7 +73,7 @@ namespace AE::Networking
 		ND_ bool IsComplete (CURLM* curlm, Duration_t responseTimeout);
 
 	private:
-		bool  _Setup (const RequestDesc &desc, const Settings_t &settings);
+		bool  _Setup (const HttpRequestDesc &desc, const Settings_t &settings);
 		void  _Release ();
 
 		static size_t _DownloadCallback (char *ptr, size_t size, size_t nmemb, void *userdata);
@@ -86,13 +86,13 @@ namespace AE::Networking
 	constructor
 =================================================
 */
-	CurlRequestTask::CurlRequestTask (const RequestDesc &desc, const Settings_t &settings)
+	CurlRequestTask::CurlRequestTask (const HttpRequestDesc &desc, const Settings_t &settings)
 	{
 		EXLOCK( _drCheck );
 		_Setup( desc, settings );
 	}
 
-	CurlRequestTask::CurlRequestTask (RequestDesc &&desc, const Settings_t &settings) :
+	CurlRequestTask::CurlRequestTask (HttpRequestDesc &&desc, const Settings_t &settings) :
 		_content{ std::move(desc._content) }
 	{
 		EXLOCK( _drCheck );
@@ -114,9 +114,9 @@ namespace AE::Networking
 	_Setup
 =================================================
 */
-	bool  CurlRequestTask::_Setup (const RequestDesc &desc, const Settings_t &settings)
+	bool  CurlRequestTask::_Setup (const HttpRequestDesc &desc, const Settings_t &settings)
 	{
-		using EMethod = RequestDesc::EMethod;
+		using EMethod = HttpRequestDesc::EMethod;
 
 		_curl = curl_easy_init();
 		CHECK_ERR( _curl );
@@ -168,6 +168,7 @@ namespace AE::Networking
 		switch ( desc._method )
 		{
 			case EMethod::Get : {
+				CHECK( content_size == 0 );
 				CURL_CALL( curl_easy_setopt( _curl, CURLOPT_HTTPGET, 1L ));
 				break;
 			}
@@ -192,6 +193,7 @@ namespace AE::Networking
 				break;
 			}
 			case EMethod::Head : {
+				CHECK( content_size == 0 );
 				CURL_CALL( curl_easy_setopt( _curl, CURLOPT_NOBODY, 1L ));
 				break;
 			}
@@ -202,6 +204,8 @@ namespace AE::Networking
 				use_read_fn = true;
 				break;
 			}
+			default :
+				RETURN_ERR( "unsupported http method" );
 		}
 		END_ENUM_CHECKS();
 
@@ -537,8 +541,6 @@ namespace AE::Networking
 		using Request		= SharedPtr< CurlRequestTask >;
 		using Requests_t	= Array< Request >;
 
-		using MilliSeconds	= RequestDesc::MilliSeconds;
-
 
 	// variables
 	private:
@@ -652,7 +654,7 @@ namespace AE::Networking
 		const auto	time		= TimePoint_t::clock::now();
 		const auto	max_delay	= _settings.responseDelay;
 
-		if ( changed or (time - _lastTick > MilliSeconds(4)) )
+		if ( changed or (time - _lastTick > milliseconds(4)) )
 		{
 			_lastTick = time;
 
@@ -692,7 +694,7 @@ namespace AE::Networking
 	// Internal implementation
 	//
 
-	class NetworkManager::_InternalImpl
+	class HttpClient::_InternalImpl
 	{
 	// types
 	public:
@@ -719,9 +721,9 @@ namespace AE::Networking
 	Instance
 =================================================
 */
-	NetworkManager&  NetworkManager::Instance ()
+	HttpClient&  HttpClient::Instance ()
 	{
-		static NetworkManager	network;
+		static HttpClient	network;
 		return network;
 	}
 
@@ -730,7 +732,7 @@ namespace AE::Networking
 	constructor
 =================================================
 */
-	NetworkManager::NetworkManager ()
+	HttpClient::HttpClient ()
 	{
 	}
 	
@@ -739,7 +741,7 @@ namespace AE::Networking
 	destructor
 =================================================
 */
-	NetworkManager::~NetworkManager ()
+	HttpClient::~HttpClient ()
 	{
 		CHECK( not _impl );
 	}
@@ -749,7 +751,7 @@ namespace AE::Networking
 	Setup
 =================================================
 */
-	bool NetworkManager::Setup (const Settings &settings)
+	bool HttpClient::Setup (const Settings &settings)
 	{
 		CHECK_ERR( not _impl );
 		_impl.reset( new _InternalImpl{ settings });
@@ -814,7 +816,7 @@ namespace AE::Networking
 	Release
 =================================================
 */
-	bool NetworkManager::Release ()
+	bool HttpClient::Release ()
 	{
 		CHECK_ERR( _impl );
 
@@ -848,7 +850,7 @@ namespace AE::Networking
 	HasSSL
 =================================================
 */
-	bool  NetworkManager::HasSSL () const
+	bool  HttpClient::HasSSL () const
 	{
 		return _impl->hasSSL;
 	}
@@ -858,13 +860,13 @@ namespace AE::Networking
 	_CreateTask
 =================================================
 */
-	Request  NetworkManager::_CreateTask (RequestDesc &&desc)
+	Request  HttpClient::_CreateTask (HttpRequestDesc &&desc)
 	{
 		CHECK_ERR( _impl );
-		return MakeShared< CurlRequestTask >( desc, _impl->settings );
+		return MakeShared< CurlRequestTask >( std::move(desc), _impl->settings );
 	}
 	
-	Request  NetworkManager::_CreateTask (const RequestDesc &desc)
+	Request  HttpClient::_CreateTask (const HttpRequestDesc &desc)
 	{
 		CHECK_ERR( _impl );
 		CHECK_ERR( not desc._content );	// can't move const value
@@ -876,16 +878,16 @@ namespace AE::Networking
 	Download
 =================================================
 */
-	Promise<Array<uint8_t>>  NetworkManager::Download (String url)
+	Promise<Array<uint8_t>>  HttpClient::Download (String url)
 	{
 		CHECK( _impl );
-		Request	req = Send( RequestDesc{ std::move(url) }.Method( RequestDesc::EMethod::Get ));
+		Request	req = Send( HttpRequestDesc{ std::move(url) }.Method( HttpRequestDesc::EMethod::Get ));
 
 		return MakePromise(	[req] () -> PromiseResult<Array<uint8_t>>
 							{
 								auto	resp = req->Response();
 
-								if ( resp->code == RequestTask::ECode::OK )
+								if ( resp->code == HttpRequest::ECode::OK )
 								{
 									return std::move(resp->content);
 								}

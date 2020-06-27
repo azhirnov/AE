@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "networking/NetworkManager.h"
+#include "networking/HttpClient.h"
 
 using namespace AE::Threading;
 using namespace AE::Networking;
@@ -10,22 +10,22 @@ using namespace AE::Networking;
 #define TEST	CHECK_FATAL
 
 
-struct LocalNetwork
+struct LocalHttpClient
 {
-	LocalNetwork (const NetworkManager::Settings &settings = Default)
+	LocalHttpClient (const HttpClient::Settings &settings = Default)
 	{
 		Scheduler().Setup( 1 );
-		NetworkManager::Instance().Setup( settings );
+		HttpClient::Instance().Setup( settings );
 	}
 
-	~LocalNetwork ()
+	~LocalHttpClient ()
 	{
 		Scheduler().Release();
-		NetworkManager::Instance().Release();
+		HttpClient::Instance().Release();
 	}
 
-	NetworkManager* operator -> ()
+	HttpClient* operator -> ()
 	{
-		return &NetworkManager::Instance();
+		return &HttpClient::Instance();
 	}
 };

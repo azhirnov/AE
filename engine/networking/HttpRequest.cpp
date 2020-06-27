@@ -1,6 +1,6 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "networking/Request.h"
+#include "networking/HttpRequest.h"
 #include "stl/Algorithms/StringUtils.h"
 
 namespace AE::Networking
@@ -11,13 +11,13 @@ namespace AE::Networking
 	Url
 =================================================
 */
-	RequestDesc&  RequestDesc::Url (String value) &
+	HttpRequestDesc&  HttpRequestDesc::Url (String value) &
 	{
 		_url = std::move(value);
 		return *this;
 	}
 
-	RequestDesc&& RequestDesc::Url (String value) &&
+	HttpRequestDesc&& HttpRequestDesc::Url (String value) &&
 	{
 		_url = std::move(value);
 		return std::move(*this);
@@ -28,13 +28,13 @@ namespace AE::Networking
 	Method
 =================================================
 */
-	RequestDesc&  RequestDesc::Method (EMethod value) &
+	HttpRequestDesc&  HttpRequestDesc::Method (EMethod value) &
 	{
 		_method = value;
 		return *this;
 	}
 
-	RequestDesc&& RequestDesc::Method (EMethod value) &&
+	HttpRequestDesc&& HttpRequestDesc::Method (EMethod value) &&
 	{
 		_method = value;
 		return std::move(*this);
@@ -45,13 +45,13 @@ namespace AE::Networking
 	Redirections
 =================================================
 */
-	RequestDesc&  RequestDesc::Redirections (uint value) &
+	HttpRequestDesc&  HttpRequestDesc::Redirections (uint value) &
 	{
 		_redirections = value;
 		return *this;
 	}
 
-	RequestDesc&& RequestDesc::Redirections (uint value) &&
+	HttpRequestDesc&& HttpRequestDesc::Redirections (uint value) &&
 	{
 		_redirections = value;
 		return std::move(*this);
@@ -62,13 +62,13 @@ namespace AE::Networking
 	VerifyPeer
 =================================================
 */
-	RequestDesc&  RequestDesc::VerifyPeer (bool value) &
+	HttpRequestDesc&  HttpRequestDesc::VerifyPeer (bool value) &
 	{
 		_verifyPeer = value;
 		return *this;
 	}
 
-	RequestDesc&& RequestDesc::VerifyPeer (bool value) &&
+	HttpRequestDesc&& HttpRequestDesc::VerifyPeer (bool value) &&
 	{
 		_verifyPeer = value;
 		return std::move(*this);
@@ -79,13 +79,13 @@ namespace AE::Networking
 	AddHeader
 =================================================
 */
-	RequestDesc&  RequestDesc::AddHeader (StringView name, StringView value) &
+	HttpRequestDesc&  HttpRequestDesc::AddHeader (StringView name, StringView value) &
 	{
 		_headers.push_back( String(name) << ": " << value );
 		return *this;
 	}
 
-	RequestDesc&& RequestDesc::AddHeader (StringView name, StringView value) &&
+	HttpRequestDesc&& HttpRequestDesc::AddHeader (StringView name, StringView value) &&
 	{
 		_headers.push_back( String(name) << ": " << value );
 		return std::move(*this);
@@ -96,13 +96,13 @@ namespace AE::Networking
 	Content
 =================================================
 */
-	RequestDesc&  RequestDesc::Content (StringView value) &
+	HttpRequestDesc&  HttpRequestDesc::Content (StringView value) &
 	{
 		_content = MakeUnique<MemRStream>( value );
 		return *this;
 	}
 
-	RequestDesc&& RequestDesc::Content (StringView value) &&
+	HttpRequestDesc&& HttpRequestDesc::Content (StringView value) &&
 	{
 		_content = MakeUnique<MemRStream>( value );
 		return std::move(*this);
@@ -113,13 +113,13 @@ namespace AE::Networking
 	Content
 =================================================
 */
-	RequestDesc&  RequestDesc::Content (Array<uint8_t> &&value) &
+	HttpRequestDesc&  HttpRequestDesc::Content (Array<uint8_t> &&value) &
 	{
 		_content = MakeUnique<MemRStream>( std::move(value) );
 		return *this;
 	}
 
-	RequestDesc&& RequestDesc::Content (Array<uint8_t> &&value) &&
+	HttpRequestDesc&& HttpRequestDesc::Content (Array<uint8_t> &&value) &&
 	{
 		_content = MakeUnique<MemRStream>( std::move(value) );
 		return std::move(*this);
@@ -130,13 +130,13 @@ namespace AE::Networking
 	Content
 =================================================
 */
-	RequestDesc&  RequestDesc::Content (UniquePtr<RStream> value) &
+	HttpRequestDesc&  HttpRequestDesc::Content (UniquePtr<RStream> value) &
 	{
 		_content = std::move(value);
 		return *this;
 	}
 
-	RequestDesc&& RequestDesc::Content (UniquePtr<RStream> value) &&
+	HttpRequestDesc&& HttpRequestDesc::Content (UniquePtr<RStream> value) &&
 	{
 		_content = std::move(value);
 		return std::move(*this);
@@ -149,7 +149,7 @@ namespace AE::Networking
 	constructor
 =================================================
 */
-	RequestTask::RequestTask () :
+	HttpRequest::HttpRequest () :
 		IAsyncTask{ EThread::Network },
 		_response{ new ResponseData{} },
 		_bytesSent{ 0 },
@@ -161,7 +161,7 @@ namespace AE::Networking
 	Response
 =================================================
 */
-	RequestTask::ResponsePtr  RequestTask::Response ()
+	HttpRequest::ResponsePtr  HttpRequest::Response ()
 	{
 		if ( not IsFinished() )
 		{
@@ -177,7 +177,7 @@ namespace AE::Networking
 	Sent
 =================================================
 */
-	BytesU  RequestTask::Sent ()
+	BytesU  HttpRequest::Sent ()
 	{
 		return BytesU{ _bytesSent.load( EMemoryOrder::Relaxed )};
 	}
@@ -187,7 +187,7 @@ namespace AE::Networking
 	Received
 =================================================
 */
-	BytesU  RequestTask::Received ()
+	BytesU  HttpRequest::Received ()
 	{
 		return BytesU{ _bytesReceived.load( EMemoryOrder::Relaxed )};
 	}

@@ -11,6 +11,8 @@ extern int Test_Networking ()
 int main ()
 #endif
 {
+	std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
+
 	UnitTest_Http();
 
 	AE_LOGI( "Tests.Network finished" );

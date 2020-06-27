@@ -5,24 +5,23 @@
 
 namespace
 {
-	using EMethod		= RequestDesc::EMethod;
-	using ECode			= RequestTask::ECode;
+	using EMethod		= HttpRequestDesc::EMethod;
+	using ECode			= HttpRequest::ECode;
 	using EStatus		= IAsyncTask::EStatus;
-	using MilliSeconds	= RequestDesc::MilliSeconds;
 
 
 	static void  Http_Test1 ()
 	{
-		LocalNetwork	network;
+		LocalHttpClient	network;
 
 		// check status
 		{
-			auto	task1 = network->Send( RequestDesc{"https://httpbin.org/status/200"}.Method( EMethod::Get ));
+			auto	task1 = network->Send( HttpRequestDesc{"https://httpbin.org/status/200"}.Method( EMethod::Get ));
 			TEST( Scheduler().Wait( {task1} ));
 			TEST( task1->Status() == EStatus::Completed );
 			TEST( task1->Response()->code == ECode::OK );
 
-			auto	task2 = network->Send( RequestDesc{"https://httpbin.org/status/204"}.Method( EMethod::Get ));
+			auto	task2 = network->Send( HttpRequestDesc{"https://httpbin.org/status/204"}.Method( EMethod::Get ));
 			TEST( Scheduler().Wait( {task2} ));
 			TEST( task2->Status() == EStatus::Completed );
 			TEST( task2->Response()->code == ECode::NoContent );
@@ -30,30 +29,56 @@ namespace
 
 		// test methods
 		{
-			auto	task1 = network->Send( RequestDesc{"https://httpbin.org/put"}.Method( EMethod::Get ));
+			auto	task1 = network->Send( HttpRequestDesc{"https://httpbin.org/put"}.Method( EMethod::Get ));
 			TEST( Scheduler().Wait( {task1} ));
 			TEST( task1->Status() == EStatus::Completed );
 			TEST( task1->Response()->code == ECode::MethodNotAllowed );
 
-			auto	task2 = network->Send( RequestDesc{"https://httpbin.org/get"}.Method( EMethod::Get ));
+			auto	task2 = network->Send( HttpRequestDesc{"https://httpbin.org/get"}.Method( EMethod::Get ));
 			TEST( Scheduler().Wait( {task2} ));
 			TEST( task2->Status() == EStatus::Completed );
 			TEST( task2->Response()->code == ECode::OK );
 
-			auto	task3 = network->Send( RequestDesc{"https://httpbin.org/put"}.Method( EMethod::Put ));
+			auto	task3 = network->Send( HttpRequestDesc{"https://httpbin.org/put"}.Method( EMethod::Put ));
 			TEST( Scheduler().Wait( {task3} ));
 			TEST( task3->Status() == EStatus::Completed );
 			TEST( task3->Response()->code == ECode::OK );
 
-			auto	task4 = network->Send( RequestDesc{"https://httpbin.org/post"}.Method( EMethod::Post ));
+			auto	task4 = network->Send( HttpRequestDesc{"https://httpbin.org/post"}.Method( EMethod::Post ));
 			TEST( Scheduler().Wait( {task4} ));
 			TEST( task4->Status() == EStatus::Completed );
 			TEST( task4->Response()->code == ECode::OK );
 		}
 
+		// upload
+		{
+			StringView	ref_content{ "upload test" };
+
+			auto	task1 = network->Send( HttpRequestDesc{"https://httpbin.org/anything"}.Method( EMethod::Put ).Content( ref_content ));
+			TEST( Scheduler().Wait( {task1} ));
+			TEST( task1->Status() == EStatus::Completed );
+			TEST( task1->Sent() == ref_content.size() );
+			
+			auto	resp1 = task1->Response();
+			TEST( resp1->code == ECode::OK );
+
+			StringView	content{ Cast<char>(resp1->content.data()), resp1->content.size() };
+
+			StringView	key		{"\"data\": \""};
+			auto		begin	= content.rfind( key );
+			TEST( begin != StringView::npos );
+			begin += key.length();
+
+			auto		end = content.find( '"', begin );
+			TEST( end != StringView::npos );
+
+			content = content.substr( begin, end - begin );
+			TEST( ref_content == content );
+		}
+
 		// cancel
 		{
-			auto	task1 = network->Send( RequestDesc{"https://httpbin.org/delay/5"}.Method( EMethod::Get ));
+			auto	task1 = network->Send( HttpRequestDesc{"https://httpbin.org/delay/5"}.Method( EMethod::Get ));
 			TEST( Scheduler().Cancel( task1 ));
 			TEST( Scheduler().Wait( {task1} ));
 			TEST( task1->Status() == EStatus::Canceled );
@@ -62,7 +87,7 @@ namespace
 
 		// downloading
 		{
-			auto	task1 = network->Send( RequestDesc{"https://httpbin.org/image/png"}.Method( EMethod::Head ));
+			auto	task1 = network->Send( HttpRequestDesc{"https://httpbin.org/image/png"}.Method( EMethod::Head ));
 			TEST( Scheduler().Wait( {task1} ));
 			TEST( task1->Status() == EStatus::Completed );
 
@@ -74,7 +99,7 @@ namespace
 			TEST( std::stoull( resp1->headers["Content-Length"] ) == 8'090 );
 			TEST( resp1->content.empty() );
 			
-			auto	task2 = network->Send( RequestDesc{"https://httpbin.org/image/png"}.Method( EMethod::Get ));
+			auto	task2 = network->Send( HttpRequestDesc{"https://httpbin.org/image/png"}.Method( EMethod::Get ));
 			TEST( Scheduler().Wait( {task2} ));
 			TEST( task2->Status() == EStatus::Completed );
 
@@ -89,22 +114,22 @@ namespace
 
 		// redirections
 		{
-			auto	task1 = network->Send( RequestDesc{"https://httpbin.org/redirect/2"}.Method( EMethod::Get ));
+			auto	task1 = network->Send( HttpRequestDesc{"https://httpbin.org/redirect/2"}.Method( EMethod::Get ));
 			TEST( Scheduler().Wait( {task1} ));
 			TEST( task1->Status() == EStatus::Completed );
 			TEST( task1->Response()->code == ECode::OK );
 
-			auto	task2 = network->Send( RequestDesc{"https://httpbin.org/redirect/2"}.Method( EMethod::Get ).Redirections( 1 ));
+			auto	task2 = network->Send( HttpRequestDesc{"https://httpbin.org/redirect/2"}.Method( EMethod::Get ).Redirections( 1 ));
 			TEST( Scheduler().Wait( {task2} ));
 			TEST( task2->Status() == EStatus::Completed );
 			TEST( task2->Response()->code == ECode::Found );
 
-			auto	task3 = network->Send( RequestDesc{"https://httpbin.org/absolute-redirect/3"}.Method( EMethod::Get ));
+			auto	task3 = network->Send( HttpRequestDesc{"https://httpbin.org/absolute-redirect/3"}.Method( EMethod::Get ));
 			TEST( Scheduler().Wait( {task3} ));
 			TEST( task3->Status() == EStatus::Completed );
 			TEST( task3->Response()->code == ECode::OK );
 
-			auto	task4 = network->Send( RequestDesc{"https://httpbin.org/relative-redirect/4"}.Method( EMethod::Get ));
+			auto	task4 = network->Send( HttpRequestDesc{"https://httpbin.org/relative-redirect/4"}.Method( EMethod::Get ));
 			TEST( Scheduler().Wait( {task4} ));
 			TEST( task4->Status() == EStatus::Completed );
 			TEST( task4->Response()->code == ECode::OK );
@@ -114,14 +139,14 @@ namespace
 
 	static void  Http_Test2 ()
 	{
-		NetworkManager::Settings	settings;
-		settings.transferTimout = MilliSeconds(1000);
+		HttpClient::Settings	settings;
+		settings.transferTimout = milliseconds(1000);
 
-		LocalNetwork	network{ settings };
+		LocalHttpClient	network{ settings };
 		
 		// timeout
 		{
-			auto	task1 = network->Send( RequestDesc{"https://httpbin.org/delay/10"}.Method( EMethod::Get ));
+			auto	task1 = network->Send( HttpRequestDesc{"https://httpbin.org/delay/10"}.Method( EMethod::Get ));
 			TEST( Scheduler().Wait( {task1} ));
 			TEST( task1->Status() == EStatus::Completed );
 			TEST( task1->Response()->code == ECode::OperationTimeout );
@@ -131,14 +156,14 @@ namespace
 
 	static void  Http_Test3 ()
 	{
-		NetworkManager::Settings	settings;
-		settings.responseDelay	= MilliSeconds(1000);
+		HttpClient::Settings	settings;
+		settings.responseDelay	= milliseconds(1000);
 
-		LocalNetwork	network{ settings };
+		LocalHttpClient	network{ settings };
 
 		// delay
 		{
-			auto	task1 = network->Send( RequestDesc{"https://httpbin.org/delay/10"}.Method( EMethod::Get ));
+			auto	task1 = network->Send( HttpRequestDesc{"https://httpbin.org/delay/10"}.Method( EMethod::Get ));
 			TEST( Scheduler().Wait( {task1} ));
 			TEST( task1->Status() == EStatus::Completed );
 			TEST( task1->Response()->code == ECode::TimeoutAfterLastResponse );
@@ -148,7 +173,7 @@ namespace
 
 	static void  Http_Test4 ()
 	{
-		LocalNetwork	network;
+		LocalHttpClient	network;
 		Scheduler().AddThread( MakeShared<WorkerThread>() );
 
 		{
