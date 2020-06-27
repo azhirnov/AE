@@ -4,6 +4,7 @@
 
 #include "stl/Math/Bytes.h"
 #include "stl/Containers/FixedArray.h"
+#include "stl/Containers/NtStringView.h"
 
 namespace AE::STL
 {
@@ -45,31 +46,54 @@ namespace AE::STL
 	template <typename T, typename A>
 	ND_ forceinline BytesU  ArraySizeOf (const std::vector<T,A> &arr)
 	{
-		return BytesU( arr.size() * sizeof(T) );
+		return BytesU{ arr.size() * sizeof(T) };
 	}
 
 	template <typename T, size_t S>
 	ND_ forceinline BytesU  ArraySizeOf (const FixedArray<T,S> &arr)
 	{
-		return BytesU( arr.size() * sizeof(T) );
+		return BytesU{ arr.size() * sizeof(T) };
 	}
 
 	template <typename T>
 	ND_ forceinline BytesU  ArraySizeOf (const ArrayView<T> &arr)
 	{
-		return BytesU( arr.size() * sizeof(T) );
+		return BytesU{ arr.size() * sizeof(T) };
 	}
 	
 	template <typename T, size_t S>
 	ND_ forceinline constexpr BytesU  ArraySizeOf (const StaticArray<T,S> &)
 	{
-		return BytesU( S * sizeof(T) );
+		return BytesU{ S * sizeof(T) };
 	}
 
 	template <typename T, size_t I>
 	ND_ forceinline constexpr BytesU  ArraySizeOf (const T (&)[I])
 	{
 		return BytesU{ sizeof(T) * I };
+	}
+	
+/*
+=================================================
+	StringSizeOf
+=================================================
+*/
+	template <typename T, typename A>
+	ND_ forceinline BytesU  StringSizeOf (const std::basic_string<T,A> &str)
+	{
+		return BytesU{ str.size() * sizeof(T) };
+	}
+
+	template <typename T>
+	ND_ forceinline BytesU  StringSizeOf (BasicStringView<T> str)
+	{
+		return BytesU{ str.size() * sizeof(T) };
+	}
+
+	template <typename T>
+	ND_ forceinline BytesU  StringSizeOf (const NtBasicStringView<T> &str)
+	{
+		return BytesU{ str.size() * sizeof(T) };
 	}
 
 /*

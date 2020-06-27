@@ -21,7 +21,7 @@ namespace AE::STL
 
 			static bool		SetThreadAffinity (const std::thread::native_handle_type &handle, uint cpuCore);
 
-			static bool		CheckErrors (StringView file, int line);
+			static bool		CheckErrors (StringView file = __FILE__, int line = __LINE__);
 	};
 
 }	// AE::STL

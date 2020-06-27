@@ -143,7 +143,7 @@ namespace
 		{
 			Path	path{ info->inPipelines[i] };
 
-			if ( not FileSystem::Exists( path ) or FileSystem::IsDirectory( path ))
+			if ( not FileSystem::Exists( path ) or not FileSystem::IsFile( path ))
 			{
 				AE_LOGI( "Can't find pipeline: '"s << path.string() << "'" );
 				continue;

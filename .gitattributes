@@ -1,25 +1,32 @@
-*.zip filter=lfs diff=lfs merge=lfs -text
-*.7z filter=lfs diff=lfs merge=lfs -text
-*.bin filter=lfs diff=lfs merge=lfs -text
+* text=auto eol=lf
 
-*.png filter=lfs diff=lfs merge=lfs -text
-*.tga filter=lfs diff=lfs merge=lfs -text
-*.jpg filter=lfs diff=lfs merge=lfs -text
-*.dds filter=lfs diff=lfs merge=lfs -text
-*.ktx filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs binary
+*.7z  filter=lfs diff=lfs merge=lfs binary
+*.bin filter=lfs diff=lfs merge=lfs binary
 
-*.obj filter=lfs diff=lfs merge=lfs -text
-*.fbx filter=lfs diff=lfs merge=lfs -text
-*.ply filter=lfs diff=lfs merge=lfs -text
-*.mtl filter=lfs diff=lfs merge=lfs -text
+*.bmp filter=lfs diff=lfs merge=lfs binary
+*.png filter=lfs diff=lfs merge=lfs binary
+*.tga filter=lfs diff=lfs merge=lfs binary
+*.jpg filter=lfs diff=lfs merge=lfs binary
+*.dds filter=lfs diff=lfs merge=lfs binary
+*.ktx filter=lfs diff=lfs merge=lfs binary
 
-*.dll filter=lfs diff=lfs merge=lfs -text
-*.lib filter=lfs diff=lfs merge=lfs -text
-*.exe filter=lfs diff=lfs merge=lfs -text
-*.a filter=lfs diff=lfs merge=lfs -text
-*.so filter=lfs diff=lfs merge=lfs -text
-*.dylib filter=lfs diff=lfs merge=lfs -text
+*.obj filter=lfs diff=lfs merge=lfs binary
+*.fbx filter=lfs diff=lfs merge=lfs binary
+*.ply filter=lfs diff=lfs merge=lfs binary
+*.mtl filter=lfs diff=lfs merge=lfs binary
 
-*.ogg filter=lfs diff=lfs merge=lfs -text
+*.dll filter=lfs diff=lfs merge=lfs binary
+*.lib filter=lfs diff=lfs merge=lfs binary
+*.exe filter=lfs diff=lfs merge=lfs binary
+*.a   filter=lfs diff=lfs merge=lfs binary
+*.so  filter=lfs diff=lfs merge=lfs binary
+*.dylib filter=lfs diff=lfs merge=lfs binary
 
-*.ttf filter=lfs diff=lfs merge=lfs -text
+*.ogg filter=lfs diff=lfs merge=lfs binary
+*.mp3 filter=lfs diff=lfs merge=lfs binary
+
+*.ttf filter=lfs diff=lfs merge=lfs binary
+
+*.dmp filter=lfs diff=lfs merge=lfs binary
+*.sym filter=lfs diff=lfs merge=lfs binary

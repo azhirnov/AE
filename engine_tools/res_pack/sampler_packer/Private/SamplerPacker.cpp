@@ -40,7 +40,7 @@ namespace AE::SamplerPacker
 		{
 			Path	path{ info->inSamplers[i] };
 
-			if ( not FileSystem::Exists( path ) or FileSystem::IsDirectory( path ))
+			if ( not FileSystem::Exists( path ) or not FileSystem::IsFile( path ))
 			{
 				AE_LOGI( "Can't find sampler file: '"s << path.string() << "'" );
 				continue;

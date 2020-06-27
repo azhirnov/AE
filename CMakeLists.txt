@@ -33,7 +33,7 @@ if (NOT DEFINED ANDROID)
 endif ()
 
 include( "cmake/external.cmake" )
-add_subdirectory( "utils/project_template" )
+add_subdirectory( "engine_tools/project_template" )
 add_subdirectory( "engine/stl" )
 add_subdirectory( "engine/scripting" )
 add_subdirectory( "engine/threading" )

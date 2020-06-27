@@ -46,6 +46,7 @@
 #include <string_view>
 #include <typeindex>
 #include <type_traits>
+#include <chrono>
 
 #include "stl/Log/Log.h"
 #include "stl/Algorithms/Hash.h"
@@ -70,8 +71,6 @@ namespace AE::STL
 	using namespace AE::Math;
 
 	using uint 		= uint32_t;
-	//using usize	= size_t;
-	//using isize	= ptrdiff_t;
 
 							using String		= std::string;
 							using WString		= std::wstring;
@@ -89,6 +88,7 @@ namespace AE::STL
 	template <typename T>	using Optional		= std::optional< T >;
 	
 							using StringView		= std::string_view;
+							using WStringView		= std::wstring_view;
 	template <typename T>	using BasicStringView	= std::basic_string_view<T>;
 
 	template <typename T>	using Function		= std::function< T >;

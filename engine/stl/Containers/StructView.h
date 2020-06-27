@@ -181,6 +181,17 @@ namespace AE::STL
 					StructView<T>{};
 		}
 
+		ND_ explicit operator Array<T> () const
+		{
+			Array<T>	result;
+			result.resize( size() );
+
+			for (size_t i = 0; i < result.size(); ++i) {
+				result[i] = (*this)[i];
+			}
+			return result;
+		}
+
 
 	private:
 		template <typename Class, size_t Stride>

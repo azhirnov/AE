@@ -6,11 +6,12 @@
 #include "stl/Math/Vec.h"
 #include "stl/Math/Bytes.h"
 #include "stl/Math/Color.h"
-#include "stl/Algorithms/EnumUtils.h"
+#include "stl/Math/BitMath.h"
 #include "stl/Algorithms/ArrayUtils.h"
 #include "stl/Memory/MemUtils.h"
-#include <chrono>
+#include "stl/Containers/NtStringView.h"
 #include <sstream>
+#include <charconv>
 
 namespace AE::STL
 {
@@ -24,50 +25,62 @@ namespace AE::STL
 	operator << (String, char)
 =================================================
 */
-	template <typename T>
-	forceinline BasicString<T>&&  operator << (BasicString<T> &&lhs, const BasicString<T> &rhs)
+	template <typename T, typename A1, typename A2>
+	forceinline std::basic_string<T,A1>&&  operator << (std::basic_string<T,A1> &&lhs, const std::basic_string<T,A2> &rhs)
+	{
+		return std::move( std::move(lhs).append( rhs.data(), rhs.size() ));
+	}
+
+	template <typename T, typename A1, typename A2>
+	forceinline std::basic_string<T,A1>&  operator << (std::basic_string<T,A1> &lhs, const std::basic_string<T,A2> &rhs)
+	{
+		return lhs.append( rhs.data(), rhs.size() );
+	}
+
+	template <typename T, typename A>
+	forceinline std::basic_string<T,A>&&  operator << (std::basic_string<T,A> &&lhs, const BasicStringView<T> &rhs)
+	{
+		return std::move( std::move(lhs).append( rhs.data(), rhs.size() ));
+	}
+
+	template <typename T, typename A>
+	forceinline std::basic_string<T,A>&  operator << (std::basic_string<T,A> &lhs, const BasicStringView<T> &rhs)
+	{
+		return lhs.append( rhs.data(), rhs.size() );
+	}
+
+	template <typename T, typename A>
+	forceinline std::basic_string<T,A>&&  operator << (std::basic_string<T,A> &&lhs, const NtBasicStringView<T> &rhs)
+	{
+		return std::move( std::move(lhs).append( rhs.c_str(), rhs.size() ));
+	}
+
+	template <typename T, typename A>
+	forceinline std::basic_string<T,A>&  operator << (std::basic_string<T,A> &lhs, const NtBasicStringView<T> &rhs)
+	{
+		return lhs.append( rhs.c_str(), rhs.size() );
+	}
+
+	template <typename T, typename A>
+	forceinline std::basic_string<T,A>&&  operator << (std::basic_string<T,A> &&lhs, T const * const rhs)
 	{
 		return std::move( std::move(lhs).append( rhs ));
 	}
 
-	template <typename T>
-	forceinline BasicString<T>&  operator << (BasicString<T> &lhs, const std::basic_string<T> &rhs)
+	template <typename T, typename A>
+	forceinline std::basic_string<T,A>&  operator << (std::basic_string<T,A> &lhs, T const * const rhs)
 	{
 		return lhs.append( rhs );
 	}
 
-	template <typename T>
-	forceinline BasicString<T>&&  operator << (BasicString<T> &&lhs, const BasicStringView<T> &rhs)
-	{
-		return std::move( std::move(lhs).append( BasicString<T>{rhs} ));
-	}
-
-	template <typename T>
-	forceinline BasicString<T>&  operator << (BasicString<T> &lhs, const BasicStringView<T> &rhs)
-	{
-		return lhs.append( BasicString<T>{rhs} );
-	}
-
-	template <typename T>
-	forceinline BasicString<T>&&  operator << (BasicString<T> &&lhs, T const * const rhs)
-	{
-		return std::move( std::move(lhs).append( rhs ));
-	}
-
-	template <typename T>
-	forceinline BasicString<T>&  operator << (BasicString<T> &lhs, T const * const rhs)
-	{
-		return lhs.append( rhs );
-	}
-
-	template <typename T>
-	forceinline BasicString<T>&&  operator << (BasicString<T> &&lhs, const T rhs)
+	template <typename T, typename A>
+	forceinline std::basic_string<T,A>&&  operator << (std::basic_string<T,A> &&lhs, const T rhs)
 	{
 		return std::move( std::move(lhs) += rhs );
 	}
 
-	template <typename T>
-	forceinline BasicString<T>&  operator << (BasicString<T> &lhs, const T rhs)
+	template <typename T, typename A>
+	forceinline std::basic_string<T,A>&  operator << (std::basic_string<T,A> &lhs, const T rhs)
 	{
 		return (lhs += rhs);
 	}
@@ -257,6 +270,37 @@ namespace AE::STL
 		}
 		return count;
 	}
+
+/*
+=================================================
+	ToAnsiString
+=================================================
+*/
+	template <typename R, typename T>
+	inline BasicString<R>  ToAnsiString (BasicStringView<T> str)
+	{
+		BasicString<R>	result;
+		result.resize( str.size() );
+
+		for (size_t i = 0; i < str.size(); ++i)
+		{
+			ASSERT( str[i] <= 0x7F );
+			result[i] = R(str[i] & 0x7F);
+		}
+		return result;
+	}
+
+	template <typename R, typename T>
+	inline BasicString<R>  ToAnsiString (const T* str)
+	{
+		return ToAnsiString<R>( BasicStringView<T>{ str });
+	}
+	
+	template <typename R, typename T, typename A>
+	inline BasicString<R>  ToAnsiString (const std::basic_string<T,A> &str)
+	{
+		return ToAnsiString<R>( BasicStringView<T>{ str });
+	}
 //-----------------------------------------------------------------------------
 
 
@@ -293,6 +337,11 @@ namespace AE::STL
 	template <int Radix, typename T>
 	ND_ forceinline EnableIf< IsEnum<T> or IsInteger<T>, String>  ToString (const T &value)
 	{
+		if constexpr ( Radix == 10 )
+		{
+			return std::to_string( value );
+		}
+		else
 		if constexpr ( Radix == 16 )
 		{
 			std::stringstream	str;
@@ -310,10 +359,10 @@ namespace AE::STL
 */
 	ND_ inline String  ToString (const double &value, uint fractParts)
 	{
-		ASSERT( fractParts > 0 and fractParts < 100 );
+		ASSERT( (fractParts > 0) and (fractParts < 100) );
 		fractParts = Clamp( fractParts, 1u, 99u );
 
-		const char	fmt[8]  = {'%', '0', '.', char('0' + fractParts/10), char('0' + fractParts%10), 'f', '\0' };
+		const char	fmt[8]  = {'%', '0', '.', char('0' + fractParts / 10), char('0' + fractParts % 10), 'f', '\0' };
 		char		buf[32] = {};
 
 		const int	len = std::snprintf( buf, CountOf(buf), fmt, value );
@@ -367,17 +416,20 @@ namespace AE::STL
 	template <typename T>
 	ND_ inline String  ToString (const Bytes<T> &value)
 	{
-		const T	kb	= T(1) << 12;
-		const T mb	= T(1) << 22;
-		const T	gb	= T(1) << Min( T(32), T(sizeof(T)*8)-1 );
+		const T	kb	= SafeLeftBitShift( T(1), 12 );
+		const T mb	= SafeLeftBitShift( T(1), 22 );
+		const T	gb	= SafeLeftBitShift( T(1), 32 );
+		const T	tb	= SafeLeftBitShift( T(1), 42 );
 		const T	val	= T(value);
 
 		String	str;
 
-		if ( val < kb )	str << ToString( val ) << " b";			else
-		if ( val < mb )	str << ToString( val >> 10 ) << " Kb";	else
-		if ( val < gb )	str << ToString( val >> 20 ) << " Mb";	else
-						str << ToString( val >> 30 ) << " Gb";
+		if ( val < kb )	str << ToString( val ) << " b";								else
+		if ( val < mb )	str << ToString( SafeRightBitShift( val, 10 )) << " Kb";	else
+		if ( val < gb )	str << ToString( SafeRightBitShift( val, 20 )) << " Mb";	else
+		if ( val < tb )	str << ToString( SafeRightBitShift( val, 30 )) << " Gb";	else
+						str << ToString( SafeRightBitShift( val, 40 )) << " Tb";
+		
 		return str;
 	}
 
@@ -414,6 +466,52 @@ namespace AE::STL
 			str << ToString( std::chrono::duration_cast<NanoSecD_t>( value ).count(), precission ) << " ns";
 
 		return str;
+	}
+//-----------------------------------------------------------------------------
+
+	
+
+/*
+=================================================
+	StringTo***
+=================================================
+*/
+	ND_ inline int  StringToInt (StringView str, int base = 10)
+	{
+		ASSERT( base == 10 or base == 16 );
+		int		val = 0;
+		std::from_chars( str.data(), str.data() + str.size(), OUT val, base );
+		return val;
+	}
+	
+	ND_ inline uint  StringToUInt (StringView str, int base = 10)
+	{
+		ASSERT( base == 10 or base == 16 );
+		uint	val = 0;
+		std::from_chars( str.data(), str.data() + str.size(), OUT val, base );
+		return val;
+	}
+	
+	ND_ inline uint64_t  StringToUInt64 (StringView str, int base = 10)
+	{
+		ASSERT( base == 10 or base == 16 );
+		uint64_t	val = 0;
+		std::from_chars( str.data(), str.data() + str.size(), OUT val, base );
+		return val;
+	}
+	
+	ND_ inline float  StringToFloat (StringView str)
+	{
+		float	val = 0.0f;
+		std::from_chars( str.data(), str.data() + str.size(), OUT val );
+		return val;
+	}
+	
+	ND_ inline double  StringToDouble (StringView str)
+	{
+		double	val = 0.0;
+		std::from_chars( str.data(), str.data() + str.size(), OUT val );
+		return val;
 	}
 
 

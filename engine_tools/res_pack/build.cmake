@@ -10,14 +10,15 @@ ExternalProject_Add( "ResourcePacker"
 		CMAKE_GENERATOR		"${CMAKE_GENERATOR}"
 		CMAKE_GENERATOR_PLATFORM "${CMAKE_GENERATOR_PLATFORM}"
 		CMAKE_GENERATOR_TOOLSET	"${CMAKE_GENERATOR_TOOLSET}"
-		CMAKE_ARGS			"-DCMAKE_CONFIGURATION_TYPES=Profile|Release"
+		CMAKE_ARGS			"-DCMAKE_CONFIGURATION_TYPES=Release"
+							"-DCMAKE_BUILD_TYPE=Release"
 							"-DAE_ENABLE_TESTS=${AE_ENABLE_TESTS}"
 		LOG_CONFIGURE 		1
 		# build
 		BINARY_DIR			"${CMAKE_CURRENT_BINARY_DIR}/build-ResourcePacker"
 		BUILD_COMMAND		"${CMAKE_COMMAND}"
 							--build .
-							--config Profile
+							--config Release
 		LOG_BUILD 			1
 		# install
 		INSTALL_DIR 		""

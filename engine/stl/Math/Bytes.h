@@ -15,6 +15,11 @@ namespace AE::Math
 	struct Bytes
 	{
 		STATIC_ASSERT( IsInteger<T> and IsScalar<T>, "must be integer scalar" );
+		
+	// types
+	public:
+		using Value_t	= T;
+
 
 	// variables
 	private:
@@ -138,10 +143,10 @@ namespace AE::Math
 	inline static constexpr BytesU	AlignOf = BytesU::AlignOf<T>();
 	
 
-	ND_ constexpr BytesU  operator "" _b (unsigned long long value)		{ return BytesU( CheckCast<size_t>(value) ); }
-	ND_ constexpr BytesU  operator "" _Kb (unsigned long long value)	{ return BytesU::FromKb( CheckCast<size_t>(value) ); }
-	ND_ constexpr BytesU  operator "" _Mb (unsigned long long value)	{ return BytesU::FromMb( CheckCast<size_t>(value) ); }
-	ND_ constexpr BytesU  operator "" _Gb (unsigned long long value)	{ return BytesU::FromGb( CheckCast<size_t>(value) ); }
+	ND_ constexpr BytesU  operator "" _b (unsigned long long value)		{ return BytesU( CheckCast<BytesU::Value_t>(value) ); }
+	ND_ constexpr BytesU  operator "" _Kb (unsigned long long value)	{ return BytesU::FromKb( CheckCast<BytesU::Value_t>(value) ); }
+	ND_ constexpr BytesU  operator "" _Mb (unsigned long long value)	{ return BytesU::FromMb( CheckCast<BytesU::Value_t>(value) ); }
+	ND_ constexpr BytesU  operator "" _Gb (unsigned long long value)	{ return BytesU::FromGb( CheckCast<BytesU::Value_t>(value) ); }
 
 	
 /*
