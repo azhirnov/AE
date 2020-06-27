@@ -1,6 +1,3 @@
-cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
-
-#----------------------------------------------------------
 
 set( CMAKE_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake" )
 set( DOCS_FOLDER "${CMAKE_CURRENT_SOURCE_DIR}/../../docs" )
@@ -23,12 +20,12 @@ file( GLOB_RECURSE CMAKE_SOURCES "${CMAKE_FOLDER}/*.*" )
 file( GLOB_RECURSE DOC_FILES "${DOCS_FOLDER}/*.*" )
 
 add_library( "ProjectTemplate" STATIC EXCLUDE_FROM_ALL ${SOURCES} ${CMAKE_SOURCES} ${DOC_FILES} )
-set_property( TARGET "ProjectTemplate" PROPERTY FOLDER "Utils" )
+set_property( TARGET "ProjectTemplate" PROPERTY FOLDER "EngineTools" )
 source_group( TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} )
 source_group( TREE "${CMAKE_FOLDER}/.." FILES ${CMAKE_SOURCES} )
 source_group( TREE "${DOCS_FOLDER}/.." FILES ${DOC_FILES} )
 
-target_compile_definitions( "ProjectTemplate" PUBLIC ${AE_COMPILER_DEFINITIONS} )
+target_compile_definitions( "ProjectTemplate" PUBLIC ${AE_COMPILER_DEFINITIONS} "AE_MIT_LICENSE" )
 target_link_libraries( "ProjectTemplate" PUBLIC "${AE_LINK_LIBRARIES}" )
 	
 # Debug
@@ -67,9 +64,13 @@ endif()
 set_target_properties( "ProjectTemplate" PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES )
 target_compile_features( "ProjectTemplate" PUBLIC cxx_std_17 )
 
-if (AE_CI_BUILD)
-	target_compile_definitions( "ProjectTemplate" PUBLIC "AE_CI_BUILD" )
+if (${AE_CI_BUILD})
+	target_compile_definitions( "ProjectTemplate" PUBLIC "AE_CI_BUILD" "AE_CI_TYPE=(${AE_CI_TYPE})" )
 endif()
+
+if (${AE_ENABLE_MEMLEAK_CHECKS})
+	target_compile_definitions( "ProjectTemplate" PUBLIC "AE_ENABLE_MEMLEAK_CHECKS" )
+endif ()
 
 if (${AE_ENABLE_VTUNE_API})
 	include( "${CMAKE_FOLDER}/vtune.cmake" )
