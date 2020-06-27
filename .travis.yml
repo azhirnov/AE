@@ -1,24 +1,46 @@
 matrix:
   include:
     
-    # Windows MSVC x64
+    # Windows MSVC x64 Vulkan 1.0
     - os: windows
-      name: Win64 VC2017
+      name: Win64 VC2017 Vk1.0
       language: cpp
       script:
         - mkdir -p build
         - cd build
-        - cmake -G "Visual Studio 15 2017 Win64" -T v141 -DAE_CI_BUILD=ON .. 
+        - cmake -G "Visual Studio 15 2017 Win64" -T v141 -DAE_CI_BUILD=ON -DAE_CI_TYPE=1 -DAE_VULKAN_VERSION="100" .. 
         - cmake --build . --config Release
         - ctest -C Release --verbose
-      
+    
+    # Windows MSVC x64 Vulkan 1.1
+    - os: windows
+      name: Win64 VC2017 Vk1.1
+      language: cpp
+      script:
+        - mkdir -p build
+        - cd build
+        - cmake -G "Visual Studio 15 2017 Win64" -T v141 -DAE_CI_BUILD=ON -DAE_CI_TYPE=1 -DAE_VULKAN_VERSION="110" .. 
+        - cmake --build . --config Release
+        - ctest -C Release --verbose
+
+    # Windows MSVC x64 Vulkan 1.2
+    - os: windows
+      name: Win64 VC2017 Vk1.2
+      language: cpp
+      script:
+        - mkdir -p build
+        - cd build
+        - cmake -G "Visual Studio 15 2017 Win64" -T v141 -DAE_CI_BUILD=ON -DAE_CI_TYPE=1 -DAE_VULKAN_VERSION="120" .. 
+        - cmake --build . --config Release
+        - ctest -C Release --verbose
+
     #- os: windows
     #  name: Win64 VC2019
     #  language: cpp
     #  script:
     #    - mkdir -p build
     #    - cd build
-    #    - cmake -G "Visual Studio 16 2019" -A Win64 -DAE_CI_BUILD=ON .. 
+    #    - cmake -G "Visual Studio 16 2019" -A Win64 -DAE_CI_BUILD=ON -DAE_CI_TYPE=1 .. 
     #    - cmake --build . --config Release
     #    - ctest -C Release --verbose
         

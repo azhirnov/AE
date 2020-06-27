@@ -1,5 +1,3 @@
-cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
-
 if (${AE_ENABLE_SCRIPTING})
 	file( GLOB_RECURSE SOURCES "*.*" )
 	if (DEFINED ANDROID)

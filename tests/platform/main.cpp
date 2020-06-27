@@ -22,9 +22,9 @@ extern int Test_Platform (IApplication &app, IWindow &wnd)
 
 	UniquePtr<IApplication::IAppListener>  AE_OnAppCreated ()
 	{
-		#ifndef AE_CI_BUILD
 		std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
 		
+		#if !defined(AE_CI_BUILD) or (defined(AE_CI_TYPE) and (AE_CI_TYPE == 2))
 			Test_GLFW();
 		#endif
 

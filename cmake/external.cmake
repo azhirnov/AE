@@ -1,3 +1,4 @@
+# Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 # detect target platform
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
@@ -36,18 +37,18 @@ file( MAKE_DIRECTORY "${EXTERNAL_PATH}" )
 	
 if (EXISTS "${EXTERNAL_PATH}/CMakeLists.txt")
 	execute_process(
-		COMMAND git checkout "${AE_EXTERNAL_TARGET}"
+		COMMAND ${GIT_EXECUTABLE} checkout "${AE_EXTERNAL_TARGET}"
 		WORKING_DIRECTORY "${EXTERNAL_PATH}"
 	)
 else ()
 	execute_process(
-		COMMAND git clone "${EXTERNAL_REPOSITORY}" "external/${AE_EXTERNAL_TARGET}" --branch "${AE_EXTERNAL_TARGET}"
+		COMMAND ${GIT_EXECUTABLE} clone "${EXTERNAL_REPOSITORY}" "external/${AE_EXTERNAL_TARGET}" --branch "${AE_EXTERNAL_TARGET}"
 		WORKING_DIRECTORY "${AE_EXTERNAL_PATH}/.."
 	)
 endif ()
 
 execute_process(
-	COMMAND git lfs pull
+	COMMAND ${GIT_EXECUTABLE} lfs pull
 	WORKING_DIRECTORY "${EXTERNAL_PATH}"
 )
 

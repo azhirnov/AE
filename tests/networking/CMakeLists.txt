@@ -1,5 +1,3 @@
-cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
-
 if (${AE_ENABLE_NETWORKING})
 	file( GLOB_RECURSE SOURCES "*.*" )
 	if (DEFINED ANDROID)

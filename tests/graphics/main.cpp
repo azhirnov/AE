@@ -75,8 +75,8 @@ extern int Test_Graphics (IApplication &app, IWindow &wnd)
 			UnitTest_GfxResourceID();
 			UnitTest_DescriptorSet();
 			UnitTest_FormattedText();
-
-			#ifdef AE_CI_BUILD
+			
+			#if defined(AE_CI_TYPE) and (AE_CI_TYPE == 1)
 				// CI can't create window and does not support vulkan
 				app.Terminate();
 			#else

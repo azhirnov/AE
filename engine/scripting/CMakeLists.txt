@@ -1,5 +1,3 @@
-cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
-
 if (${AE_ENABLE_ANGELSCRIPT})
 	set( AE_ENABLE_SCRIPTING ON CACHE INTERNAL "" FORCE )
 endif ()
@@ -13,6 +11,6 @@ if (${AE_ENABLE_SCRIPTING})
 	target_compile_definitions( "Scripting" PUBLIC "AE_ENABLE_SCRIPTING" )
 	
 	if (${AE_ENABLE_ANGELSCRIPT})
-		target_link_libraries( "Scripting" PUBLIC "AngelScript-lib" ) # TODO: make private
+		target_link_libraries( "Scripting" PUBLIC "AngelScript-lib" )
 	endif ()
 endif()

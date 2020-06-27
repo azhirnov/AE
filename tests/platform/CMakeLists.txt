@@ -1,5 +1,3 @@
-cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
-
 file( GLOB_RECURSE SOURCES "*.*" )
 if (DEFINED ANDROID)
 	add_library( "Tests.Platform" STATIC ${SOURCES} )

@@ -1,3 +1,5 @@
+# Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+
 cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
 
 project( "AE" LANGUAGES C CXX )
@@ -17,6 +19,13 @@ set( AE_ENABLE_VTUNE_API OFF CACHE BOOL "enable helper functions for Intel VTune
 set( AE_ENABLE_MEMLEAK_CHECKS OFF CACHE BOOL "enable memory leak checking" )
 
 #----------------------------------------------------------
+# advanced settings
+
+set( AE_CI_BUILD OFF CACHE BOOL "CI settings" )
+set( AE_CI_TYPE "1" CACHE STRING "CI type: 1 - travis CI, 2 - BuildServer" )
+mark_as_advanced( AE_CI_BUILD AE_CI_TYPE )
+
+#----------------------------------------------------------
 
 set( CMAKE_DEBUG_POSTFIX "" )
 set( CMAKE_RELEASE_POSTFIX "" )
@@ -32,6 +41,8 @@ if (NOT DEFINED ANDROID)
 	set( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${MAIN_BINARY_DIR}" CACHE INTERNAL "" FORCE )
 endif ()
 
+#----------------------------------------------------------
+
 include( "cmake/external.cmake" )
 add_subdirectory( "engine_tools/project_template" )
 add_subdirectory( "engine/stl" )
@@ -46,6 +57,11 @@ add_subdirectory( "engine/ecs-st" )
 
 #----------------------------------------------------------
 
+# backend
+if (NOT DEFINED ANDROID)
+endif ()
+
+#----------------------------------------------------------
 # tools
 if (NOT DEFINED ANDROID)
 	include( "engine_tools/res_pack/build.cmake" )

@@ -21,7 +21,10 @@ int main ()
 	UnitTest_EntityPool();
 	UnitTest_Registry();
 	UnitTest_Transformation();
+
+#if !defined(AE_CI_BUILD) or (defined(AE_CI_TYPE) and (AE_CI_TYPE == 2))
 	UnitTest_RendererVk();
+#endif
 
 	AE_LOGI( "Tests.ECS finished" );
 	return 0;
