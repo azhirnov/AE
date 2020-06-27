@@ -46,7 +46,7 @@ namespace AE::Graphics
 		
 		for (uint t = 1; t <= uint(usage); t <<= 1)
 		{
-			if ( not EnumEq( usage, EVirtualResourceUsage(t) ))
+			if ( not AllBits( usage, EVirtualResourceUsage(t) ))
 				continue;
 
 			BEGIN_ENUM_CHECKS();

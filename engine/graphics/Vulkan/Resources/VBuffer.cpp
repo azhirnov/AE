@@ -32,7 +32,7 @@ namespace AE::Graphics
 
 		for (VkBufferUsageFlags t = 1; t <= usage; t <<= 1)
 		{
-			if ( not EnumEq( usage, t ) )
+			if ( not AllBits( usage, t ) )
 				continue;
 
 			BEGIN_ENUM_CHECKS();
@@ -269,7 +269,7 @@ namespace AE::Graphics
 		SHAREDLOCK( _drCheck );
 		constexpr auto	mask = EBufferUsage::TransferDst | EBufferUsage::StorageTexel | EBufferUsage::Storage | EBufferUsage::RayTracing;
 
-		return not EnumAny( _desc.usage, mask );
+		return not AnyBits( _desc.usage, mask );
 	}
 	
 /*
@@ -326,7 +326,7 @@ namespace AE::Graphics
 		
 		for (EBufferUsage t = EBufferUsage(1); t <= _desc.usage; t = EBufferUsage(uint(t) << 1))
 		{
-			if ( not EnumEq( _desc.usage, t ))
+			if ( not AllBits( _desc.usage, t ))
 				continue;
 
 			BEGIN_ENUM_CHECKS();

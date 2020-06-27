@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "stl/Algorithms/EnumUtils.h"
 #include "stl/Algorithms/ArrayUtils.h"
+#include "stl/Math/BitMath.h"
 #include "stl/Math/Math.h"
 #include "stl/Math/Vec.h"
 #include "stl/Math/Color.h"

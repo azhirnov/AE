@@ -257,14 +257,14 @@
 
 // bit operators
 #define AE_BIT_OPERATORS( _type_ ) \
-	ND_ constexpr _type_  operator |  (_type_ lhs, _type_ rhs)	{ return _type_( AE::STL::EnumToUInt(lhs) | AE::STL::EnumToUInt(rhs) ); } \
-	ND_ constexpr _type_  operator &  (_type_ lhs, _type_ rhs)	{ return _type_( AE::STL::EnumToUInt(lhs) & AE::STL::EnumToUInt(rhs) ); } \
+	ND_ constexpr _type_  operator |  (_type_ lhs, _type_ rhs)	{ return _type_( AE::STL::ToNearUInt(lhs) | AE::STL::ToNearUInt(rhs) ); } \
+	ND_ constexpr _type_  operator &  (_type_ lhs, _type_ rhs)	{ return _type_( AE::STL::ToNearUInt(lhs) & AE::STL::ToNearUInt(rhs) ); } \
 	\
-	constexpr _type_&  operator |= (_type_ &lhs, _type_ rhs)	{ return lhs = _type_( AE::STL::EnumToUInt(lhs) | AE::STL::EnumToUInt(rhs) ); } \
-	constexpr _type_&  operator &= (_type_ &lhs, _type_ rhs)	{ return lhs = _type_( AE::STL::EnumToUInt(lhs) & AE::STL::EnumToUInt(rhs) ); } \
+	constexpr _type_&  operator |= (_type_ &lhs, _type_ rhs)	{ return lhs = _type_( AE::STL::ToNearUInt(lhs) | AE::STL::ToNearUInt(rhs) ); } \
+	constexpr _type_&  operator &= (_type_ &lhs, _type_ rhs)	{ return lhs = _type_( AE::STL::ToNearUInt(lhs) & AE::STL::ToNearUInt(rhs) ); } \
 	\
-	ND_ constexpr _type_  operator ~ (_type_ lhs)				{ return _type_(~AE::STL::EnumToUInt(lhs)); } \
-	ND_ constexpr bool   operator ! (_type_ lhs)				{ return not AE::STL::EnumToUInt(lhs); } \
+	ND_ constexpr _type_  operator ~ (_type_ lhs)				{ return _type_(~AE::STL::ToNearUInt(lhs)); } \
+	ND_ constexpr bool   operator ! (_type_ lhs)				{ return not AE::STL::ToNearUInt(lhs); } \
 	
 
 // enable/disable checks for enums

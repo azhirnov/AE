@@ -143,7 +143,7 @@ namespace AE::PipelineCompiler
 						CHECK_ERR( dst_has_dyn_idx				== src_has_dyn_idx );
 						CHECK_ERR( dst_un.buffer.staticSize		== src_un.buffer.staticSize );
 						CHECK_ERR( dst_un.buffer.arrayStride	== src_un.buffer.arrayStride );
-						CHECK_ERR( EnumEq( dst_un.buffer.state, src_un.buffer.state, ~EResourceState::_ShaderMask ));
+						CHECK_ERR( AllBits( dst_un.buffer.state, src_un.buffer.state, ~EResourceState::_ShaderMask ));
 
 						merged += (dst_un.buffer.state != src_un.buffer.state);
 
@@ -153,7 +153,7 @@ namespace AE::PipelineCompiler
 					case EDescriptorType::UniformTexelBuffer :
 					case EDescriptorType::StorageTexelBuffer :
 					{
-						CHECK_ERR( EnumEq( dst_un.texelBuffer.state, src_un.texelBuffer.state, ~EResourceState::_ShaderMask ));
+						CHECK_ERR( AllBits( dst_un.texelBuffer.state, src_un.texelBuffer.state, ~EResourceState::_ShaderMask ));
 
 						merged += (dst_un.texelBuffer.state != src_un.texelBuffer.state);
 
@@ -162,7 +162,7 @@ namespace AE::PipelineCompiler
 					}
 					case EDescriptorType::StorageImage :
 					{
-						CHECK_ERR( EnumEq( dst_un.storageImage.state, src_un.storageImage.state, ~EResourceState::_ShaderMask ));
+						CHECK_ERR( AllBits( dst_un.storageImage.state, src_un.storageImage.state, ~EResourceState::_ShaderMask ));
 						CHECK_ERR( dst_un.storageImage.type == src_un.storageImage.type );
 						
 						merged += (dst_un.storageImage.state != src_un.storageImage.state);
@@ -172,7 +172,7 @@ namespace AE::PipelineCompiler
 					}
 					case EDescriptorType::SampledImage :
 					{
-						CHECK_ERR( EnumEq( dst_un.sampledImage.state, src_un.sampledImage.state, ~EResourceState::_ShaderMask ));
+						CHECK_ERR( AllBits( dst_un.sampledImage.state, src_un.sampledImage.state, ~EResourceState::_ShaderMask ));
 						CHECK_ERR( dst_un.sampledImage.type == src_un.sampledImage.type );
 						
 						merged += (dst_un.sampledImage.state != src_un.sampledImage.state);
@@ -182,7 +182,7 @@ namespace AE::PipelineCompiler
 					}
 					case EDescriptorType::CombinedImage :
 					{
-						CHECK_ERR( EnumEq( dst_un.combinedImage.state, src_un.combinedImage.state, ~EResourceState::_ShaderMask ));
+						CHECK_ERR( AllBits( dst_un.combinedImage.state, src_un.combinedImage.state, ~EResourceState::_ShaderMask ));
 						CHECK_ERR( dst_un.combinedImage.type == src_un.combinedImage.type );
 						
 						merged += (dst_un.combinedImage.state != src_un.combinedImage.state);
@@ -195,7 +195,7 @@ namespace AE::PipelineCompiler
 						CHECK_ERR( dst_un.combinedImageWithSampler.samplerOffsetInStorage + dst_un.arraySize <= samplerStorage.size() );
 						CHECK_ERR( src_un.combinedImageWithSampler.samplerOffsetInStorage + src_un.arraySize <= other.samplerStorage.size() );
 						
-						CHECK_ERR( EnumEq( dst_un.combinedImageWithSampler.image.state, src_un.combinedImageWithSampler.image.state, ~EResourceState::_ShaderMask ));
+						CHECK_ERR( AllBits( dst_un.combinedImageWithSampler.image.state, src_un.combinedImageWithSampler.image.state, ~EResourceState::_ShaderMask ));
 						CHECK_ERR( dst_un.combinedImageWithSampler.image.type == src_un.combinedImageWithSampler.image.type );
 						
 						merged += (dst_un.combinedImageWithSampler.image.state != src_un.combinedImageWithSampler.image.state);
@@ -213,7 +213,7 @@ namespace AE::PipelineCompiler
 					}
 					case EDescriptorType::SubpassInput :
 					{
-						CHECK_ERR( EnumEq( dst_un.subpassInput.state, src_un.subpassInput.state, ~EResourceState::_ShaderMask ));
+						CHECK_ERR( AllBits( dst_un.subpassInput.state, src_un.subpassInput.state, ~EResourceState::_ShaderMask ));
 						CHECK_ERR( dst_un.subpassInput.type == src_un.subpassInput.type );
 						
 						merged += (dst_un.subpassInput.state != src_un.subpassInput.state);

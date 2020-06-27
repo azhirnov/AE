@@ -86,11 +86,11 @@ namespace AE::Graphics
 
 	// debugger can't show enum names for VkFlags, so use enum instead
 #	define VULKAN_ENUM_BIT_OPERATORS( _type_ ) \
-			inline constexpr _type_&  operator |= (_type_ &lhs, _type_ rhs) { return lhs = _type_( EnumToUInt( lhs ) | EnumToUInt( rhs )); } \
-		ND_ inline constexpr _type_   operator |  (_type_ lhs, _type_ rhs)	{ return _type_( EnumToUInt( lhs ) | EnumToUInt( rhs )); } \
-			inline constexpr _type_&  operator &= (_type_ &lhs, _type_ rhs) { return lhs = _type_( EnumToUInt( lhs ) & EnumToUInt( rhs )); } \
-		ND_ inline constexpr _type_   operator &  (_type_ lhs, _type_ rhs)	{ return _type_( EnumToUInt( lhs ) & EnumToUInt( rhs )); } \
-		ND_ inline constexpr _type_   operator ~  (_type_ value)			{ return _type_( ~EnumToUInt( value )); } \
+			inline constexpr _type_&  operator |= (_type_ &lhs, _type_ rhs) { return lhs = _type_( ToNearUInt( lhs ) | ToNearUInt( rhs )); } \
+		ND_ inline constexpr _type_   operator |  (_type_ lhs, _type_ rhs)	{ return _type_( ToNearUInt( lhs ) | ToNearUInt( rhs )); } \
+			inline constexpr _type_&  operator &= (_type_ &lhs, _type_ rhs) { return lhs = _type_( ToNearUInt( lhs ) & ToNearUInt( rhs )); } \
+		ND_ inline constexpr _type_   operator &  (_type_ lhs, _type_ rhs)	{ return _type_( ToNearUInt( lhs ) & ToNearUInt( rhs )); } \
+		ND_ inline constexpr _type_   operator ~  (_type_ value)			{ return _type_( ~ToNearUInt( value )); } \
 
 	
 	VULKAN_ENUM_BIT_OPERATORS( VkPipelineStageFlagBits );

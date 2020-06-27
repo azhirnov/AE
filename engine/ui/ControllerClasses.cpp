@@ -211,11 +211,11 @@ namespace AE::UI
 		{
 			RectF	reg = flayout.GetRegion();
 
-			if ( EnumEq( dir, ELayoutAlign::Left ))		reg.left  += delta.x;
-			if ( EnumEq( dir, ELayoutAlign::Right ))	reg.right += delta.x;
+			if ( AllBits( dir, ELayoutAlign::Left ))		reg.left  += delta.x;
+			if ( AllBits( dir, ELayoutAlign::Right ))	reg.right += delta.x;
 
-			if ( EnumEq( dir, ELayoutAlign::Top ))		reg.top    += delta.y;
-			if ( EnumEq( dir, ELayoutAlign::Bottom ))	reg.bottom += delta.y;
+			if ( AllBits( dir, ELayoutAlign::Top ))		reg.top    += delta.y;
+			if ( AllBits( dir, ELayoutAlign::Bottom ))	reg.bottom += delta.y;
 
 			flayout.SetRegion( reg.Normalize() );
 		};

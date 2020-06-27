@@ -349,21 +349,21 @@ namespace _ae_scripting_hidden_ {
 		using namespace AngelScript;
 
 		// constructor
-		if ( EnumEq( flags, asOBJ_APP_CLASS_CONSTRUCTOR ) )
+		if ( AllBits( flags, asOBJ_APP_CLASS_CONSTRUCTOR ) )
 		{
 			AS_CALL_R( GetASEngine()->RegisterObjectBehaviour( _name.c_str(), asBEHAVE_CONSTRUCT, "void f()",
 											asFUNCTION( &AngelScriptHelper::Constructor<T> ), asCALL_GENERIC ));
 		}
 
 		// destructor
-		if ( EnumEq( flags, asOBJ_APP_CLASS_DESTRUCTOR ) )
+		if ( AllBits( flags, asOBJ_APP_CLASS_DESTRUCTOR ) )
 		{
 			AS_CALL_R( GetASEngine()->RegisterObjectBehaviour( _name.c_str(), asBEHAVE_DESTRUCT,  "void f()",
 											asFUNCTION( &AngelScriptHelper::Destructor<T> ), asCALL_GENERIC ));
 		}
 
 		// copy constructor
-		if ( EnumEq( flags, asOBJ_APP_CLASS_COPY_CONSTRUCTOR ) )
+		if ( AllBits( flags, asOBJ_APP_CLASS_COPY_CONSTRUCTOR ) )
 		{
 			AS_CALL_R( GetASEngine()->RegisterObjectBehaviour( _name.c_str(), asBEHAVE_CONSTRUCT,
 											(String("void f(const ") + _name + " &in)").c_str(),
@@ -371,7 +371,7 @@ namespace _ae_scripting_hidden_ {
 		}
 
 		// assignment 
-		if ( EnumEq( flags, asOBJ_APP_CLASS_ASSIGNMENT ) )
+		if ( AllBits( flags, asOBJ_APP_CLASS_ASSIGNMENT ) )
 		{
 			AS_CALL_R( GetASEngine()->RegisterObjectMethod( _name.c_str(),
 											(String(_name) + " & opAssign(const " + _name + " &in)").c_str(),

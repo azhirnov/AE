@@ -100,7 +100,7 @@ namespace AE::Graphics
 */
 	ND_ inline constexpr bool EResourceState_IsReadable (EResourceState value)
 	{
-		return EnumEq( value, EResourceState::_Read );
+		return AllBits( value, EResourceState::_Read );
 	}
 	
 /*
@@ -110,7 +110,7 @@ namespace AE::Graphics
 */
 	ND_ inline constexpr bool EResourceState_IsWritable (EResourceState value)
 	{
-		return EnumEq( value, EResourceState::_Write );
+		return AllBits( value, EResourceState::_Write );
 	}
 
 /*
@@ -124,7 +124,7 @@ namespace AE::Graphics
 		
 		for (EShaderStages t = EShaderStages(1 << 0); t < EShaderStages::_Last; t = EShaderStages(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ))
+			if ( not AllBits( values, t ))
 				continue;
 			
 			BEGIN_ENUM_CHECKS();
@@ -348,7 +348,7 @@ namespace AE::Graphics
 	ND_ inline uint  EPixelFormat_BitPerPixel (EPixelFormat value, EImageAspect aspect)
 	{
 		auto	info = EPixelFormat_GetInfo( value );
-		ASSERT( EnumEq( info.aspectMask, aspect ) );
+		ASSERT( AllBits( info.aspectMask, aspect ) );
 
 		if ( aspect != EImageAspect::Stencil )
 			return info.bitsPerBlock / (info.blockSize.x * info.blockSize.y);
@@ -378,7 +378,7 @@ namespace AE::Graphics
 	
 	ND_ inline bool  EPixelFormat_IsColor (EPixelFormat value)
 	{
-		return not EnumAny( EPixelFormat_GetInfo( value ).valueType, PixelFormatInfo::EType::DepthStencil );
+		return not AnyBits( EPixelFormat_GetInfo( value ).valueType, PixelFormatInfo::EType::DepthStencil );
 	}
 
 /*
@@ -388,17 +388,17 @@ namespace AE::Graphics
 */
 	ND_ inline bool  EPixelFormat_HasDepth (EPixelFormat value)
 	{
-		return EnumEq( EPixelFormat_GetInfo( value ).valueType, PixelFormatInfo::EType::Depth );
+		return AllBits( EPixelFormat_GetInfo( value ).valueType, PixelFormatInfo::EType::Depth );
 	}
 	
 	ND_ inline bool  EPixelFormat_HasStencil (EPixelFormat value)
 	{
-		return EnumEq( EPixelFormat_GetInfo( value ).valueType, PixelFormatInfo::EType::Stencil );
+		return AllBits( EPixelFormat_GetInfo( value ).valueType, PixelFormatInfo::EType::Stencil );
 	}
 	
 	ND_ inline bool  EPixelFormat_HasDepthOrStencil (EPixelFormat value)
 	{
-		return EnumAny( EPixelFormat_GetInfo( value ).valueType, PixelFormatInfo::EType::DepthStencil );
+		return AnyBits( EPixelFormat_GetInfo( value ).valueType, PixelFormatInfo::EType::DepthStencil );
 	}
 	
 /*
@@ -409,8 +409,8 @@ namespace AE::Graphics
 	ND_ inline EImageAspect  EPixelFormat_ToImageAspect (EPixelFormat format)
 	{
 		auto&	fmt_info	= EPixelFormat_GetInfo( format );
-		auto	depth_bit	= EnumEq( fmt_info.valueType, PixelFormatInfo::EType::Depth ) ? EImageAspect::Depth : Default;
-		auto	stencil_bit	= EnumEq( fmt_info.valueType, PixelFormatInfo::EType::Stencil ) ? EImageAspect::Stencil : Default;
+		auto	depth_bit	= AllBits( fmt_info.valueType, PixelFormatInfo::EType::Depth ) ? EImageAspect::Depth : Default;
+		auto	stencil_bit	= AllBits( fmt_info.valueType, PixelFormatInfo::EType::Stencil ) ? EImageAspect::Stencil : Default;
 		auto	color_bit	= (not (depth_bit | stencil_bit) ? EImageAspect::Color : Default);
 
 		return depth_bit | stencil_bit | color_bit;

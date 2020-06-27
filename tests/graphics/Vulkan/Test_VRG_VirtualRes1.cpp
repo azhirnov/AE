@@ -52,7 +52,7 @@ bool VRGTest::Test_VirtualRes1 ()
 			TEST( output[1].ResourceType() == GfxResourceID::EType::VirtualBuffer );
 			
 			auto&	desc = _resourceMngr->GetBufferDescription( input[0] );
-			TEST( EnumEq( desc.usage, EBufferUsage::Index ));
+			TEST( AllBits( desc.usage, EBufferUsage::Index ));
 			TEST( desc.size == buf_size );
 
 			TEST( ctx.SetOutput( output[0], input[0] ));
@@ -75,7 +75,7 @@ bool VRGTest::Test_VirtualRes1 ()
 			TEST( id.ResourceType() == GfxResourceID::EType::Buffer );
 
 			auto&	desc = _resourceMngr->GetBufferDescription( id );
-			TEST( EnumEq( desc.usage, EBufferUsage::Storage ));
+			TEST( AllBits( desc.usage, EBufferUsage::Storage ));
 			TEST( desc.size == buf_size );
 		},
 		"pass 1" ));

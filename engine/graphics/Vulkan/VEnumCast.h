@@ -322,7 +322,7 @@ namespace AE::Graphics
 		VkShaderStageFlagBits	flags = Zero;
 		for (EShaderStages t = EShaderStages(1); t <= values; t = EShaderStages(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ))
+			if ( not AllBits( values, t ))
 				continue;
 
 			BEGIN_ENUM_CHECKS();
@@ -535,7 +535,7 @@ namespace AE::Graphics
 
 		for (EImageFlags t = EImageFlags(1); t <= values; t = EImageFlags(uint(t) << 1))
 		{
-			if ( not EnumEq( values, t ))
+			if ( not AllBits( values, t ))
 				continue;
 		
 			BEGIN_ENUM_CHECKS();
@@ -626,7 +626,7 @@ namespace AE::Graphics
 
 		for (EImageUsage t = EImageUsage(1); t <= values; t = EImageUsage(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ))
+			if ( not AllBits( values, t ))
 				continue;
 			
 			BEGIN_ENUM_CHECKS();
@@ -704,7 +704,7 @@ namespace AE::Graphics
 		
 		for (EImageAspect t = EImageAspect(1); t <= values; t = EImageAspect(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ))
+			if ( not AllBits( values, t ))
 				continue;
 			
 			BEGIN_ENUM_CHECKS();
@@ -736,7 +736,7 @@ namespace AE::Graphics
 		
 		for (EBufferUsage t = EBufferUsage(1); t <= values; t = EBufferUsage(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ))
+			if ( not AllBits( values, t ))
 				continue;
 			
 			BEGIN_ENUM_CHECKS();
@@ -832,7 +832,7 @@ namespace AE::Graphics
 		
 		for (ERayTracingGeometryFlags t = ERayTracingGeometryFlags(1); t <= values; t = ERayTracingGeometryFlags(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ))
+			if ( not AllBits( values, t ))
 				continue;
 			
 			BEGIN_ENUM_CHECKS();
@@ -863,7 +863,7 @@ namespace AE::Graphics
 		
 		for (ERayTracingInstanceFlags t = ERayTracingInstanceFlags(1); t <= values; t = ERayTracingInstanceFlags(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ))
+			if ( not AllBits( values, t ))
 				continue;
 		
 			BEGIN_ENUM_CHECKS();
@@ -896,7 +896,7 @@ namespace AE::Graphics
 		
 		for (ERayTracingFlags t = ERayTracingFlags(1); t <= values; t = ERayTracingFlags(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ))
+			if ( not AllBits( values, t ))
 				continue;
 		
 			BEGIN_ENUM_CHECKS();
@@ -926,29 +926,29 @@ namespace AE::Graphics
 */
 	ND_ inline VkShaderStageFlags  EResourceState_ToShaderStages (EResourceState value)
 	{
-		ASSERT( EnumAny( value, EResourceState::_ShaderMask ));
+		ASSERT( AnyBits( value, EResourceState::_ShaderMask ));
 
 		VkShaderStageFlags	result = Zero;
 
-		if ( EnumEq( value, EResourceState::_VertexShader ))			result |= VK_SHADER_STAGE_VERTEX_BIT;
-		if ( EnumEq( value, EResourceState::_TessControlShader ))		result |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-		if ( EnumEq( value, EResourceState::_TessEvaluationShader ))	result |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-		if ( EnumEq( value, EResourceState::_GeometryShader ))			result |= VK_SHADER_STAGE_GEOMETRY_BIT;
-		if ( EnumEq( value, EResourceState::_FragmentShader ))			result |= VK_SHADER_STAGE_FRAGMENT_BIT;
-		if ( EnumEq( value, EResourceState::_ComputeShader ))			result |= VK_SHADER_STAGE_COMPUTE_BIT;
+		if ( AllBits( value, EResourceState::_VertexShader ))			result |= VK_SHADER_STAGE_VERTEX_BIT;
+		if ( AllBits( value, EResourceState::_TessControlShader ))		result |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+		if ( AllBits( value, EResourceState::_TessEvaluationShader ))	result |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+		if ( AllBits( value, EResourceState::_GeometryShader ))			result |= VK_SHADER_STAGE_GEOMETRY_BIT;
+		if ( AllBits( value, EResourceState::_FragmentShader ))			result |= VK_SHADER_STAGE_FRAGMENT_BIT;
+		if ( AllBits( value, EResourceState::_ComputeShader ))			result |= VK_SHADER_STAGE_COMPUTE_BIT;
 
 		#ifdef VK_NV_mesh_shader
-		if ( EnumEq( value, EResourceState::_MeshTaskShader ))			result |= VK_SHADER_STAGE_TASK_BIT_NV;
-		if ( EnumEq( value, EResourceState::_MeshShader ))				result |= VK_SHADER_STAGE_MESH_BIT_NV;
+		if ( AllBits( value, EResourceState::_MeshTaskShader ))			result |= VK_SHADER_STAGE_TASK_BIT_NV;
+		if ( AllBits( value, EResourceState::_MeshShader ))				result |= VK_SHADER_STAGE_MESH_BIT_NV;
 		#endif
 
 		#ifdef VK_NV_ray_tracing
-		if ( EnumEq( value, EResourceState::_RayGenShader ))			result |= VK_SHADER_STAGE_RAYGEN_BIT_NV;
-		if ( EnumEq( value, EResourceState::_RayAnyHitShader ))			result |= VK_SHADER_STAGE_ANY_HIT_BIT_NV;
-		if ( EnumEq( value, EResourceState::_RayClosestHitShader ))		result |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
-		if ( EnumEq( value, EResourceState::_RayMissShader ))			result |= VK_SHADER_STAGE_MISS_BIT_NV;
-		if ( EnumEq( value, EResourceState::_RayIntersectionShader ))	result |= VK_SHADER_STAGE_INTERSECTION_BIT_NV;
-		if ( EnumEq( value, EResourceState::_RayCallableShader ))		result |= VK_SHADER_STAGE_CALLABLE_BIT_NV;
+		if ( AllBits( value, EResourceState::_RayGenShader ))			result |= VK_SHADER_STAGE_RAYGEN_BIT_NV;
+		if ( AllBits( value, EResourceState::_RayAnyHitShader ))			result |= VK_SHADER_STAGE_ANY_HIT_BIT_NV;
+		if ( AllBits( value, EResourceState::_RayClosestHitShader ))		result |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
+		if ( AllBits( value, EResourceState::_RayMissShader ))			result |= VK_SHADER_STAGE_MISS_BIT_NV;
+		if ( AllBits( value, EResourceState::_RayIntersectionShader ))	result |= VK_SHADER_STAGE_INTERSECTION_BIT_NV;
+		if ( AllBits( value, EResourceState::_RayCallableShader ))		result |= VK_SHADER_STAGE_CALLABLE_BIT_NV;
 		#endif
 
 		return result;
@@ -987,29 +987,29 @@ namespace AE::Graphics
 			case EResourceState::_Access_ShaderStorage :
 			case EResourceState::_Access_Uniform :
 			case EResourceState::_Access_ShaderSample : {
-				ASSERT( EnumAny( value, EResourceState::_ShaderMask ));
+				ASSERT( AnyBits( value, EResourceState::_ShaderMask ));
 				VkPipelineStageFlagBits	result = Zero;
-				if ( EnumEq( value, EResourceState::_VertexShader ))			result |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
-				if ( EnumEq( value, EResourceState::_TessControlShader ))		result |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
-				if ( EnumEq( value, EResourceState::_TessEvaluationShader ))	result |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
-				if ( EnumEq( value, EResourceState::_GeometryShader ))			result |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
-				if ( EnumEq( value, EResourceState::_FragmentShader ))			result |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-				if ( EnumEq( value, EResourceState::_ComputeShader ))			result |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+				if ( AllBits( value, EResourceState::_VertexShader ))			result |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+				if ( AllBits( value, EResourceState::_TessControlShader ))		result |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
+				if ( AllBits( value, EResourceState::_TessEvaluationShader ))	result |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+				if ( AllBits( value, EResourceState::_GeometryShader ))			result |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+				if ( AllBits( value, EResourceState::_FragmentShader ))			result |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+				if ( AllBits( value, EResourceState::_ComputeShader ))			result |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
 				#ifdef VK_NV_mesh_shader
-				if ( EnumEq( value, EResourceState::_MeshTaskShader ))			result |= VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV;
-				if ( EnumEq( value, EResourceState::_MeshShader ))				result |= VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV;
+				if ( AllBits( value, EResourceState::_MeshTaskShader ))			result |= VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV;
+				if ( AllBits( value, EResourceState::_MeshShader ))				result |= VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV;
 				#endif
 				#ifdef VK_NV_ray_tracing
-				if ( EnumAny( value, EResourceState::_RayTracingShaders ))		result |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV;
+				if ( AnyBits( value, EResourceState::_RayTracingShaders ))		result |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV;
 				#endif
 				return result;
 			}
 
 			case EResourceState::_Access_DepthStencilAttachment : {
-				ASSERT( EnumAny( value, EResourceState::EarlyFragmentTests | EResourceState::LateFragmentTests ));
+				ASSERT( AnyBits( value, EResourceState::EarlyFragmentTests | EResourceState::LateFragmentTests ));
 				VkPipelineStageFlagBits	result = Zero;
-				if ( EnumEq( value, EResourceState::EarlyFragmentTests ))		result |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-				if ( EnumEq( value, EResourceState::LateFragmentTests ))		result |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+				if ( AllBits( value, EResourceState::EarlyFragmentTests ))		result |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+				if ( AllBits( value, EResourceState::LateFragmentTests ))		result |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 				return result;
 			}
 		}
@@ -1077,7 +1077,7 @@ namespace AE::Graphics
 			case EResourceState::Unknown :							return VK_IMAGE_LAYOUT_UNDEFINED;
 
 			case EResourceState::ShaderSample :
-			case EResourceState::InputAttachment :					return EnumEq( aspect, VK_IMAGE_ASPECT_COLOR_BIT ) ?
+			case EResourceState::InputAttachment :					return AllBits( aspect, VK_IMAGE_ASPECT_COLOR_BIT ) ?
 																			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL :
 																			VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 			case EResourceState::ShaderRead :
@@ -1340,7 +1340,7 @@ namespace AE::Graphics
 
 		for (VkImageUsageFlags t = 1; t < VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM; t <<= 1)
 		{
-			if ( not EnumEq( usage, t ) )
+			if ( not AllBits( usage, t ) )
 				continue;
 			
 			BEGIN_ENUM_CHECKS();
@@ -1396,7 +1396,7 @@ namespace AE::Graphics
 
 		for (uint t = 1; t <= uint(values); t <<= 1)
 		{
-			if ( not EnumEq( values, t ))
+			if ( not AllBits( values, t ))
 				continue;
 		
 			BEGIN_ENUM_CHECKS();
@@ -1444,7 +1444,7 @@ namespace AE::Graphics
 		
 		for (uint t = 1; t <= uint(values); t <<= 1)
 		{
-			if ( not EnumEq( values, t ) )
+			if ( not AllBits( values, t ) )
 				continue;
 			
 			BEGIN_ENUM_CHECKS();

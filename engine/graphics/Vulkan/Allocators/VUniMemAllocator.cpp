@@ -53,10 +53,10 @@ namespace {
 	{
 		VmaAllocationCreateFlags	result = 0;
 
-		if ( EnumEq( memType, EMemoryType::Dedicated ))
+		if ( AllBits( memType, EMemoryType::Dedicated ))
 			result |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		
-		if ( EnumAny( memType, EMemoryType::_HostVisible ))
+		if ( AnyBits( memType, EMemoryType::_HostVisible ))
 			result |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
 		// TODO: VMA_ALLOCATION_CREATE_NEVER_ALLOCATE_BIT
@@ -71,10 +71,10 @@ namespace {
 */
 	VmaMemoryUsage  ConvertToMemoryUsage (EMemoryType memType)
 	{
-		if ( EnumEq( memType, EMemoryType::HostCocherent ))
+		if ( AllBits( memType, EMemoryType::HostCocherent ))
 			return VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_TO_CPU;
 
-		if ( EnumEq( memType, EMemoryType::HostCached ))
+		if ( AllBits( memType, EMemoryType::HostCached ))
 			return VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU;
 
 		return VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY;
@@ -92,7 +92,7 @@ namespace {
 
 		for (EMemoryType t = EMemoryType(1); t <= memType; t = EMemoryType(uint(t) << 1)) 
 		{
-			if ( not EnumEq( values, t ) )
+			if ( not AllBits( values, t ) )
 				continue;
 
 			BEGIN_ENUM_CHECKS();

@@ -149,7 +149,7 @@ namespace AE::Graphics
 
 		for (uint t = 1; t <= uint(usage); t <<= 1)
 		{
-			if ( not EnumEq( usage, EVirtualResourceUsage(t) ))
+			if ( not AllBits( usage, EVirtualResourceUsage(t) ))
 				continue;
 
 			BEGIN_ENUM_CHECKS();
@@ -234,10 +234,10 @@ namespace AE::Graphics
 				break;
 
 			case EImage::_2D :
-				if ( layerCount > 6 and EnumEq( desc.flags, EImageFlags::CubeCompatible ))
+				if ( layerCount > 6 and AllBits( desc.flags, EImageFlags::CubeCompatible ))
 					viewType = EImageView::CubeArray;
 				else
-				if ( layerCount == 6 and EnumEq( desc.flags, EImageFlags::CubeCompatible ))
+				if ( layerCount == 6 and AllBits( desc.flags, EImageFlags::CubeCompatible ))
 					viewType = EImageView::Cube;
 				else
 				if ( layerCount > 1 )
@@ -287,10 +287,10 @@ namespace AE::Graphics
 					break;
 
 				case EImage::_2D :
-					if ( layerCount > 6 and EnumEq( desc.flags, EImageFlags::CubeCompatible ))
+					if ( layerCount > 6 and AllBits( desc.flags, EImageFlags::CubeCompatible ))
 						viewType = EImageView::CubeArray;
 					else
-					if ( layerCount == 6 and EnumEq( desc.flags, EImageFlags::CubeCompatible ))
+					if ( layerCount == 6 and AllBits( desc.flags, EImageFlags::CubeCompatible ))
 						viewType = EImageView::Cube;
 					else
 					if ( layerCount > 1 )

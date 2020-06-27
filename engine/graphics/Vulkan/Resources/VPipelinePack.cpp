@@ -355,7 +355,7 @@ namespace AE::Graphics
 			for (size_t j = 0; j < desc.shaders.size(); ++j)
 			{
 				const uint	idx = uint(desc.shaders[j].second & ~PipelineCompiler::ShaderUID::SPIRV);
-				CHECK_ERR( EnumEq( desc.shaders[j].second, PipelineCompiler::ShaderUID::SPIRV ));
+				CHECK_ERR( AllBits( desc.shaders[j].second, PipelineCompiler::ShaderUID::SPIRV ));
 				CHECK_ERR( idx < _shaderModules.Get<0>() );
 
 				modules[j].stage	= VEnumCast( desc.shaders[j].first );
@@ -405,7 +405,7 @@ namespace AE::Graphics
 			for (size_t j = 0; j < desc.shaders.size(); ++j)
 			{
 				const uint	idx = uint(desc.shaders[j].second & ~PipelineCompiler::ShaderUID::SPIRV);
-				CHECK_ERR( EnumEq( desc.shaders[j].second, PipelineCompiler::ShaderUID::SPIRV ));
+				CHECK_ERR( AllBits( desc.shaders[j].second, PipelineCompiler::ShaderUID::SPIRV ));
 				CHECK_ERR( idx < _shaderModules.Get<0>() );
 
 				modules[j].stage	= VEnumCast( desc.shaders[j].first );
@@ -449,7 +449,7 @@ namespace AE::Graphics
 			VPipelineLayoutID	id	= _pplnLayouts.Get<1>()[ uint(desc.layout) ];
 			const uint			idx	= uint(desc.shader & ~PipelineCompiler::ShaderUID::SPIRV);
 
-			CHECK_ERR( EnumEq( desc.shader, PipelineCompiler::ShaderUID::SPIRV ));
+			CHECK_ERR( AllBits( desc.shader, PipelineCompiler::ShaderUID::SPIRV ));
 			CHECK_ERR( idx < _shaderModules.Get<0>() );
 
 			ShaderModule	module;

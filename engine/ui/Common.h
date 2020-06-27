@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "stl/Algorithms/EnumUtils.h"
+#include "stl/Math/BitMath.h"
 #include "stl/Utils/NamedID.h"
 
 #include "threading/Primitives/DataRaceCheck.h"

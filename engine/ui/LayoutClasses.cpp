@@ -691,25 +691,25 @@ namespace AE::UI
 		RectF		region;
 
 		// horizontal alignment
-		if ( EnumEq( _align, ELayoutAlign::CenterX ))
+		if ( AllBits( _align, ELayoutAlign::CenterX ))
 		{
 			region.left		= parent_region.Center().x - _size.x * 0.5f;
 			region.right	= region.left + _size.x;
 		}
 		else
-		if ( EnumEq( _align, ELayoutAlign::Left | ELayoutAlign::Right ))
+		if ( AllBits( _align, ELayoutAlign::Left | ELayoutAlign::Right ))
 		{
 			region.left		= parent_region.left;
 			region.right	= parent_region.right;
 		}
 		else
-		if ( EnumEq( _align, ELayoutAlign::Left ))
+		if ( AllBits( _align, ELayoutAlign::Left ))
 		{
 			region.left		= parent_region.left;
 			region.right	= region.left + _size.x;
 		}
 		else
-		if ( EnumEq( _align, ELayoutAlign::Right ))
+		if ( AllBits( _align, ELayoutAlign::Right ))
 		{
 			region.right	= parent_region.right;
 			region.left		= region.right - _size.x;
@@ -723,25 +723,25 @@ namespace AE::UI
 		
 
 		// vertical alignment
-		if ( EnumEq( _align, ELayoutAlign::CenterY ))
+		if ( AllBits( _align, ELayoutAlign::CenterY ))
 		{
 			region.top		= parent_region.Center().y - _size.y * 0.5f;
 			region.bottom	= region.top + _size.y;
 		}
 		else
-		if ( EnumEq( _align, ELayoutAlign::Bottom | ELayoutAlign::Top ))
+		if ( AllBits( _align, ELayoutAlign::Bottom | ELayoutAlign::Top ))
 		{
 			region.top		= parent_region.top;
 			region.bottom	= parent_region.bottom;
 		}
 		else
-		if ( EnumEq( _align, ELayoutAlign::Bottom ))
+		if ( AllBits( _align, ELayoutAlign::Bottom ))
 		{
 			region.top		= parent_region.top;
 			region.bottom	= region.top + _size.y;
 		}
 		else
-		if ( EnumEq( _align, ELayoutAlign::Top ))
+		if ( AllBits( _align, ELayoutAlign::Top ))
 		{
 			region.bottom	= parent_region.bottom;
 			region.top		= region.bottom - _size.y;

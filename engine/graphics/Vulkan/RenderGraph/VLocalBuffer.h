@@ -59,8 +59,8 @@ namespace
 		ND_ VBuffer const*		ToGlobal ()			const	{ return _bufferData.get(); }
 		ND_ BytesU				Size ()				const	{ return _bufferData->Description().size; }
 		ND_ EBufferUsage		Usage ()			const	{ return _bufferData->Description().usage; }
-		ND_ bool				IsHostVisible ()	const	{ return EnumAny( _bufferData->Description().memType, EMemoryType::HostCocherent | EMemoryType::HostCached ); }
-		ND_ bool				IsHostCached ()		const	{ return EnumEq( _bufferData->Description().memType, EMemoryType::HostCached ); }
+		ND_ bool				IsHostVisible ()	const	{ return AnyBits( _bufferData->Description().memType, EMemoryType::HostCocherent | EMemoryType::HostCached ); }
+		ND_ bool				IsHostCached ()		const	{ return AllBits( _bufferData->Description().memType, EMemoryType::HostCached ); }
 	};
 
 
@@ -166,7 +166,7 @@ namespace
 		}
 		else
 		// read after write
-		if ( EnumAny( _currentState.unavailable, _pendingAccess.access ))
+		if ( AnyBits( _currentState.unavailable, _pendingAccess.access ))
 		{
 			barrier.srcAccessMask	= _currentState.writeAccess;
 			barrier.dstAccessMask	= _pendingAccess.access;

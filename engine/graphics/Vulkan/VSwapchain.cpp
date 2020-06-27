@@ -332,14 +332,14 @@ namespace AE::Graphics
 		VkImageUsageFlags	image_usage;
 		_GetImageUsage( OUT image_usage, presentMode, colorFormat, surf_caps );
 
-		if ( not EnumEq( image_usage, colorImageUsage ))
+		if ( not AllBits( image_usage, colorImageUsage ))
 			return false;
 
 		VkImageFormatProperties	image_props = {};
 		VK_CALL( vkGetPhysicalDeviceImageFormatProperties( _device.GetVkPhysicalDevice(), colorFormat, VK_IMAGE_TYPE_2D,
 														   VK_IMAGE_TILING_OPTIMAL, colorImageUsage, 0, OUT &image_props ));
 
-		if ( not EnumEq( image_props.sampleCounts, samples ))
+		if ( not AllBits( image_props.sampleCounts, samples ))
 			return false;
 
 		//if ( imageArrayLayers < image_props.maxArrayLayers )
@@ -557,14 +557,14 @@ namespace AE::Graphics
 			VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
 		};
 		
-		if ( EnumEq( surfaceCaps.supportedCompositeAlpha, compositeAlpha ) )
+		if ( AllBits( surfaceCaps.supportedCompositeAlpha, compositeAlpha ) )
 			return true;	// keep current
 		
 		compositeAlpha = VK_COMPOSITE_ALPHA_FLAG_BITS_MAX_ENUM_KHR;
 
 		for (auto& flag : composite_alpha_flags)
 		{
-			if ( EnumEq( surfaceCaps.supportedCompositeAlpha, flag ) )
+			if ( AllBits( surfaceCaps.supportedCompositeAlpha, flag ) )
 			{
 				compositeAlpha = flag;
 				return true;
@@ -662,10 +662,10 @@ namespace AE::Graphics
 	void  VSwapchainInitializer::_GetSurfaceTransform (INOUT VkSurfaceTransformFlagBitsKHR &transform,
 													   const VkSurfaceCapabilitiesKHR &surfaceCaps) const
 	{
-		if ( EnumEq( surfaceCaps.supportedTransforms, transform ) )
+		if ( AllBits( surfaceCaps.supportedTransforms, transform ) )
 			return;	// keep current
 		
-		if ( EnumEq( surfaceCaps.supportedTransforms, VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ) )
+		if ( AllBits( surfaceCaps.supportedTransforms, VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ) )
 		{
 			transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 		}
@@ -720,7 +720,7 @@ namespace AE::Graphics
 			return false;
 		}
 
-		ASSERT( EnumEq( imageUsage, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT ) );
+		ASSERT( AllBits( imageUsage, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT ) );
 		imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		
 
@@ -728,36 +728,36 @@ namespace AE::Graphics
 		VkFormatProperties	format_props;
 		vkGetPhysicalDeviceFormatProperties( _device.GetVkPhysicalDevice(), colorFormat, OUT &format_props );
 
-		CHECK_ERR( EnumEq( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT ) );
-		ASSERT( EnumEq( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT ) );
+		CHECK_ERR( AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT ) );
+		ASSERT( AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT ) );
 		
-		if ( EnumEq( imageUsage, VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) and
-			 (not EnumEq( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_TRANSFER_SRC_BIT ) or
-			  not EnumEq( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_BLIT_DST_BIT )) )
+		if ( AllBits( imageUsage, VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) and
+			 (not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_TRANSFER_SRC_BIT ) or
+			  not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_BLIT_DST_BIT )) )
 		{
 			imageUsage &= ~VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 		}
 		
-		if ( EnumEq( imageUsage, VK_IMAGE_USAGE_TRANSFER_DST_BIT ) and
-			 not EnumEq( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_TRANSFER_DST_BIT ) )
+		if ( AllBits( imageUsage, VK_IMAGE_USAGE_TRANSFER_DST_BIT ) and
+			 not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_TRANSFER_DST_BIT ) )
 		{
 			imageUsage &= ~VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		}
 		
-		if ( EnumEq( imageUsage, VK_IMAGE_USAGE_STORAGE_BIT ) and
-			 not EnumEq( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT ) )
+		if ( AllBits( imageUsage, VK_IMAGE_USAGE_STORAGE_BIT ) and
+			 not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT ) )
 		{
 			imageUsage &= ~VK_IMAGE_USAGE_STORAGE_BIT;
 		}
 
-		if ( EnumEq( imageUsage, VK_IMAGE_USAGE_SAMPLED_BIT ) and
-			 not EnumEq( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT ) )
+		if ( AllBits( imageUsage, VK_IMAGE_USAGE_SAMPLED_BIT ) and
+			 not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT ) )
 		{
 			imageUsage &= ~VK_IMAGE_USAGE_SAMPLED_BIT;
 		}
 
-		if ( EnumEq( imageUsage, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT ) and
-			 not EnumEq( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT ) )
+		if ( AllBits( imageUsage, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT ) and
+			 not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT ) )
 		{
 			imageUsage &= ~VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 		}

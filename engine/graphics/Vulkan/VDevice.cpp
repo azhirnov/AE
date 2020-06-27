@@ -109,7 +109,7 @@ namespace AE::Graphics
 
 		for (uint i = 0; i <= uint(mask); ++i)
 		{
-			if ( not EnumEq( mask, i ))
+			if ( not AllBits( mask, i ))
 				continue;
 
 			auto	q = GetQueue( EQueueType(i) );
@@ -334,11 +334,11 @@ namespace {
 
 		for (uint32_t j = 0; j < memProps.memoryTypeCount; ++j)
 		{
-			if ( EnumEq( memProps.memoryTypes[j].propertyFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) )
+			if ( AllBits( memProps.memoryTypes[j].propertyFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) )
 			{
 				const uint32_t idx = memProps.memoryTypes[j].heapIndex;
 
-				if ( EnumEq( memProps.memoryHeaps[idx].flags, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT ) )
+				if ( AllBits( memProps.memoryHeaps[idx].flags, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT ) )
 				{
 					total += BytesU( memProps.memoryHeaps[idx].size );
 					memProps.memoryHeaps[idx].size = 0;
@@ -1203,7 +1203,7 @@ namespace {
 		for (auto& queue : _vkQueues)
 		{
 			const bool	is_unique		= IsUniqueQueue( &queue, _queueTypes );
-			const bool	has_graphics	= EnumEq( queue.familyFlags, VK_QUEUE_GRAPHICS_BIT );
+			const bool	has_graphics	= AllBits( queue.familyFlags, VK_QUEUE_GRAPHICS_BIT );
 
 			if ( has_graphics )
 			{
@@ -1240,8 +1240,8 @@ namespace {
 		for (auto& queue : _vkQueues)
 		{
 			const bool	is_unique		= IsUniqueQueue( &queue, _queueTypes );
-			const bool	has_compute		= EnumEq( queue.familyFlags, VK_QUEUE_COMPUTE_BIT );
-			const bool	has_graphics	= EnumEq( queue.familyFlags, VK_QUEUE_GRAPHICS_BIT );
+			const bool	has_compute		= AllBits( queue.familyFlags, VK_QUEUE_COMPUTE_BIT );
+			const bool	has_graphics	= AllBits( queue.familyFlags, VK_QUEUE_GRAPHICS_BIT );
 
 			// compute without graphics
 			if ( has_compute and not has_graphics )
@@ -1290,8 +1290,8 @@ namespace {
 		for (auto& queue : _vkQueues)
 		{
 			const bool	is_unique			= IsUniqueQueue( &queue, _queueTypes );
-			const bool	has_transfer		= EnumEq( queue.familyFlags, VK_QUEUE_TRANSFER_BIT );
-			const bool	supports_transfer	= EnumAny( queue.familyFlags, VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT );
+			const bool	has_transfer		= AllBits( queue.familyFlags, VK_QUEUE_TRANSFER_BIT );
+			const bool	supports_transfer	= AnyBits( queue.familyFlags, VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT );
 
 			// transfer without graphics or compute
 			if ( has_transfer and not supports_transfer )
@@ -1337,7 +1337,7 @@ namespace {
 		{
 			// if the capabilities of a queue family include VK_QUEUE_GRAPHICS_BIT or VK_QUEUE_COMPUTE_BIT,
 			// then reporting the VK_QUEUE_TRANSFER_BIT capability separately for that queue family is optional.
-			if ( EnumAny( requiredFlags, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT ))
+			if ( AnyBits( requiredFlags, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT ))
 				requiredFlags &= ~VK_QUEUE_TRANSFER_BIT;
 		}
 
@@ -1355,7 +1355,7 @@ namespace {
 				return true;
 			}
 
-			if ( EnumEq( curr_flags, requiredFlags ) and 
+			if ( AllBits( curr_flags, requiredFlags ) and 
 				 (compatible.first == 0 or BitCount(compatible.first) > BitCount(curr_flags)) )
 			{
 				compatible = { curr_flags, uint(i) };
@@ -1829,7 +1829,7 @@ namespace {
 		}
 		
 		self->_DebugReport({ self->_tempObjectDbgInfos, pCallbackData->pMessage,
-							 EnumEq( messageSeverity, VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
+							 AllBits( messageSeverity, VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
 						   });
 		return VK_FALSE;
 	}

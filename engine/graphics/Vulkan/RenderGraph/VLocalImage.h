@@ -197,7 +197,7 @@ namespace
 		}
 		else
 		// read after write
-		if ( EnumAny( _currentState.unavailable, _pendingAccess.access ))
+		if ( AnyBits( _currentState.unavailable, _pendingAccess.access ))
 		{
 			barrier.srcAccessMask	= _currentState.writeAccess;	// read access has no effect
 			barrier.dstAccessMask	= _pendingAccess.access;

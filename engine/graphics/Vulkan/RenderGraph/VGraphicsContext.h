@@ -1258,10 +1258,10 @@ namespace {
 			auto&	real_desc	= real->Description();
 
 			CHECK_ERR( virt_desc.imageType	== real_desc.imageType );
-			CHECK_ERR( EnumEq( real_desc.flags, virt_desc.flags ));
+			CHECK_ERR( AllBits( real_desc.flags, virt_desc.flags ));
 			CHECK_ERR( All( virt_desc.dimension == real_desc.dimension ));
 			CHECK_ERR( virt_desc.format == real_desc.format );
-			CHECK_ERR( EnumEq( real_desc.usage, virt_desc.usage ));
+			CHECK_ERR( AllBits( real_desc.usage, virt_desc.usage ));
 			CHECK_ERR( virt_desc.arrayLayers == real_desc.arrayLayers );
 			CHECK_ERR( virt_desc.maxLevel == real_desc.maxLevel );
 			CHECK_ERR( virt_desc.samples == real_desc.samples );
@@ -1277,7 +1277,7 @@ namespace {
 			auto&	real_desc	= real->Description();
 			
 			CHECK_ERR( virt_desc.size == real_desc.size );
-			CHECK_ERR( EnumEq( real_desc.usage, virt_desc.usage ));
+			CHECK_ERR( AllBits( real_desc.usage, virt_desc.usage ));
 		}
 		else
 			RETURN_ERR( "unsupported virtual resource type" );
@@ -1443,7 +1443,7 @@ namespace {
 
 		if ( _enableBarriers )
 		{
-			if ( not EnumEq( mem_info.flags, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ))
+			if ( not AllBits( mem_info.flags, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ))
 			{
 				_barrierMngr.FlushMemory( mem_info.memory, VkDeviceSize(mem_info.offset), VkDeviceSize(mem_info.size) );
 			}

@@ -12,7 +12,7 @@
 #include "stl/Containers/NtStringView.h"
 #include "stl/CompileTime/TypeList.h"
 #include "stl/CompileTime/FunctionInfo.h"
-#include "stl/Algorithms/EnumUtils.h"
+#include "stl/Math/BitMath.h"
 
 // AngelScript + Addons //
 #include "angelscript.h"

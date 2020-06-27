@@ -45,16 +45,16 @@ namespace {
 			result = defaultLayout;
 		else
 		// render target layouts has high priority to avoid unnecessary decompressions
-		if ( EnumEq( usage, EImageUsage::ColorAttachment ))
+		if ( AllBits( usage, EImageUsage::ColorAttachment ))
 			result = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		else
-		if ( EnumEq( usage, EImageUsage::DepthStencilAttachment ))
+		if ( AllBits( usage, EImageUsage::DepthStencilAttachment ))
 			result = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		else
-		if ( EnumEq( usage, EImageUsage::Sampled ))
+		if ( AllBits( usage, EImageUsage::Sampled ))
 			result = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		else
-		if ( EnumEq( usage, EImageUsage::Storage ))
+		if ( AllBits( usage, EImageUsage::Storage ))
 			result = VK_IMAGE_LAYOUT_GENERAL;
 
 		return result;
@@ -71,7 +71,7 @@ namespace {
 
 		for (VkImageUsageFlags t = 1; t <= usage; t <<= 1)
 		{
-			if ( not EnumEq( usage, t ) )
+			if ( not AllBits( usage, t ) )
 				continue;
 
 			BEGIN_ENUM_CHECKS();
@@ -124,7 +124,7 @@ namespace {
 		_desc.Validate();
 
 		auto&		dev			= resMngr.GetDevice();
-		const bool	opt_tiling	= not EnumAny( _desc.memType, EMemoryType::_HostVisible );
+		const bool	opt_tiling	= not AnyBits( _desc.memType, EMemoryType::_HostVisible );
 		
 		// create image
 		VkImageCreateInfo	info = {};
@@ -375,7 +375,7 @@ namespace {
 	bool  VImage::IsReadOnly () const
 	{
 		SHAREDLOCK( _drCheck );
-		return not EnumEq( _desc.usage, EImageUsage::TransferDst | EImageUsage::ColorAttachment | EImageUsage::Storage |
+		return not AllBits( _desc.usage, EImageUsage::TransferDst | EImageUsage::ColorAttachment | EImageUsage::Storage |
 										EImageUsage::DepthStencilAttachment | EImageUsage::TransientAttachment );
 	}
 	
@@ -412,13 +412,13 @@ namespace {
 		VkFormatProperties	props = {};
 		vkGetPhysicalDeviceFormatProperties( dev.GetVkPhysicalDevice(), VEnumCast( desc.format ), OUT &props );
 		
-		const bool					opt_tiling	= not EnumAny( desc.memType, EMemoryType::_HostVisible );
+		const bool					opt_tiling	= not AnyBits( desc.memType, EMemoryType::_HostVisible );
 		const VkFormatFeatureFlags	dev_flags	= opt_tiling ? props.optimalTilingFeatures : props.linearTilingFeatures;
 		VkFormatFeatureFlags		img_flags	= 0;
 
 		for (EImageUsage t = EImageUsage(1); t <= desc.usage; t = EImageUsage(uint(t) << 1))
 		{
-			if ( not EnumEq( desc.usage, t ))
+			if ( not AllBits( desc.usage, t ))
 				continue;
 
 			BEGIN_ENUM_CHECKS();

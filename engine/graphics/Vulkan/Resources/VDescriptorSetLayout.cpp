@@ -258,7 +258,7 @@ namespace AE::Graphics
 */
 	void VDescriptorSetLayout::_AddCombinedImage (const Image &tex, uint bindingIndex, uint arraySize, INOUT DescriptorBinding &binding)
 	{
-		ASSERT( EnumEq( tex.state, EResourceState::_Access_ShaderSample ));
+		ASSERT( AllBits( tex.state, EResourceState::_Access_ShaderSample ));
 
 		VkDescriptorSetLayoutBinding	bind = {};
 		bind.descriptorType		= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;

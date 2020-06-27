@@ -94,13 +94,13 @@ namespace AE::Graphics
 				switch ( iter->second.type )
 				{
 					case EFragOutput::Int4 :
-						CHECK( EnumEq( fmt_info.valueType, EType::Int ));
+						CHECK( AllBits( fmt_info.valueType, EType::Int ));
 						break;
 					case EFragOutput::UInt4 :
-						CHECK( EnumEq( fmt_info.valueType, EType::UInt ));
+						CHECK( AllBits( fmt_info.valueType, EType::UInt ));
 						break;
 					case EFragOutput::Float4 :
-						CHECK( EnumAny( fmt_info.valueType, EType::SNorm | EType::UNorm | EType::SFloat | EType::UFloat ));
+						CHECK( AnyBits( fmt_info.valueType, EType::SNorm | EType::UNorm | EType::SFloat | EType::UFloat ));
 						break;
 					case EFragOutput::Unknown :
 						break;

@@ -1,7 +1,7 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Platforms/CPUInfo.h"
-#include "stl/Algorithms/EnumUtils.h"
+#include "stl/Math/BitMath.h"
 
 #ifdef COMPILER_MSVC
 #	include <intrin.h>
@@ -40,18 +40,18 @@ namespace AE::STL
 
 		__cpuid( cpui.data(), 0x00000001 );
 		
-		SSE2	= EnumEq( cpui[3], 1u << 26 );
-		SSE3	= EnumEq( cpui[2], 1u << 0 );
-		SSE41	= EnumEq( cpui[2], 1u << 19 );
-		SSE42	= EnumEq( cpui[2], 1u << 20 );
-		AVX		= EnumEq( cpui[2], 1u << 28 );
-		POPCNT	= EnumEq( cpui[2], 1u << 23 );
+		SSE2	= AllBits( cpui[3], 1u << 26 );
+		SSE3	= AllBits( cpui[2], 1u << 0 );
+		SSE41	= AllBits( cpui[2], 1u << 19 );
+		SSE42	= AllBits( cpui[2], 1u << 20 );
+		AVX		= AllBits( cpui[2], 1u << 28 );
+		POPCNT	= AllBits( cpui[2], 1u << 23 );
 
-		CmpXchg16 = EnumEq( cpui[2], 1u << 13 );
+		CmpXchg16 = AllBits( cpui[2], 1u << 13 );
 		
 		__cpuid( cpui.data(), 0x00000007 );
 		
-		AVX2	= EnumEq( cpui[1], 1u << 5 );
+		AVX2	= AllBits( cpui[1], 1u << 5 );
 	}
 #endif	// COMPILER_MSVC
 	
@@ -70,7 +70,7 @@ namespace AE::STL
 		auto	caps2 = getauxval(AT_HWCAP2);
 
 	#ifdef __arm__
-		NEON = EnumEq( caps, HWCAP_NEON );
+		NEON = AllBits( caps, HWCAP_NEON );
 	#endif
 
 	#ifdef __aarch64__

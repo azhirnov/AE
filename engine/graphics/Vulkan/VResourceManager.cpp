@@ -117,17 +117,17 @@ namespace {
 		{
 			auto&	mt = props.memoryTypes[i];
 
-			if ( EnumEq( transfer_mem_req.memoryTypeBits, 1u << i ))
+			if ( AllBits( transfer_mem_req.memoryTypeBits, 1u << i ))
 			{
-				if ( EnumEq( mt.propertyFlags, VK_MEMORY_PROPERTY_HOST_CACHED_BIT ))
+				if ( AllBits( mt.propertyFlags, VK_MEMORY_PROPERTY_HOST_CACHED_BIT ))
 					cached_heaps[ mt.heapIndex ] = true;
 			
-				if ( EnumEq( mt.propertyFlags, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ))
+				if ( AllBits( mt.propertyFlags, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ))
 					cocherent_heaps[ mt.heapIndex ] = true;
 			}
 
-			if ( EnumEq( uniform_mem_req.memoryTypeBits, 1u << i ) and
-				 EnumEq( mt.propertyFlags, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ))
+			if ( AllBits( uniform_mem_req.memoryTypeBits, 1u << i ) and
+				 AllBits( mt.propertyFlags, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ))
 			{
 				uniform_heaps[ mt.heapIndex ] = true;
 			}
@@ -1325,7 +1325,7 @@ namespace {
 			 t < EPipelineDynamicState::_Last;
 			 t = EPipelineDynamicState(uint(t) << 1))
 		{
-			if ( not EnumEq( inState, t ))
+			if ( not AllBits( inState, t ))
 				continue;
 
 			*(states++) = VEnumCast( t );
@@ -1511,7 +1511,7 @@ namespace {
 		outState.viewportCount	= viewportCount;
 		outState.scissorCount	= viewportCount;
 
-		if ( EnumEq( dynamicStates, EPipelineDynamicState::Viewport ) and EnumEq( dynamicStates, EPipelineDynamicState::Scissor ) )
+		if ( AllBits( dynamicStates, EPipelineDynamicState::Viewport ) and AllBits( dynamicStates, EPipelineDynamicState::Scissor ) )
 			return;
 		
 		auto*	viewports	= allocator.Alloc<VkViewport>( viewportCount );
@@ -1523,8 +1523,8 @@ namespace {
 			scissors[i]	 = VkRect2D{ VkOffset2D{ 0, 0 }, VkExtent2D{ viewportSize.x, viewportSize.y }};
 		}
 
-		outState.pViewports	= EnumEq( dynamicStates, EPipelineDynamicState::Viewport ) ? null : viewports;
-		outState.pScissors	= EnumEq( dynamicStates, EPipelineDynamicState::Scissor ) ? null : scissors;
+		outState.pViewports	= AllBits( dynamicStates, EPipelineDynamicState::Viewport ) ? null : viewports;
+		outState.pScissors	= AllBits( dynamicStates, EPipelineDynamicState::Scissor ) ? null : scissors;
 	}
 
 /*
@@ -1613,7 +1613,7 @@ namespace {
 			 t < EPipelineDynamicState::_Last;
 			 t = EPipelineDynamicState(uint(t) << 1)) 
 		{
-			if ( not EnumEq( dynamicStates, t ) )
+			if ( not AllBits( dynamicStates, t ) )
 				continue;
 
 			BEGIN_ENUM_CHECKS();

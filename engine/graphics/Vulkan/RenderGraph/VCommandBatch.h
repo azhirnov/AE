@@ -388,7 +388,7 @@ namespace AE::Graphics
 			suitable->mem		= mem_info.memory;
 			suitable->capacity	= mem_info.size;
 			suitable->memOffset	= mem_info.offset;
-			suitable->isCoherent= EnumEq( mem_info.flags, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT );
+			suitable->isCoherent= AllBits( mem_info.flags, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT );
 		}
 
 		// write data to buffer
