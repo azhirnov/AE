@@ -1,0 +1,17 @@
+if (TARGET "Mongoose-lib")
+	file( GLOB_RECURSE SOURCES "*.*" )
+	add_executable( "BuildServer" ${SOURCES} )
+	source_group( TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} )
+	set_property( TARGET "BuildServer" PROPERTY FOLDER "CrashReporting" )
+	target_link_libraries( "BuildServer" PUBLIC "STL" "Scripting" )
+	target_link_libraries( "BuildServer" PUBLIC "Mongoose-lib" )
+	target_include_directories( "BuildServer" PUBLIC "." )
+	
+	find_package( Git )
+	if (NOT Git_FOUND)
+		message( FATAL_ERROR "Git not found" )
+	endif ()
+
+	target_compile_definitions( "BuildServer" PUBLIC "AE_CMAKE_EXE=\"${CMAKE_COMMAND}\"" )
+	target_compile_definitions( "BuildServer" PUBLIC "AE_GIT_EXE=\"${GIT_EXECUTABLE}\"" )
+endif ()

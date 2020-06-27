@@ -62,6 +62,18 @@ if (NOT DEFINED ANDROID)
 endif ()
 
 #----------------------------------------------------------
+
+# crash reporting modules
+add_subdirectory( "crash_report/crash_handler" )
+if (NOT DEFINED ANDROID)
+	add_subdirectory( "crash_report/build_server" )
+	add_subdirectory( "crash_report/minidump_parser" )
+	add_subdirectory( "crash_report/crash_report_sender" )
+	add_subdirectory( "crash_report/crash_report_server" )
+endif ()
+
+#----------------------------------------------------------
+
 # tools
 if (NOT DEFINED ANDROID)
 	include( "engine_tools/res_pack/build.cmake" )
@@ -88,6 +100,12 @@ if (${AE_ENABLE_TESTS})
 	
 	if (NOT DEFINED ANDROID)
 		add_subdirectory( "tests/asset_packer" )
+	endif ()
+	
+	# crash reporting modules
+	if (NOT DEFINED ANDROID)
+		add_subdirectory( "tests/minidump_parser" )
+		add_subdirectory( "tests/crash_report_server" )
 	endif ()
 
 	if (DEFINED ANDROID)

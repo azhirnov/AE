@@ -21,6 +21,12 @@ Generate project with CMake and build.<br/>
 Required C++17 standard support and CMake 3.10 or later.
 
 
+## LICENSE
+The default license is MIT.
+But some projects depends on GPL libraries, some shaders may use CC BY-NC-SA 3.0 license (free for non commercial use) and other.<br/>
+In C++ source code check for defines `AE_MIT_LICENSE`, `AE_SHAREDLIB_LGPL_LICENSE`, `AE_GPL2_LICENSE` and other to know which licenses are used in current project.<br/>
+
+
 ## References
 ECS:<br/>
 * [Unity ECS](https://docs.unity3d.com/Packages/com.unity.entities@0.5/manual/index.html)
