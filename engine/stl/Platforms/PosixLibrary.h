@@ -4,10 +4,10 @@
 
 #if defined(PLATFORM_LINUX) || defined(PLATFORM_ANDROID)
 
-# include "stl/Types/Noncopyable.h"
+# include "stl/Utils/Noncopyable.h"
 # include "stl/Algorithms/ArrayUtils.h"
 # include "stl/Containers/NtStringView.h"
-# include "stl/Types/FileSystem.h"
+# include "stl/Utils/FileSystem.h"
 
 # include <dlfcn.h>
 # include <linux/limits.h>

@@ -8,7 +8,7 @@
 #include "stl/Math/Vec.h"
 #include "stl/Math/Color.h"
 #include "stl/Math/Rectangle.h"
-#include "stl/Types/Noncopyable.h"
+#include "stl/Utils/Noncopyable.h"
 #include "stl/Containers/Union.h"
 #include "stl/Containers/FixedMap.h"
 #include "stl/Containers/FixedString.h"

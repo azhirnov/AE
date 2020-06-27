@@ -4,7 +4,7 @@
 
 #ifndef AE_LFAS_ENABLED
 # include "threading/Common.h"
-# include "stl/Types/Noncopyable.h"
+# include "stl/Utils/Noncopyable.h"
 #endif
 
 namespace AE::Threading

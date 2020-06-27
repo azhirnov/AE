@@ -14,7 +14,7 @@
 
 #include "stl/Stream/Stream.h"
 #include "stl/CompileTime/TypeList.h"
-#include "stl/Types/Noncopyable.h"
+#include "stl/Utils/Noncopyable.h"
 
 
 #ifdef __INTELLISENSE__

@@ -4,8 +4,7 @@
 
 #include "stl/Stream/Stream.h"
 #include "stl/Containers/NtStringView.h"
-#include "stl/Types/FileSystem.h"
-#include <stdio.h>
+#include "stl/Utils/FileSystem.h"
 
 namespace AE::STL
 {

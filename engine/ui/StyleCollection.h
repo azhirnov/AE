@@ -5,7 +5,7 @@
 #include "ui/LayoutEnums.h"
 #include "serializing/ISerializable.h"
 #include "graphics/Canvas/Canvas.h"
-#include "stl/Types/NamedID_HashCollisionCheck.h"
+#include "stl/Utils/NamedID_HashCollisionCheck.h"
 
 namespace AE::UI
 {

@@ -3,8 +3,8 @@
 #pragma once
 
 #include "graphics/Public/Common.h"
-#include "stl/Types/HandleTmpl.h"
-#include "stl/Types/NamedID.h"
+#include "stl/Utils/HandleTmpl.h"
+#include "stl/Utils/NamedID.h"
 
 namespace AE::Graphics
 {

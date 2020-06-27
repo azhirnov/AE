@@ -6,7 +6,7 @@
 #include "graphics/Public/ResourceManager.h"
 #include "graphics/Public/RenderGraph.h"
 
-#include "stl/Types/FileSystem.h"
+#include "stl/Utils/FileSystem.h"
 #include "stl/Stream/Stream.h"
 #include "stl/Memory/LinearAllocator.h"
 

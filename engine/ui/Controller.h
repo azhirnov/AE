@@ -4,7 +4,7 @@
 
 #include "serializing/ISerializable.h"
 #include "stl/Containers/AnyTypeRef.h"
-#include "stl/Types/NamedID_HashCollisionCheck.h"
+#include "stl/Utils/NamedID_HashCollisionCheck.h"
 #include "ui/Common.h"
 
 namespace AE::UI

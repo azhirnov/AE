@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "stl/Common.h"
+#include "stl/Math/Bytes.h"
 
 #ifdef AE_ENABLE_GFS
 #  include "filesystem.hpp"
@@ -33,11 +33,12 @@ namespace AE::STL
 
 	// filesystem
 	public:
-		// remove file or empty directory
+		// remove file or empty directory.
+		// returns 'true' if the file was deleted.
 		static bool  Remove (const Path &p);
 
-		// remove directory and all subdirectories
-		static std::uintmax_t  RemoveAll (const Path &p);
+		// remove directory and all subdirectories.
+		static bool  RemoveAll (const Path &p);
 
 		// create directory, parent directory must be exists
 		static bool  CreateDirectory (const Path &p);
@@ -50,6 +51,9 @@ namespace AE::STL
 
 		// returns 'true' if file or directory is exists
 		ND_ static bool  Exists (const Path &p);
+		
+		// returns 'true' if path refers to a file
+		ND_ static bool  IsFile (const Path &p);
 
 		// returns 'true' if path refers to a directory
 		ND_ static bool  IsDirectory (const Path &p);
@@ -65,6 +69,18 @@ namespace AE::STL
 
 		// enumerate all files in directory
 		ND_ static _ae_fs_::directory_iterator  Enum (const Path &p);
+
+		// 
+		static bool  CopyFile (const Path &from, const Path &to);
+		static bool  CopyDirectory (const Path &from, const Path &to);
+
+		// writes file system capacity and available space
+		static bool  GetSpace (const Path &path, OUT BytesU &total, OUT BytesU &available);
+
+		// replace unsupported symbols.
+		// returns 'true' if name is not modified.
+		template <typename T>
+		static bool  ValidateFileName (INOUT BasicString<T> &name);
 
 		
 	// utils
@@ -91,10 +107,10 @@ namespace AE::STL
 		return _ae_fs_::remove( p, OUT ec );
 	}
 	
-	inline std::uintmax_t  FileSystem::RemoveAll (const Path &p)
+	inline bool  FileSystem::RemoveAll (const Path &p)
 	{
 		std::error_code	ec;
-		return _ae_fs_::remove_all( p, OUT ec );
+		return _ae_fs_::remove_all( p, OUT ec ) != UMax;
 	}
 	
 	inline bool  FileSystem::CreateDirectory (const Path &p)
@@ -122,6 +138,12 @@ namespace AE::STL
 		return _ae_fs_::exists( p, OUT ec );
 	}
 	
+	inline bool  FileSystem::IsFile (const Path &p)
+	{
+		std::error_code	ec;
+		return not _ae_fs_::is_directory( p, OUT ec );	// TODO
+	}
+
 	inline bool  FileSystem::IsDirectory (const Path &p)
 	{
 		std::error_code	ec;
@@ -150,6 +172,60 @@ namespace AE::STL
 	{
 		std::error_code	ec;
 		return _ae_fs_::directory_iterator{ p, OUT ec };
+	}
+	
+	inline bool  FileSystem::CopyFile (const Path &from, const Path &to)
+	{
+		std::error_code	ec;
+		return _ae_fs_::copy_file( from, to, _ae_fs_::copy_options::overwrite_existing, OUT ec );
+	}
+
+	inline bool  FileSystem::CopyDirectory (const Path &from, const Path &to)
+	{
+		std::error_code	ec;
+		_ae_fs_::copy( from, to, _ae_fs_::copy_options::recursive, OUT ec );
+		return not ec;
+	}
+	
+	inline bool  FileSystem::GetSpace (const Path &path, OUT BytesU &total, OUT BytesU &available)
+	{
+		std::error_code	ec;
+		auto	space = _ae_fs_::space( path, OUT ec );
+		if ( not ec )
+		{
+			total		= BytesU{ space.capacity };
+			available	= BytesU{ space.available };
+			return true;
+		}
+		return false;
+	}
+	
+	template <typename T>
+	inline bool  FileSystem::ValidateFileName (INOUT BasicString<T> &name)
+	{
+		bool	res = true;
+		for (size_t i = 0; i < name.size(); ++i)
+		{
+			T&	c = name[i];
+
+		#ifdef PLATFORM_WINDOWS
+			if ( (c == T('/')) | (c == T('\\')) | (c == T('?')) | (c == T('%')) | (c == T('*')) |
+				 (c == T('|')) | (c == T(':'))  | (c == T('"')) | (c == T('<')) | (c == T('>')) )
+			{
+				res = false;
+				c = T('_');
+			}
+		#elif defined(PLATFORM_ANDROID) or defined(PLATFORM_LINUX)
+			if ( (c == T('/')) )
+			{
+				res = false;
+				c = T('_');
+			}
+		#else
+			#error Not implemented
+		#endif
+		}
+		return res;
 	}
 
 

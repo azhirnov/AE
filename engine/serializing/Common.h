@@ -11,8 +11,8 @@
 #include "stl/Containers/Union.h"
 
 #include "stl/Stream/Stream.h"
-#include "stl/Types/NamedID.h"
-#include "stl/Types/NamedID_HashCollisionCheck.h"
+#include "stl/Utils/NamedID.h"
+#include "stl/Utils/NamedID_HashCollisionCheck.h"
 
 #include "stl/Algorithms/ArrayUtils.h"
 

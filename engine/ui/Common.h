@@ -3,7 +3,7 @@
 #pragma once
 
 #include "stl/Algorithms/EnumUtils.h"
-#include "stl/Types/NamedID.h"
+#include "stl/Utils/NamedID.h"
 
 #include "threading/Primitives/DataRaceCheck.h"
 

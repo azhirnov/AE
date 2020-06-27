@@ -6,9 +6,9 @@
 
 # include "stl/Platforms/WindowsHeader.h"
 # include "stl/Platforms/WindowsUtils.h"
-# include "stl/Types/Noncopyable.h"
+# include "stl/Utils/Noncopyable.h"
 # include "stl/Containers/NtStringView.h"
-# include "stl/Types/FileSystem.h"
+# include "stl/Utils/FileSystem.h"
 # include "stl/Algorithms/ArrayUtils.h"
 
 namespace AE::STL

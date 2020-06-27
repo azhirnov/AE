@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "stl/Types/Noncopyable.h"
+#include "stl/Utils/Noncopyable.h"
 #include "stl/Containers/ArrayView.h"
 #include "stl/Math/Random.h"
 

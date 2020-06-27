@@ -39,7 +39,7 @@
 #include "stl/Containers/NtStringView.h"
 #include "stl/Containers/AnyTypeRef.h"
 #include "stl/Algorithms/Cast.h"
-#include "stl/Types/Noncopyable.h"
+#include "stl/Utils/Noncopyable.h"
 #include "stl/CompileTime/TypeList.h"
 #include "stl/CompileTime/TemplateUtils.h"
 

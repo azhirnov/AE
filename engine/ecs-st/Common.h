@@ -8,9 +8,9 @@
 #include "stl/Math/BitMath.h"
 #include "stl/Math/Vec.h"
 
-#include "stl/Types/HandleTmpl.h"
-#include "stl/Types/TypeId.h"
-#include "stl/Types/Noncopyable.h"
+#include "stl/Utils/HandleTmpl.h"
+#include "stl/Utils/TypeId.h"
+#include "stl/Utils/Noncopyable.h"
 
 #include "stl/Containers/FixedArray.h"
 #include "stl/Containers/ArrayView.h"

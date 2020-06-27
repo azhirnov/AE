@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "stl/Types/NamedID.h"
+#include "stl/Utils/NamedID.h"
 
 namespace AE::STL
 {
