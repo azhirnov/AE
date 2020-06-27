@@ -9,10 +9,13 @@
 #include "stl/Platforms/WindowsLibrary.h"
 #include "stl/Platforms/PosixLibrary.h"
 
+#include "stl/Platforms/WindowsProcess.h"
+
 namespace AE::STL
 {
 	#if defined(PLATFORM_WINDOWS)
 		using PlatformUtils = WindowsUtils;
+		using Process		= WindowsProcess;
 	
 	#elif defined(PLATFORM_ANDROID)
 		using PlatformUtils = AndroidUtils;
