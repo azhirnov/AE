@@ -635,7 +635,9 @@ namespace AE::Graphics
 				case EImageUsage::TransferSrc :				flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;				break;
 				case EImageUsage::TransferDst :				flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;				break;
 				case EImageUsage::Sampled :					flags |= VK_IMAGE_USAGE_SAMPLED_BIT;					break;
+				case EImageUsage::StorageAtomic :
 				case EImageUsage::Storage :					flags |= VK_IMAGE_USAGE_STORAGE_BIT;					break;
+				case EImageUsage::ColorAttachmentBlend :
 				case EImageUsage::ColorAttachment :			flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;			break;
 				case EImageUsage::DepthStencilAttachment :	flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;	break;
 				case EImageUsage::TransientAttachment :		flags |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;		break;
@@ -745,8 +747,11 @@ namespace AE::Graphics
 				case EBufferUsage::TransferSrc :	result |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;					break;
 				case EBufferUsage::TransferDst :	result |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;					break;
 				case EBufferUsage::UniformTexel :	result |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;			break;
+				case EBufferUsage::StorageTexelAtomic:
 				case EBufferUsage::StorageTexel :	result |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;			break;
 				case EBufferUsage::Uniform :		result |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;				break;
+				case EBufferUsage::VertexPplnStore :
+				case EBufferUsage::FragmentPplnStore:
 				case EBufferUsage::Storage :		result |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;				break;
 				case EBufferUsage::Index :			result |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;					break;
 				case EBufferUsage::Vertex :			result |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;				break;

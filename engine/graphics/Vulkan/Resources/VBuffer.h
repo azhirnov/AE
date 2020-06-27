@@ -49,13 +49,13 @@ namespace AE::Graphics
 		VBuffer () {}
 		~VBuffer ();
 
-		bool Create (VResourceManager &, const BufferDesc &desc, GfxMemAllocatorPtr allocator, StringView dbgName);
-		bool Create (const VDevice &dev, const VulkanBufferDesc &desc, StringView dbgName);
+		bool  Create (VResourceManager &, const BufferDesc &desc, GfxMemAllocatorPtr allocator, StringView dbgName);
+		bool  Create (const VDevice &dev, const VulkanBufferDesc &desc, StringView dbgName);
 
-		void Destroy (VResourceManager &);
+		void  Destroy (VResourceManager &);
 		
-		bool GetMemoryInfo (OUT VResourceMemoryInfo &) const;
-		bool GetMemoryInfo (OUT IGfxMemAllocator::NativeMemInfo_t &) const;
+		bool  GetMemoryInfo (OUT VResourceMemoryInfo &) const;
+		bool  GetMemoryInfo (OUT IGfxMemAllocator::NativeMemInfo_t &) const;
 
 		ND_ VkBufferView		GetView (const VDevice &dev, const BufferViewDesc &) const;
 		
@@ -77,7 +77,7 @@ namespace AE::Graphics
 
 
 	private:
-		bool _CreateView (const VDevice &, const BufferViewDesc &, OUT VkBufferView &) const;
+		bool  _CreateView (const VDevice &, const BufferViewDesc &, OUT VkBufferView &) const;
 	};
 	
 

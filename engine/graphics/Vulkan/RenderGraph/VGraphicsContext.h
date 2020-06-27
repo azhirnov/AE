@@ -1520,7 +1520,7 @@ namespace {
 		ASSERT( arrayLayer < img->Description().arrayLayers );
 
 		const uint		max_parts		= BufferView::Count;
-		const BytesU	stagingbuf_size	= _resMngr.GetHostReadBufferSize();
+		const BytesU	stagingbuf_size	= _resMngr.GetHostReadBufferSize() / 2;
 		const auto&		fmt_info		= EPixelFormat_GetInfo( img->Description().format );
 		const auto&		block_dim		= fmt_info.blockSize;
 		const uint		block_size		= aspectMask != EImageAspect::Stencil ? fmt_info.bitsPerBlock : fmt_info.bitsPerBlock2;
@@ -1720,7 +1720,7 @@ namespace {
 		ASSERT( arrayLayer < img->Description().arrayLayers );
 
 		const uint		max_parts		= BufferView::Count;
-		const BytesU	stagingbuf_size	= _resMngr.GetHostReadBufferSize();
+		const BytesU	stagingbuf_size	= _resMngr.GetHostWriteBufferSize() / 2;
 		const auto&		fmt_info		= EPixelFormat_GetInfo( img->Description().format );
 		const auto&		block_dim		= fmt_info.blockSize;
 		const uint		block_size		= aspectMask != EImageAspect::Stencil ? fmt_info.bitsPerBlock : fmt_info.bitsPerBlock2;

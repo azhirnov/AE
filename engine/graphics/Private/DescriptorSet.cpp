@@ -531,8 +531,8 @@ namespace AE::Graphics
 		{
 			_changed |= (res->elementCount != buffers.size());
 
-			BytesU	offset	= 0_b;
-			BytesU	size	= ~0_b;
+			const BytesU	offset	= 0_b;
+			const BytesU	size	= ~0_b;	// whole size
 		
 			ASSERT( buffers.size() <= res->elementCapacity );
 			res->elementCount = uint16_t(buffers.size());
@@ -552,7 +552,7 @@ namespace AE::Graphics
 				}
 				else
 				{
-					ASSERT( offset >= buf.offset and offset - buf.offset < std::numeric_limits<uint>::max() );
+					ASSERT( (offset >= buf.offset) and (offset - buf.offset < std::numeric_limits<uint>::max()) );
 					_GetDynamicOffset( res->dynamicOffsetIndex + uint(i) ) = uint(offset - buf.offset);
 				}
 
@@ -593,7 +593,7 @@ namespace AE::Graphics
 	
 /*
 =================================================
-	SetBufferBase
+	BindTexelBuffer
 =================================================
 */
 	DescriptorSet&  DescriptorSet::BindTexelBuffer (const UniformName &name, GfxResourceID buffer, const BufferViewDesc &desc, uint index)
@@ -606,6 +606,7 @@ namespace AE::Graphics
 			auto&	texbuf = res->elements[ index ];
 
 			_changed |= (res->elementCount <= index);
+			_changed |= ((texbuf.bufferId != buffer) or not (texbuf.desc == desc));
 
 			ASSERT( index < res->elementCapacity );
 			res->elementCount = Max( uint16_t(index+1), res->elementCount );

@@ -220,11 +220,15 @@ namespace {
 		EXLOCK( _drCheck );
 		
 		auto&	dev = resMngr.GetDevice();
-
-		for (auto& view : _viewMap) {
-			dev.vkDestroyImageView( dev.GetVkDevice(), view.second, null );
-		}
 		
+		{
+			SHAREDLOCK( _viewMapLock );
+			for (auto& view : _viewMap) {
+				dev.vkDestroyImageView( dev.GetVkDevice(), view.second, null );
+			}
+			_viewMap.clear();
+		}
+
 		if ( _canBeDestroyed and _image ) {
 			dev.vkDestroyImage( dev.GetVkDevice(), _image, null );
 		}
@@ -233,7 +237,6 @@ namespace {
 			CHECK( _memAllocator->Dealloc( INOUT _memStorage ));
 		}
 		
-		_viewMap.clear();
 		_debugName.clear();
 
 		_memAllocator	= null;
@@ -427,12 +430,14 @@ namespace {
 				case EImageUsage::TransferSrc :				img_flags |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT | VK_FORMAT_FEATURE_BLIT_SRC_BIT;	break;
 				case EImageUsage::TransferDst :				img_flags |= VK_FORMAT_FEATURE_TRANSFER_DST_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;	break;
 				case EImageUsage::Sampled :					img_flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;	break;
-				case EImageUsage::Storage :					img_flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;			break;
-				case EImageUsage::ColorAttachment :			img_flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;		break;
+				case EImageUsage::Storage :					img_flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;				break;
+				case EImageUsage::StorageAtomic :			img_flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;		break;
+				case EImageUsage::ColorAttachment :			img_flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;			break;
+				case EImageUsage::ColorAttachmentBlend :	img_flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;		break;
 				case EImageUsage::DepthStencilAttachment :	img_flags |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;	break;
-				case EImageUsage::TransientAttachment :		break;
+				case EImageUsage::TransientAttachment :		break;	// TODO
 				case EImageUsage::InputAttachment :			break;
-				case EImageUsage::ShadingRate :				break;
+				case EImageUsage::ShadingRate :				if ( not dev.GetFeatures().shadingRateImageNV ) return false;	break;
 				
 				#ifdef VK_EXT_fragment_density_map
 				case EImageUsage::FragmentDensityMap :		img_flags |= VK_FORMAT_FEATURE_FRAGMENT_DENSITY_MAP_BIT_EXT;	break;
@@ -457,9 +462,18 @@ namespace {
 	IsSupported
 =================================================
 */
-	bool  VImage::IsSupported (const VDevice &, const ImageViewDesc &desc) const
+	bool  VImage::IsSupported (const VDevice &dev, const ImageViewDesc &desc) const
 	{
 		SHAREDLOCK( _drCheck );
+
+		if ( desc.viewType == EImageView::CubeArray )
+		{
+			if ( not dev.GetProperties().features.imageCubeArray )
+				return false;
+
+			if ( not AllBits( _desc.flags, EImageFlags::CubeCompatible ))
+				return false;
+		}
 
 		// TODO: mutable format
 

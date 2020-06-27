@@ -152,8 +152,12 @@ namespace AE::Graphics
 
 		auto&	dev = resMngr.GetDevice();
 
-		for (auto& view : _viewMap) {
-			dev.vkDestroyBufferView( dev.GetVkDevice(), view.second, null );
+		{
+			SHAREDLOCK( _viewMapLock );
+			for (auto& view : _viewMap) {
+				dev.vkDestroyBufferView( dev.GetVkDevice(), view.second, null );
+			}
+			_viewMap.clear();
 		}
 
 		if ( _canBeDestroyed and _buffer ) {
@@ -164,7 +168,6 @@ namespace AE::Graphics
 			CHECK( _memAllocator->Dealloc( INOUT _memStorage ));
 		}
 
-		_viewMap.clear();
 		_debugName.clear();
 
 		_memAllocator	= null;
@@ -305,7 +308,36 @@ namespace AE::Graphics
 */
 	bool  VBuffer::IsSupported (const VDevice &dev, const BufferDesc &desc)
 	{
-		Unused( dev, desc );
+		for (EBufferUsage t = EBufferUsage(1); t <= desc.usage; t = EBufferUsage(uint(t) << 1))
+		{
+			if ( not AllBits( desc.usage, t ))
+				continue;
+
+			BEGIN_ENUM_CHECKS();
+			switch ( t )
+			{
+				case EBufferUsage::UniformTexel :		break;
+				case EBufferUsage::StorageTexel :		break;
+				case EBufferUsage::StorageTexelAtomic:	break;
+				case EBufferUsage::TransferSrc :		break;
+				case EBufferUsage::TransferDst :		break;
+				case EBufferUsage::Uniform :			break;
+				case EBufferUsage::Storage :			break;
+				case EBufferUsage::Index :				break;
+				case EBufferUsage::Vertex :				break;
+				case EBufferUsage::Indirect :			break;
+				case EBufferUsage::RayTracing :			if ( not dev.GetFeatures().rayTracingNV ) return false;									break;
+				case EBufferUsage::ShaderAddress :		if ( not dev.GetFeatures().bufferAddress ) return false;								break;
+				case EBufferUsage::VertexPplnStore :	if ( not dev.GetProperties().features.vertexPipelineStoresAndAtomics ) return false;	break;
+				case EBufferUsage::FragmentPplnStore :	if ( not dev.GetProperties().features.fragmentStoresAndAtomics ) return false;			break;
+				case EBufferUsage::_Last :
+				case EBufferUsage::All :
+				case EBufferUsage::Transfer :
+				case EBufferUsage::Unknown :
+				default :								ASSERT(false);	break;
+			}
+			END_ENUM_CHECKS();
+		}
 		return true;
 	}
 	
@@ -332,8 +364,9 @@ namespace AE::Graphics
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
 			{
-				case EBufferUsage::UniformTexel :		buf_flags |= VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;	break;
-				case EBufferUsage::StorageTexel :		buf_flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT | VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT;	break;
+				case EBufferUsage::UniformTexel :		buf_flags |= VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;		break;
+				case EBufferUsage::StorageTexel :		buf_flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT;		break;
+				case EBufferUsage::StorageTexelAtomic:	buf_flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT;	break;
 				case EBufferUsage::TransferSrc :		break;
 				case EBufferUsage::TransferDst :		break;
 				case EBufferUsage::Uniform :			break;
@@ -343,6 +376,8 @@ namespace AE::Graphics
 				case EBufferUsage::Indirect :			break;
 				case EBufferUsage::RayTracing :			break;
 				case EBufferUsage::ShaderAddress :		break;
+				case EBufferUsage::VertexPplnStore :	break;
+				case EBufferUsage::FragmentPplnStore :	break;
 				case EBufferUsage::_Last :
 				case EBufferUsage::All :
 				case EBufferUsage::Transfer :

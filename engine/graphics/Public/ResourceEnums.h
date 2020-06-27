@@ -55,25 +55,25 @@ namespace AE::Graphics
 
 	enum class EBufferUsage : uint
 	{
-		TransferSrc		= 1 << 0,
-		TransferDst		= 1 << 1,
-		UniformTexel	= 1 << 2,
-		StorageTexel	= 1 << 3,
-		Uniform			= 1 << 4,
-		Storage			= 1 << 5,
-		Index			= 1 << 6,
-		Vertex			= 1 << 7,
-		Indirect		= 1 << 8,
-		RayTracing		= 1 << 9,
-		ShaderAddress	= 1 << 10,
+		TransferSrc			= 1 << 0,
+		TransferDst			= 1 << 1,
+		UniformTexel		= 1 << 2,		// glsl: 'uniform samplerBuffer'
+		StorageTexel		= 1 << 3,		// glsl: 'uniform imageBuffer'
+		Uniform				= 1 << 4,		// uniform buffer
+		Storage				= 1 << 5,		// shader storage buffer
+		Index				= 1 << 6,		// index buffer
+		Vertex				= 1 << 7,		// vertex buffer
+		Indirect			= 1 << 8,		// indirect buffer for draw and dispatch
+		RayTracing			= 1 << 9,		// for scratch buffer, instance data, shader binding table
+		ShaderAddress		= 1 << 10,		// shader device address
+		VertexPplnStore		= 1 << 11,		// storage buffer store and atomic operations in vertex, geometry, tessellation shaders
+		FragmentPplnStore	= 1 << 12,		// storage buffer store and atomic operations in fragment shader
+		StorageTexelAtomic	= 1 << 13,		// atomic ops on imageBuffer
 		_Last,
-
-		// TODO:
-		// StorageAtomic
 		
-		All				= ((_Last-1) << 1) - 1,
-		Transfer		= TransferDst | TransferSrc,
-		Unknown			= 0,
+		All					= ((_Last-1) << 1) - 1,
+		Transfer			= TransferDst | TransferSrc,
+		Unknown				= 0,
 	};
 	AE_BIT_OPERATORS( EBufferUsage );
 
@@ -130,11 +130,9 @@ namespace AE::Graphics
 		InputAttachment			= 1 << 7,		// input attachment in shader
 		ShadingRate				= 1 << 8,
 		FragmentDensityMap		= 1 << 9,
+		StorageAtomic			= 1 << 10,		// same as 'Storage'
+		ColorAttachmentBlend	= 1 << 11,		// same as 'ColorAttachment'
 		_Last,
-
-		// TODO:
-		//	StorageAtomic
-		//	ColorAttachmentBlend
 
 		All						= ((_Last-1) << 1) - 1,
 		Transfer				= TransferSrc | TransferDst,

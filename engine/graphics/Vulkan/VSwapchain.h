@@ -74,7 +74,8 @@ namespace AE::Graphics
 		ND_ VkSurfaceKHR				GetVkSurface ()					const	{ return _vkSurface; }
 		ND_ VkSwapchainKHR				GetVkSwapchain ()				const	{ return _vkSwapchain; }
 
-		ND_ uint2 const&				GetSurfaceSize ()				const	{ return _surfaceSize; }
+		ND_ uint2						GetSurfaceSize ()	const override		{ return _surfaceSize; }
+
 		ND_ VkFormat					GetColorFormat ()				const	{ return _colorFormat; }
 		ND_ VkColorSpaceKHR				GetColorSpace ()				const	{ return _colorSpace; }
 		ND_ VkSurfaceTransformFlagBitsKHR	GetPreTransformFlags ()		const	{ return _preTransform; }

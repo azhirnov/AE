@@ -32,6 +32,8 @@ namespace AE::Graphics
 	{
 	public:
 		virtual ~ISwapchain () {}
+
+		ND_ virtual uint2  GetSurfaceSize () const = 0;
 	};
 
 
