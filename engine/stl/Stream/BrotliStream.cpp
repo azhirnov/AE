@@ -14,12 +14,14 @@ namespace AE::STL
 	constructor
 =================================================
 */
-	BrotliRStream::BrotliRStream (UniquePtr<RStream> &&stream) :
-		_stream{ std::move(stream) }
+	BrotliRStream::BrotliRStream (const SharedPtr<RStream> &stream) :
+		_stream{ std::move(stream) },
+		_position{ _stream->Position() },
+		_lastResult{ BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT }
 	{
 		_instance = BrotliDecoderCreateInstance( null, null, null );
-
-		_buffer.reserve( _BufferSize );
+		
+		_buffer.resize( _BufferSize );
 	}
 	
 /*
@@ -58,33 +60,31 @@ namespace AE::STL
 	BytesU  BrotliRStream::Read2 (OUT void *buffer, BytesU size)
 	{
 		ASSERT( IsOpen() );
-		ASSERT( not BrotliDecoderIsFinished( static_cast<BrotliDecoderState *>(_instance) ));
 		ASSERT( _position == _stream->Position() );
 
-		size_t				available_out	= size_t(size);
-		uint8_t*			next_out		= static_cast<uint8_t *>( buffer );
-		BrotliDecoderResult	result			= BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT;
+		BrotliDecoderResult	result			= BrotliDecoderResult(_lastResult);
 		BytesU				written;
 		const BytesU		stream_size		= _stream->Size();
-
-		for (;;)
+		
+		// decompress next part
+		if ( result == BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT )
 		{
-			switch ( result ) {
-				case BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT :
-					break;		// read next part and decompress
+			size_t			available_out	= size_t(size);
+			uint8_t*		next_out		= static_cast<uint8_t *>( buffer );
+			size_t			available_in	= 0;
+			uint8_t const*	next_in			= null;
 
-				case BROTLI_DECODER_RESULT_SUCCESS :
-					return written;
-
-				case BROTLI_DECODER_RESULT_ERROR :
-				case BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT :		// not supported
-				default :
-					ASSERT(false);
-					return written;
-			}
-
-			_buffer.resize( Min( size_t(stream_size - _position), _buffer.capacity() ));
-
+			result = BrotliDecoderDecompressStream( static_cast<BrotliDecoderState *>(_instance), INOUT &available_in, INOUT &next_in, 
+													INOUT &available_out, INOUT &next_out, null );
+			
+			written += BytesU(next_out - static_cast<uint8_t *>(buffer));
+		}
+		
+		// read next part and decompress
+		for (; (result == BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT) and (written < size);)
+		{
+			size_t			available_out	= size_t(size - written);
+			uint8_t*		next_out		= static_cast<uint8_t *>( buffer + written );
 			size_t			available_in	= size_t(_stream->Read2( _buffer.data(), BytesU(_buffer.size()) ));
 			uint8_t const*	next_in			= _buffer.data();
 			
@@ -98,6 +98,34 @@ namespace AE::STL
 			
 			written += BytesU(next_out - static_cast<uint8_t *>(buffer));
 		}
+
+		switch ( result )
+		{
+			case BROTLI_DECODER_RESULT_SUCCESS :
+			case BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT :
+				_lastResult = uint(BROTLI_DECODER_RESULT_NEEDS_MORE_INPUT);
+				return written;
+
+			case BROTLI_DECODER_RESULT_NEEDS_MORE_OUTPUT :
+				_lastResult = uint(result);
+				return written;
+
+			case BROTLI_DECODER_RESULT_ERROR :		// not supported
+			default :
+				ASSERT(false);
+				return written;
+		}
+	}
+	
+/*
+=================================================
+	Size
+=================================================
+*/
+	BytesU  BrotliRStream::Size () const
+	{
+		ASSERT( !"not supported for compressed file" );
+		return ~0_b;
 	}
 //-----------------------------------------------------------------------------
 	
@@ -107,10 +135,17 @@ namespace AE::STL
 	constructor
 =================================================
 */
-	BrotliWStream::BrotliWStream (UniquePtr<WStream> &&stream) :
+	BrotliWStream::BrotliWStream (const SharedPtr<WStream> &stream, const Config &cfg) :
 		_stream{ std::move(stream) }
 	{
 		_instance = BrotliEncoderCreateInstance( null, null, null );
+
+		if ( _instance )
+		{
+			BrotliEncoderSetParameter( static_cast<BrotliEncoderState *>(_instance),
+									   BROTLI_PARAM_QUALITY,
+									   uint( Lerp( float(BROTLI_MIN_QUALITY), float(BROTLI_MAX_QUALITY), Clamp( cfg.quality, 0.0f, 1.0f )) + 0.5f ));
+		}
 
 		_buffer.resize( _BufferSize );
 	}
@@ -147,7 +182,7 @@ namespace AE::STL
 		CHECK_ERR( BrotliEncoderCompressStream( static_cast<BrotliEncoderState *>(_instance), BROTLI_OPERATION_PROCESS,
 											    INOUT &available_in, INOUT &next_in,
 											    INOUT &available_out, INOUT &next_out, null ));
-		ASSERT( available_in == 0 );
+		ASSERT( available_in == 0 );	// out: amount of unused input - should be zero
 		
 		const BytesU	out_size = BytesU(next_out - _buffer.data());
 

@@ -2,6 +2,7 @@
 
 #include "stl/Stream/FileStream.h"
 #include "stl/Algorithms/StringUtils.h"
+#include <stdio.h>
 
 #ifdef PLATFORM_WINDOWS
 #	define fread	_fread_nolock
@@ -245,6 +246,18 @@ namespace AE::STL
 		return BytesU(uint64_t(size));
 	}
 	
+/*
+=================================================
+	SeekSet
+=================================================
+*/
+	bool  FileWStream::SeekSet (BytesU pos)
+	{
+		ASSERT( IsOpen() );
+
+		return (fseek( _file, int64_t(pos), SEEK_SET ) == 0);
+	}
+
 /*
 =================================================
 	Write2

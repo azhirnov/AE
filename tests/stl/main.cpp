@@ -3,7 +3,6 @@
 #include "stl/Common.h"
 
 extern void UnitTest_Array ();
-extern void UnitTest_BrotliStream ();
 extern void UnitTest_Color ();
 extern void UnitTest_CT_Counter ();
 extern void UnitTest_FixedArray ();
@@ -26,6 +25,7 @@ extern void UnitTest_StaticString ();
 extern void UnitTest_StructView ();
 extern void UnitTest_StringParser ();
 extern void UnitTest_StackAllocator ();
+extern void UnitTest_Stream ();
 extern void UnitTest_ToString ();
 extern void UnitTest_TypeList ();
 extern void UnitTest_TypeTraits ();
@@ -37,7 +37,6 @@ int main ()
 #endif
 {
 	UnitTest_Array();
-	UnitTest_BrotliStream();
 	UnitTest_Color();
 	UnitTest_CT_Counter();
 	UnitTest_FixedArray();
@@ -59,10 +58,13 @@ int main ()
 	UnitTest_StaticString();
 	UnitTest_StructView();
 	UnitTest_StringParser();
+	UnitTest_Stream();
 	UnitTest_ToString();
 	UnitTest_StackAllocator();
 	UnitTest_TypeList();
 	UnitTest_TypeTraits();
+
+	CHECK_FATAL( AE_DUMP_MEMLEAKS() );
 
 	AE_LOGI( "Tests.STL finished" );
 	return 0;

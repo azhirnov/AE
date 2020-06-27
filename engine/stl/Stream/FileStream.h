@@ -82,6 +82,7 @@ namespace AE::STL
 		BytesU	Position ()	const override;
 		BytesU	Size ()		const override;
 		
+		bool	SeekSet (BytesU pos) override;
 		BytesU	Write2 (const void *buffer, BytesU size) override;
 		void	Flush () override;
 	};
