@@ -144,7 +144,7 @@ namespace
 		}
 
 		UniquePtr<SimpleSymbolSupplier>		symbol_supplier;
-		symbol_supplier.reset( new SimpleSymbolSupplier{ symbolsPath.string() });
+		symbol_supplier.reset( New<SimpleSymbolSupplier>( symbolsPath.string() ));
 		
 		BasicSourceLineResolver	resolver;
 		MinidumpProcessor		minidump_processor{ symbol_supplier.get(), &resolver };
@@ -195,7 +195,7 @@ namespace
 		info = Default;
 
 		UniquePtr<SimpleSymbolSupplier>		symbol_supplier;
-		symbol_supplier.reset( new SimpleSymbolSupplier{ symbolsPath.string() });
+		symbol_supplier.reset( New<SimpleSymbolSupplier>( symbolsPath.string() ));
 		
 		BasicSourceLineResolver	resolver;
 		MinidumpProcessor		minidump_processor{ symbol_supplier.get(), &resolver };

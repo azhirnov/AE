@@ -60,9 +60,9 @@ namespace AE::Graphics
 		ND_ bool  Lock ();
 			void  Unlock ();
 
-		ND_ VkCommandBuffer  Allocate (const VDevice &dev);
+		ND_ VkCommandBuffer  Alloc (const VDevice &dev);
 
-		void  Deallocate (const VDevice &dev, VkCommandBuffer cmd);
+		void  Dealloc (const VDevice &dev, VkCommandBuffer cmd);
 
 		void  ResetAll (const VDevice &dev, VkCommandPoolResetFlags flags);
 		void  TrimAll (const VDevice &dev, VkCommandPoolTrimFlags flags);

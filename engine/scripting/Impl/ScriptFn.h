@@ -33,12 +33,11 @@ namespace AE::Scripting
 
 
 	// methods
-	private:
+	public:
 		ScriptFn (const ScriptModulePtr &mod, AngelScript::asIScriptContext* ctx) :
 			_module{ mod }, _ctx{ ctx }
 		{}
 
-	public:
 		~ScriptFn ()
 		{
 			if ( _ctx )
@@ -71,7 +70,7 @@ namespace AE::Scripting
 		}
 
 	private:
-		bool _CheckError (int exec_res)
+		bool  _CheckError (int exec_res)
 		{
 			using namespace AngelScript;
 

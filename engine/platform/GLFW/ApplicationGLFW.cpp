@@ -278,6 +278,8 @@ namespace {
 			AE::App::ApplicationGLFW	app{ std::move(listener) };
 			app._MainLoop();
 		}
+
+		AE_OnAppDestroyed();
 		return res;
 	}
 

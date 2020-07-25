@@ -15,7 +15,7 @@ using namespace AE::Threading;
 namespace
 {
 	static siv::PerlinNoise			noise;
-	static const uint				max_levels		= 4;
+	static const uint				max_levels		= 5;
 	static Atomic<uint64_t>			task_complete	{0};
 
 
@@ -25,6 +25,8 @@ namespace
 		static constexpr uint			W = 32;
 		static constexpr uint			H = 32;
 		StaticArray< uint8_t, W*H >		data;
+
+		HeightMap () {}
 	};
 	using HeightMap_t = SharedPtr< HeightMap >;
 
@@ -107,10 +109,10 @@ namespace
 			const auto	start_time = TimePoint_t::clock::now();
 		
 			Unused(
-				scheduler->Run<LargeTask1>( Tuple{uint2{0,0}, 0} ),
-				scheduler->Run<LargeTask1>( Tuple{uint2{0,1}, 0} ),
-				scheduler->Run<LargeTask1>( Tuple{uint2{1,0}, 0} ),
-				scheduler->Run<LargeTask1>( Tuple{uint2{1,1}, 0} )
+				scheduler->Run<LargeTask1>( Tuple{uint2{0,0}, 0u} ),
+				scheduler->Run<LargeTask1>( Tuple{uint2{0,1}, 0u} ),
+				scheduler->Run<LargeTask1>( Tuple{uint2{1,0}, 0u} ),
+				scheduler->Run<LargeTask1>( Tuple{uint2{1,1}, 0u} )
 			);
 
 			const uint64_t	required = 1ull << (2 + 2 * max_levels);
@@ -196,10 +198,10 @@ namespace
 			const auto	start_time = TimePoint_t::clock::now();
 		
 			Unused(
-				scheduler->Run<LargeTask2>( Tuple{uint2{0,0}, 0} ),
-				scheduler->Run<LargeTask2>( Tuple{uint2{0,1}, 0} ),
-				scheduler->Run<LargeTask2>( Tuple{uint2{1,0}, 0} ),
-				scheduler->Run<LargeTask2>( Tuple{uint2{1,1}, 0} )
+				scheduler->Run<LargeTask2>( Tuple{uint2{0,0}, 0u} ),
+				scheduler->Run<LargeTask2>( Tuple{uint2{0,1}, 0u} ),
+				scheduler->Run<LargeTask2>( Tuple{uint2{1,0}, 0u} ),
+				scheduler->Run<LargeTask2>( Tuple{uint2{1,1}, 0u} )
 			);
 			
 			const uint64_t	required = 1ull << (2 + 2 * max_levels);

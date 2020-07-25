@@ -2,12 +2,15 @@
 
 #ifdef AE_ENABLE_GLFW
 # include "platform/GLFW/ApplicationGLFW.h"
+# include "threading/TaskSystem/TaskScheduler.h"
+# include "stl/Containers/InPlace.h"
 
 using namespace AE::App;
+using namespace AE::Threading;
 
 namespace
 {
-	Array<int>	events;
+	InPlace<Array<int>>		events;
 
 
 	class WndListener final : public IWindow::IWndListener
@@ -18,42 +21,42 @@ namespace
 	public:
 		void OnCreate (IWindow &) override
 		{
-			events.push_back( 2 );
+			events->push_back( 2 );
 		}
 		
 		void OnStart (IWindow &) override
 		{
-			events.push_back( 3 );
+			events->push_back( 3 );
 		}
 
 		void OnEnterForeground (IWindow &) override
 		{
-			events.push_back( 5 );
+			events->push_back( 5 );
 		}
 
 		void OnSurfaceCreated (IWindow &) override
 		{
-			events.push_back( 4 );
+			events->push_back( 4 );
 		}
 
 		void OnEnterBackground (IWindow &) override
 		{
-			events.push_back( 6 );
+			events->push_back( 6 );
 		}
 
 		void OnSurfaceDestroyed (IWindow &) override
 		{
-			events.push_back( 7 );
+			events->push_back( 7 );
 		}
 
 		void OnStop (IWindow &) override
 		{
-			events.push_back( 8 );
+			events->push_back( 8 );
 		}
 
 		void OnDestroy (IWindow &) override
 		{
-			events.push_back( 9 );
+			events->push_back( 9 );
 		}
 
 		void OnUpdate (IWindow &wnd) override
@@ -75,9 +78,21 @@ namespace
 		WindowPtr	_window;
 
 	public:
+		AppListener ()
+		{
+			TaskScheduler::CreateInstance();
+			Scheduler().Setup( 1 );
+		}
+
+		~AppListener ()
+		{
+			Scheduler().Release();
+			TaskScheduler::DestroyInstance();
+		}
+
 		void OnStart (IApplication &app) override
 		{
-			events.push_back( 1 );
+			events->push_back( 1 );
 
 			auto	monitors = app.GetMonitors();
 			CHECK_FATAL( monitors.size() >= 1 );
@@ -93,7 +108,7 @@ namespace
 		{
 			_window = null;
 
-			events.push_back( 10 );
+			events->push_back( 10 );
 		}
 			
 		void OnUpdate (IApplication &app) override
@@ -107,9 +122,13 @@ namespace
 
 extern void Test_GLFW ()
 {
+	events.Create();
+
 	ApplicationGLFW::Run( MakeUnique<AppListener>() );
 
-	CHECK_FATAL( events == Array<int>{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+	CHECK_FATAL( *events == Array<int>{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+
+	events.Destroy();
 
 	AE_LOGI( "Test_GLFW - passed" );
 }

@@ -141,7 +141,7 @@ namespace AE::Scripting
 
 		struct Ctors {
 			static void FromEnum (void *dst, Enum_t e) {
-				new(dst) Bitfield_t{ e };
+				PlacementNew<Bitfield_t>( dst, e );
 			}
 		};
 

@@ -165,7 +165,7 @@ namespace AE::UI
 		if ( not layout )
 			return;
 
-		auto	tmp = new _LayoutCallback( layout, func );
+		auto	tmp = New<_LayoutCallback>( layout, func );
 
 		_tempLayouts.push_back({ parent, tmp });
 		_callbacks.push_back( _CallbackPtr_t{tmp} );

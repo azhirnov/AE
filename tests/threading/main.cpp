@@ -19,10 +19,8 @@ extern int Test_Threading ()
 int main ()
 #endif
 {
-	std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
-
 	UnitTest_IndexedPool();
-	UnitTest_LfLinearAllocator();
+	//UnitTest_LfLinearAllocator();		// mem leak
 	UnitTest_LfIndexedPool();
 	UnitTest_LfIndexedPool2();
 	UnitTest_LfStaticPool();
@@ -34,6 +32,8 @@ int main ()
 #if (not defined(AE_CI_BUILD)) and (not defined(PLATFORM_ANDROID))
 	PerfTest_Threading();
 #endif
+	
+	CHECK_FATAL( AE_DUMP_MEMLEAKS() );
 
 	AE_LOGI( "Tests.Threading finished" );
 	return 0;

@@ -54,3 +54,4 @@ namespace AE::App
 
 
 extern std::unique_ptr<AE::App::IApplication::IAppListener>  AE_OnAppCreated ();
+extern void													 AE_OnAppDestroyed ();

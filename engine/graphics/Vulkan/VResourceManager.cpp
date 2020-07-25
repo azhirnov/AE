@@ -23,8 +23,7 @@ namespace {
 	template <typename ResType, typename ...Args>
 	inline void Replace (INOUT VResourceBase<ResType> &target, Args&& ...args)
 	{
-		target.Data().~ResType();
-		new (&target.Data()) ResType{ std::forward<Args>(args)... };
+		Reconstruct<ResType>( target.Data(), std::forward<Args>( args )... );
 	}
 }
 //-----------------------------------------------------------------------------

@@ -30,7 +30,7 @@ namespace AE::Graphics
 		CHECK_ERR( pool );
 		CHECK_ERR( not _cmdBuf );
 			
-		_cmdBuf = pool->Allocate( dev );
+		_cmdBuf = pool->Alloc( dev );
 		CHECK_ERR( _cmdBuf );
 
 		_cmdPool		= pool;

@@ -69,7 +69,7 @@ namespace AE::STL
 			return *this;
 		}
 
-		void Destroy ()
+		void  Destroy ()
 		{
 			DEBUG_ONLY(
 				ASSERT( _isCreated );

@@ -13,6 +13,8 @@
 #include "BuildServerApi.h"
 
 #include "stl/Platforms/WindowsHeader.h"
+
+#pragma warning(disable: 4005)
 #include "mongoose.h"
 
 #define SERVER_NAME	"BuildServer"
@@ -360,7 +362,7 @@ namespace
 		
 		auto&	info = _activeBuilds.insert_or_assign( id, UniquePtr<BuildInfo>{} ).first->second;
 
-		info.reset( new BuildInfo{ std::thread{ [&info, id, src = std::move(script_src), deploy_dir = _deployDir] () -> bool
+		info.reset( New<BuildInfo>( std::thread{ [&info, id, src = std::move(script_src), deploy_dir = _deployDir] () -> bool
 		{
 			{
 				EXLOCK( info->timeGuard );
@@ -460,7 +462,7 @@ namespace
 			info->looping.store( false, EMemoryOrder::Relaxed );
 
 			return true;
-		}}});
+		}}));
 
 		return true;
 	}

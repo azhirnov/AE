@@ -256,14 +256,14 @@ namespace AE::Scripting
 		template <typename T>
 		static T * FactoryCreate ()
 		{
-			return new T();
+			return New<T>();
 		}
 
 
 		template <typename T>
 		static void Constructor (AngelScript::asIScriptGeneric *gen)
 		{
-			new( gen->GetObject() ) T();
+			PlacementNew<T>( gen->GetObject() );
 		}
 
 		
@@ -272,7 +272,7 @@ namespace AE::Scripting
 		{
 			T const*	src = static_cast< const T *>( gen->GetArgObject(0) );
 			void *		dst = gen->GetObject();
-			new( dst ) T( *src );
+			PlacementNew<T>( dst, *src );
 		}
 		
 
@@ -288,10 +288,9 @@ namespace AE::Scripting
 		{
 			T const*	src = static_cast< const T *>( gen->GetArgObject(0) );
 			T*			dst = static_cast< T *>( gen->GetObject() );
-			*dst = *src;
 
 			dst->~T();
-			new( dst ) T( *src );
+			PlacementNew<T>( dst, *src );
 		}
 	};
 

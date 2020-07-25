@@ -15,16 +15,16 @@ extern int Test_ECSst ()
 int main ()
 #endif
 {
-	std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
-
 	UnitTest_Archetype();
 	UnitTest_EntityPool();
 	UnitTest_Registry();
-	UnitTest_Transformation();
+	//UnitTest_Transformation();
 
 #if !defined(AE_CI_BUILD) or (defined(AE_CI_TYPE) and (AE_CI_TYPE == 2))
-	UnitTest_RendererVk();
+	//UnitTest_RendererVk();
 #endif
+
+	CHECK_FATAL( AE_DUMP_MEMLEAKS() );
 
 	AE_LOGI( "Tests.ECS finished" );
 	return 0;

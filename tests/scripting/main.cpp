@@ -14,12 +14,12 @@ extern int Test_Scripting ()
 int main ()
 #endif
 {
-	std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
-
 	UnitTest_Array();
 	UnitTest_Class();
 	UnitTest_MathFunc();
 	UnitTest_String();
+	
+	CHECK_FATAL( AE_DUMP_MEMLEAKS() );
 
 	AE_LOGI( "Tests.ScriptBinding finished" );
 	return 0;

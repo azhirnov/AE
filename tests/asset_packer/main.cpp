@@ -9,15 +9,17 @@ extern void Test_SamplerPacker ();
 
 int main ()
 {
-	std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
+	{
+		const Path	curr = FileSystem::CurrentPath();
 
-	const Path	curr = FileSystem::CurrentPath();
+		Test_PipelineCompiler();
+		FileSystem::SetCurrentPath( curr );
 
-	Test_PipelineCompiler();
-	FileSystem::SetCurrentPath( curr );
-
-	Test_SamplerPacker();
-	FileSystem::SetCurrentPath( curr );
+		Test_SamplerPacker();
+		FileSystem::SetCurrentPath( curr );
+	}
+	
+	CHECK_FATAL( AE_DUMP_MEMLEAKS() );
 
 	AE_LOGI( "Tests.AssetPacker finished" );
 	return 0;

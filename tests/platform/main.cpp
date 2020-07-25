@@ -22,14 +22,19 @@ extern int Test_Platform (IApplication &app, IWindow &wnd)
 
 	UniquePtr<IApplication::IAppListener>  AE_OnAppCreated ()
 	{
-		std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
-		
-		#if !defined(AE_CI_BUILD) or (defined(AE_CI_TYPE) and (AE_CI_TYPE == 2))
+		#if AE_HAS_GRAPHICS
 			Test_GLFW();
 		#endif
 
+		CHECK_FATAL( AE_DUMP_MEMLEAKS() );
+
 		AE_LOGI( "Tests.Platform finished" );
 		std::exit(0);
+	}
+	
+	void  AE_OnAppDestroyed ()
+	{
+		// do nothing
 	}
 
 #endif

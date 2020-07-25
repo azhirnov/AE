@@ -62,7 +62,7 @@ namespace AE::ECS::Systems
 =================================================
 */
 	TransformationGraph::TransformationGraph (Registry &reg) :
-		_root{ new Node{} },
+		_root{ New<Node>() },
 		_owner{ &reg }
 	{
 		reg.AddMessageListener< Components::GlobalTransformation, MsgTag_AddedComponent >(
@@ -72,7 +72,7 @@ namespace AE::ECS::Systems
 				{
 					NodePtr&	node = _entityToNode[id];
 					if ( not node )
-						node.reset( new Node{ id });
+						node.reset( New<Node>( id ));
 
 					if ( not node->parent )
 						_root->AddChild( node );
@@ -89,7 +89,7 @@ namespace AE::ECS::Systems
 					EntityID	id		= entities[i];
 					NodePtr&	node	= _entityToNode[id];
 					if ( not node )
-						node.reset( new Node{ id });
+						node.reset( New<Node>( id ));
 
 					node->RemoveSelf();
 

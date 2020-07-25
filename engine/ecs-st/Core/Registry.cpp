@@ -11,7 +11,7 @@ namespace AE::ECS
 =================================================
 */
 	Registry::Registry () :
-		_componentInfo{ new ComponentMap_t::element_type{} }
+		_componentInfo{ New<ComponentMap_t::element_type>() }
 	{
 		EXLOCK( _drCheck );
 	}
@@ -166,7 +166,7 @@ namespace AE::ECS
 
 		if ( inserted )
 		{
-			storage.reset( new ArchetypeStorage{ *this, key, ECS_Config::InitialtStorageSize });
+			storage.reset( New<ArchetypeStorage>( *this, key, ECS_Config::InitialtStorageSize ));
 
 			_OnNewArchetype( &*iter );
 		}
@@ -313,7 +313,7 @@ namespace AE::ECS
 			{
 				// TODO: if 'removeComps' is just a tags then you can change archetype in 'src_storage' instead of copying all data
 
-				dst_storage.reset( new ArchetypeStorage{ *this, key, ECS_Config::InitialtStorageSize });
+				dst_storage.reset( New<ArchetypeStorage>( *this, key, ECS_Config::InitialtStorageSize ));
 
 				_OnNewArchetype( &*iter );
 			}

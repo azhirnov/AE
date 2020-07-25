@@ -22,27 +22,27 @@ namespace AE::Scripting
 	private:
 		static void _Ctor1 (void *mem, const T value)
 		{
-			new( mem ) Vec<T,2>( value );
+			PlacementNew< Vec<T,2> >( mem, value );
 		}
 			
 		static void _Ctor2 (void *mem, const Vec<T,2> &value)
 		{
-			new( mem ) Vec<T,2>( value );
+			PlacementNew< Vec<T,2> >( mem, value );
 		}
-			
+		
 		static void _Ctor3 (void *mem, const Vec<T,3> &value)
 		{
-			new( mem ) Vec<T,2>( value );
+			PlacementNew< Vec<T,2> >( mem, value );
 		}
 			
 		static void _Ctor4 (void *mem, const Vec<T,4> &value)
 		{
-			new( mem ) Vec<T,2>( value );
+			PlacementNew< Vec<T,2> >( mem, value );
 		}
 
 		static void _CtorArg2 (void *mem, T x, T y)
 		{
-			new( mem ) Vec<T,2>( x, y );
+			PlacementNew< Vec<T,2> >( mem, x, y );
 		}
 			
 	public:
@@ -72,32 +72,32 @@ namespace AE::Scripting
 	private:
 		static void _Ctor1 (void *mem, const T value)
 		{
-			new( mem ) Vec<T,3>( value );
+			PlacementNew< Vec<T,3> >( mem, value );
 		}
 			
 		static void _Ctor2 (void *mem, const Vec<T,2> &value)
 		{
-			new( mem ) Vec<T,3>( value.x, value.y, T(0) );
+			PlacementNew< Vec<T,3> >( mem, value.x, value.y, T(0) );
 		}
 			
 		static void _Ctor3 (void *mem, const Vec<T,3> &value)
 		{
-			new( mem ) Vec<T,3>( value );
+			PlacementNew< Vec<T,3> >( mem, value );
 		}
 			
 		static void _Ctor4 (void *mem, const Vec<T,4> &value)
 		{
-			new( mem ) Vec<T,3>( value.x, value.y, value.z );
+			PlacementNew< Vec<T,3> >( mem, value.x, value.y, value.z );
 		}
 
 		static void _CtorArg2 (void *mem, const Vec<T,2> &xy, T z)
 		{
-			new( mem ) Vec<T,3>( xy, z );
+			PlacementNew< Vec<T,3> >( mem, xy, z );
 		}
 
 		static void _CtorArg3 (void *mem, T x, T y, T z)
 		{
-			new( mem ) Vec<T,3>( x, y, z );
+			PlacementNew< Vec<T,3> >( mem, x, y, z );
 		}
 
 	public:
@@ -129,37 +129,37 @@ namespace AE::Scripting
 	private:
 		static void _Ctor1 (void *mem, const T value)
 		{
-			new( mem ) Vec<T,4>( value );
+			PlacementNew< Vec<T,4> >( mem, value );
 		}
 			
 		static void _Ctor2 (void *mem, const Vec<T,2> &value)
 		{
-			new( mem ) Vec<T,4>( value.x, value.y, T(0), T(0) );
+			PlacementNew< Vec<T,4> >( mem, value.x, value.y, T(0), T(0) );
 		}
 			
 		static void _Ctor3 (void *mem, const Vec<T,3> &value)
 		{
-			new( mem ) Vec<T,4>( value.x, value.y, value.z, T(0) );
+			PlacementNew< Vec<T,4> >( mem, value.x, value.y, value.z, T(0) );
 		}
 			
 		static void _Ctor4 (void *mem, const Vec<T,4> &value)
 		{
-			new( mem ) Vec<T,4>( value );
+			PlacementNew< Vec<T,4> >( mem, value );
 		}
 
 		static void _CtorArg2 (void *mem, const Vec<T,2> &xy, const Vec<T,2> &zw)
 		{
-			new( mem ) Vec<T,4>( xy, zw );
+			PlacementNew< Vec<T,4> >( mem, xy, zw );
 		}
 			
 		static void _CtorArg3 (void *mem, const Vec<T,3> &xyz, T w)
 		{
-			new( mem ) Vec<T,4>( xyz, w );
+			PlacementNew< Vec<T,4> >( mem, xyz, w );
 		}
 
 		static void _CtorArg4 (void *mem, T x, T y, T z, T w)
 		{
-			new( mem ) Vec<T,4>( x, y, z, w );
+			PlacementNew< Vec<T,4> >( mem, x, y, z, w );
 		}
 
 	public:

@@ -350,7 +350,7 @@ DEBUG_ONLY(
 			~ComponentDbgView () override {}
 
 			UniquePtr<IComponentDbgView>  ElementView (size_t index) const override {
-				return MakeUnique<ComponentDbgView<T>>( _comps.section( index, 1 ).data(), 1 );
+				return MakeUnique<ComponentDbgView<T>>( _comps.section( index, 1 ).data(), 1u );
 			}
 		};
 
@@ -654,7 +654,7 @@ DEBUG_ONLY(
 		auto&	comp = _singleComponents[ TypeIdOf<T>() ];
 		if ( not comp.data )
 		{
-			comp.data	 = new T();
+			comp.data	 = New<T>();
 			comp.deleter = [](void* ptr) { delete Cast<T>(ptr); };
 
 			// TODO: message that single component was created ?

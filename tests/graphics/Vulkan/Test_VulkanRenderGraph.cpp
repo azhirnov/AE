@@ -83,16 +83,16 @@ bool  VRGTest::_Create (IApplication &app, IWindow &wnd)
 	CHECK_ERR( _vulkan.CreateLogicalDevice( Default ));
 
 	// this is a test and the test should fail for any validation error
-	_vulkan.CreateDebugCallback( DefaultDebugMessageSeverity );
-	//								  [] (const VDeviceInitializer::DebugReport &rep) { CHECK_FATAL(not rep.isError); });
+	_vulkan.CreateDebugCallback( DefaultDebugMessageSeverity,
+								 [] (const VDeviceInitializer::DebugReport &rep) { CHECK_FATAL(not rep.isError); });
 
-	_resourceMngr.reset( new VResourceManager{ _vulkan });
+	_resourceMngr.reset( New<VResourceManager>( _vulkan ));
 	CHECK_ERR( Cast<VResourceManager>(_resourceMngr)->Initialize() );
 	
 	CHECK_ERR( _swapchain.CreateSurface( wnd.GetNative() ));
 	CHECK_ERR( _swapchain.Create( _resourceMngr.get(), wnd.GetSurfaceSize() ));
 
-	_renderGraph.reset( new VRenderGraph{ *Cast<VResourceManager>(_resourceMngr) });
+	_renderGraph.reset( New<VRenderGraph>( *Cast<VResourceManager>(_resourceMngr) ));
 	CHECK_ERR( Cast<VRenderGraph>(_renderGraph)->Initialize() );
 
 	CHECK_ERR( _CompilePipelines() );

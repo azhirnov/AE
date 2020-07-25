@@ -14,13 +14,17 @@ struct LocalHttpClient
 {
 	LocalHttpClient (const HttpClient::Settings &settings = Default)
 	{
+		TaskScheduler::CreateInstance();
 		Scheduler().Setup( 1 );
+
 		HttpClient::Instance().Setup( settings );
 	}
 
 	~LocalHttpClient ()
 	{
 		Scheduler().Release();
+		TaskScheduler::DestroyInstance();
+
 		HttpClient::Instance().Release();
 	}
 

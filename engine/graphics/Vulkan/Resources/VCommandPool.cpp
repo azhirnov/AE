@@ -129,7 +129,7 @@ namespace AE::Graphics
 	{
 		if ( not _available.Put( cmd ))
 		{
-			Deallocate( dev, cmd );
+			Dealloc( dev, cmd );
 		}
 	}
 
@@ -138,7 +138,7 @@ namespace AE::Graphics
 	Allocate
 =================================================
 */
-	VkCommandBuffer  VCommandPool::Allocate (const VDevice &dev)
+	VkCommandBuffer  VCommandPool::Alloc (const VDevice &dev)
 	{
 		CHECK_ERR( IsCreated(), VK_NULL_HANDLE );
 		
@@ -185,7 +185,7 @@ namespace AE::Graphics
 	Deallocate
 =================================================
 */
-	void  VCommandPool::Deallocate (const VDevice &dev, VkCommandBuffer cmd)
+	void  VCommandPool::Dealloc (const VDevice &dev, VkCommandBuffer cmd)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( IsCreated(), void());

@@ -50,6 +50,8 @@ namespace
 				TEST( std::memcmp( ref.data(), items[i], ElemSize ) == 0 );
 			}
 		}
+		
+		// TODO: fix memleak in allocator
 	}
 }
 

@@ -5,16 +5,17 @@
 #include "stl/Defines.h"
 
 // mem leak check
-#if defined(COMPILER_MSVC) && defined(AE_ENABLE_MEMLEAK_CHECKS)
+#if defined(COMPILER_MSVC) && defined(AE_ENABLE_MEMLEAK_CHECKS) && defined(_DEBUG)
 #	define _CRTDBG_MAP_ALLOC
 #	include <stdlib.h>
 #	include <crtdbg.h>
 
 	// call at exit
 	// returns 'true' if no mem leaks
-#	define AE_CHECK_MEMLEAKS()	(::_CrtDumpMemoryLeaks() != TRUE)
+#	define AE_DUMP_MEMLEAKS()	(::_CrtDumpMemoryLeaks() != 1)
 #else
 
+#	undef  AE_ENABLE_MEMLEAK_CHECKS
 #	define AE_DUMP_MEMLEAKS()	(true)
 #endif
 
@@ -147,6 +148,41 @@ namespace AE::STL
 	
 /*
 =================================================
+	New
+=================================================
+*/
+#if defined(COMPILER_MSVC) and defined(AE_ENABLE_MEMLEAK_CHECKS)
+namespace _ae_stl_hidden_
+{
+	struct DbgNew
+	{
+		const char *	file;
+		int				line;
+
+		DbgNew (const char *file, int line) : file{file}, line{line}
+		{}
+
+		template <typename T, typename ...Types>
+		ND_ forceinline T*  New (Types&&... args)	
+		{
+			return new( _NORMAL_BLOCK, file, line ) T{ std::forward<Types>( args )... };
+		}
+	};
+}
+#	define New	_ae_stl_hidden_::DbgNew{ __FILE__, __LINE__ }.New
+
+#else
+
+	template <typename T, typename ...Types>
+	ND_ forceinline T*  New (Types&&... args)
+	{
+		return new T{ std::forward<Types>( args )... };
+	}
+
+#endif
+	
+/*
+=================================================
 	MakeShared
 =================================================
 */
@@ -161,10 +197,31 @@ namespace AE::STL
 	MakeUnique
 =================================================
 */
+#if defined(COMPILER_MSVC) and defined(AE_ENABLE_MEMLEAK_CHECKS)
+namespace _ae_stl_hidden_
+{
+	struct DbgMakeUnique
+	{
+		const char *	file;
+		int				line;
+
+		template <typename T, typename ...Types>
+		ND_ forceinline UniquePtr<T>  MakeUnique (Types&&... args)
+		{
+			return UniquePtr<T>{ new( _NORMAL_BLOCK, file, line ) T{ std::forward<Types>( args )... }};
+		}
+	};
+}
+#	define MakeUnique	_ae_stl_hidden_::DbgMakeUnique{ __FILE__, __LINE__ }.MakeUnique
+
+#else
+
 	template <typename T, typename ...Types>
 	ND_ forceinline UniquePtr<T>  MakeUnique (Types&&... args)
 	{
 		return std::make_unique<T>( std::forward<Types>( args )... );
 	}
+
+#endif
 
 }	// AE::STL

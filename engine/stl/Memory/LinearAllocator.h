@@ -188,12 +188,24 @@ namespace AE::STL
 		UntypedLinearAllocator (Self &&other) : _alloc{other._alloc} {}
 		UntypedLinearAllocator (const Self &other) : _alloc{other._alloc} {}
 		UntypedLinearAllocator (LinearAllocator_t &alloc) : _alloc{alloc} {}
-
+		
+		#pragma push_macro("Allocate")
+		#undef Allocate
 
 		ND_ AE_ALLOCATOR void*  Allocate (BytesU size, BytesU align)
 		{
 			return _alloc.Alloc( size, align );
 		}
+		
+	#ifdef AE_ENABLE_MEMLEAK_CHECKS
+		ND_ AE_ALLOCATOR void*  Allocate (BytesU size, BytesU align, const char *file, int line)
+		{
+			Unused( file, line );
+			return _alloc.Alloc( size, align );
+		}
+	#endif
+		
+		#pragma pop_macro("Allocate")
 
 		void  Deallocate (void *, BytesU)
 		{}
@@ -279,6 +291,5 @@ namespace AE::STL
 			return &_alloc == &rhs._alloc;
 		}
 	};
-
 
 }	// AE::STL

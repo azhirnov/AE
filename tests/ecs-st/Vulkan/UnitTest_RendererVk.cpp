@@ -207,11 +207,11 @@ extern void UnitTest_RendererVk ()
 		CHECK_FATAL( dev.ChooseHighPerformanceDevice() );
 		CHECK_FATAL( dev.CreateLogicalDevice( Default, Default ));
 
-		UniquePtr<VResourceManager>	resourceMngr{ new VResourceManager{ dev }};
+		UniquePtr<VResourceManager>	resourceMngr{ New<VResourceManager>( dev )};
 		CHECK_FATAL( resourceMngr->Initialize() );
 		CHECK_FATAL( CompilePipelines( *resourceMngr ));
 		
-		UniquePtr<VRenderGraph>		renderGraph{ new VRenderGraph{ *resourceMngr }};
+		UniquePtr<VRenderGraph>		renderGraph{ New<VRenderGraph>( *resourceMngr )};
 		CHECK_FATAL( renderGraph->Initialize() );
 		
 

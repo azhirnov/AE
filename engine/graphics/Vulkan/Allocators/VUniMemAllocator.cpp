@@ -22,6 +22,8 @@
 # define VMA_IMPLEMENTATION		1
 # define VMA_ASSERT(expr)		{}
 
+# undef Allocate
+
 #ifdef COMPILER_MSVC
 #	pragma warning (push, 0)
 #	pragma warning (disable: 4701)

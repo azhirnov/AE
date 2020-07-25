@@ -396,7 +396,24 @@
 #	define assert( ... ) \
 		AE_PRIVATE_CHECK( (__VA_ARGS__), AE_PRIVATE_TOSTRING( __VA_ARGS__ ))
 
-#endif
+#	ifdef AE_CI_TYPE
+	  // Travis CI
+#	  if AE_CI_TYPE == 1
+#		define AE_HAS_GRAPHICS	0
+	  // AE BuildServer
+#	  elif AE_CI_TYPE == 2
+#		define AE_HAS_GRAPHICS	1
+#	  else
+#		error unknown CI type!
+#	  endif
+	// undefined
+#	else
+#		define AE_HAS_GRAPHICS	0
+#	endif
+
+#else
+#	define AE_HAS_GRAPHICS	1
+#endif	// AE_CI_BUILD
 
 
 // check definitions
@@ -418,6 +435,18 @@
 #	pragma detect_mismatch( "AE_CI_BUILD", "1" )
 #  else
 #	pragma detect_mismatch( "AE_CI_BUILD", "0" )
+#  endif
+
+#  ifdef AE_ENABLE_MEMLEAK_CHECKS
+#	pragma detect_mismatch( "AE_ENABLE_MEMLEAK_CHECKS", "1" )
+#  else
+#	pragma detect_mismatch( "AE_ENABLE_MEMLEAK_CHECKS", "0" )
+#  endif
+
+#  if defined(AE_HAS_GRAPHICS) && AE_HAS_GRAPHICS
+#	pragma detect_mismatch( "AE_HAS_GRAPHICS", "1" )
+#  else
+#	pragma detect_mismatch( "AE_HAS_GRAPHICS", "0" )
 #  endif
 
 // platforms

@@ -3,6 +3,7 @@
 #include "platform/Public/IApplication.h"
 
 using namespace AE::App;
+using namespace AE::Threading;
 
 extern void UnitTest_GfxResourceID ();
 extern void UnitTest_DescriptorSet ();
@@ -67,21 +68,30 @@ extern int Test_Graphics (IApplication &app, IWindow &wnd)
 		WindowPtr	_window;
 		
 	public:
-		AppListener () {}
-		~AppListener () override {}
-		
+		AppListener ()
+		{
+			TaskScheduler::CreateInstance();
+			Scheduler().Setup( 1 );
+		}
+
+		~AppListener () override
+		{
+			Scheduler().Release();
+			TaskScheduler::DestroyInstance();
+		}
+
 		void OnStart (IApplication &app) override
 		{
 			UnitTest_GfxResourceID();
 			UnitTest_DescriptorSet();
 			UnitTest_FormattedText();
 			
-			#if defined(AE_CI_TYPE) and (AE_CI_TYPE == 1)
-				// CI can't create window and does not support vulkan
-				app.Terminate();
-			#else
+			#if AE_HAS_GRAPHICS
 				_window = app.CreateWindow( MakeUnique<WndListener>( app ), Default );
 				CHECK_FATAL( _window );
+			#else
+				// CI can't create window and does not support vulkan
+				app.Terminate();
 			#endif
 		}
 
@@ -96,9 +106,12 @@ extern int Test_Graphics (IApplication &app, IWindow &wnd)
 
 	UniquePtr<IApplication::IAppListener>  AE_OnAppCreated ()
 	{
-		std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
-
 		return MakeUnique<AppListener>();
+	}
+
+	void  AE_OnAppDestroyed ()
+	{
+		CHECK_FATAL( AE_DUMP_MEMLEAKS() );
 	}
 
 #endif

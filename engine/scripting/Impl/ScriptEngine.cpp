@@ -2,6 +2,7 @@
 
 #include "scripting/Impl/ScriptEngine.h"
 #include "stl/Algorithms/StringUtils.h"
+#include "scriptstdstring.h"
 
 namespace AE::Scripting
 {
@@ -50,6 +51,8 @@ namespace AE::Scripting
 		if ( _engine ) {
 			_engine->ShutDownAndRelease();
 		}
+
+		AngelScript::UnregisterStdString();
 	}
 	
 /*
@@ -109,7 +112,7 @@ namespace AE::Scripting
 		}
 		AS_CALL_R( module->Build() );
 
-		return ScriptModulePtr{ new ScriptModule{ module.release() }};
+		return ScriptModulePtr{ New<ScriptModule>( module.release() )};
 	}
 	
 /*

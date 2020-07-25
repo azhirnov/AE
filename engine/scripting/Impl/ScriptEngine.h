@@ -39,13 +39,13 @@ namespace AE::Scripting
 	class ScriptModule final : public std::enable_shared_from_this<ScriptModule>
 	{
 		friend class ScriptEngine;
-
+	// variables
 	private:
 		AngelScript::asIScriptModule*	_module;
-
-	private:
-		explicit ScriptModule (AngelScript::asIScriptModule* mod);
+		
+	// methods
 	public:
+		explicit ScriptModule (AngelScript::asIScriptModule* mod);
 		~ScriptModule ();
 	};
 

@@ -72,7 +72,7 @@ namespace AE::UI
 		CHECK_ERR( not _canvas );
 		CHECK_ERR( fontMngr );
 
-		_canvas.reset( new Canvas{ resMngr });
+		_canvas.reset( New<Canvas>( resMngr ));
 		_fontMngr		= fontMngr;
 		_objFactory		= &factory;
 		_resourceMngr	= &resMngr;

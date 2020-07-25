@@ -74,7 +74,7 @@ namespace AE::Scripting
 			return null;
 		}
 
-		return ScriptFnPtr<Fn>{ new ScriptFn<Fn>{ module, ctx }};
+		return ScriptFnPtr<Fn>{ New<ScriptFn<Fn>>( module, ctx )};
 	}
 
 }	// AE::Scripting

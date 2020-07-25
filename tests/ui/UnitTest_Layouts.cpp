@@ -42,7 +42,7 @@ namespace
 
 		void RunOnce (LayoutPtr &&child)
 		{
-			baseLayout.reset( new WidgetLayout( "root" ));
+			baseLayout.reset( New<WidgetLayout>( "root" ));
 
 			baseLayout->AddChild( std::move(child) );
 

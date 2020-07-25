@@ -424,7 +424,7 @@ namespace AE::UI
 			return true;
 		}
 
-		_childs.push_back( LayoutPtr(new StackLayoutCell( std::move(layout) )) );
+		_childs.push_back( LayoutPtr( New<StackLayoutCell>( std::move(layout) )) );
 		return true;
 	}
 //-----------------------------------------------------------------------------
@@ -594,7 +594,7 @@ namespace AE::UI
 	{
 		CHECK_ERR( layout->GetTypeId() != typeid(FillStackLayoutCell) );
 
-		_childs.push_back( LayoutPtr(new FillStackLayoutCell( std::move(layout), weight )) );
+		_childs.push_back( LayoutPtr( New<FillStackLayoutCell>( std::move(layout), weight )) );
 		return true;
 	}
 //-----------------------------------------------------------------------------

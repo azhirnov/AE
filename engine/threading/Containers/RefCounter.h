@@ -146,7 +146,7 @@ namespace AE::Threading
 	template <typename T, typename ...Args>
 	ND_ forceinline RC<T>  MakeRC (Args&& ...args)
 	{
-		return RC<T>{ new T{ std::forward<Args>(args)... }};
+		return RC<T>{ New<T>( std::forward<Args>(args)... )};
 	}
 	
 /*

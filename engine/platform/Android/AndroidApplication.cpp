@@ -32,7 +32,7 @@ namespace {
 */
 	AndroidApplication*&  AndroidApplication::_GetAppInstance ()
 	{
-		static AndroidApplication*	app = new AndroidApplication{ AE_OnAppCreated() };
+		static AndroidApplication*	app = New<AndroidApplication>{ AE_OnAppCreated() };
 		return app;
 	}
 
@@ -323,6 +323,8 @@ namespace {
 		auto&	app = AndroidApplication::_GetAppInstance();
 		delete app;
 		app = null;
+
+		AE_OnAppDestroyed();
 	
 		JavaEnv::SetVM( null );
 	}

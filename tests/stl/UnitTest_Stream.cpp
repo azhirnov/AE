@@ -17,7 +17,7 @@ namespace
 
 		// compress
 		{
-			auto*			stream = new MemWStream{};
+			auto*			stream = New<MemWStream>();
 			BrotliWStream	encoder{ UniquePtr<WStream>{stream} };
 
 			TEST( encoder.IsOpen() );
@@ -29,7 +29,7 @@ namespace
 
 		// uncompress
 		{
-			BrotliRStream	decoder{ UniquePtr<RStream>{ new MemRStream{ file_data }} };
+			BrotliRStream	decoder{ UniquePtr<RStream>{ New<MemRStream>( file_data )} };
 			String			str2, str3;
 
 			TEST( decoder.IsOpen() );

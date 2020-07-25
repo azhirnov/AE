@@ -236,6 +236,8 @@ namespace
 		int	res = 0;
 		TEST( Run< int() >( se, script, "main", OUT res ));
 		TEST( res == 11 );
+
+		ScriptCl::engine = null;
 	}
 
 
@@ -280,6 +282,7 @@ namespace
 		TEST( res );
 		TEST( res->__Counter() == 1 );
 		TEST( res->i == 11 );
+		res->__Release();
 	}
 
 
@@ -322,7 +325,7 @@ namespace
 			}
 		)#";
 
-		Test8_Ptr	arg{ new Test8_CL(), false };
+		Test8_Ptr	arg{ New<Test8_CL>(), false };
 		Test8_Ptr	res;
 
 		TEST( Run< Test8_Ptr (Test8_Ptr) >( se, script, "main", OUT res, arg ));

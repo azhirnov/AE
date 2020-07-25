@@ -88,7 +88,7 @@ namespace AE::Graphics
 		//_virtualToReal{ StdLinearAllocator<Pair<const GfxResourceID, VirtualResInfo>>{ _allocator }},
 		_resMngr{ resMngr },
 		_taskDepsMngr{ MakeShared<VCmdBatchDepsManager>() },
-		_cmdPoolMngr{ new VCommandPoolManager{ _resMngr.GetDevice() }}
+		_cmdPoolMngr{ New<VCommandPoolManager>( _resMngr.GetDevice() )}
 	{
 		Threading::Scheduler().RegisterDependency< CmdBatchDep >( _taskDepsMngr );
 
@@ -181,6 +181,8 @@ namespace AE::Graphics
 		auto*	cmd = _allocator.Alloc<T>();
 		CHECK_ERR( cmd );
 
+		PlacementNew< BaseCmd >( cmd );
+
 		cmd->state			= BaseCmd::EState::Initial;
 		cmd->queue			= queue;
 		cmd->inputCount		= uint16_t(input.size());
@@ -251,27 +253,25 @@ namespace AE::Graphics
 		cmd->logicalRP = _CreateLogicalPass( rpDesc );
 		CHECK_ERR( cmd->logicalRP );
 		
-		PlacementNew< BaseCmd::Fn_t >(
-			&cmd->pass,
-			[this, draw = std::move(draw), cmd] (GraphicsContext &ctx) -> bool
-			{
-				CHECK_ERR( _CreateFramebuffer( {cmd->logicalRP} ));
+		cmd->pass = [this, draw = std::move(draw), cmd] (GraphicsContext &ctx) -> bool
+		{
+			CHECK_ERR( _CreateFramebuffer( {cmd->logicalRP} ));
 				
-				// transit image layouts to default state
-				ctx.FlushLocalResourceStates();
+			// transit image layouts to default state
+			ctx.FlushLocalResourceStates();
 
-				RenderContext	rctx{ _resMngr, *cmd->logicalRP, ctx.GetBatchId() };
+			RenderContext	rctx{ _resMngr, *cmd->logicalRP, ctx.GetBatchId() };
 				
-				ctx.BeginPass( *cmd->logicalRP, VK_SUBPASS_CONTENTS_INLINE );
-				rctx.Begin( ctx.GetCommandBuffer() );
+			ctx.BeginPass( *cmd->logicalRP, VK_SUBPASS_CONTENTS_INLINE );
+			rctx.Begin( ctx.GetCommandBuffer() );
 
-				draw( rctx, cmd->Input(), cmd->Output() );
+			draw( rctx, cmd->Input(), cmd->Output() );
 
-				ctx.EndPass( *cmd->logicalRP );
-				ctx.MergeResources( INOUT rctx.GetResourceMap() );
+			ctx.EndPass( *cmd->logicalRP );
+			ctx.MergeResources( INOUT rctx.GetResourceMap() );
 
-				return true;
-			});
+			return true;
+		};
 
 		return true;
 	}
@@ -300,23 +300,21 @@ namespace AE::Graphics
 		cmd->logicalRP = _CreateLogicalPass( rpDesc );
 		CHECK_ERR( cmd->logicalRP );
 
-		PlacementNew< BaseCmd::Fn_t >(
-			&cmd->pass,
-			[this, draw = std::move(asyncDraw), cmd] (GraphicsContext &ctx) -> bool
-			{
-				auto	cmd_pool = _cmdPoolMngr->Acquire( ctx.GetQueue(), ECommandPoolType::Secondary_CachedRenderCommands );
-				CHECK_ERR( cmd_pool );
+		cmd->pass = [this, draw = std::move(asyncDraw), cmd] (GraphicsContext &ctx) -> bool
+		{
+			auto	cmd_pool = _cmdPoolMngr->Acquire( ctx.GetQueue(), ECommandPoolType::Secondary_CachedRenderCommands );
+			CHECK_ERR( cmd_pool );
 
-				RenderContext	rctx{ _resMngr, *cmd->logicalRP, ctx.GetBatchId() };
-				rctx.BeginAsync( cmd_pool );
+			RenderContext	rctx{ _resMngr, *cmd->logicalRP, ctx.GetBatchId() };
+			rctx.BeginAsync( cmd_pool );
 
-				draw( rctx, cmd->Input(), cmd->Output() );
+			draw( rctx, cmd->Input(), cmd->Output() );
 
-				cmd->renderCommands = rctx.EndAsync();
-				cmd_pool->Unlock();
+			cmd->renderCommands = rctx.EndAsync();
+			cmd_pool->Unlock();
 
-				return cmd->renderCommands.IsValid();
-			});
+			return cmd->renderCommands.IsValid();
+		};
 
 		return true;
 	}
@@ -340,13 +338,12 @@ namespace AE::Graphics
 		auto*	cmd = _Add<BaseCmd>( queue, input, output, dbgName );
 		CHECK_ERR( cmd );
 		
-		PlacementNew< BaseCmd::Fn_t >(
-			&cmd->pass,
-			[fn = std::move(pass), cmd] (GraphicsContext &ctx)
-			{
-				fn( ctx, cmd->Input(), cmd->Output() );
-				return true;
-			});
+		cmd->pass = [fn = std::move(pass), cmd] (GraphicsContext &ctx)
+		{
+			fn( ctx, cmd->Input(), cmd->Output() );
+			return true;
+		};
+
 		return true;
 	}
 	
@@ -369,13 +366,12 @@ namespace AE::Graphics
 		auto*	cmd = _Add<BaseCmd>( queue, input, output, dbgName );
 		CHECK_ERR( cmd );
 		
-		PlacementNew< BaseCmd::Fn_t >(
-			&cmd->pass,
-			[fn = std::move(pass), cmd] (GraphicsContext &ctx)
-			{
-				fn( ctx, cmd->Input(), cmd->Output() );
-				return true;
-			});
+		cmd->pass = [fn = std::move(pass), cmd] (GraphicsContext &ctx)
+		{
+			fn( ctx, cmd->Input(), cmd->Output() );
+			return true;
+		};
+
 		return true;
 	}
 	
@@ -397,13 +393,12 @@ namespace AE::Graphics
 		auto*	cmd = _Add<BaseCmd>( queue, input, output, dbgName );
 		CHECK_ERR( cmd );
 		
-		PlacementNew< BaseCmd::Fn_t >(
-			&cmd->pass,
-			[fn = std::move(pass), cmd] (GraphicsContext &ctx)
-			{
-				fn( ctx, cmd->Input(), cmd->Output() );
-				return true;
-			});
+		cmd->pass = [fn = std::move(pass), cmd] (GraphicsContext &ctx)
+		{
+			fn( ctx, cmd->Input(), cmd->Output() );
+			return true;
+		};
+
 		return true;
 	}
 	
@@ -427,11 +422,9 @@ namespace AE::Graphics
 		SHAREDLOCK( _drCheck );
 		EXLOCK( _cmdGuard );
 		
-		const auto	SubmitCommands = [this] (OUT CmdBatchID &batch_id) -> bool
+		const auto	SubmitCommands = [this] (OUT Array<BaseCmd*> &ordered, OUT CmdBatchID &batch_id) -> bool
 		{
 			_ResolveDependencies();
-
-			Array<BaseCmd*>		ordered;
 			_SortCommands( OUT ordered );
 
 			CHECK_ERR( _MergeRenderPasses( ordered ));
@@ -449,12 +442,13 @@ namespace AE::Graphics
 			return true;
 		};
 		
-		CmdBatchID	batch_id;
-		bool		result = SubmitCommands( OUT batch_id );
+		Array<BaseCmd*>	ordered;
+		CmdBatchID		batch_id;
+		bool			result = SubmitCommands( OUT ordered, OUT batch_id );
 
 		// free memory
 		{
-			for (auto* cmd : _commands) {
+			for (auto* cmd : ordered) {
 				PlacementDelete( cmd->pass );
 			}
 			for (auto& res : _virtualToReal)
@@ -463,7 +457,10 @@ namespace AE::Graphics
 				bool	is_deleted = _resMngr.ReleaseResource( res.second.real );
 				//CHECK( res.first.IsVirtual() == is_deleted );
 			}
+			
+			ASSERT( _commands.empty() );
 			_commands.clear();
+			
 			_asyncCommands.clear();
 			_resWriteCmd.clear();
 			_virtualToReal.clear();
@@ -516,6 +513,7 @@ namespace AE::Graphics
 			{
 				if ( (*iter)->state != BaseCmd::EState::Complete )
 				{
+					PlacementDelete( (*iter)->pass );
 					iter = _commands.erase( iter );
 					continue;
 				}
@@ -543,6 +541,7 @@ namespace AE::Graphics
 				if ( failed )
 				{
 					(*iter)->state = BaseCmd::EState::Incomplete;
+					PlacementDelete( (*iter)->pass );
 					iter = _commands.erase( iter );
 					continue;
 				}
@@ -588,17 +587,15 @@ namespace AE::Graphics
 						if ( not cmd->pass( *_contexts[uint(EQueueType::Graphics)].indirect ))
 							return;
 			
-						PlacementNew< BaseCmd::Fn_t >(
-							&cmd->pass,
-							[this, cmd] (GraphicsContext &ctx) -> bool
-							{
-								CHECK_ERR( _CreateFramebuffer( {cmd->logicalRP} ));
+						cmd->pass = [this, cmd] (GraphicsContext &ctx) -> bool
+						{
+							CHECK_ERR( _CreateFramebuffer( {cmd->logicalRP} ));
 								
-								// transit image layouts to default state
-								ctx.FlushLocalResourceStates();
+							// transit image layouts to default state
+							ctx.FlushLocalResourceStates();
 
-								return ctx.Execute( *cmd->logicalRP, std::move(cmd->renderCommands) );
-							});
+							return ctx.Execute( *cmd->logicalRP, std::move(cmd->renderCommands) );
+						};
 					}
 				)));
 			}

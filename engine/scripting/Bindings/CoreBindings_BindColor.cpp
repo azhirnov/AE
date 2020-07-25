@@ -15,42 +15,42 @@ namespace AE::Scripting
 	template <typename T>
 	static void RGBAColor_Ctor1 (void *mem, T val)
 	{
-		new( mem ) RGBAColor<T>( val );
+		PlacementNew< RGBAColor<T> >( mem, val );
 	}
 
 	template <typename T>
 	static void RGBAColor_Ctor4 (void *mem, T r, T g, T b, T a)
 	{
-		new( mem ) RGBAColor<T>( r, g, b, a );
+		PlacementNew< RGBAColor<T> >( mem, r, g, b, a );
 	}
 	
 	static void RGBA32f_Ctor_HSV_Alpha (void *mem, const HSVColor &c, float alpha)
 	{
-		new( mem ) RGBA32f( c, alpha );
+		PlacementNew< RGBA32f >( mem, c, alpha );
 	}
 
 	template <typename T>
 	static void RGBA32f_Ctor_RGBA (void *mem, const RGBAColor<T> &c)
 	{
-		new( mem ) RGBA32f( c );
+		PlacementNew< RGBA32f >( mem, c );
 	}
 	
 	template <typename T>
 	static void RGBA32i_Ctor_RGBA (void *mem, const RGBAColor<T> &c)
 	{
-		new( mem ) RGBA32i( c );
+		PlacementNew< RGBA32i >( mem, c );
 	}
 	
 	template <typename T>
 	static void RGBA32u_Ctor_RGBA (void *mem, const RGBAColor<T> &c)
 	{
-		new( mem ) RGBA32u( c );
+		PlacementNew< RGBA32u >( mem, c );
 	}
 	
 	template <typename T>
 	static void RGBA8u_Ctor_RGBA (void *mem, const RGBAColor<T> &c)
 	{
-		new( mem ) RGBA8u( c );
+		PlacementNew< RGBA8u >( mem, c );
 	}
 
 /*
@@ -110,22 +110,22 @@ namespace AE::Scripting
 */
 	static void HSVColor_Ctor1 (void *mem, float h)
 	{
-		new( mem ) HSVColor( h );
+		PlacementNew< HSVColor >( mem, h );
 	}
 	
 	static void HSVColor_Ctor2 (void *mem, float h, float s)
 	{
-		new( mem ) HSVColor( h, s );
+		PlacementNew< HSVColor >( mem, h, s );
 	}
 	
 	static void HSVColor_Ctor3 (void *mem, float h, float s, float v)
 	{
-		new( mem ) HSVColor( h, s, v );
+		PlacementNew< HSVColor >( mem, h, s, v );
 	}
 
 	static void HSVColor_Ctor_RGBA32f (void *mem, const RGBA32f &c)
 	{
-		new( mem ) HSVColor( c );
+		PlacementNew< HSVColor >( mem, c );
 	}
 
 /*
@@ -157,7 +157,7 @@ namespace AE::Scripting
 */
 	static void DepthStencil_Ctor (void *mem, float d, int s)
 	{
-		new( mem ) DepthStencil( d, s );
+		PlacementNew< DepthStencil >( mem, d, uint(s) );
 	}
 
 /*
