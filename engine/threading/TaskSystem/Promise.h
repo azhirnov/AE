@@ -46,6 +46,8 @@ namespace AE::Threading
 
 		PromiseResult<T>&  operator = (const PromiseResult<T> &rhs);
 		PromiseResult<T>&  operator = (PromiseResult<T> &&rhs);
+		PromiseResult<T>&  operator = (const T &rhs);
+		PromiseResult<T>&  operator = (T &&rhs);
 
 		~PromiseResult ()					{ if ( _hasValue ) _value.~T(); }
 
@@ -241,8 +243,33 @@ namespace AE::Threading
 		if ( _hasValue )
 		{
 			PlacementNew<T>( &_value, std::move(rhs._value) );
+			rhs._value.~T();
 			rhs._hasValue = false;
 		}
+		return *this;
+	}
+	
+	template <typename T>
+	inline PromiseResult<T>&  PromiseResult<T>::operator = (const T &rhs)
+	{
+		if ( _hasValue )
+			_value.~T();
+
+		_hasValue = true;
+		PlacementNew<T>( &_value, rhs );
+
+		return *this;
+	}
+	
+	template <typename T>
+	inline PromiseResult<T>&  PromiseResult<T>::operator = (T &&rhs)
+	{
+		if ( _hasValue )
+			_value.~T();
+		
+		_hasValue = true;
+		PlacementNew<T>( &_value, std::move(rhs) );
+
 		return *this;
 	}
 //-----------------------------------------------------------------------------

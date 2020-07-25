@@ -13,12 +13,14 @@ struct LocalTaskScheduler
 {
 	LocalTaskScheduler (size_t maxWorkerThreads)
 	{
+		TaskScheduler::CreateInstance();
 		Scheduler().Setup( maxWorkerThreads );
 	}
 
 	~LocalTaskScheduler ()
 	{
 		Scheduler().Release();
+		TaskScheduler::DestroyInstance();
 	}
 
 	TaskScheduler* operator -> ()

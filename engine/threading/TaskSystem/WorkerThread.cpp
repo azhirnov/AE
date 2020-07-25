@@ -26,6 +26,8 @@ namespace AE::Threading
 */
 	bool  WorkerThread::Attach (uint uid)
 	{
+		_looping.store( 1, EMemoryOrder::Relaxed );
+
 		_thread = std::thread{[this, uid] ()
 		{
 			uint	seed			= uid;
@@ -35,7 +37,6 @@ namespace AE::Threading
 			AE_VTUNE( __itt_thread_set_name( _name.c_str() ));
 			//CHECK( PlatformUtils::SetThreadAffinity( _thread.native_handle(), uid ));
 			
-			_looping.store( 1, EMemoryOrder::Relaxed );
 			for (; _looping.load( EMemoryOrder::Relaxed );)
 			{
 				bool	processed = false;

@@ -285,13 +285,35 @@ DEBUG_ONLY(
 	
 /*
 =================================================
-	Instance
+	_Instance
 =================================================
 */
-	TaskScheduler&  TaskScheduler::Instance ()
+	TaskScheduler*  TaskScheduler::_Instance ()
 	{
-		static TaskScheduler	scheduler;
-		return scheduler;
+		static std::aligned_storage_t< sizeof(TaskScheduler), alignof(TaskScheduler) >	scheduler;
+		return Cast<TaskScheduler>( &scheduler );
+	}
+	
+/*
+=================================================
+	CreateInstance
+=================================================
+*/
+	void  TaskScheduler::CreateInstance ()
+	{
+		new( _Instance() ) TaskScheduler{};
+		ThreadFence( EMemoryOrder::Release );
+	}
+	
+/*
+=================================================
+	DestroyInstance
+=================================================
+*/
+	void  TaskScheduler::DestroyInstance ()
+	{
+		ThreadFence( EMemoryOrder::Acquire );
+		_Instance()->~TaskScheduler();
 	}
 
 /*
@@ -311,7 +333,7 @@ DEBUG_ONLY(
 */
 	TaskScheduler::~TaskScheduler ()
 	{
-		// call 'Release' before destroy
+		// you must call 'Release' before destroy
 		EXLOCK( _threadGuard );
 		CHECK( _threads.empty() );
 		ASSERT( asyncTaskCounter == 0 );
@@ -373,6 +395,9 @@ DEBUG_ONLY(
 		}
 		
 		ASSERT( asyncTaskCounter == 0 );
+		
+		auto&	chunk_pool = OutputChunk_t::_GetPool();
+		chunk_pool.Release();
 	}
 
 /*
@@ -387,6 +412,8 @@ DEBUG_ONLY(
 		CHECK_ERR( thread );
 		CHECK_ERR( thread->Attach( uint(_threads.size()) ));
 		
+		ASSERT( _threads.size() <= std::thread::hardware_concurrency() );
+
 		_threads.push_back( thread );
 		return true;
 	}

@@ -348,7 +348,8 @@ namespace AE::Threading
 
 	// methods
 	public:
-		ND_ static TaskScheduler&  Instance ();
+		static void  CreateInstance ();
+		static void  DestroyInstance ();
 
 		bool  Setup (size_t maxWorkerThreads);
 		void  Release ();
@@ -381,10 +382,15 @@ namespace AE::Threading
 
 		bool  Cancel (const AsyncTask &task);
 
+		
+		friend TaskScheduler&  Scheduler ();
+
 
 	private:
 		TaskScheduler ();
 		~TaskScheduler ();
+		
+		ND_ static TaskScheduler*  _Instance ();
 
 		AsyncTask  _InsertTask (const AsyncTask &task, uint bitIndex);
 
@@ -532,7 +538,7 @@ namespace AE::Threading
 */
 	ND_ inline TaskScheduler&  Scheduler ()
 	{
-		return TaskScheduler::Instance();
+		return *TaskScheduler::_Instance();
 	}
 
 
