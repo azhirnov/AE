@@ -113,7 +113,7 @@ namespace
 		}
 
 		// redirections
-		{
+		/*{
 			auto	task1 = network->Send( HttpRequestDesc{"https://httpbin.org/redirect/2"}.Method( EMethod::Get ));
 			TEST( Scheduler().Wait( {task1} ));
 			TEST( task1->Status() == EStatus::Completed );
@@ -133,7 +133,7 @@ namespace
 			TEST( Scheduler().Wait( {task4} ));
 			TEST( task4->Status() == EStatus::Completed );
 			TEST( task4->Response()->code == ECode::OK );
-		}
+		}*/
 	}
 
 

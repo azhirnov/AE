@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "networking/HttpRequest.h"
+#include "networking/http/HttpRequest.h"
 #include "threading/TaskSystem/Promise.h"
 
 namespace AE::Networking

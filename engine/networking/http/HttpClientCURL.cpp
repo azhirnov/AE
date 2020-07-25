@@ -1,7 +1,7 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_CURL
-# include "networking/HttpClient.h"
+# include "networking/http/HttpClient.h"
 # include "threading/Primitives/DataRaceCheck.h"
 # include "stl/Algorithms/StringUtils.h"
 # include "stl/Algorithms/Cast.h"
@@ -754,7 +754,7 @@ namespace AE::Networking
 	bool HttpClient::Setup (const Settings &settings)
 	{
 		CHECK_ERR( not _impl );
-		_impl.reset( new _InternalImpl{ settings });
+		_impl.reset( New<_InternalImpl>( settings ));
 
 		if ( curl_version_info_data* info = curl_version_info( CURLVERSION_NOW ))
 		{

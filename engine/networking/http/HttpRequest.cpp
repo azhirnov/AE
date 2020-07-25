@@ -1,6 +1,6 @@
 // Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
 
-#include "networking/HttpRequest.h"
+#include "networking/http/HttpRequest.h"
 #include "stl/Algorithms/StringUtils.h"
 
 namespace AE::Networking
@@ -151,7 +151,7 @@ namespace AE::Networking
 */
 	HttpRequest::HttpRequest () :
 		IAsyncTask{ EThread::Network },
-		_response{ new ResponseData{} },
+		_response{ New<ResponseData>() },
 		_bytesSent{ 0 },
 		_bytesReceived{ 0 }
 	{}

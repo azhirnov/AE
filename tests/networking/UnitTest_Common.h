@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "networking/HttpClient.h"
+#include "networking/http/HttpClient.h"
 
 using namespace AE::Threading;
 using namespace AE::Networking;
