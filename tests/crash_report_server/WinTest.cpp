@@ -14,7 +14,7 @@
 using namespace AE::STL;
 
 #define SERVER_IP		"127.0.0.1:8080"
-#define MINIDUMP_FILE	"77d6e3cb-e464-4f8f-b181-c894d163db65.dmp"
+#define MINIDUMP_FILE	"18a244ca-111b-412e-a728-bd95a41924ef.dmp"
 #define LOG_FILE		"log.txt"
 #define SYMBOLS_ID		"Tests.Breakpad.exe"
 

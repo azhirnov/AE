@@ -9,3 +9,5 @@
 /tests/graphics/Vulkan/temp
 tests/ecs-st/Vulkan/temp
 /tests/crash_report_server/output
+/tests/build_server/output
+

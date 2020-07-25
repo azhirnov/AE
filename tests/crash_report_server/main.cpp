@@ -12,8 +12,6 @@ extern void  WinTest ();
 
 int main ()
 {
-	std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
-
 	TEST( FileSystem::FindAndSetCurrent( "tests/crash_report_server/input", 5 ));
 
 	FileSystem::RemoveAll( "../output" );
@@ -22,6 +20,8 @@ int main ()
 # ifdef PLATFORM_WINDOWS
 	WinTest();
 # endif
+
+	CHECK_FATAL( AE_DUMP_MEMLEAKS() );
 
 	AE_LOGI( "Tests.CrashReportServer finished" );
 	return 0;

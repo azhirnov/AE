@@ -11,11 +11,11 @@ using namespace AE::STL;
 static void  Minidump_Test1 ()
 {
 	AE::MinidumpParser::CrashInfo	info;
-	TEST( AE::MinidumpParser::ParseMinidump( "b4103ffa-8d04-4fc8-9936-0f8158b74e8e.dmp", "Tests.Breakpad.exe.sym", 1, OUT info ));
+	TEST( AE::MinidumpParser::ParseMinidump( "18a244ca-111b-412e-a728-bd95a41924ef.dmp", "Tests.Breakpad.exe.sym", 1, OUT info ));
 
 	TEST( info.reason == "EXCEPTION_ACCESS_VIOLATION_WRITE" );
 	TEST( info.address == 0 );
-	TEST( info.callstack == "Tests.Breakpad.exe + 0x73c2" );
+	TEST( info.callstack == "Tests.Breakpad.exe + 0x15ed" );
 	TEST( info.userInfo == L"" );
 	TEST( info.log == "" );
 	TEST( info.system.os == "Windows NT | 10.0.18363 " );
@@ -34,8 +34,8 @@ static void CrashReport_Test1 ()
 	
 	TEST( info.reason == "EXCEPTION_ACCESS_VIOLATION_WRITE" );
 	TEST( info.address == 0 );
-	TEST( info.callstack == "Tests.Breakpad.exe + 0x73c2" );
-	TEST( info.userInfo == L"ID: 5420170019289003836" );
+	TEST( info.callstack == "Tests.Breakpad.exe + 0x15ed" );
+	TEST( info.userInfo == L"ID: 10442745955219762557" );
 	TEST( info.log == "log test" );
 	TEST( info.system.os == "Windows NT | 10.0.18363 " );
 	TEST( info.system.cpu == "amd64 | family 6 model 158 stepping 10 threads 12" );
@@ -45,12 +45,12 @@ static void CrashReport_Test1 ()
 
 int main ()
 {
-	std::atexit( [] () { CHECK_FATAL( AE_DUMP_MEMLEAKS() ); });
-
 	TEST( FileSystem::FindAndSetCurrent( "minidump_parser/data", 5 ));
 
 	Minidump_Test1();
 	CrashReport_Test1();
+
+	CHECK_FATAL( AE_DUMP_MEMLEAKS() );
 
 	AE_LOGI( "Tests.MinidumpParser finished" );
 	return 0;

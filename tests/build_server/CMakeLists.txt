@@ -1,0 +1,13 @@
+if (TARGET "BuildServer" AND TARGET "CURL-lib")
+	file( GLOB SOURCES "*.*" )
+	add_executable( "Tests.BuildServer" ${SOURCES} )
+	source_group( TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} )
+	set_property( TARGET "Tests.BuildServer" PROPERTY FOLDER "EngineTests" )
+	target_link_libraries( "Tests.BuildServer" PUBLIC "Networking" )
+	add_dependencies( "Tests.BuildServer" "BuildServer" )
+	target_compile_definitions( "Tests.BuildServer" PUBLIC "AE_BUILD_SERVER_EXE=\"$<TARGET_FILE:BuildServer>\"" )
+	
+	if (NOT ${AE_CI_BUILD})
+		add_test( NAME "Tests.BuildServer" COMMAND "Tests.BuildServer" )
+	endif ()
+endif ()

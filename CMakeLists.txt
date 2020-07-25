@@ -106,6 +106,7 @@ if (${AE_ENABLE_TESTS})
 	if (NOT DEFINED ANDROID)
 		add_subdirectory( "tests/minidump_parser" )
 		add_subdirectory( "tests/crash_report_server" )
+		add_subdirectory( "tests/build_server" )
 	endif ()
 
 	if (DEFINED ANDROID)
