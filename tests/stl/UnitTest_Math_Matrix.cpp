@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Math/Matrix.h"
 #include "stl/Math/MatrixStorage.h"
@@ -118,6 +118,28 @@ namespace
 		TEST( All( m4[1] == float4(5.0f, 6.0f, 7.0f, 0.0f) ));
 		TEST( All( m4[2] == float4(9.0f, 10.f, 11.f, 0.0f) ));
 	}
+	
+
+	static void  MatrixStorage_Test6 ()
+	{
+		const float3	v{ 0.0f, 0.0f, 0.5f };
+		
+		float3x3		m0 = float3x3::ToCubeFace( 0 );
+		float3x3		m1 = float3x3::ToCubeFace( 1 );
+		float3x3		m2 = float3x3::ToCubeFace( 2 );
+		float3x3		m3 = float3x3::ToCubeFace( 3 );
+		float3x3		m4 = float3x3::ToCubeFace( 4 );
+		float3x3		m5 = float3x3::ToCubeFace( 5 );
+
+		float3			v0 = m0 * v;
+		float3			v1 = m1 * v;
+		float3			v2 = m2 * v;
+		float3			v3 = m3 * v;
+		float3			v4 = m4 * v;
+		float3			v5 = m5 * v;
+
+		TEST(All( v0 == float3{0.0f} ));
+	}
 }
 
 
@@ -128,6 +150,7 @@ extern void UnitTest_Math_Matrix ()
 	MatrixStorage_Test3();
 	MatrixStorage_Test4();
 	MatrixStorage_Test5();
+	MatrixStorage_Test6();
 
 	AE_LOGI( "UnitTest_Math_Matrix - passed" );
 }

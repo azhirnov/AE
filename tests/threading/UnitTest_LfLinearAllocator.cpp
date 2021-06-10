@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "threading/Memory/LfLinearAllocator.h"
 #include "stl/Containers/FixedTupleArray.h"
@@ -24,11 +24,11 @@ namespace
 					{
 						std::this_thread::yield();
 
-						void*	ptr = alloc.Alloc( BytesU{ElemSize}, 8_b );
+						void*	ptr = alloc.Alloc( Bytes{ElemSize}, 8_b );
 						if ( not ptr )
 							return;
 
-						std::memset( ptr, uint8_t(data->size()), ElemSize );
+						std::memset( ptr, ubyte(data->size()), ElemSize );
 						data->push_back( ptr );
 					}
 				}
@@ -41,11 +41,11 @@ namespace
 
 		for (auto& items : thread_data)
 		{
-			for (size_t i = 0; i < items.size(); ++i)
+			for (usize i = 0; i < items.size(); ++i)
 			{
-				StaticArray< uint8_t, ElemSize >	ref;
+				StaticArray< ubyte, ElemSize >	ref;
 
-				ref.fill( uint8_t(i) );
+				ref.fill( ubyte(i) );
 
 				TEST( std::memcmp( ref.data(), items[i], ElemSize ) == 0 );
 			}

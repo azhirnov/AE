@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -18,8 +18,8 @@ namespace AE::STL
 	// variables
 	private:
 		FILE*		_file	= null;
-		BytesU		_fileSize;
-		BytesU		_position;
+		Bytes		_fileSize;
+		Bytes		_position;
 
 
 	// methods
@@ -39,14 +39,14 @@ namespace AE::STL
 		~FileRStream ();
 
 		bool	IsOpen ()	const override		{ return _file != null; }
-		BytesU	Position ()	const override		{ return _position; }
-		BytesU	Size ()		const override		{ return _fileSize; }
+		Bytes	Position ()	const override		{ return _position; }
+		Bytes	Size ()		const override		{ return _fileSize; }
 		
-		bool	SeekSet (BytesU pos) override;
-		BytesU	Read2 (OUT void *buffer, BytesU size) override;
+		bool	SeekSet (Bytes pos) override;
+		Bytes	Read2 (OUT void *buffer, Bytes size) override;
 
 	private:
-		ND_ BytesU  _GetSize () const;
+		ND_ Bytes  _GetSize () const;
 	};
 
 
@@ -79,11 +79,11 @@ namespace AE::STL
 		~FileWStream ();
 		
 		bool	IsOpen ()	const override		{ return _file != null; }
-		BytesU	Position ()	const override;
-		BytesU	Size ()		const override;
+		Bytes	Position ()	const override;
+		Bytes	Size ()		const override;
 		
-		bool	SeekSet (BytesU pos) override;
-		BytesU	Write2 (const void *buffer, BytesU size) override;
+		bool	SeekSet (Bytes pos) override;
+		Bytes	Write2 (const void *buffer, Bytes size) override;
 		void	Flush () override;
 	};
 

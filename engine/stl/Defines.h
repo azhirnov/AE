@@ -1,16 +1,8 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
-
-#if defined(DEBUG) || defined(_DEBUG)
-#	define AE_DEBUG
-#else
-#	define AE_RELEASE
-#endif
-
-
-//#define AE_HAS_EXCEPTIONS
+#include "stl/Config.h"
 
 
 #ifdef COMPILER_MSVC
@@ -67,7 +59,7 @@
 
 // force inline
 #ifndef forceinline
-# ifdef AE_DEBUG
+# if defined(AE_DEBUG) or defined(AE_DEVELOP)
 #	define forceinline		inline
 
 # elif defined(COMPILER_MSVC)
@@ -85,7 +77,7 @@
 
 // debug break
 #ifndef AE_PRIVATE_BREAK_POINT
-# if defined(COMPILER_MSVC) and defined(AE_DEBUG)
+# if defined(COMPILER_MSVC) and (defined(AE_DEBUG) or defined(AE_DEVELOP))
 #	define AE_PRIVATE_BREAK_POINT()		__debugbreak()
 
 # elif defined(PLATFORM_ANDROID) and defined(AE_DEBUG)
@@ -150,7 +142,13 @@
 
 
 // branch prediction optimization
-#if 0 // TODO: C++20
+#ifdef COMPILER_MSVC
+# if _MSC_VER >= 1928
+#	define AE_PRIVATE_HAS_CPP_ATTRIBS
+# endif
+#endif
+
+#ifdef AE_PRIVATE_HAS_CPP_ATTRIBS
 #	define if_likely( ... )		[[likely]] if ( __VA_ARGS__ )
 #	define if_unlikely( ... )	[[unlikely]] if ( __VA_ARGS__ )
 
@@ -166,7 +164,7 @@
 
 // debug only scope
 #ifndef DEBUG_ONLY
-# ifdef AE_DEBUG
+# if defined(AE_DEBUG)
 #	define DEBUG_ONLY( ... )		__VA_ARGS__
 # else
 #	define DEBUG_ONLY( ... )
@@ -177,7 +175,7 @@
 // log
 // (text, file, line)
 #ifndef AE_LOGD
-# ifdef AE_DEBUG
+# if defined(AE_DEBUG)
 #	define AE_LOGD				AE_LOGI
 # else
 #	define AE_LOGD( ... )		{}
@@ -208,7 +206,7 @@
 		}}
 
 #   define CHECK( ... ) \
-		AE_PRIVATE_CHECK( (__VA_ARGS__), AE_PRIVATE_TOSTRING( __VA_ARGS__ ) )
+		AE_PRIVATE_CHECK( (__VA_ARGS__), AE_PRIVATE_TOSTRING( __VA_ARGS__ ))
 #endif
 
 
@@ -217,12 +215,17 @@
 #	define AE_PRIVATE_CHECK_ERR( _expr_, _ret_ ) \
 		{if_likely (( _expr_ )) {}\
 		  else { \
-			AE_LOGE( AE_PRIVATE_TOSTRING( _expr_ ) ); \
+			AE_LOGE( AE_PRIVATE_TOSTRING( _expr_ )); \
 			return (_ret_); \
 		}}
 
 #	define CHECK_ERR( ... ) \
-		AE_PRIVATE_CHECK_ERR( AE_PRIVATE_GETARG_0( __VA_ARGS__ ), AE_PRIVATE_GETARG_1( __VA_ARGS__, ::AE::STL::Default ) )
+		AE_PRIVATE_CHECK_ERR( AE_PRIVATE_GETARG_0( __VA_ARGS__ ), AE_PRIVATE_GETARG_1( __VA_ARGS__, ::AE::STL::Default ))
+#endif
+
+#ifndef CHECK_ERRV
+#	define CHECK_ERRV( _expr_ ) \
+		AE_PRIVATE_CHECK_ERR( (_expr_), void() )
 #endif
 
 
@@ -231,7 +234,7 @@
 #	define CHECK_FATAL( ... ) \
 		{if_likely (( __VA_ARGS__ )) {}\
 		  else { \
-			AE_LOGE( AE_PRIVATE_TOSTRING( __VA_ARGS__ ) ); \
+			AE_LOGE( AE_PRIVATE_TOSTRING( __VA_ARGS__ )); \
 			AE_PRIVATE_EXIT(); \
 		}}
 #endif
@@ -243,7 +246,7 @@
 		{ AE_LOGE( _text_ );  return (_ret_); }
 
 #	define RETURN_ERR( ... ) \
-		AE_PRIVATE_RETURN_ERR( AE_PRIVATE_GETARG_0( __VA_ARGS__ ), AE_PRIVATE_GETARG_1( __VA_ARGS__, ::AE::STL::Default ) )
+		AE_PRIVATE_RETURN_ERR( AE_PRIVATE_GETARG_0( __VA_ARGS__ ), AE_PRIVATE_GETARG_1( __VA_ARGS__, ::AE::STL::Default ))
 #endif
 
 
@@ -333,12 +336,12 @@
 
 
 // DLL import/export
-#if !defined(AE_DLL_EXPORT) || !defined(AE_DLL_IMPORT)
+#if not defined(AE_DLL_EXPORT) or not defined(AE_DLL_IMPORT)
 # if defined(COMPILER_MSVC)
 #	define AE_DLL_EXPORT			__declspec( dllexport )
 #	define AE_DLL_IMPORT			__declspec( dllimport )
 
-# elif defined(COMPILER_GCC) || defined(COMPILER_CLANG)
+# elif defined(COMPILER_GCC) or defined(COMPILER_CLANG)
 #  ifdef PLATFORM_WINDOWS
 #	define AE_DLL_EXPORT			__attribute__ (dllexport)
 #	define AE_DLL_IMPORT			__attribute__ (dllimport)
@@ -350,6 +353,39 @@
 # else
 #	error define AE_DLL_EXPORT and AE_DLL_IMPORT for you compiler
 # endif
+#endif
+
+
+// replace assertions by exceptions
+#ifndef AE_NO_EXCEPTIONS
+
+#	include <stdexcept>
+
+#	undef  AE_PRIVATE_BREAK_POINT
+#	define AE_PRIVATE_BREAK_POINT()	{}
+
+#	undef  AE_LOGE
+#	define AE_LOGE	AE_LOGI
+
+	// keep ASSERT and CHECK behaviour because they may be used in destructor
+	// but override CHECK_ERR, CHECK_FATAL and RETURN_ERR to allow user to handle this errors
+
+#	undef  AE_PRIVATE_CHECK_ERR
+#	define AE_PRIVATE_CHECK_ERR( _expr_, _ret_ ) \
+		{if ( !(_expr_) ) { \
+			throw AE::Exception{ AE_PRIVATE_TOSTRING( _expr_ )}; \
+		}}
+
+#	undef  CHECK_FATAL
+#	define CHECK_FATAL( _expr_ ) \
+		{if ( !(_expr_) ) { \
+			throw AE::Exception{ AE_PRIVATE_TOSTRING( _expr_ )}; \
+		}}
+
+#	undef  AE_PRIVATE_RETURN_ERR
+#	define AE_PRIVATE_RETURN_ERR( _text_, _ret_ ) \
+		{throw AE::Exception{ _text_ };}
+
 #endif
 
 
@@ -376,7 +412,7 @@
 #	undef  CHECK_FATAL
 #	define CHECK_FATAL( ... ) \
 		{if ( !(__VA_ARGS__) ) { \
-			AE_LOGI( AE_PRIVATE_TOSTRING( __VA_ARGS__ ) ); \
+			AE_LOGI( AE_PRIVATE_TOSTRING( __VA_ARGS__ )); \
 			AE_PRIVATE_EXIT(); \
 		}}
 
@@ -396,24 +432,28 @@
 #	define assert( ... ) \
 		AE_PRIVATE_CHECK( (__VA_ARGS__), AE_PRIVATE_TOSTRING( __VA_ARGS__ ))
 
-#	ifdef AE_CI_TYPE
-	  // Travis CI
-#	  if AE_CI_TYPE == 1
-#		define AE_HAS_GRAPHICS	0
-	  // AE BuildServer
-#	  elif AE_CI_TYPE == 2
-#		define AE_HAS_GRAPHICS	1
-#	  else
-#		error unknown CI type!
-#	  endif
-	// undefined
-#	else
-#		define AE_HAS_GRAPHICS	0
-#	endif
-
-#else
-#	define AE_HAS_GRAPHICS	1
 #endif	// AE_CI_BUILD
+
+
+#if defined(AE_DEBUG)
+#  if defined(AE_DEVELOP) or defined(AE_PROFILE) or defined(AE_RELEASE)
+#	error only one configuration must be enabled!
+#  endif
+#elif defined(AE_DEVELOP)
+#  if defined(AE_DEBUG) or defined(AE_PROFILE) or defined(AE_RELEASE)
+#	error only one configuration must be enabled!
+#  endif
+#elif defined(AE_PROFILE)
+#  if defined(AE_DEBUG) or defined(AE_DEVELOP) or defined(AE_RELEASE)
+#	error only one configuration must be enabled!
+#  endif
+#elif defined(AE_RELEASE)
+#  if defined(AE_DEBUG) or defined(AE_DEVELOP) or defined(AE_PROFILE)
+#	error only one configuration must be enabled!
+#  endif
+#else
+#	error unknown configuration!
+#endif
 
 
 // check definitions
@@ -423,6 +463,24 @@
 #	pragma detect_mismatch( "AE_DEBUG", "1" )
 #  else
 #	pragma detect_mismatch( "AE_DEBUG", "0" )
+#  endif
+
+#  ifdef AE_DEVELOP
+#	pragma detect_mismatch( "AE_DEVELOP", "1" )
+#  else
+#	pragma detect_mismatch( "AE_DEVELOP", "0" )
+#  endif
+
+#  ifdef AE_PROFILE
+#	pragma detect_mismatch( "AE_PROFILE", "1" )
+#  else
+#	pragma detect_mismatch( "AE_PROFILE", "0" )
+#  endif
+
+#  ifdef AE_RELEASE
+#	pragma detect_mismatch( "AE_RELEASE", "1" )
+#  else
+#	pragma detect_mismatch( "AE_RELEASE", "0" )
 #  endif
 
 #  if defined(AE_FAST_HASH) && AE_FAST_HASH
@@ -443,10 +501,10 @@
 #	pragma detect_mismatch( "AE_ENABLE_MEMLEAK_CHECKS", "0" )
 #  endif
 
-#  if defined(AE_HAS_GRAPHICS) && AE_HAS_GRAPHICS
-#	pragma detect_mismatch( "AE_HAS_GRAPHICS", "1" )
+#  ifdef AE_NO_EXCEPTIONS
+#	pragma detect_mismatch( "AE_NO_EXCEPTIONS", "1" )
 #  else
-#	pragma detect_mismatch( "AE_HAS_GRAPHICS", "0" )
+#	pragma detect_mismatch( "AE_NO_EXCEPTIONS", "0" )
 #  endif
 
 // platforms

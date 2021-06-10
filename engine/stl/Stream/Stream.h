@@ -1,10 +1,11 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "stl/Containers/ArrayView.h"
 #include "stl/Math/Bytes.h"
 #include "stl/Memory/MemUtils.h"
+#include "stl/Utils/RefCounter.h"
 
 namespace AE::STL
 {
@@ -13,7 +14,7 @@ namespace AE::STL
 	// Read-only Stream
 	//
 	
-	class RStream : public std::enable_shared_from_this< RStream >
+	class RStream : public EnableRC< RStream >
 	{
 	public:
 		RStream () {}
@@ -27,52 +28,68 @@ namespace AE::STL
 		RStream&  operator = (RStream &&) = delete;
 
 		ND_ virtual bool	IsOpen ()			const = 0;
-		ND_ virtual BytesU	Position ()			const = 0;
-		ND_ virtual BytesU	Size ()				const = 0;
-		ND_ BytesU			RemainingSize ()	const { return Size() - Position(); }
+		ND_ virtual Bytes	Position ()			const = 0;
+		ND_ virtual Bytes	Size ()				const = 0;
+		ND_ Bytes			RemainingSize ()	const { return Size() - Position(); }
 
-			virtual bool	SeekSet (BytesU pos) = 0;
-		ND_ virtual BytesU	Read2 (OUT void *buffer, BytesU size) = 0;
+			virtual bool	SeekSet (Bytes pos) = 0;
+		ND_ virtual Bytes	Read2 (OUT void *buffer, Bytes size) = 0;
 		
 
-		bool  Read (OUT void *buffer, BytesU size)
+		bool  Read (OUT void *buffer, Bytes size)
 		{
 			return Read2( buffer, size ) == size;
 		}
 		
 
 		template <typename T, typename A>
-		bool  Read (size_t length, OUT std::basic_string<T,A> &str)
+		bool  Read (usize length, OUT std::basic_string<T,A> &str)
 		{
 			str.resize( length );
 
-			BytesU	expected_size	{ sizeof(str[0]) * str.length() };
-			BytesU	current_size	= Read2( str.data(), expected_size );
+			Bytes	expected_size	{ sizeof(str[0]) * str.length() };
+			Bytes	current_size	= Read2( str.data(), expected_size );
 		
-			str.resize( size_t(current_size / sizeof(str[0])) );
+			str.resize( usize(current_size / sizeof(str[0])) );
 
 			return str.length() == length;
 		}
 		
 
 		template <typename T, typename A>
-		EnableIf<IsPOD<T>, bool>  Read (size_t count, OUT std::vector<T,A> &arr)
+		bool  Read (Bytes size, OUT std::basic_string<T,A> &str)
+		{
+			ASSERT( IsAligned( size, sizeof(T) ));
+			return Read( usize(size) / sizeof(T), OUT str );
+		}
+
+
+		template <typename T, typename A>
+		EnableIf<IsPOD<T>, bool>  Read (usize count, OUT std::vector<T,A> &arr)
 		{
 			arr.resize( count );
 
-			BytesU	expected_size	{ sizeof(arr[0]) * arr.size() };
-			BytesU	current_size	= Read2( arr.data(), expected_size );
+			Bytes	expected_size	{ sizeof(arr[0]) * arr.size() };
+			Bytes	current_size	= Read2( arr.data(), expected_size );
 		
-			arr.resize( size_t(current_size / sizeof(arr[0])) );
+			arr.resize( usize(current_size / sizeof(arr[0])) );
 
 			return arr.size() == count;
+		}
+		
+
+		template <typename T, typename A>
+		EnableIf<IsPOD<T>, bool>  Read (Bytes size, OUT std::vector<T,A> &arr)
+		{
+			ASSERT( IsAligned( size, sizeof(T) ));
+			return Read( usize(size) / sizeof(T), OUT arr );
 		}
 
 
 		template <typename T>
 		EnableIf<IsPOD<T>, bool>  Read (OUT T &data)
 		{
-			return Read2( AddressOf(data), BytesU::SizeOf(data) ) == BytesU::SizeOf(data);
+			return Read2( AddressOf(data), Bytes::SizeOf(data) ) == Bytes::SizeOf(data);
 		}
 	};
 
@@ -82,7 +99,7 @@ namespace AE::STL
 	// Write-only Stream
 	//
 	
-	class WStream : public std::enable_shared_from_this< WStream >
+	class WStream : public EnableRC< WStream >
 	{
 	public:
 		WStream () {}
@@ -96,15 +113,15 @@ namespace AE::STL
 		WStream&  operator = (WStream &&) = delete;
 
 		ND_ virtual bool	IsOpen ()	const = 0;
-		ND_ virtual BytesU	Position ()	const = 0;
-		ND_ virtual BytesU	Size ()		const = 0;
+		ND_ virtual Bytes	Position ()	const = 0;
+		ND_ virtual Bytes	Size ()		const = 0;
 		
-			virtual bool	SeekSet (BytesU pos) = 0;
-		ND_ virtual BytesU	Write2 (const void *buffer, BytesU size) = 0;
+			virtual bool	SeekSet (Bytes pos) = 0;
+		ND_ virtual Bytes	Write2 (const void *buffer, Bytes size) = 0;
 			virtual void	Flush () = 0;
 
 
-		bool  Write (const void *buffer, BytesU size)
+		bool  Write (const void *buffer, Bytes size)
 		{
 			return Write2( buffer, size ) == size;
 		}
@@ -113,7 +130,7 @@ namespace AE::STL
 		template <typename T>
 		EnableIf<IsPOD<T>, bool>  Write (ArrayView<T> buf)
 		{
-			BytesU	size { sizeof(buf[0]) * buf.size() };
+			Bytes	size { sizeof(buf[0]) * buf.size() };
 
 			return Write2( buf.data(), size ) == size;
 		}
@@ -132,7 +149,7 @@ namespace AE::STL
 			if ( str.empty() )
 				return true;
 
-			BytesU	size { sizeof(str[0]) * str.length() };
+			Bytes	size { sizeof(str[0]) * str.length() };
 
 			return Write2( str.data(), size ) == size;
 		}
@@ -141,7 +158,7 @@ namespace AE::STL
 		template <typename T>
 		EnableIf<IsPOD<T>, bool>  Write (const T &data)
 		{
-			return Write2( AddressOf(data), BytesU::SizeOf(data) ) == BytesU::SizeOf(data);
+			return Write2( AddressOf(data), Bytes::SizeOf(data) ) == Bytes::SizeOf(data);
 		}
 	};
 

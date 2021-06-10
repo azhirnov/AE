@@ -2,10 +2,10 @@
     package="AE.engine">
 
 	<!-- min OpenGL version: 3.0-->
-    <uses-feature android:glEsVersion="0x00030000" android:required="false"/>
+    <!--<uses-feature android:glEsVersion="0x00030000" android:required="false"/>-->
 	
 	<!-- min Vulkan API version: 1.0.82 -->
-    <uses-feature android:name="android.hardware.vulkan.version" android:version="0x400052" android:required="false" />
+    <!--<uses-feature android:name="android.hardware.vulkan.version" android:version="0x400052" android:required="false" />-->
 	
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 

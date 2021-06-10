@@ -203,7 +203,7 @@ namespace
 			ScriptEngine::ModuleSource	src;
 			src.name = Path{path}.filename().replace_extension("").string();
 
-			if ( not file.Read( size_t(file.RemainingSize()), OUT src.script ))
+			if ( not file.Read( usize(file.RemainingSize()), OUT src.script ))
 			{
 				AE_LOGI( "Failed to read pipeline file: '"s << Path{path}.string() << "'" );
 				continue;
@@ -332,7 +332,7 @@ namespace
 				continue;
 			}
 
-			if ( not file.Read( size_t(file.RemainingSize()), OUT sh.second.source ))
+			if ( not file.Read( usize(file.RemainingSize()), OUT sh.second.source ))
 			{
 				AE_LOGI( "Failed to read shader file: '"s << Path{ sh.first.filename }.string() << "'" );
 				continue;
@@ -381,7 +381,7 @@ namespace
 */
 	bool SavePack (NtWStringView filename)
 	{
-		auto	file = MakeShared<FileWStream>( filename );
+		auto	file = MakeRC<FileWStream>( filename );
 		CHECK_ERR( file->IsOpen() );
 
 		Serializing::Serializer		ser;
@@ -415,7 +415,7 @@ namespace
 
 		PipelineStorage		ppln_storage;
 		ShaderStorage		shader_storage;
-		ScriptEnginePtr		script_engine	= MakeShared<ScriptEngine>();
+		ScriptEnginePtr		script_engine	= MakeRC<ScriptEngine>();
 
 		shader_storage.storage		= &ppln_storage;
 		shader_storage.shaderFolders= std::move(shader_dirs);

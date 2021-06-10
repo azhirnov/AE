@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -18,9 +18,9 @@ namespace AE::Threading
 	// Lock-Free Linear Allocator
 	//
 
-	template <size_t ChunkSize,
-			  size_t MemAlign = 8,
-			  size_t MaxChunks = 16,
+	template <usize ChunkSize,
+			  usize MemAlign = 8,
+			  usize MaxChunks = 16,
 			  typename AllocatorType = UntypedAlignedAllocator
 			 >
 	class LfLinearAllocator final
@@ -38,9 +38,9 @@ namespace AE::Threading
 		static constexpr bool	IsThreadSafe = true;
 
 	private:
-		using ChunkBits_t	= Atomic< Conditional< (MaxChunks > 32), uint64_t, uint32_t >>;
+		using ChunkBits_t	= Atomic< Conditional< (MaxChunks > 32), ulong, uint >>;
 		using ChunkData_t	= StaticArray< Atomic<void *>, MaxChunks >;
-		using ChunkOffset_t	= StaticArray< Atomic<size_t>, MaxChunks >;
+		using ChunkOffset_t	= StaticArray< Atomic<usize>, MaxChunks >;
 		
 		STATIC_ASSERT( ChunkBits_t::is_always_lock_free );
 		STATIC_ASSERT( ChunkData_t::value_type::is_always_lock_free );
@@ -54,8 +54,8 @@ namespace AE::Threading
 		ChunkBits_t			_lockedForAlloc;	// 1 bit - chunk is not allocating in another thread
 		Allocator_t			_alloc;				// thread-safe allocator
 
-		static constexpr BytesU	_capacity {ChunkSize};
-		static constexpr BytesU	_memAlign {MemAlign};
+		static constexpr Bytes	_capacity {ChunkSize};
+		static constexpr Bytes	_memAlign {MemAlign};
 
 
 	// methods
@@ -63,7 +63,7 @@ namespace AE::Threading
 		explicit LfLinearAllocator (const Allocator_t &alloc = Allocator_t()) :
 			_alloc{ alloc }
 		{
-			for (size_t i = 0; i < MaxChunks; ++i) {
+			for (usize i = 0; i < MaxChunks; ++i) {
 				_chunks[i].store( null, EMemoryOrder::Relaxed );
 				_offsets[i].store( 0, EMemoryOrder::Relaxed );
 			}
@@ -77,7 +77,7 @@ namespace AE::Threading
 			ThreadFence( EMemoryOrder::Acquire );
 			_lockedForAlloc.store( UMax, EMemoryOrder::Relaxed );
 
-			for (size_t i = 0; i < MaxChunks; ++i)
+			for (usize i = 0; i < MaxChunks; ++i)
 			{
 				if ( void* ptr = _chunks[i].exchange( null, EMemoryOrder::Relaxed ))
 					_alloc.Deallocate( ptr, _capacity, _memAlign );
@@ -86,27 +86,27 @@ namespace AE::Threading
 
 		
 		template <typename T>
-		ND_ AE_ALLOCATOR T*  Alloc (size_t count = 1)
+		ND_ AE_ALLOCATOR T*  Alloc (usize count = 1)
 		{
 			return Cast<T>( Alloc( SizeOf<T> * count, AlignOf<T> ));
 		}
 
 
-		ND_ AE_ALLOCATOR void*  Alloc (const BytesU size, const BytesU align)
+		ND_ AE_ALLOCATOR void*  Alloc (const Bytes size, const Bytes align)
 		{
-			for (size_t i = 0; i < MaxChunks; ++i)
+			for (usize i = 0; i < MaxChunks; ++i)
 			{
 				if ( void* ptr = _chunks[i].load( EMemoryOrder::Relaxed ))
 				{
 					// find available space
-					for (size_t off = _offsets[i].load( EMemoryOrder::Relaxed );;)
+					for (usize off = _offsets[i].load( EMemoryOrder::Relaxed );;)
 					{
-						BytesU	aligned_off = AlignToLarger( size_t(ptr) + BytesU{off}, align ) - size_t(ptr);
+						Bytes	aligned_off = AlignToLarger( usize(ptr) + Bytes{off}, align ) - usize(ptr);
 						
 						if ( size > (_capacity - aligned_off) )
 							break;
 
-						if ( _offsets[i].compare_exchange_weak( INOUT off, size_t(aligned_off + size), EMemoryOrder::Relaxed ))
+						if ( _offsets[i].compare_exchange_weak( INOUT off, usize(aligned_off + size), EMemoryOrder::Relaxed ))
 							return ptr + aligned_off;
 					}
 				}
@@ -147,10 +147,10 @@ namespace AE::Threading
 		}
 
 
-		ND_ static constexpr BytesU  MaxSize ()
+		/*ND_ static constexpr Bytes  MaxSize ()
 		{
 			return MaxChunks * ChunkSize;
-		}
+		}*/
 
 		// TODO: Discard
 	};

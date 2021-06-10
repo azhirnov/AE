@@ -1,9 +1,10 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Common.h"
 
 extern void UnitTest_Array ();
 extern void UnitTest_Color ();
+extern void UnitTest_ChunkedArray ();
 extern void UnitTest_CT_Counter ();
 extern void UnitTest_FixedArray ();
 extern void UnitTest_FixedMap ();
@@ -30,6 +31,7 @@ extern void UnitTest_ToString ();
 extern void UnitTest_TypeList ();
 extern void UnitTest_TypeTraits ();
 
+
 #ifdef PLATFORM_ANDROID
 extern int Test_STL ()
 #else
@@ -38,6 +40,7 @@ int main ()
 {
 	UnitTest_Array();
 	UnitTest_Color();
+	//UnitTest_ChunkedArray();
 	UnitTest_CT_Counter();
 	UnitTest_FixedArray();
 	UnitTest_FixedMap();

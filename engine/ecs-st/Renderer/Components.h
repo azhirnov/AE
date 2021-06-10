@@ -68,7 +68,7 @@ namespace AE::ECS::Components
 
 	struct Viewport
 	{
-		GfxResourceID	image;
+		ImageID			image;
 		ImageLayer		layer;
 		MipmapLevel		mipmap;
 		RectU			region;
@@ -82,9 +82,9 @@ namespace AE::ECS::Components
 		Renderer::EStencilOp	stencilFailOp;					// stencil test failed
 		Renderer::EStencilOp	stencilDepthFailOp;				// depth and stencil tests are passed
 		Renderer::EStencilOp	stencilPassOp;					// stencil test passed and depth test failed
-		uint8_t					stencilReference;				// front & back
-		uint8_t					stencilWriteMask;				// front & back
-		uint8_t					stencilCompareMask;				// front & back
+		ubyte					stencilReference;				// front & back
+		ubyte					stencilWriteMask;				// front & back
+		ubyte					stencilCompareMask;				// front & back
 
 		Renderer::ECullMode		cullMode;
 

@@ -1,12 +1,14 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
+
+# include "stl/Algorithms/StringUtils.h"
 
 # include "graphics/Vulkan/VSwapchain.h"
 # include "graphics/Vulkan/VResourceManager.h"
 # include "graphics/Vulkan/VEnumCast.h"
+# include "graphics/Vulkan/VEnumToString.h"
 # include "platform/Public/IWindow.h"
-# include "stl/Algorithms/StringUtils.h"
 
 # ifdef PLATFORM_WINDOWS
 #	include "stl/Platforms/WindowsHeader.h"
@@ -95,6 +97,8 @@ namespace AE::Graphics
 		CHECK_ERR( _vkSwapchain and queue, VK_RESULT_MAX_ENUM );
 		CHECK_ERR( IsImageAcquired(), VK_RESULT_MAX_ENUM );
 
+		EXLOCK( queue->guard );
+
 		const VkSwapchainKHR	swap_chains[]	= { _vkSwapchain };
 		const uint				image_indices[]	= { _currImageIndex };
 
@@ -133,11 +137,13 @@ namespace AE::Graphics
 */
 	bool  VSwapchainInitializer::CreateSurface (const App::NativeWindow &window, StringView dbgName)
 	{
+		CHECK_ERR( _device.GetVkInstance() );
+		CHECK_ERR( _device.GetFeatures().surface );
+		CHECK_ERR( not _vkSurface );
+
 		#if defined(PLATFORM_WINDOWS)
 		{
-			CHECK_ERR( _device.GetVkInstance() and window.hinstance and window.hwnd );
-			CHECK_ERR( not _vkSurface );
-			CHECK_ERR( _device.GetFeatures().surface );
+			CHECK_ERR( window.hinstance and window.hwnd );
 
 			VkWin32SurfaceCreateInfoKHR		surface_info = {};
 
@@ -157,7 +163,7 @@ namespace AE::Graphics
 		}
 		#elif defined(PLATFORM_ANDROID)
 		{
-			CHECK_ERR( _device.GetVkInstance() and window.nativeWindow );
+			CHECK_ERR( window.nativeWindow );
 
 			VkAndroidSurfaceCreateInfoKHR	surface_info = {};
 
@@ -206,10 +212,13 @@ namespace AE::Graphics
 	{
 		static const char*	extensions[] = {
 			#ifdef PLATFORM_WINDOWS
-				VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+				VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 			#endif
 			#ifdef PLATFORM_ANDROID
-				VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
+				VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
+			#endif
+			#ifdef PLATFORM_LINUX
+				VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
 			#endif
 		};
 		return extensions;
@@ -263,15 +272,14 @@ namespace AE::Graphics
 		}
 		else
 		{
-			const size_t	max_idx		= UMax;
+			const usize	max_idx				= UMax;
+			usize		both_match_idx		= max_idx;
+			usize		format_match_idx	= max_idx;
+			usize		space_match_idx		= max_idx;
+			usize		def_format_idx		= 0;
+			usize		def_space_idx		= 0;
 
-			size_t	both_match_idx		= max_idx;
-			size_t	format_match_idx	= max_idx;
-			size_t	space_match_idx		= max_idx;
-			size_t	def_format_idx		= 0;
-			size_t	def_space_idx		= 0;
-
-			for (size_t i = 0; i < surf_formats.size(); ++i)
+			for (usize i = 0; i < surf_formats.size(); ++i)
 			{
 				const auto&	surf_fmt = surf_formats[i];
 
@@ -296,7 +304,7 @@ namespace AE::Graphics
 					def_space_idx = i;
 			}
 
-			size_t	idx = 0;
+			usize	idx = 0;
 
 			if ( both_match_idx != max_idx )
 				idx = both_match_idx;
@@ -353,7 +361,7 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool  VSwapchainInitializer::Create (IResourceManager *						resMngr,
+	bool  VSwapchainInitializer::Create (VResourceManager *						resMngr,
 										 const uint2							&viewSize,
 										 const VkFormat							colorFormat,
 										 const VkColorSpaceKHR					colorSpace,
@@ -444,7 +452,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void  VSwapchainInitializer::Destroy (IResourceManager *resMngr)
+	void  VSwapchainInitializer::Destroy (VResourceManager *resMngr)
 	{
 		CHECK( not IsImageAcquired() );
 
@@ -492,7 +500,7 @@ namespace AE::Graphics
 	that used swapchain images!
 =================================================
 */
-	bool  VSwapchainInitializer::Recreate (IResourceManager *resMngr, const uint2 &size)
+	bool  VSwapchainInitializer::Recreate (VResourceManager *resMngr, const uint2 &size)
 	{
 		CHECK_ERR( Create( resMngr, size, _colorFormat, _colorSpace, _minImageCount, _presentMode,
 						   _preTransform, _compositeAlpha, _colorImageUsage ));
@@ -505,7 +513,7 @@ namespace AE::Graphics
 	_CreateColorAttachment
 =================================================
 */
-	bool  VSwapchainInitializer::_CreateColorAttachment (IResourceManager *resMngr)
+	bool  VSwapchainInitializer::_CreateColorAttachment (VResourceManager *resMngr)
 	{
 		CHECK_ERR( _images.empty() );
 		
@@ -523,17 +531,17 @@ namespace AE::Graphics
 			VulkanImageDesc	desc;
 			desc.dimension		= uint3(_surfaceSize, 1);
 			desc.arrayLayers	= 1;
-			desc.currentLayout	= BitCast<ImageLayoutVk_t>( VK_IMAGE_LAYOUT_UNDEFINED );
-			desc.defaultLayout	= BitCast<ImageLayoutVk_t>( VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
-			desc.flags			= ImageFlagsVk_t(0);
-			desc.format			= BitCast<FormatVk_t>( _colorFormat );
-			desc.imageType		= BitCast<ImageTypeVk_t>( VK_IMAGE_TYPE_2D );
+			desc.currentLayout	= VK_IMAGE_LAYOUT_UNDEFINED;
+			desc.defaultLayout	= VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			desc.flags			= VkImageCreateFlagBits(0);
+			desc.format			= _colorFormat;
+			desc.imageType		= VK_IMAGE_TYPE_2D;
 			desc.maxLevels		= 1;
-			desc.samples		= BitCast<SampleCountVk_t>( VK_SAMPLE_COUNT_1_BIT );
-			desc.usage			= BitCast<ImageUsageVk_t>( _colorImageUsage );
+			desc.samples		= VK_SAMPLE_COUNT_1_BIT;
+			desc.usage			= _colorImageUsage;
 			desc.canBeDestroyed	= false;	// images created by swapchain, so don't destroy they
 
-			for (size_t i = 0; i < count; ++i)
+			for (usize i = 0; i < count; ++i)
 			{
 				desc.image = _images[i];
 				_imageIDs[i] = resMngr->CreateImage( desc, "SwapchainImage_"s + ToString(i) );
@@ -557,14 +565,14 @@ namespace AE::Graphics
 			VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
 		};
 		
-		if ( AllBits( surfaceCaps.supportedCompositeAlpha, compositeAlpha ) )
+		if ( AllBits( surfaceCaps.supportedCompositeAlpha, compositeAlpha ))
 			return true;	// keep current
 		
 		compositeAlpha = VK_COMPOSITE_ALPHA_FLAG_BITS_MAX_ENUM_KHR;
 
 		for (auto& flag : composite_alpha_flags)
 		{
-			if ( AllBits( surfaceCaps.supportedCompositeAlpha, flag ) )
+			if ( AllBits( surfaceCaps.supportedCompositeAlpha, flag ))
 			{
 				compositeAlpha = flag;
 				return true;
@@ -605,7 +613,7 @@ namespace AE::Graphics
 		Array< VkPresentModeKHR >	present_modes;
 
 		VK_CALL( vkGetPhysicalDeviceSurfacePresentModesKHR( _device.GetVkPhysicalDevice(), _vkSurface, OUT &count, null ));
-		CHECK_ERR( count > 0, void() );
+		CHECK_ERRV( count > 0 );
 
 		present_modes.resize( count );
 		VK_CALL( vkGetPhysicalDeviceSurfacePresentModesKHR( _device.GetVkPhysicalDevice(), _vkSurface, OUT &count, OUT present_modes.data() ));
@@ -615,7 +623,7 @@ namespace AE::Graphics
 		bool	mailbox_mode_supported		= false;
 		bool	immediate_mode_supported	= false;
 
-		for (size_t i = 0; i < present_modes.size(); ++i)
+		for (usize i = 0; i < present_modes.size(); ++i)
 		{
 			required_mode_supported		|= (present_modes[i] == presentMode);
 			fifo_mode_supported			|= (present_modes[i] == VK_PRESENT_MODE_FIFO_KHR);
@@ -662,10 +670,10 @@ namespace AE::Graphics
 	void  VSwapchainInitializer::_GetSurfaceTransform (INOUT VkSurfaceTransformFlagBitsKHR &transform,
 													   const VkSurfaceCapabilitiesKHR &surfaceCaps) const
 	{
-		if ( AllBits( surfaceCaps.supportedTransforms, transform ) )
+		if ( AllBits( surfaceCaps.supportedTransforms, transform ))
 			return;	// keep current
 		
-		if ( AllBits( surfaceCaps.supportedTransforms, VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ) )
+		if ( AllBits( surfaceCaps.supportedTransforms, VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR ))
 		{
 			transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 		}
@@ -702,7 +710,7 @@ namespace AE::Graphics
 			surf_info.surface	= _vkSurface;
 
 			VkSurfaceCapabilities2KHR	surf_caps2;
-			VK_CALL( vkGetPhysicalDeviceSurfaceCapabilities2KHR( _device.GetVkPhysicalDevice(), &surf_info, OUT &surf_caps2 ) );
+			VK_CALL( vkGetPhysicalDeviceSurfaceCapabilities2KHR( _device.GetVkPhysicalDevice(), &surf_info, OUT &surf_caps2 ));
 
 			for (VkBaseInStructure const *iter = reinterpret_cast<VkBaseInStructure const *>(&surf_caps2);
 					iter != null;
@@ -720,7 +728,7 @@ namespace AE::Graphics
 			return false;
 		}
 
-		ASSERT( AllBits( imageUsage, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT ) );
+		ASSERT( AllBits( imageUsage, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT ));
 		imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		
 
@@ -728,8 +736,8 @@ namespace AE::Graphics
 		VkFormatProperties	format_props;
 		vkGetPhysicalDeviceFormatProperties( _device.GetVkPhysicalDevice(), colorFormat, OUT &format_props );
 
-		CHECK_ERR( AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT ) );
-		ASSERT( AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT ) );
+		CHECK_ERR( AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT ));
+		ASSERT( AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT ));
 		
 		if ( AllBits( imageUsage, VK_IMAGE_USAGE_TRANSFER_SRC_BIT ) and
 			 (not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_TRANSFER_SRC_BIT ) or
@@ -739,25 +747,25 @@ namespace AE::Graphics
 		}
 		
 		if ( AllBits( imageUsage, VK_IMAGE_USAGE_TRANSFER_DST_BIT ) and
-			 not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_TRANSFER_DST_BIT ) )
+			 not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_TRANSFER_DST_BIT ))
 		{
 			imageUsage &= ~VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		}
 		
 		if ( AllBits( imageUsage, VK_IMAGE_USAGE_STORAGE_BIT ) and
-			 not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT ) )
+			 not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT ))
 		{
 			imageUsage &= ~VK_IMAGE_USAGE_STORAGE_BIT;
 		}
 
 		if ( AllBits( imageUsage, VK_IMAGE_USAGE_SAMPLED_BIT ) and
-			 not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT ) )
+			 not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT ))
 		{
 			imageUsage &= ~VK_IMAGE_USAGE_SAMPLED_BIT;
 		}
 
 		if ( AllBits( imageUsage, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT ) and
-			 not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT ) )
+			 not AllBits( format_props.optimalTilingFeatures, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT ))
 		{
 			imageUsage &= ~VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 		}
@@ -773,12 +781,12 @@ namespace AE::Graphics
 	void  VSwapchainInitializer::_PrintInfo () const
 	{
 		AE_LOGI( "Created Vulkan Swapchain:"s
-			<< "\n  format:          " << ToString( _colorFormat )		// TODO: convert to string
-			<< "\n  color space:     " << ToString( _colorSpace )
-			<< "\n  present mode:    " << ToString( _presentMode )
-			<< "\n  transform:       " << ToString( _preTransform )
-			<< "\n  composite alpha: " << ToString( _compositeAlpha )
-			<< "\n  image usage:     " << ToString( _colorImageUsage )
+			<< "\n  format:          " << VkFormat_ToString( _colorFormat )
+			<< "\n  color space:     " << VkColorSpaceKHR_ToString( _colorSpace )
+			<< "\n  present mode:    " << VkPresentModeKHR_ToString( _presentMode )
+			<< "\n  transform:       " << VkSurfaceTransformFlagBitsKHR_ToString( _preTransform )
+			<< "\n  composite alpha: " << VkCompositeAlphaFlagBitsKHR_ToString( _compositeAlpha )
+			<< "\n  image usage:     " << VkImageUsageFlags_ToString( _colorImageUsage )
 			<< "\n  min image count: " << ToString( _minImageCount )
 		);
 	}

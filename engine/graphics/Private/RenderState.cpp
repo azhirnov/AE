@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "graphics/Public/RenderState.h"
 
@@ -28,7 +28,7 @@ namespace AE::Graphics
 	HashVal  RenderState::ColorBuffer::CalcHash () const
 	{
 	#if AE_FAST_HASH
-		return size_t(HashOf( AddressOf(*this), sizeof(*this) ));
+		return usize(HashOf( AddressOf(*this), sizeof(*this) ));
 	#else
 		HashVal	result;
 		result << HashOf( blend );
@@ -65,7 +65,7 @@ namespace AE::Graphics
 	HashVal  RenderState::ColorBuffersState::CalcHash () const
 	{
 	#if AE_FAST_HASH
-		return size_t(HashOf( AddressOf(*this), sizeof(*this) ));
+		return usize(HashOf( AddressOf(*this), sizeof(*this) ));
 	#else
 		HashVal	result;
 		result << HashOf( blendColor );
@@ -105,7 +105,7 @@ namespace AE::Graphics
 	HashVal  RenderState::StencilFaceState::CalcHash () const
 	{
 	#if AE_FAST_HASH
-		return size_t(HashOf( AddressOf(*this), sizeof(*this) ));
+		return usize(HashOf( AddressOf(*this), sizeof(*this) ));
 	#else
 		HashVal	result;
 		result << HashOf( failOp );
@@ -145,7 +145,7 @@ namespace AE::Graphics
 		if ( enabled )
 		{
 		#if AE_FAST_HASH
-			return size_t(HashOf( AddressOf(*this), sizeof(*this) ));
+			return usize(HashOf( AddressOf(*this), sizeof(*this) ));
 		#else
 			result << front.CalcHash();
 			result << back.CalcHash();
@@ -178,7 +178,7 @@ namespace AE::Graphics
 	HashVal  RenderState::DepthBufferState::CalcHash () const
 	{
 	#if AE_FAST_HASH
-		return size_t(HashOf( AddressOf(*this), sizeof(*this) ));
+		return usize(HashOf( AddressOf(*this), sizeof(*this) ));
 	#else
 		HashVal	result;
 		result << HashOf( compareOp );
@@ -211,7 +211,7 @@ namespace AE::Graphics
 	HashVal  RenderState::InputAssemblyState::CalcHash () const
 	{
 	#if AE_FAST_HASH
-		return size_t(HashOf( AddressOf(*this), sizeof(*this) ));
+		return usize(HashOf( AddressOf(*this), sizeof(*this) ));
 	#else
 		HashVal	result;
 		result << HashOf( topology );
@@ -249,7 +249,7 @@ namespace AE::Graphics
 	HashVal  RenderState::RasterizationState::CalcHash () const
 	{
 	#if AE_FAST_HASH
-		return size_t(HashOf( AddressOf(*this), sizeof(*this) ));
+		return usize(HashOf( AddressOf(*this), sizeof(*this) ));
 	#else
 		HashVal	result;
 		result << HashOf( polygonMode );
@@ -291,7 +291,7 @@ namespace AE::Graphics
 	HashVal  RenderState::MultisampleState::CalcHash () const
 	{
 	#if AE_FAST_HASH
-		return size_t(HashOf( AddressOf(*this), sizeof(*this) ));
+		return usize(HashOf( AddressOf(*this), sizeof(*this) ));
 	#else
 		HashVal	result;
 		result << HashOf( sampleMask );
@@ -329,7 +329,7 @@ namespace AE::Graphics
 	HashVal  RenderState::CalcHash () const
 	{
 	#if AE_FAST_HASH
-		return size_t(HashOf( AddressOf(*this), sizeof(*this) ));
+		return usize(HashOf( AddressOf(*this), sizeof(*this) ));
 	#else
 		HashVal	result;
 		result << color.CalcHash();

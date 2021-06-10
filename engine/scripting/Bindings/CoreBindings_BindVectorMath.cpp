@@ -448,7 +448,7 @@ namespace AE::Scripting
 		explicit DefineVector_Func (const ScriptEnginePtr &se) : _se{se}
 		{}
 
-		template <typename T, size_t Index>
+		template <typename T, usize Index>
 		void operator () ()
 		{
 			ClassBinder<T>	binder( _se );
@@ -469,7 +469,7 @@ namespace AE::Scripting
 		explicit BindVector_Func (const ScriptEnginePtr &se) : _se{se}
 		{}
 
-		template <typename T, size_t Index>
+		template <typename T, usize Index>
 		void operator () ()
 		{
 			using Value_t = typename T::value_type;

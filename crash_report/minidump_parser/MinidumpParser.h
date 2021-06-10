@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -18,7 +18,7 @@ namespace AE::MinidumpParser
 			String		gpu;
 		}			system;
 		String		reason;		// crash reason
-		uint64_t	address;	// crash address
+		ulong	address;	// crash address
 		String		callstack;	// short stack-trace
 		WString		userInfo;	// only from crash report
 		String		log;		// only from crash report
@@ -26,7 +26,7 @@ namespace AE::MinidumpParser
 
 	bool  ParseMinidump (const Path &minidumpPath, const Path &symbolsPath, uint callStackDepth, OUT CrashInfo &info);
 
-	bool  ParseCrashReport (const SharedPtr<RStream> &crashReport, Path symbolsFolder, uint callStackDepth, OUT CrashInfo &info);
+	bool  ParseCrashReport (const RC<RStream> &crashReport, Path symbolsFolder, uint callStackDepth, OUT CrashInfo &info);
 
 
 }	// AE::MinidumpParser

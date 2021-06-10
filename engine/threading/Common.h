@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -8,15 +8,15 @@
 #include <mutex>
 #include <shared_mutex>
 #include <thread>
+#include <condition_variable>
 
-
-#if not defined(AE_ENABLE_DATA_RACE_CHECK) and (defined(AE_DEBUG) or defined(AE_CI_BUILD))
+#if not defined(AE_ENABLE_DATA_RACE_CHECK) and (defined(AE_DEBUG) or defined(AE_DEVELOP) or defined(AE_CI_BUILD))
 #	define AE_ENABLE_DATA_RACE_CHECK	1
 #else
 #	define AE_ENABLE_DATA_RACE_CHECK	0
 #endif
 
-#if not defined(AE_OPTIMAL_MEMORY_ORDER) and not defined(AE_DEBUG)
+#if not defined(AE_OPTIMAL_MEMORY_ORDER) and not (defined(AE_DEBUG) or defined(AE_DEVELOP))
 #	define AE_OPTIMAL_MEMORY_ORDER		1
 #else
 #	define AE_OPTIMAL_MEMORY_ORDER		0
@@ -28,11 +28,25 @@
 #	define EXLOCK( _syncObj_ ) \
 		std::unique_lock	AE_PRIVATE_UNITE_RAW( __scopeLock, __COUNTER__ ) { _syncObj_ }
 #endif
+#ifndef DBG_EXLOCK
+# ifdef AE_DEBUG
+#	define DBG_EXLOCK			EXLOCK
+# else
+#	define DBG_EXLOCK( ... )	{}
+# endif
+#endif
 
 // shared lock
 #ifndef SHAREDLOCK
 #	define SHAREDLOCK( _syncObj_ ) \
 		std::shared_lock	AE_PRIVATE_UNITE_RAW( __sharedLock, __COUNTER__ ) { _syncObj_ }
+#endif
+#ifndef DBG_SHAREDLOCK
+# ifdef AE_DEBUG
+#	define DBG_SHAREDLOCK			SHAREDLOCK
+# else
+#	define DBG_SHAREDLOCK( ... )	{}
+# endif
 #endif
 
 
@@ -42,10 +56,11 @@ namespace AE::Threading
 
 	template <typename T>	using Atomic	= std::atomic< T >;
 	
-	using Mutex				= std::mutex;
-	using ThreadID			= std::thread::id;
-	using SharedMutex		= std::shared_mutex;
-	using RecursiveMutex	= std::recursive_mutex;
+	using Mutex					= std::mutex;
+	using ThreadID				= std::thread::id;
+	using SharedMutex			= std::shared_mutex;
+	using RecursiveMutex		= std::recursive_mutex;
+	using ConditionVariable		= std::condition_variable;
 
 
 #	if AE_OPTIMAL_MEMORY_ORDER

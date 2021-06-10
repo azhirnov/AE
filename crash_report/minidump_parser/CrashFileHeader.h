@@ -21,5 +21,5 @@ struct CrashFileHeader
 	struct {
 		uint		offset;		// offset in bytes from header end
 		uint		size;
-	}			dump;			// uint8_t[]
+	}			dump;			// ubyte[]
 };

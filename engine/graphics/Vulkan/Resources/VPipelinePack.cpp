@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -8,7 +8,6 @@
 
 # include "stl/Memory/StackAllocator.h"
 
-# include "serializing/Deserializer.h"
 # include "serializing/ObjectFactory.h"
 
 namespace AE::PipelineCompiler
@@ -38,7 +37,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void VPipelinePack::Destroy (VResourceManager &resMngr)
+	void  VPipelinePack::Destroy (VResourceManagerImpl &resMngr)
 	{
 		EXLOCK( _drCheck );
 
@@ -89,7 +88,7 @@ namespace AE::Graphics
 	TODO: multithreading
 =================================================
 */
-	bool VPipelinePack::Create (VResourceManager &resMngr, const SharedPtr<RStream> &stream, INOUT PipelineRefs &refs)
+	bool  VPipelinePack::Create (VResourceManagerImpl &resMngr, const RC<RStream> &stream, INOUT PipelineRefs &refs)
 	{
 		EXLOCK( _drCheck );
 
@@ -121,7 +120,7 @@ namespace AE::Graphics
 	_LoadDescrSetLayouts
 =================================================
 */
-	bool VPipelinePack::_LoadDescrSetLayouts (VResourceManager &resMngr, Serializing::Deserializer &des, StackAllocator_t &stackAlloc)
+	bool  VPipelinePack::_LoadDescrSetLayouts (VResourceManagerImpl &resMngr, Serializing::Deserializer &des, StackAllocator_t &stackAlloc)
 	{
 		EMarker	marker;
 		uint	count	= 0;
@@ -173,7 +172,7 @@ namespace AE::Graphics
 								ArrayView{ vk_samplers, sampler_count });
 			CHECK_ERR( item );
 
-			PlacementNew<UniqueID<DescriptorSetLayoutID>>( _dsLayouts.Get<1>() + i, std::move(item) );
+			PlacementNew<UniqueID<DescriptorSetLayoutID>>( _dsLayouts.Get<1>() + i, RVRef(item) );
 
 			stackAlloc.Pop( bm );
 		}
@@ -186,7 +185,7 @@ namespace AE::Graphics
 	_LoadPipelineLayouts
 =================================================
 */
-	bool VPipelinePack::_LoadPipelineLayouts (VResourceManager &resMngr, Serializing::Deserializer &des)
+	bool  VPipelinePack::_LoadPipelineLayouts (VResourceManagerImpl &resMngr, Serializing::Deserializer &des)
 	{
 		EMarker	marker;
 		uint	count	= 0;
@@ -204,7 +203,7 @@ namespace AE::Graphics
 
 			VPipelineLayout::DescriptorSets_t	desc_sets;
 
-			for (size_t j = 0; j < desc.descrSets.size(); ++j)
+			for (usize j = 0; j < desc.descrSets.size(); ++j)
 			{
 				auto&	src = desc.descrSets[j];
 				CHECK_ERR( uint(src.second.uid) < _dsLayouts.Get<0>() );
@@ -219,7 +218,7 @@ namespace AE::Graphics
 			auto	item = resMngr.CreatePipelineLayout( desc_sets, desc.pushConstants.items );
 			CHECK_ERR( item );
 			
-			PlacementNew<UniqueID<VPipelineLayoutID>>( _pplnLayouts.Get<1>() + i, std::move(item) );
+			PlacementNew<UniqueID<VPipelineLayoutID>>( _pplnLayouts.Get<1>() + i, RVRef(item) );
 		}
 		return true;
 	}
@@ -229,7 +228,7 @@ namespace AE::Graphics
 	_LoadRenderPasses
 =================================================
 */
-	bool VPipelinePack::_LoadRenderPasses (VResourceManager &resMngr, Serializing::Deserializer &des, INOUT PipelineRefs &refs)
+	bool  VPipelinePack::_LoadRenderPasses (VResourceManagerImpl &resMngr, Serializing::Deserializer &des, INOUT PipelineRefs &refs)
 	{
 		EMarker	marker;
 		uint	count	= 0;
@@ -252,7 +251,7 @@ namespace AE::Graphics
 			auto	item = resMngr.CreateRenderPassOutput( frag_outputs );
 			CHECK_ERR( item );
 
-			PlacementNew<UniqueID<VRenderPassOutputID>>( _renderPassOutputs.Get<1>() + i, std::move(item) );
+			PlacementNew<UniqueID<VRenderPassOutputID>>( _renderPassOutputs.Get<1>() + i, RVRef(item) );
 		}
 		
 		CHECK_ERR( des( OUT marker, OUT count ) and marker == EMarker::RenderPassNames );
@@ -277,7 +276,7 @@ namespace AE::Graphics
 	_LoadSpirvShaders
 =================================================
 */
-	bool VPipelinePack::_LoadSpirvShaders (const VDevice &dev, Serializing::Deserializer &des, StackAllocator_t &stackAlloc)
+	bool  VPipelinePack::_LoadSpirvShaders (const VDevice &dev, Serializing::Deserializer &des, StackAllocator_t &stackAlloc)
 	{
 		EMarker	marker;
 		uint	count	= 0;
@@ -328,7 +327,7 @@ namespace AE::Graphics
 	_LoadGraphicsPipelines
 =================================================
 */
-	bool VPipelinePack::_LoadGraphicsPipelines (VResourceManager &resMngr, Serializing::Deserializer &des, StackAllocator_t &stackAlloc)
+	bool  VPipelinePack::_LoadGraphicsPipelines (VResourceManagerImpl &resMngr, Serializing::Deserializer &des, StackAllocator_t &stackAlloc)
 	{
 		EMarker	marker;
 		uint	count	= 0;
@@ -352,7 +351,7 @@ namespace AE::Graphics
 			VPipelineLayoutID	layout_id	= _pplnLayouts.Get<1>()[ uint(desc.layout) ];
 			VRenderPassOutputID	rp_output_id= _renderPassOutputs.Get<1>()[ uint(desc.renderPass) ];
 
-			for (size_t j = 0; j < desc.shaders.size(); ++j)
+			for (usize j = 0; j < desc.shaders.size(); ++j)
 			{
 				const uint	idx = uint(desc.shaders[j].second & ~PipelineCompiler::ShaderUID::SPIRV);
 				CHECK_ERR( AllBits( desc.shaders[j].second, PipelineCompiler::ShaderUID::SPIRV ));
@@ -366,7 +365,7 @@ namespace AE::Graphics
 			auto	item = resMngr.CreateGPTemplate( layout_id, rp_output_id, desc, ArrayView{modules, desc.shaders.size()} );
 			CHECK_ERR( item );
 			
-			PlacementNew<UniqueID<VGraphicsPipelineTemplateID>>( _gpipelines.Get<1>() + i, std::move(item) );
+			PlacementNew<UniqueID<VGraphicsPipelineTemplateID>>( _gpipelines.Get<1>() + i, RVRef(item) );
 
 			stackAlloc.Pop( bm );
 		}
@@ -378,7 +377,7 @@ namespace AE::Graphics
 	_LoadMeshPipelines
 =================================================
 */
-	bool VPipelinePack::_LoadMeshPipelines (VResourceManager &resMngr, Serializing::Deserializer &des, StackAllocator_t &stackAlloc)
+	bool  VPipelinePack::_LoadMeshPipelines (VResourceManagerImpl &resMngr, Serializing::Deserializer &des, StackAllocator_t &stackAlloc)
 	{
 		EMarker	marker;
 		uint	count	= 0;
@@ -402,7 +401,7 @@ namespace AE::Graphics
 			VPipelineLayoutID	layout_id	= _pplnLayouts.Get<1>()[ uint(desc.layout) ];
 			VRenderPassOutputID	rp_output_id= _renderPassOutputs.Get<1>()[ uint(desc.renderPass) ];
 
-			for (size_t j = 0; j < desc.shaders.size(); ++j)
+			for (usize j = 0; j < desc.shaders.size(); ++j)
 			{
 				const uint	idx = uint(desc.shaders[j].second & ~PipelineCompiler::ShaderUID::SPIRV);
 				CHECK_ERR( AllBits( desc.shaders[j].second, PipelineCompiler::ShaderUID::SPIRV ));
@@ -416,7 +415,7 @@ namespace AE::Graphics
 			auto	item = resMngr.CreateMPTemplate( layout_id, rp_output_id, desc, ArrayView{modules, desc.shaders.size()} );
 			CHECK_ERR( item );
 
-			PlacementNew<UniqueID<VMeshPipelineTemplateID>>( _mpipelines.Get<1>() + i, std::move(item) );
+			PlacementNew<UniqueID<VMeshPipelineTemplateID>>( _mpipelines.Get<1>() + i, RVRef(item) );
 			
 			stackAlloc.Pop( bm );
 		}
@@ -428,7 +427,7 @@ namespace AE::Graphics
 	_LoadComputePipelines
 =================================================
 */
-	bool VPipelinePack::_LoadComputePipelines (VResourceManager &resMngr, Serializing::Deserializer &des)
+	bool  VPipelinePack::_LoadComputePipelines (VResourceManagerImpl &resMngr, Serializing::Deserializer &des)
 	{
 		EMarker	marker;
 		uint	count	= 0;
@@ -460,7 +459,7 @@ namespace AE::Graphics
 			auto	item = resMngr.CreateCPTemplate( id, desc, module );
 			CHECK_ERR( item );
 
-			PlacementNew<UniqueID<VComputePipelineTemplateID>>( _cpipelines.Get<1>() + i, std::move(item) );
+			PlacementNew<UniqueID<VComputePipelineTemplateID>>( _cpipelines.Get<1>() + i, RVRef(item) );
 		}
 		return true;
 	}
@@ -470,7 +469,7 @@ namespace AE::Graphics
 	_LoadRayTracingPipelines
 =================================================
 */
-	bool VPipelinePack::_LoadRayTracingPipelines (VResourceManager &, Serializing::Deserializer &des)
+	bool  VPipelinePack::_LoadRayTracingPipelines (VResourceManagerImpl &, Serializing::Deserializer &des)
 	{
 		EMarker	marker;
 		uint	count	= 0;
@@ -487,7 +486,7 @@ namespace AE::Graphics
 	_LoadPipelineNames
 =================================================
 */
-	bool VPipelinePack::_LoadPipelineNames (Serializing::Deserializer &des, INOUT PipelineRefs &refs)
+	bool  VPipelinePack::_LoadPipelineNames (Serializing::Deserializer &des, INOUT PipelineRefs &refs)
 	{
 		using PipelineUID		= PipelineCompiler::PipelineUID;
 		using PipelineNameMap_t	= Array<Pair< PipelineName, PipelineUID >>;	// TODO: allocator

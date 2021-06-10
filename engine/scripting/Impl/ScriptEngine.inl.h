@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -21,7 +21,7 @@ namespace AE::Scripting
 		String	signature;
 		GlobalFunction<T>::GetDescriptor( OUT signature, name );
 
-		AS_CALL( _engine->RegisterGlobalFunction( signature.c_str(), asFUNCTION( *func ), asCALL_CDECL ) );
+		AS_CALL( _engine->RegisterGlobalFunction( signature.c_str(), asFUNCTION( *func ), asCALL_CDECL ));
 	}
 	
 /*
@@ -36,7 +36,7 @@ namespace AE::Scripting
 		ScriptTypeInfo<T>::Name( OUT signature );
 		(signature += ' ') += name;
 
-		AS_CALL( _engine->RegisterGlobalProperty( signature.c_str(), Cast<void *>(&var) ) );
+		AS_CALL( _engine->RegisterGlobalProperty( signature.c_str(), Cast<void *>(&var) ));
 	}
 	
 /*
@@ -51,7 +51,7 @@ namespace AE::Scripting
 		ScriptTypeInfo<T>::Name( OUT signature );
 		(signature += ' ') += name;
 
-		AS_CALL( _engine->RegisterGlobalProperty( signature.c_str(), Cast<void *>(const_cast<T*>(&var)) ) );
+		AS_CALL( _engine->RegisterGlobalProperty( signature.c_str(), Cast<void *>(const_cast<T*>(&var)) ));
 	}
 	
 /*
@@ -74,7 +74,7 @@ namespace AE::Scripting
 			return null;
 		}
 
-		return ScriptFnPtr<Fn>{ New<ScriptFn<Fn>>( module, ctx )};
+		return ScriptFnPtr<Fn>{ new ScriptFn<Fn>{ module, ctx }};
 	}
 
 }	// AE::Scripting

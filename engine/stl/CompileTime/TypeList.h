@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -6,43 +6,43 @@
 
 namespace AE::STL
 {
-namespace _ae_stl_hidden_
+namespace _hidden_
 {
 
-	template <typename RefType, size_t I, typename TL>
+	template <typename RefType, usize I, typename TL>
 	struct TL_GetFirstIndex;
 
-	template <typename RefType, size_t I>
+	template <typename RefType, usize I>
 	struct TL_GetFirstIndex< RefType, I, Tuple<> >
 	{
-		inline static constexpr size_t	value = UMax;
+		inline static constexpr usize	value = UMax;
 	};
 
-	template <typename RefType, size_t I, typename Head, typename... Tail>
+	template <typename RefType, usize I, typename Head, typename... Tail>
 	struct TL_GetFirstIndex< RefType, I, Tuple<Head, Tail...> >
 	{
-		inline static constexpr size_t	value = Conditional< IsSameTypes<RefType, Head>,
-													std::integral_constant<size_t, I>,
+		inline static constexpr usize	value = Conditional< IsSameTypes<RefType, Head>,
+													std::integral_constant<usize, I>,
 													TL_GetFirstIndex< RefType, I+1, Tuple<Tail...> > >::value;
 	};
 	
 
-	template <typename RefType, size_t I, typename TL>
+	template <typename RefType, usize I, typename TL>
 	struct TL_GetLastIndex;
 	
-	template <typename RefType, size_t I>
+	template <typename RefType, usize I>
 	struct TL_GetLastIndex< RefType, I, Tuple<> >
 	{
-		inline static constexpr size_t	value = UMax;
+		inline static constexpr usize	value = UMax;
 	};
 	
-	template <typename RefType, size_t I, typename Head, typename... Tail>
+	template <typename RefType, usize I, typename Head, typename... Tail>
 	struct TL_GetLastIndex< RefType, I, Tuple<Head, Tail...> >
 	{
 		using result = TL_GetLastIndex< RefType, I+1, Tuple<Tail...> >;
 
-		inline static constexpr size_t	value = Conditional< result::value == UMax and IsSameTypes<RefType, Head>,
-													std::integral_constant<size_t, I>,
+		inline static constexpr usize	value = Conditional< result::value == UMax and IsSameTypes<RefType, Head>,
+													std::integral_constant<usize, I>,
 													result >::value;
 	};
 
@@ -70,24 +70,24 @@ namespace _ae_stl_hidden_
 	};
 	
 
-	template <template <typename...> class Templ, size_t I, typename TL>
+	template <template <typename...> class Templ, usize I, typename TL>
 	struct TL_GetFirstSpecializationOf;
 
-	template <template <typename...> class Templ, size_t I>
+	template <template <typename...> class Templ, usize I>
 	struct TL_GetFirstSpecializationOf< Templ, I, Tuple<> >
 	{
-		inline static constexpr size_t	value = UMax;
+		inline static constexpr usize	value = UMax;
 	};
 
-	template <template <typename...> class Templ, size_t I, typename Head, typename... Tail>
+	template <template <typename...> class Templ, usize I, typename Head, typename... Tail>
 	struct TL_GetFirstSpecializationOf< Templ, I, Tuple<Head, Tail...> >
 	{
-		inline static constexpr size_t	value = Conditional< IsSpecializationOf< Head, Templ >,
-													std::integral_constant<size_t, I>,
+		inline static constexpr usize	value = Conditional< IsSpecializationOf< Head, Templ >,
+													std::integral_constant<usize, I>,
 													TL_GetFirstSpecializationOf< Templ, I+1, Tuple<Tail...> > >::value;
 	};
 
-}	// _ae_stl_hidden_
+}	// _hidden_
 
 
 	//
@@ -101,32 +101,32 @@ namespace _ae_stl_hidden_
 		using							AsTuple		= Tuple< Types... >;
 
 		template <typename T>
-		inline static constexpr size_t	FirstIndex	= _ae_stl_hidden_::TL_GetFirstIndex< T, 0, AsTuple >::value;
+		inline static constexpr usize	FirstIndex	= STL::_hidden_::TL_GetFirstIndex< T, 0, AsTuple >::value;
 		
 		template <typename T>
-		inline static constexpr size_t	LastIndex	= _ae_stl_hidden_::TL_GetLastIndex< T, 0, AsTuple >::value;
+		inline static constexpr usize	LastIndex	= STL::_hidden_::TL_GetLastIndex< T, 0, AsTuple >::value;
 
 		template <template <typename...> class Templ>
-		inline static constexpr size_t	FirstSpecializationOf = _ae_stl_hidden_::TL_GetFirstSpecializationOf< Templ, 0, AsTuple >::value;
+		inline static constexpr usize	FirstSpecializationOf = STL::_hidden_::TL_GetFirstSpecializationOf< Templ, 0, AsTuple >::value;
 		
 		template <typename T>
-		inline static constexpr size_t	Index	= FirstIndex<T>;
+		inline static constexpr usize	Index	= FirstIndex<T>;
 
-		inline static constexpr size_t	Count	= std::tuple_size_v< AsTuple >;
+		inline static constexpr usize	Count	= std::tuple_size_v< AsTuple >;
 
 		template <typename T>
 		inline static constexpr bool	HasType	= (Index<T> != UMax);
 		
-		template <size_t I>		using	Get		= typename std::tuple_element<I, AsTuple>::type;
-		template <size_t I>		using	GetT	= std::tuple_element<I, AsTuple>;
+		template <usize I>		using	Get		= typename std::tuple_element<I, AsTuple>::type;
+		template <usize I>		using	GetT	= std::tuple_element<I, AsTuple>;
 
 		struct Front { using			type	= Get<0>; };
 		struct Back  { using			type	= Get<Count-1>; };
 
 		struct Self	 { using			type	= TypeList< Types... >; };
 
-		struct PopFront	{ using			type	= typename _ae_stl_hidden_::TL_PopFront< TypeList<>, Types... >::type; };
-		struct PopBack	{ using			type	= typename _ae_stl_hidden_::TL_PopBack< TypeList<>, Types... >::type; };
+		struct PopFront	{ using			type	= typename STL::_hidden_::TL_PopFront< TypeList<>, Types... >::type; };
+		struct PopBack	{ using			type	= typename STL::_hidden_::TL_PopBack< TypeList<>, Types... >::type; };
 
 		template <typename T>	using	PushBack = TypeList< Types..., T >;
 		template <typename T>	using	PushFront = TypeList< T, Types... >;
@@ -149,17 +149,17 @@ namespace _ae_stl_hidden_
 
 
 		template <typename FN>
-		static constexpr void 			Visit (FN&& fn)	{ return _Visit<0>( std::forward<FN>(fn) ); }
+		static constexpr void 			Visit (FN&& fn)	{ return _Visit<0>( FwdArg<FN>(fn) ); }
 
 	private:
-		template <size_t I, typename FN>
+		template <usize I, typename FN>
 		static constexpr void _Visit (FN&& fn)
 		{
 			if constexpr( I < Count )
 			{
 				using T = Get<I>;
 				fn.template operator()<T,I>();
-				_Visit< I+1 >( std::forward<FN>(fn) );
+				_Visit< I+1 >( FwdArg<FN>(fn) );
 			}
 			Unused( fn );
 		}
@@ -176,7 +176,7 @@ namespace _ae_stl_hidden_
 	{};
 
 	
-namespace _ae_stl_hidden_
+namespace _hidden_
 {
 	template <typename T>
 	struct _IsTypeList {
@@ -188,10 +188,20 @@ namespace _ae_stl_hidden_
 		static constexpr bool	value = true;
 	};
 
-}	// _ae_stl_hidden_
+
+	template <typename Left, typename Right>
+	struct _Merge;
+
+	template <typename ...LeftTypes, typename ...RightTypes>
+	struct _Merge< TypeList<LeftTypes...>, TypeList<RightTypes...> >
+	{
+		using type = TypeList< LeftTypes..., RightTypes... >;
+	};
+
+}	// _hidden_
 
 	template <typename T>
-	static constexpr bool	IsTypeList = _ae_stl_hidden_::_IsTypeList< T >::value;
+	static constexpr bool	IsTypeList = STL::_hidden_::_IsTypeList< T >::value;
 
 }	// AE::STL
 
@@ -200,12 +210,16 @@ namespace AE::STL::TypeListUtils
 	
 	template <typename T>
 	struct GetTypeSize {
-		static constexpr size_t	value = sizeof(T);
+		static constexpr usize	value = sizeof(T);
 	};
 		
 	template <typename T>
 	struct GetTypeAlign {
-		static constexpr size_t	value = alignof(T);
+		static constexpr usize	value = alignof(T);
 	};
+	
+
+	template <typename Left, typename Right>
+	using Merge = typename STL::_hidden_::_Merge< Left, Right >::type;
 
 }	// AE::STL::TypeListUtils

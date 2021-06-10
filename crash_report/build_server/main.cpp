@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	TODO:
 	Windows:
@@ -362,7 +362,7 @@ namespace
 		
 		auto&	info = _activeBuilds.insert_or_assign( id, UniquePtr<BuildInfo>{} ).first->second;
 
-		info.reset( New<BuildInfo>( std::thread{ [&info, id, src = std::move(script_src), deploy_dir = _deployDir] () -> bool
+		info.reset( new BuildInfo{ std::thread{ [&info, id, src = std::move(script_src), deploy_dir = _deployDir] () -> bool
 		{
 			{
 				EXLOCK( info->timeGuard );
@@ -380,7 +380,7 @@ namespace
 				return false;
 			}
 
-			auto	se = MakeShared<ScriptEngine>();
+			auto	se = MakeRC<ScriptEngine>();
 			if ( not se->Create() )
 			{
 				EXLOCK( info->outputGuard );
@@ -388,53 +388,7 @@ namespace
 				return false;
 			}
 		
-			CoreBindings::BindString( se );
-			CoreBindings::BindArray( se );
-			CoreBindings::BindLog( se );
-
-			bool	binded = true;
-
-			// bind ECompiler
-			{
-				EnumBinder<BuildScriptApi::ECompiler>	binder{ se };
-				binded &= binder.Create();
-				binded &= binder.AddValue( "VisualStudio2017",		BuildScriptApi::ECompiler::VisualStudio2017 );
-				binded &= binder.AddValue( "VisualStudio2019",		BuildScriptApi::ECompiler::VisualStudio2019 );
-				binded &= binder.AddValue( "VisualStudio2019_v141",	BuildScriptApi::ECompiler::VisualStudio2019_v141 );
-			}
-
-			// bind EArch
-			{
-				EnumBinder<BuildScriptApi::EArch>	binder{ se };
-				binded &= binder.Create();
-				binded &= binder.AddValue( "x86",	BuildScriptApi::EArch::x86 );
-				binded &= binder.AddValue( "x64",	BuildScriptApi::EArch::x64 );
-			}
-
-			// bind BuildScriptApi
-			{
-				ClassBinder<BuildScriptApi>	binder{ se };
-				binded &= binder.CreateRef( &AngelScriptHelper::FactoryCreate<BuildScriptApi>, null, null, 0 );
-
-				binded &= binder.AddMethod( &BuildScriptApi::GitClone,		"GitClone" );
-				binded &= binder.AddMethod( &BuildScriptApi::GitClone2,		"GitClone" );
-				binded &= binder.AddMethod( &BuildScriptApi::GitGetBranch,	"GitGetBranch" );
-				binded &= binder.AddMethod( &BuildScriptApi::GitGetHash,	"GitGetHash" );
-
-				binded &= binder.AddMethod( &BuildScriptApi::CMakeGen,		"CMakeGen" );
-				binded &= binder.AddMethod( &BuildScriptApi::CMakeBuild,	"CMakeBuild" );
-				binded &= binder.AddMethod( &BuildScriptApi::CMakeInstall,	"CMakeInstall" );
-				binded &= binder.AddMethod( &BuildScriptApi::CTest,			"CTest" );
-
-				binded &= binder.AddMethod( &BuildScriptApi::CurDir,		"CurDir" );
-				binded &= binder.AddMethod( &BuildScriptApi::MakeDir,		"MakeDir" );
-				binded &= binder.AddMethod( &BuildScriptApi::IsFile,		"IsFile" );
-				binded &= binder.AddMethod( &BuildScriptApi::IsDirectory,	"IsDirectory" );
-
-				binded &= binder.AddMethod( &BuildScriptApi::Deploy,		"Deploy" );
-			}
-
-			if ( not binded )
+			if ( not BuildScriptApi::Bind( se ))
 			{
 				EXLOCK( info->outputGuard );
 				info->output << "failed to bind script objects\n";
@@ -462,7 +416,7 @@ namespace
 			info->looping.store( false, EMemoryOrder::Relaxed );
 
 			return true;
-		}}));
+		}}});
 
 		return true;
 	}

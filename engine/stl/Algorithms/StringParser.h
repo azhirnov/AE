@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -14,24 +14,24 @@ namespace AE::STL
 	struct StringParser final
 	{
 	public:
-			static void  ToEndOfLine	(StringView str, INOUT size_t &pos);
-			static void  ToBeginOfLine	(StringView str, INOUT size_t &pos);
-			static void  ToNextLine		(StringView str, INOUT size_t &pos);
-			static void  ToPrevLine		(StringView str, INOUT size_t &pos);
+			static void  ToEndOfLine	(StringView str, INOUT usize &pos);
+			static void  ToBeginOfLine	(StringView str, INOUT usize &pos);
+			static void  ToNextLine		(StringView str, INOUT usize &pos);
+			static void  ToPrevLine		(StringView str, INOUT usize &pos);
 
-		ND_ static bool  IsBeginOfLine	(StringView str, size_t pos);
-		ND_ static bool  IsEndOfLine	(StringView str, size_t pos);
+		ND_ static bool  IsBeginOfLine	(StringView str, usize pos);
+		ND_ static bool  IsEndOfLine	(StringView str, usize pos);
 
-		ND_ static size_t CalculateNumberOfLines (StringView str);
+		ND_ static usize CalculateNumberOfLines (StringView str);
 
-			static bool  MoveToLine (StringView str, INOUT size_t &pos, size_t lineNumber);
+			static bool  MoveToLine (StringView str, INOUT usize &pos, usize lineNumber);
 
-			static void  ReadCurrLine (StringView str, INOUT size_t &pos, OUT StringView &result);
-			static void  ReadLineToEnd (StringView str, INOUT size_t &pos, OUT StringView &result);
+			static void  ReadCurrLine (StringView str, INOUT usize &pos, OUT StringView &result);
+			static void  ReadLineToEnd (StringView str, INOUT usize &pos, OUT StringView &result);
 
-			static bool  ReadTo (StringView str, StringView endSymbol, INOUT size_t &pos, OUT StringView &result);
+			static bool  ReadTo (StringView str, StringView endSymbol, INOUT usize &pos, OUT StringView &result);
 
-			static bool  ReadString (StringView str, INOUT size_t &pos, OUT StringView &result);
+			static bool  ReadString (StringView str, INOUT usize &pos, OUT StringView &result);
 			
 			static void  DivideLines (StringView str, OUT Array<StringView> &lines);
 

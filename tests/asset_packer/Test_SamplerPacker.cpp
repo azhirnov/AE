@@ -1,9 +1,8 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Platforms/PlatformUtils.h"
 #include "stl/Stream/FileStream.h"
 
-#include "serializing/Deserializer.h"
 #include "serializing/ObjectFactory.h"
 
 #include "sampler_packer/SamplerPacker.h"
@@ -37,7 +36,7 @@ namespace
 		TEST( pack_samplers( &info ));
 		
 
-		auto	file = MakeShared<FileRStream>( output );
+		auto	file = MakeRC<FileRStream>( output );
 		TEST( file->IsOpen() );
 
 		AE::Serializing::Deserializer	des;
@@ -126,14 +125,14 @@ namespace
 extern void Test_SamplerPacker ()
 {
 	{
-		Path	dll_path;
-		TEST( FileSystem::Search( "SamplerPacker.dll", 3, 3, OUT dll_path ));
+		Path	dll_path{ AE_SAMPLER_PACKER_LIBRARY };
+		//TEST( FileSystem::Search( "SamplerPacker.dll", 3, 3, OUT dll_path ));
 
 		Library		lib;
 		TEST( lib.Load( dll_path ));
 		TEST( lib.GetProcAddr( "PackSamplers", OUT pack_samplers ));
 		
-		TEST( FileSystem::FindAndSetCurrent( "sampler_test", 5 ));
+		TEST( FileSystem::SetCurrentPath( AE_CURRENT_DIR "/sampler_test" ));
 
 		SamplerPacker_Test1();
 	}

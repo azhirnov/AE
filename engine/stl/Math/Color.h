@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -70,19 +70,19 @@ namespace AE::Math
 				return T(0);
 		}
 
-		ND_ static constexpr size_t		size ()			{ return 4; }
+		ND_ static constexpr usize		size ()			{ return 4; }
 		
 		ND_ T *			data ()							{ return std::addressof(r); }
 		ND_ T const *	data ()					const	{ return std::addressof(r); }
 
-		ND_ T &			operator [] (size_t i)			{ ASSERT( i < size() );  return std::addressof(r)[i]; }
-		ND_ T const&	operator [] (size_t i)	const	{ ASSERT( i < size() );  return std::addressof(r)[i]; }
+		ND_ T &			operator [] (usize i)			{ ASSERT( i < size() );  return std::addressof(r)[i]; }
+		ND_ T const&	operator [] (usize i)	const	{ ASSERT( i < size() );  return std::addressof(r)[i]; }
 	};
 	
 	using RGBA32f	= RGBAColor< float >;
 	using RGBA32i	= RGBAColor< int >;
 	using RGBA32u	= RGBAColor< uint >;
-	using RGBA8u	= RGBAColor< uint8_t >;
+	using RGBA8u	= RGBAColor< ubyte >;
 
 
 
@@ -168,7 +168,7 @@ namespace AE::Math
 	}
 
 	template <> template <>
-	inline constexpr RGBAColor<float>::RGBAColor (const RGBAColor<uint8_t> &other) :
+	inline constexpr RGBAColor<float>::RGBAColor (const RGBAColor<ubyte> &other) :
 		r{ float(other.r) / 255.0f }, g{ float(other.g) / 255.0f },
 		b{ float(other.b) / 255.0f }, a{ float(other.a) / 255.0f }
 	{}
@@ -200,7 +200,7 @@ namespace AE::Math
 	{}
 
 	template <> template <>
-	inline constexpr RGBAColor<int>::RGBAColor (const RGBAColor<uint8_t> &other) :
+	inline constexpr RGBAColor<int>::RGBAColor (const RGBAColor<ubyte> &other) :
 		r{int(other.r)}, g{int(other.g)}, b{int(other.b)}, a{int(other.a)}
 	{}
 	
@@ -215,7 +215,7 @@ namespace AE::Math
 	{}
 
 	template <> template <>
-	inline constexpr RGBAColor<uint>::RGBAColor (const RGBAColor<uint8_t> &other) :
+	inline constexpr RGBAColor<uint>::RGBAColor (const RGBAColor<ubyte> &other) :
 		r{uint(other.r)}, g{uint(other.g)}, b{uint(other.b)}, a{uint(other.a)}
 	{}
 	
@@ -225,28 +225,28 @@ namespace AE::Math
 =================================================
 */
 	template <> template <>
-	inline constexpr RGBAColor<uint8_t>::RGBAColor (const RGBAColor<int> &other) :
-		r{uint8_t(other.r)}, g{uint8_t(other.g)}, b{uint8_t(other.b)}, a{uint8_t(other.a)}
+	inline constexpr RGBAColor<ubyte>::RGBAColor (const RGBAColor<int> &other) :
+		r{ubyte(other.r)}, g{ubyte(other.g)}, b{ubyte(other.b)}, a{ubyte(other.a)}
 	{}
 
 	template <> template <>
-	inline constexpr RGBAColor<uint8_t>::RGBAColor (const RGBAColor<uint> &other) :
-		r{uint8_t(other.r)}, g{uint8_t(other.g)}, b{uint8_t(other.b)}, a{uint8_t(other.a)}
+	inline constexpr RGBAColor<ubyte>::RGBAColor (const RGBAColor<uint> &other) :
+		r{ubyte(other.r)}, g{ubyte(other.g)}, b{ubyte(other.b)}, a{ubyte(other.a)}
 	{}
 	
 	template <> template <>
-	inline constexpr RGBAColor<uint8_t>::RGBAColor (const RGBAColor<float> &other) :
-		r{uint8_t(other.r * 255.0f + 0.5f)},  g{uint8_t(other.g * 255.0f + 0.5f)},
-		b{uint8_t(other.b * 255.0f + 0.5f)},  a{uint8_t(other.a * 255.0f + 0.5f)}
+	inline constexpr RGBAColor<ubyte>::RGBAColor (const RGBAColor<float> &other) :
+		r{ubyte(other.r * 255.0f + 0.5f)},  g{ubyte(other.g * 255.0f + 0.5f)},
+		b{ubyte(other.b * 255.0f + 0.5f)},  a{ubyte(other.a * 255.0f + 0.5f)}
 	{}
 
 	ND_ inline constexpr RGBA8u  AdjustContrast (const RGBA8u &col, float factor)
 	{
 		constexpr float	mid = 127.0f;
 		RGBA8u			result;
-		result.r = uint8_t(mid + factor * (float(col.r) - mid) + 0.5f);
-		result.g = uint8_t(mid + factor * (float(col.g) - mid) + 0.5f);
-		result.b = uint8_t(mid + factor * (float(col.b) - mid) + 0.5f);
+		result.r = ubyte(mid + factor * (float(col.r) - mid) + 0.5f);
+		result.g = ubyte(mid + factor * (float(col.g) - mid) + 0.5f);
+		result.b = ubyte(mid + factor * (float(col.b) - mid) + 0.5f);
 		result.a = col.a;
 		return result;
 	}
@@ -261,9 +261,9 @@ namespace AE::Math
 	{
 		RGBA8u			result;
 		const float		lum		= Luminance( col );
-		result.r = uint8_t(lum + factor * (float(col.r) - lum) + 0.5f);
-		result.g = uint8_t(lum + factor * (float(col.g) - lum) + 0.5f);
-		result.b = uint8_t(lum + factor * (float(col.b) - lum) + 0.5f);
+		result.r = ubyte(lum + factor * (float(col.r) - lum) + 0.5f);
+		result.g = ubyte(lum + factor * (float(col.g) - lum) + 0.5f);
+		result.b = ubyte(lum + factor * (float(col.b) - lum) + 0.5f);
 		result.a = col.a;
 		return result;
 	}
@@ -273,8 +273,8 @@ namespace AE::Math
 		float4 v = Lerp( float4{float(x.r), float(x.g), float(x.b), float(x.a)},
 						 float4{float(y.r), float(y.g), float(y.b), float(y.a)}, factor );
 
-		return RGBA8u{ uint8_t(v.x + 0.5f), uint8_t(v.y + 0.5f),
-					   uint8_t(v.z + 0.5f), uint8_t(v.w + 0.5f) };
+		return RGBA8u{ ubyte(v.x + 0.5f), ubyte(v.y + 0.5f),
+					   ubyte(v.z + 0.5f), ubyte(v.w + 0.5f) };
 	}
 	
 /*
@@ -297,7 +297,7 @@ namespace AE::Math
 	template <typename T>
 	ND_ inline constexpr RGBAColor<T>  Clamp (const RGBAColor<T> &value, const RGBAColor<T> &minVal, const RGBAColor<T> &maxVal)
 	{
-		return Min( maxVal, Max( value, minVal ) );
+		return Min( maxVal, Max( value, minVal ));
 	}
 	
 /*

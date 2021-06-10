@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -18,13 +18,13 @@ namespace AE::Graphics
 		struct Data
 		{
 			void *		ptr;
-			BytesU		size;
+			Bytes		size;
 		};
 
 		struct ConstData
 		{
 			void const *	ptr;
-			BytesU			size;
+			Bytes			size;
 		};
 
 		static constexpr uint	Count = 4;
@@ -62,24 +62,24 @@ namespace AE::Graphics
 			void	clear ()			{ _parts.clear(); }
 
 
-		bool  try_push_back (void *ptr, BytesU size)
+		bool  try_push_back (void *ptr, Bytes size)
 		{
 			return _parts.try_push_back( Data{ ptr, size });
 		}
 
-		ND_ BytesU  DataSize () const
+		ND_ Bytes  DataSize () const
 		{
-			BytesU	result;
+			Bytes	result;
 			for (auto& part : _parts) {
 				result += part.size;
 			}
 			return result;
 		}
 
-		ND_ BufferView  section (BytesU offset, BytesU size)
+		ND_ BufferView  section (Bytes offset, Bytes size)
 		{
 			BufferView	result;
-			BytesU		off;
+			Bytes		off;
 
 			for (auto& part : _parts)
 			{

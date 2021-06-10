@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "threading/Primitives/Barrier.h"
 #include "stl/Memory/MemUtils.h"
@@ -29,7 +29,7 @@ namespace AE::Threading
 */
 	Barrier::~Barrier ()
 	{
-		CHECK( DeleteSynchronizationBarrier( BitCast<SYNCHRONIZATION_BARRIER *>( &_data[0] ) ));
+		CHECK( DeleteSynchronizationBarrier( BitCast<SYNCHRONIZATION_BARRIER *>( &_data[0] )));
 	}
 	
 /*

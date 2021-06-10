@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -103,18 +103,18 @@ namespace AE::Scripting
 		template <> struct ScriptTypeInfo < const _type_& > {}
 
 
-#	define DECL_SCRIPT_TYPE( _type_ )	AE_DECL_SCRIPT_TYPE( _type_, AE_PRIVATE_TOSTRING( _type_ ) )
+#	define DECL_SCRIPT_TYPE( _type_ )	AE_DECL_SCRIPT_TYPE( _type_, AE_PRIVATE_TOSTRING( _type_ ))
 	DECL_SCRIPT_TYPE( bool );
 	DECL_SCRIPT_TYPE( float );
 	DECL_SCRIPT_TYPE( double );
 	DECL_SCRIPT_TYPE( int );
 	DECL_SCRIPT_TYPE( uint );
-	AE_DECL_SCRIPT_TYPE( int8_t,		"int8" );
-	AE_DECL_SCRIPT_TYPE( uint8_t,		"uint8" );
-	AE_DECL_SCRIPT_TYPE( int16_t,		"int16" );
-	AE_DECL_SCRIPT_TYPE( uint16_t,		"uint16" );
-	AE_DECL_SCRIPT_TYPE( int64_t,		"int64" );
-	AE_DECL_SCRIPT_TYPE( uint64_t,		"uint64" );
+	AE_DECL_SCRIPT_TYPE( sbyte,			"int8" );
+	AE_DECL_SCRIPT_TYPE( ubyte,			"uint8" );
+	AE_DECL_SCRIPT_TYPE( sshort,		"int16" );
+	AE_DECL_SCRIPT_TYPE( ushort,		"uint16" );
+	AE_DECL_SCRIPT_TYPE( slong,			"int64" );
+	AE_DECL_SCRIPT_TYPE( ulong,			"uint64" );
 	AE_DECL_SCRIPT_OBJ( std::string,	"string" );
 #	undef DECL_SCRIPT_TYPE
 
@@ -256,7 +256,7 @@ namespace AE::Scripting
 		template <typename T>
 		static T * FactoryCreate ()
 		{
-			return New<T>();
+			return new T{};
 		}
 
 
@@ -299,7 +299,7 @@ namespace AE::Scripting
 	// Script Function Descriptor
 	//
 
-	namespace _ae_scripting_hidden_
+	namespace _hidden_
 	{
 
 		template <typename T>
@@ -327,7 +327,7 @@ namespace AE::Scripting
 				ASSERT( first <= last );
 			}
 
-			template <typename T, size_t Index>
+			template <typename T, usize Index>
 			void operator () ()
 			{
 				if ( Index < first or Index > last )	return;
@@ -461,7 +461,7 @@ namespace AE::Scripting
 			}
 		};
 
-	}	// _ae_scripting_hidden_
+	}	// _hidden_
 
 	
 
@@ -470,7 +470,7 @@ namespace AE::Scripting
 	//
 
 	template <typename T>
-	struct GlobalFunction : _ae_scripting_hidden_::GlobalFunction<T>
+	struct GlobalFunction : Scripting::_hidden_::GlobalFunction<T>
 	{
 	};
 
@@ -480,12 +480,12 @@ namespace AE::Scripting
 	//
 
 	template <typename T>
-	struct MemberFunction : _ae_scripting_hidden_::MemberFunction<T>
+	struct MemberFunction : Scripting::_hidden_::MemberFunction<T>
 	{
 	};
 
 
-	namespace _ae_scripting_hidden_
+	namespace _hidden_
 	{
 
 		//
@@ -523,14 +523,14 @@ namespace AE::Scripting
 				static int    Set (AngelScript::asIScriptContext *ctx, int arg, const _type_ &value)	{ return ctx->_set_( arg, value ); } \
 			}
 
-		DECL_CONTEXT_RESULT( int8_t,	GetReturnByte,		SetArgByte );
-		DECL_CONTEXT_RESULT( uint8_t,	GetReturnByte,		SetArgByte );
-		DECL_CONTEXT_RESULT( int16_t,	GetReturnWord,		SetArgWord );
-		DECL_CONTEXT_RESULT( uint16_t,	GetReturnWord,		SetArgWord );
+		DECL_CONTEXT_RESULT( sbyte,		GetReturnByte,		SetArgByte );
+		DECL_CONTEXT_RESULT( ubyte,		GetReturnByte,		SetArgByte );
+		DECL_CONTEXT_RESULT( sshort,	GetReturnWord,		SetArgWord );
+		DECL_CONTEXT_RESULT( ushort,	GetReturnWord,		SetArgWord );
 		DECL_CONTEXT_RESULT( int32_t,	GetReturnDWord,		SetArgDWord );
-		DECL_CONTEXT_RESULT( uint32_t,	GetReturnDWord,		SetArgDWord );
-		DECL_CONTEXT_RESULT( int64_t,	GetReturnQWord,		SetArgQWord );
-		DECL_CONTEXT_RESULT( uint64_t,	GetReturnQWord,		SetArgQWord );
+		DECL_CONTEXT_RESULT( uint,		GetReturnDWord,		SetArgDWord );
+		DECL_CONTEXT_RESULT( slong,		GetReturnQWord,		SetArgQWord );
+		DECL_CONTEXT_RESULT( ulong,		GetReturnQWord,		SetArgQWord );
 		DECL_CONTEXT_RESULT( float,		GetReturnFloat,		SetArgFloat );
 		DECL_CONTEXT_RESULT( double,	GetReturnDouble,	SetArgDouble );
 #		undef DECL_CONTEXT_RESULT
@@ -583,8 +583,8 @@ namespace AE::Scripting
 		{
 			static void Set (AngelScript::asIScriptContext *ctx, int index, Arg0 arg0, Args ...args)
 			{
-				AS_CALL( ContextSetterGetter<Arg0>::Set( ctx, index, arg0 ) );
-				SetContextArgs<Args...>::Set( ctx, index+1, std::forward<Args>(args)... );
+				AS_CALL( ContextSetterGetter<Arg0>::Set( ctx, index, arg0 ));
+				SetContextArgs<Args...>::Set( ctx, index+1, FwdArg<Args>(args)... );
 			}
 		};
 
@@ -593,7 +593,7 @@ namespace AE::Scripting
 		{
 			static void Set (AngelScript::asIScriptContext *ctx, int index, Arg0 arg0)
 			{
-				AS_CALL( ContextSetterGetter<Arg0>::Set( ctx, index, arg0 ) );
+				AS_CALL( ContextSetterGetter<Arg0>::Set( ctx, index, arg0 ));
 			}
 		};
 
@@ -624,6 +624,6 @@ namespace AE::Scripting
 			using type	= void;
 		};
 
-	}	// _ae_scripting_hidden_
+	}	// _hidden_
 
 }	// AE::Scripting

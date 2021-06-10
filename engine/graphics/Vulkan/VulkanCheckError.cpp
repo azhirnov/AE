@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -74,8 +74,21 @@ namespace AE::Graphics
 			VK1_CASE_ERR( VK_ERROR_UNKNOWN )
 			#endif
 
-			case VK_SUCCESS :
+			#ifdef VK_KHR_deferred_host_operations
+			VK1_CASE_ERR( VK_THREAD_IDLE_KHR )
+			VK1_CASE_ERR( VK_THREAD_DONE_KHR )
+			VK1_CASE_ERR( VK_OPERATION_DEFERRED_KHR )
+			VK1_CASE_ERR( VK_OPERATION_NOT_DEFERRED_KHR )
+			#endif
+
+			#ifdef VK_EXT_pipeline_creation_cache_control
+			VK1_CASE_ERR( VK_PIPELINE_COMPILE_REQUIRED_EXT )
+			#endif
+				
+			#ifndef VK_VERSION_1_2
 			case VK_RESULT_RANGE_SIZE :
+			#endif
+			case VK_SUCCESS :
 			case VK_RESULT_MAX_ENUM :
 			default :	msg = msg + "unknown (" + ToString(int(errCode)) + ')';  break;
 		}

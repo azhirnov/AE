@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "CPP_VM/VirtualMachine.h"
 #include "CPP_VM/Atomic.h"
@@ -43,7 +43,7 @@ namespace
 			{
 				EAction		act				= EAction::Assign;
 				uint		indices [64];
-				size_t		indexCount		= 0;
+				usize		indexCount		= 0;
 			};
 
 			struct
@@ -88,7 +88,7 @@ namespace
 					{
 						// cache invalidation is not needed here
 
-						for (size_t i = 0; i < pt->indexCount; ++i)
+						for (usize i = 0; i < pt->indexCount; ++i)
 						{
 							g->pool.Unassign( pt->indices[i] );
 						}
@@ -105,7 +105,7 @@ namespace
 						// it can happen when you send index to another thread.
 						vm.ThreadFenceAcquire();
 
-						for (size_t i = 0; i < pt->indexCount; ++i)
+						for (usize i = 0; i < pt->indexCount; ++i)
 						{
 							auto&	st  = g->pool[ pt->indices[i] ];
 							auto	val = st.Read();
@@ -119,7 +119,7 @@ namespace
 
 					case EAction::Write :
 					{
-						for (size_t i = 0; i < pt->indexCount; ++i)
+						for (usize i = 0; i < pt->indexCount; ++i)
 						{
 							auto&	st  = g->pool[ pt->indices[i] ];
 
@@ -144,7 +144,7 @@ namespace
 			vm.ThreadFenceAcquire();
 			for (auto& pt : global.perThread)
 			{
-				for (size_t i = 0; i < pt.second.indexCount; ++i)
+				for (usize i = 0; i < pt.second.indexCount; ++i)
 				{
 					global.pool.Unassign( pt.second.indices[i] );
 				}

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -7,22 +7,21 @@
 namespace AE::Graphics
 {
 
-	enum class EQueueType : uint
+	enum class EQueueType : ubyte
 	{
 		Graphics,			// also supports compute and transfer commands
 		AsyncCompute,		// separate compute queue
 		AsyncTransfer,		// separate transfer queue
-		//Present,			// queue must support present, may be a separate queue
 		_Count,
-		Unknown			= ~0u,
+		Unknown			= 0xFF,
 	};
 
 
-	enum class EQueueMask : uint
+	enum class EQueueMask : ushort
 	{
-		Graphics		= 1 << uint(EQueueType::Graphics),
-		AsyncCompute	= 1 << uint(EQueueType::AsyncCompute),
-		AsyncTransfer	= 1 << uint(EQueueType::AsyncTransfer),
+		Graphics		= 1 << ushort(EQueueType::Graphics),
+		AsyncCompute	= 1 << ushort(EQueueType::AsyncCompute),
+		AsyncTransfer	= 1 << ushort(EQueueType::AsyncTransfer),
 		All				= Graphics | AsyncCompute | AsyncTransfer,
 		Unknown			= 0,
 	};
@@ -31,14 +30,20 @@ namespace AE::Graphics
 
 	forceinline constexpr EQueueMask&  operator |= (EQueueMask &lhs, EQueueType rhs)
 	{
-		ASSERT( uint(rhs) < 32 );
-		return lhs = BitCast<EQueueMask>( uint(lhs) | (1u << (uint(rhs) & 31)) );
+		ASSERT( uint(rhs) < 16 );
+		return lhs = BitCast<EQueueMask>(ushort( uint(lhs) | (1u << (uint(rhs) & 15)) ));
 	}
 
 	forceinline constexpr EQueueMask   operator |  (EQueueMask lhs, EQueueType rhs)
 	{
-		ASSERT( uint(rhs) < 32 );
-		return BitCast<EQueueMask>( uint(lhs) | (1u << (uint(rhs) & 31)) );
+		ASSERT( uint(rhs) < 16 );
+		return BitCast<EQueueMask>(ushort( uint(lhs) | (1u << (uint(rhs) & 15)) ));
+	}
+
+	forceinline constexpr EQueueMask   operator &  (EQueueMask lhs, EQueueType rhs)
+	{
+		ASSERT( uint(rhs) < 16 );
+		return BitCast<EQueueMask>(ushort( uint(lhs) & (1u << (uint(rhs) & 15)) ));
 	}
 
 

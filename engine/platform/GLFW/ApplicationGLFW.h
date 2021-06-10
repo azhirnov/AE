@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -38,9 +38,9 @@ namespace AE::App
 	// methods
 	public:
 		WindowPtr				CreateWindow (WndListenerPtr, const WindowDesc &) override;
-		VRDevicePtr				CreateVRDevice () override;
+		//VRDevicePtr			CreateVRDevice () override;
 
-		SharedPtr<RStream>		OpenResource () override;
+		RC<RStream>				OpenResource () override;
 
 		Monitors_t				GetMonitors () override;
 		ArrayView<const char*>	GetVulkanInstanceExtensions () override;

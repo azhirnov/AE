@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -32,6 +32,8 @@ namespace AE::STL
 		~PosixLibrary ()	{ Unload(); }
 
 		bool  Load (NtStringView libName);
+		bool  Load (const char *libName)		{ return Load( NtStringView{libName} ); }
+		bool  Load (const String &libName)		{ return Load( NtStringView{libName} ); }
 		bool  Load (const Path &libName);
 		void  Unload ();
 
@@ -48,14 +50,14 @@ namespace AE::STL
 	inline bool  PosixLibrary::Load (NtStringView libName)
 	{
 		CHECK_ERR( _handle == null );
-		_handle = ::dlopen( libName.c_str(), RTLD_NOW | RTLD_LOCAL );
+		_handle = ::dlopen( libName.c_str(), RTLD_LAZY | RTLD_LOCAL );
 		return _handle != null;
 	}
 
 	inline bool  PosixLibrary::Load (const Path &libName)
 	{
 		CHECK_ERR( _handle == null );
-		_handle = ::dlopen( libName.c_str(), RTLD_NOW | RTLD_LOCAL );	// TODO
+		_handle = ::dlopen( libName.c_str(), RTLD_LAZY | RTLD_LOCAL );
 		return _handle != null;
 	}
 
@@ -76,16 +78,16 @@ namespace AE::STL
 	
 	inline Path  PosixLibrary::GetPath () const
 	{
-#	ifndef PLATFORM_ANDROID
+#	ifdef PLATFORM_ANDROID
+		RETURN_ERR( "not supported" );
+#	else
+
 		CHECK_ERR( _handle );
 
 		char	buf [PATH_MAX] = {};
 		CHECK_ERR( ::dlinfo( _handle, RTLD_DI_ORIGIN, buf ) == 0 );
 
 		return Path{ buf };
-#	else
-
-		RETURN_ERR( "not supported" );
 #	endif
 	}
 

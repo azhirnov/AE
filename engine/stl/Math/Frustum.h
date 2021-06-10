@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -224,7 +224,7 @@ namespace AE::Math
 		T		distances [uint(EPlane::_Count)] = {};
 		
 		isVisible = true;
-		for (size_t i = 0; i < _planes.size(); ++i)
+		for (usize i = 0; i < _planes.size(); ++i)
 		{
 			auto&	plane	= _planes[i];
 			const T	d		= Dot( plane.norm, center ) + plane.dist;
@@ -301,7 +301,7 @@ namespace AE::Math
 		StaticArray<Vec3_t, 8>		points;		_GetCorners( OUT points );
 		AxisAlignedBoundingBox<T>	result{ points[0] };
 
-		for (size_t i = 1; i < points.size(); ++i) {
+		for (usize i = 1; i < points.size(); ++i) {
 			result.Add( points[i] );
 		}
 		return result;
@@ -398,7 +398,7 @@ namespace AE::Math
 		auto	dir = Cross( lp.norm, rp.norm );
 		auto	len = Length2( dir );
 
-		if ( Equals( len, T(0), _err ) )
+		if ( Equals( len, T(0), _err ))
 			return false;
 
 		result = dir * (T(1) / Sqrt(len));

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_CURL
 # include "networking/http/HttpClient.h"
@@ -8,7 +8,7 @@
 # include "stl/Platforms/WindowsHeader.h"
 # include <curl/curl.h>
 
-# ifdef AE_DEBUG
+# if defined(AE_DEBUG) or defined(AE_DEVELOP)
 #	define CURL_CALL( ... ) { \
 			CURLcode _err_ = __VA_ARGS__; \
 			ASSERT( _err_ == CURLE_OK ); \
@@ -76,9 +76,9 @@ namespace AE::Networking
 		bool  _Setup (const HttpRequestDesc &desc, const Settings_t &settings);
 		void  _Release ();
 
-		static size_t _DownloadCallback (char *ptr, size_t size, size_t nmemb, void *userdata);
-		static size_t _UploadCallback (char *buffer, size_t size, size_t nitems, void *userdata);
-		static size_t _HeaderCallback (char *buffer, size_t size, size_t nitems, void *userdata);
+		static usize _DownloadCallback (char *ptr, usize size, usize nmemb, void *userdata);
+		static usize _UploadCallback (char *buffer, usize size, usize nitems, void *userdata);
+		static usize _HeaderCallback (char *buffer, usize size, usize nitems, void *userdata);
 	};
 	
 /*
@@ -93,7 +93,7 @@ namespace AE::Networking
 	}
 
 	CurlRequestTask::CurlRequestTask (HttpRequestDesc &&desc, const Settings_t &settings) :
-		_content{ std::move(desc._content) }
+		_content{ RVRef(desc._content) }
 	{
 		EXLOCK( _drCheck );
 		_Setup( desc, settings );
@@ -128,7 +128,7 @@ namespace AE::Networking
 		CURL_CALL( curl_easy_setopt( _curl, CURLOPT_NOSIGNAL, 1L ));
 		
 		// debugging
-		#ifdef AE_DEBUG
+		#if defined(AE_DEBUG) || defined(AE_DEVELOP)
 			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_ERRORBUFFER, _errorBuffer ));
 			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_VERBOSE, 0L ));
 			CURL_CALL( curl_easy_setopt( _curl, CURLOPT_NOPROGRESS, 1L ));
@@ -301,7 +301,7 @@ namespace AE::Networking
 	_UploadCallback
 =================================================
 */
-	size_t  CurlRequestTask::_UploadCallback (char *buffer, size_t size, size_t nitems, void *userdata)
+	usize  CurlRequestTask::_UploadCallback (char *buffer, usize size, usize nitems, void *userdata)
 	{
 		auto*	self = Cast<CurlRequestTask>( userdata );
 		EXLOCK( self->_drCheck );
@@ -312,8 +312,8 @@ namespace AE::Networking
 		if ( not self->_content )
 			return 0;
 
-		size_t	required	= size * nitems;
-		size_t	written		= size_t( self->_content->Read2( OUT buffer, BytesU{required} ));
+		usize	required	= size * nitems;
+		usize	written		= usize( self->_content->Read2( OUT buffer, Bytes{required} ));
 
 		self->_bytesSent.fetch_add( written, EMemoryOrder::Relaxed );
 
@@ -325,7 +325,7 @@ namespace AE::Networking
 	_DownloadCallback
 =================================================
 */
-	size_t  CurlRequestTask::_DownloadCallback (char *ptr, size_t size, size_t nmemb, void *userdata)
+	usize  CurlRequestTask::_DownloadCallback (char *ptr, usize size, usize nmemb, void *userdata)
 	{
 		auto*	self = Cast<CurlRequestTask>( userdata );
 		EXLOCK( self->_drCheck );
@@ -335,15 +335,15 @@ namespace AE::Networking
 
 		self->_lastResponseTime = TimePoint_t::clock::now();
 
-		size_t	download_size	= size * nmemb;
+		usize	download_size	= size * nmemb;
 		if ( download_size == 0 )
 			return 0;
 
 		auto&	content = self->_response->content;
-		size_t	offset	= content.size();
+		usize	offset	= content.size();
 
 		content.resize( offset + download_size );
-		std::memcpy( content.data() + offset, ptr, download_size );
+		MemCopy( content.data() + offset, ptr, Bytes{download_size} );
 
 		self->_bytesReceived.fetch_add( download_size, EMemoryOrder::Relaxed );
 
@@ -355,14 +355,14 @@ namespace AE::Networking
 	_HeaderCallback
 =================================================
 */
-	size_t  CurlRequestTask::_HeaderCallback (char *buffer, size_t size, size_t nitems, void *userdata)
+	usize  CurlRequestTask::_HeaderCallback (char *buffer, usize size, usize nitems, void *userdata)
 	{
 		auto*	self = Cast<CurlRequestTask>( userdata );
 		EXLOCK( self->_drCheck );
 		
 		self->_lastResponseTime = TimePoint_t::clock::now();
 		
-		const size_t	header_size = size * nitems;
+		const usize	header_size = size * nitems;
 
 		if ( header_size > 0 and header_size <= CURL_MAX_HTTP_HEADER )
 		{
@@ -371,12 +371,12 @@ namespace AE::Networking
 			
 			if ( header.size() )
 			{
-				const size_t	separator = header.find( ": " );
+				const usize	separator = header.find( ": " );
 
 				if ( separator != String::npos )
 					self->_response->headers.insert_or_assign( header.substr( 0, separator ), header.substr( separator + 2 ));
 				else
-					self->_response->headers.insert_or_assign( std::move(header), String() );
+					self->_response->headers.insert_or_assign( RVRef(header), String() );
 			}
 			return header_size;
 		}
@@ -538,7 +538,7 @@ namespace AE::Networking
 	public:
 		using ThreadMask	= BitSet< uint(EThread::_Count) >;
 
-		using Request		= SharedPtr< CurlRequestTask >;
+		using Request		= RC< CurlRequestTask >;
 		using Requests_t	= Array< Request >;
 
 
@@ -698,7 +698,7 @@ namespace AE::Networking
 	{
 	// types
 	public:
-		using CurlThreadPtr = SharedPtr< CurlThread >;
+		using CurlThreadPtr = RC< CurlThread >;
 		using Threads_t		= FixedArray< CurlThreadPtr, 8 >;
 
 	// variables
@@ -754,7 +754,7 @@ namespace AE::Networking
 	bool HttpClient::Setup (const Settings &settings)
 	{
 		CHECK_ERR( not _impl );
-		_impl.reset( New<_InternalImpl>( settings ));
+		_impl.reset( new _InternalImpl{ settings });
 
 		if ( curl_version_info_data* info = curl_version_info( CURLVERSION_NOW ))
 		{
@@ -803,7 +803,7 @@ namespace AE::Networking
 
 
 		// start thread
-		auto	ct = MakeShared<CurlThread>( _impl->curlm, _impl->curlShared, _impl->settings );
+		auto	ct = MakeRC<CurlThread>( _impl->curlm, _impl->curlShared, _impl->settings );
 
 		_impl->threads.push_back( ct );
 		Scheduler().AddThread( ct );
@@ -863,14 +863,14 @@ namespace AE::Networking
 	Request  HttpClient::_CreateTask (HttpRequestDesc &&desc)
 	{
 		CHECK_ERR( _impl );
-		return MakeShared< CurlRequestTask >( std::move(desc), _impl->settings );
+		return MakeRC< CurlRequestTask >( RVRef(desc), _impl->settings );
 	}
 	
 	Request  HttpClient::_CreateTask (const HttpRequestDesc &desc)
 	{
 		CHECK_ERR( _impl );
 		CHECK_ERR( not desc._content );	// can't move const value
-		return MakeShared< CurlRequestTask >( desc, _impl->settings );
+		return MakeRC< CurlRequestTask >( desc, _impl->settings );
 	}
 
 /*
@@ -878,18 +878,18 @@ namespace AE::Networking
 	Download
 =================================================
 */
-	Promise<Array<uint8_t>>  HttpClient::Download (String url)
+	Promise<Array<ubyte>>  HttpClient::Download (String url)
 	{
 		CHECK( _impl );
-		Request	req = Send( HttpRequestDesc{ std::move(url) }.Method( HttpRequestDesc::EMethod::Get ));
+		Request	req = Send( HttpRequestDesc{ RVRef(url) }.Method( HttpRequestDesc::EMethod::Get ));
 
-		return MakePromise(	[req] () -> PromiseResult<Array<uint8_t>>
+		return MakePromise(	[req] () -> PromiseResult<Array<ubyte>>
 							{
 								auto	resp = req->Response();
 
 								if ( resp->code == HttpRequest::ECode::OK )
 								{
-									return std::move(resp->content);
+									return RVRef(resp->content);
 								}
 								return PromiseNullResult();
 							},

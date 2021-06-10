@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Utils/NamedID_HashCollisionCheck.h"
 
@@ -38,10 +38,10 @@ namespace AE::STL
 			uint	new_seed		= gen();
 			bool	has_collision	= false;
 
-			HashMap< size_t, StString_t >	map;
+			HashMap< usize, StString_t >	map;
 			for (auto& item : info.data)
 			{
-				size_t	key = size_t(CT_Hash( item.second.data(), item.second.length(), new_seed ));
+				usize	key = usize(CT_Hash( item.second.data(), item.second.length(), new_seed ));
 
 				if ( not map.insert({ key, StringView{item.second} }).second )
 				{

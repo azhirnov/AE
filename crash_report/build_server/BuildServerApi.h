@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Containers/NtStringView.h"
 #include "stl/Stream/BrotliStream.h"
@@ -60,12 +60,15 @@ namespace
 		Path			_workDir;
 		Path			_currentDir;
 		Path			_deployDir;
+		String			_androidDevice;
 
 
 	// methods
 	public:
 		BuildScriptApi () {}
 		BuildScriptApi (String& output, Mutex& guard, Atomic<bool>& looping, Path workDir, Path deployDir);
+
+		static bool  Bind (const ScriptEnginePtr &se);
 
 		// git
 		bool  GitClone (const String &url, const String &branch, const String &dstFolder);
@@ -78,6 +81,15 @@ namespace
 		bool  CMakeBuild (const String &buildDir, const String &config, const String &target);
 		bool  CMakeInstall (const String &buildDir, const String &dstFolder, const String &config, const String &target);
 		bool  CTest (const String &exeDir, const String &config);
+
+		// android
+		bool  AndroidBuild (const String &sourceDir, const ScriptArray<String> &defines);	// TODO: sign
+		bool  AndroidDevices (OUT ScriptArray<String> &devices);	// for USB
+		bool  AndroidSetDevice (const String &device);				// for USB
+		bool  AndroidConnectDevice (const String &ip);				// for WiFi
+		bool  AndroidRun (const String &sourceDir);
+		bool  AndroidCopyTo (const String &src, const String &dst);
+		//bool  AndroidCopyFrom (const String &src, const String &dst);
 
 		// filesystem
 		bool  CurDir (const String &dir);
@@ -108,7 +120,7 @@ namespace
 =================================================
 */
 	static bool  Execute (String commandLine, INOUT String *output, Mutex *guard, Atomic<bool> &looping, const Path &currentDir,
-						  milliseconds timeout = milliseconds{6000'000})
+						  milliseconds timeout = milliseconds{6'000'000})
 	{
 		if ( guard and output )
 		{
@@ -174,6 +186,69 @@ namespace
 		_currentDir{ workDir },
 		_deployDir{ std::move(deployDir) }
 	{}
+	
+/*
+=================================================
+	Bind
+=================================================
+*/
+	bool  BuildScriptApi::Bind (const ScriptEnginePtr &se)
+	{
+		CoreBindings::BindString( se );
+		CoreBindings::BindArray( se );
+		CoreBindings::BindLog( se );
+
+		bool	binded = true;
+
+		// bind ECompiler
+		{
+			EnumBinder<ECompiler>	binder{ se };
+			binded &= binder.Create();
+			binded &= binder.AddValue( "VisualStudio2017",		ECompiler::VisualStudio2017 );
+			binded &= binder.AddValue( "VisualStudio2019",		ECompiler::VisualStudio2019 );
+			binded &= binder.AddValue( "VisualStudio2019_v141",	ECompiler::VisualStudio2019_v141 );
+		}
+
+		// bind EArch
+		{
+			EnumBinder<EArch>	binder{ se };
+			binded &= binder.Create();
+			binded &= binder.AddValue( "x86",	EArch::x86 );
+			binded &= binder.AddValue( "x64",	EArch::x64 );
+		}
+
+		// bind BuildScriptApi
+		{
+			ClassBinder<BuildScriptApi>	binder{ se };
+			binded &= binder.CreateRef( &AngelScriptHelper::FactoryCreate<BuildScriptApi>, null, null, 0 );
+
+			binded &= binder.AddMethod( &BuildScriptApi::GitClone,			"GitClone" );
+			binded &= binder.AddMethod( &BuildScriptApi::GitClone2,			"GitClone" );
+			binded &= binder.AddMethod( &BuildScriptApi::GitGetBranch,		"GitGetBranch" );
+			binded &= binder.AddMethod( &BuildScriptApi::GitGetHash,		"GitGetHash" );
+
+			binded &= binder.AddMethod( &BuildScriptApi::CMakeGen,			"CMakeGen" );
+			binded &= binder.AddMethod( &BuildScriptApi::CMakeBuild,		"CMakeBuild" );
+			binded &= binder.AddMethod( &BuildScriptApi::CMakeInstall,		"CMakeInstall" );
+			binded &= binder.AddMethod( &BuildScriptApi::CTest,				"CTest" );
+
+			binded &= binder.AddMethod( &BuildScriptApi::AndroidBuild,		"AndroidBuild" );
+			binded &= binder.AddMethod( &BuildScriptApi::AndroidDevices,	"AndroidDevices" );
+			binded &= binder.AddMethod( &BuildScriptApi::AndroidSetDevice,	"AndroidSetDevice" );
+			binded &= binder.AddMethod( &BuildScriptApi::AndroidConnectDevice,	"AndroidConnectDevice" );
+			binded &= binder.AddMethod( &BuildScriptApi::AndroidRun,		"AndroidRun" );
+			binded &= binder.AddMethod( &BuildScriptApi::AndroidCopyTo,		"AndroidCopyTo" );
+
+			binded &= binder.AddMethod( &BuildScriptApi::CurDir,			"CurDir" );
+			binded &= binder.AddMethod( &BuildScriptApi::MakeDir,			"MakeDir" );
+			binded &= binder.AddMethod( &BuildScriptApi::IsFile,			"IsFile" );
+			binded &= binder.AddMethod( &BuildScriptApi::IsDirectory,		"IsDirectory" );
+
+			binded &= binder.AddMethod( &BuildScriptApi::Deploy,			"Deploy" );
+		}
+
+		return binded;
+	}
 
 /*
 =================================================
@@ -514,11 +589,11 @@ namespace
 
 		if ( res )
 		{
-			size_t	pos = output.find( "tests failed out of" );
+			usize	pos = output.find( "tests failed out of" );
 			if ( pos != String::npos )
 			{
-				size_t	start	= pos;
-				size_t	end		= pos;
+				usize	start	= pos;
+				usize	end		= pos;
 				StringParser::ToBeginOfLine( output, INOUT start );
 				StringParser::ToEndOfLine( output, INOUT end );
 
@@ -540,6 +615,238 @@ namespace
 
 		_errorCounter += uint(res);
 		return res;
+	}
+	
+/*
+=================================================
+	AndroidBuild
+=================================================
+*/
+	bool  BuildScriptApi::AndroidBuild (const String &sourceDir, const ScriptArray<String> &defines)
+	{
+		if ( not _looping->load( EMemoryOrder::Relaxed ))
+			return false;
+		
+		Path	src_folder	 = Path{_currentDir}.append( sourceDir );
+		Path	src_relative = FileSystem::ToRelative( src_folder, _workDir );
+
+		if ( src_relative.string().find( ".." ) != String::npos )
+		{
+			EXLOCK( *_outputGuard );
+			*_output << "AndroidBuild: invalid source path\n";
+			_errorCounter ++;
+			return false;
+		}
+
+		// append cmake defines to 'build.gradle'
+		if ( defines.size() )
+		{
+			Array<Path>		subdirs;
+			Array<Path>		files;
+
+			for (auto& entry : FileSystem::Enum( src_folder ))
+			{
+				if ( entry.is_directory() )
+					subdirs.push_back( entry );
+				else
+				if ( Path{entry}.filename().string() == "build.gradle" )
+					files.push_back( entry );
+			}
+
+			for (auto& dir : subdirs)
+			{
+				for (auto& entry : FileSystem::Enum( dir ))
+				{
+					if ( Path{entry}.filename().string() == "build.gradle" )
+						files.push_back( entry );
+				}
+			}
+			
+			String	cmake_args;
+			for (auto& def : defines) {
+				cmake_args << "\n\t\t\t\t\t\t  '-D" << def << "',";		// TODO: convert " to \", validate
+			}
+			cmake_args << "\n\t\t\t\t\t\t ";
+
+			const String	externalNativeBuild_str = "externalNativeBuild";
+			const String	arguments_str			= "arguments";
+
+			// TODO: backup
+			for (auto& fname : files)
+			{
+				FileRStream		file{ fname };
+				
+				if ( not file.IsOpen() )
+				{
+					EXLOCK( *_outputGuard );
+					*_output << "AndroidBuild: failed to open file: '" << fname.string() << "'\n";
+					_errorCounter ++;
+					continue;
+				}
+
+				String	src;
+				if ( not file.Read( usize(file.RemainingSize()), OUT src ))
+					continue;
+
+				usize	pos = src.find( externalNativeBuild_str );
+				if ( pos == String::npos )
+					continue;
+
+				const usize		begin = pos + externalNativeBuild_str.length();
+
+				pos = src.find( '{', begin );
+				if ( pos == String::npos )
+					continue;
+
+				++pos;
+				for (int cnt = 1; (cnt > 0) and (pos < src.length()); ++pos)
+				{
+					const char	c = src[pos];
+					if ( c == '{' )
+						++cnt;
+					if ( c == '}' )
+						--cnt;
+				}
+				const usize		end = pos;
+
+				pos = src.find( arguments_str, begin );
+				if ( pos == String::npos or pos > end )
+				{
+					// TODO: add field
+					continue;
+				}
+
+				// append args
+				pos += arguments_str.length() + 1;
+				src.insert( pos, cmake_args );
+			}
+		}
+		
+		String	cmd;
+		cmd << "gradlew build";
+
+		String	output;
+		bool	res = Execute( cmd, INOUT &output, null, *_looping, src_folder );
+		ASSERT( res );
+
+		if ( res )
+		{
+			const String	success_str	= "BUILD SUCCESSFUL";
+			const String	fail_str	= "BUILD FAILED";
+
+			uint	success_count	= 0;
+			uint	fail_count		= 0;
+
+			for (usize pos = 0;;)
+			{
+				pos = output.find( success_str, pos );
+				if ( pos == String::npos )
+					break;
+
+				++success_count;
+				pos += success_str.length();
+			}
+			
+			for (usize pos = 0;;)
+			{
+				pos = output.find( fail_str, pos );
+				if ( pos == String::npos )
+					break;
+
+				++fail_count;
+				pos += fail_str.length();
+			}
+
+			ASSERT( success_count > 0 or fail_count > 0 );
+
+			if ( not (success_count > 0 and fail_count == 0) )
+				res = false;
+		}
+		
+		{
+			EXLOCK( *_outputGuard );
+			*_output << output;
+		}
+		
+		_errorCounter += uint(res);
+		return res;
+	}
+	
+/*
+=================================================
+	AndroidDevices
+----
+	https://developer.android.com/studio/command-line
+=================================================
+*/
+	bool  BuildScriptApi::AndroidDevices (OUT ScriptArray<String> &devices)
+	{
+		devices.clear();
+
+		String	cmdline = "adb devices -l";
+		String	list;
+		bool	res = WindowsProcess::Execute( cmdline, OUT list );
+
+		if ( res )
+		{
+			usize	pos = list.find( "List of devices attached" );
+
+			for (; pos < list.length(); ++pos)
+			{
+
+			}
+		}
+		
+		_errorCounter += uint(res);
+		return res;
+	}
+	
+/*
+=================================================
+	AndroidSetDevice
+=================================================
+*/
+	bool  BuildScriptApi::AndroidSetDevice (const String &device)
+	{
+		_androidDevice = device;
+		return true;
+	}
+	
+/*
+=================================================
+	AndroidSetDevice
+=================================================
+*/
+	bool  BuildScriptApi::AndroidConnectDevice (const String &ip)
+	{
+		_androidDevice = ip;
+		
+		String	cmdline	= "adb connect "s << _androidDevice;
+		bool	res		= WindowsProcess::Execute( cmdline );
+		Unused( res );
+		return true;
+	}
+
+/*
+=================================================
+	AndroidRun
+=================================================
+*/
+	bool  BuildScriptApi::AndroidRun (const String &sourceDir)
+	{
+		Unused( sourceDir );
+		return true;
+	}
+	
+/*
+=================================================
+	AndroidCopyTo
+=================================================
+*/
+	bool  BuildScriptApi::AndroidCopyTo (const String &src, const String &dst)
+	{
+		Unused( src, dst );
+		return true;
 	}
 
 /*

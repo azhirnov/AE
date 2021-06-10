@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Algorithms/StringParser.h"
 #include "stl/Math/Math.h"
@@ -11,7 +11,7 @@ namespace AE::STL
 	ToEndOfLine
 =================================================
 */
-	void StringParser::ToEndOfLine (StringView str, INOUT size_t &pos)
+	void StringParser::ToEndOfLine (StringView str, INOUT usize &pos)
 	{
 		if ( pos < str.length() and ((str[pos] == '\n') | (str[pos] == '\r')) )
 			return;
@@ -32,7 +32,7 @@ namespace AE::STL
 	ToBeginOfLine
 =================================================
 */
-	void StringParser::ToBeginOfLine (StringView str, INOUT size_t &pos)
+	void StringParser::ToBeginOfLine (StringView str, INOUT usize &pos)
 	{
 		pos = Min( pos, str.length() );
 
@@ -53,9 +53,9 @@ namespace AE::STL
 	IsBeginOfLine
 =================================================
 */
-	bool StringParser::IsBeginOfLine (StringView str, const size_t pos)
+	bool StringParser::IsBeginOfLine (StringView str, const usize pos)
 	{
-		size_t	p = pos;
+		usize	p = pos;
 		ToBeginOfLine( str, INOUT p );
 		return p == pos;
 	}
@@ -65,9 +65,9 @@ namespace AE::STL
 	IsEndOfLine
 =================================================
 */
-	bool StringParser::IsEndOfLine (StringView str, const size_t pos)
+	bool StringParser::IsEndOfLine (StringView str, const usize pos)
 	{
-		size_t	p = pos;
+		usize	p = pos;
 		ToEndOfLine( str, INOUT p );
 		return p == pos;
 	}
@@ -77,7 +77,7 @@ namespace AE::STL
 	ToNextLine
 =================================================
 */
-	void StringParser::ToNextLine (StringView str, INOUT size_t &pos)
+	void StringParser::ToNextLine (StringView str, INOUT usize &pos)
 	{
 		while ( pos < str.length() )
 		{
@@ -104,7 +104,7 @@ namespace AE::STL
 	ToPrevLine
 =================================================
 */
-	void StringParser::ToPrevLine (StringView str, INOUT size_t &pos)
+	void StringParser::ToPrevLine (StringView str, INOUT usize &pos)
 	{
 		pos = Min( pos, str.length() );
 
@@ -133,11 +133,11 @@ namespace AE::STL
 	CalculateNumberOfLines
 =================================================
 */
-	size_t  StringParser::CalculateNumberOfLines (StringView str)
+	usize  StringParser::CalculateNumberOfLines (StringView str)
 	{
-		size_t	lines = 0;
+		usize	lines = 0;
 
-		for (size_t pos = 0; pos < str.length(); ++lines)
+		for (usize pos = 0; pos < str.length(); ++lines)
 		{
 			ToNextLine( str, INOUT pos );
 		}
@@ -149,9 +149,9 @@ namespace AE::STL
 	MoveToLine
 =================================================
 */
-	bool StringParser::MoveToLine (StringView str, INOUT size_t &pos, size_t lineNumber)
+	bool StringParser::MoveToLine (StringView str, INOUT usize &pos, usize lineNumber)
 	{
-		size_t	lines = 0;
+		usize	lines = 0;
 
 		for (; (pos < str.length()) & (lines < lineNumber); ++lines)
 		{
@@ -168,7 +168,7 @@ namespace AE::STL
 	and move to next line.
 =================================================
 */
-	void StringParser::ReadCurrLine (StringView str, INOUT size_t &pos, OUT StringView &result)
+	void StringParser::ReadCurrLine (StringView str, INOUT usize &pos, OUT StringView &result)
 	{
 		ToBeginOfLine( str, INOUT pos );
 
@@ -183,9 +183,9 @@ namespace AE::STL
 	and move to next line.
 =================================================
 */
-	void StringParser::ReadLineToEnd (StringView str, INOUT size_t &pos, OUT StringView &result)
+	void StringParser::ReadLineToEnd (StringView str, INOUT usize &pos, OUT StringView &result)
 	{
-		const size_t	prev_pos = pos;
+		const usize	prev_pos = pos;
 
 		ToEndOfLine( str, INOUT pos );
 
@@ -201,7 +201,7 @@ namespace AE::STL
 	read string from " to "
 =================================================
 */
-	bool StringParser::ReadString (StringView str, INOUT size_t &pos, OUT StringView &result)
+	bool StringParser::ReadString (StringView str, INOUT usize &pos, OUT StringView &result)
 	{
 		result = Default;
 
@@ -213,7 +213,7 @@ namespace AE::STL
 
 		CHECK_ERR( str[pos] == '"' );
 
-		const size_t	begin = ++pos;
+		const usize	begin = ++pos;
 
 		for (; pos < str.length(); ++pos)
 		{
@@ -237,11 +237,11 @@ namespace AE::STL
 	read from 'pos' to symbol 'endSymbol'
 =================================================
 */
-	bool StringParser::ReadTo (StringView str, StringView endSymbol, INOUT size_t &pos, OUT StringView &result)
+	bool StringParser::ReadTo (StringView str, StringView endSymbol, INOUT usize &pos, OUT StringView &result)
 	{
 		result = Default;
 
-		size_t	start = pos;
+		usize	start = pos;
 		pos = str.find( endSymbol, start );
 
 		if ( pos == StringView::npos )
@@ -260,8 +260,8 @@ namespace AE::STL
 	{
 		lines.clear();
 
-		size_t	pos = 0;
-		size_t	prev = 0;
+		usize	pos = 0;
+		usize	prev = 0;
 
 		while ( pos < str.length() )
 		{
@@ -284,11 +284,11 @@ namespace AE::STL
 */
 	void StringParser::Tokenize (StringView str, const char divisor, OUT Array<StringView> &tokens)
 	{
-		size_t	begin = 0;
+		usize	begin = 0;
 
 		tokens.clear();
 
-		for (size_t i = 0; i < str.length(); ++i)
+		for (usize i = 0; i < str.length(); ++i)
 		{
 			const char	c = str[i];
 

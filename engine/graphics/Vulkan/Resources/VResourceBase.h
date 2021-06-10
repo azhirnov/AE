@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -28,7 +28,7 @@ namespace AE::Graphics
 
 		using Self			= VResourceBase< ResType >;
 		using Resource_t	= ResType;
-		using Generation_t	= GfxResourceID::Generation_t;
+		using Generation_t	= BufferID::Generation_t;
 
 
 	// variables
@@ -94,7 +94,7 @@ namespace AE::Graphics
 			ASSERT( IsDestroyed() );
 			ASSERT( GetRefCount() == 0 );
 
-			bool	result = _data.Create( std::forward<Args &&>( args )... );
+			bool	result = _data.Create( FwdArg<Args &&>( args )... );
 
 			// set state and flush cache
 			if ( result )
@@ -111,7 +111,7 @@ namespace AE::Graphics
 			ASSERT( not IsDestroyed() );
 			//ASSERT( GetRefCount() == 0 );
 
-			_data.Destroy( std::forward<Args &&>( args )... );
+			_data.Destroy( FwdArg<Args &&>( args )... );
 			
 			// flush cache
 			ThreadFence( EMemoryOrder::Release );
@@ -120,7 +120,7 @@ namespace AE::Graphics
 			_refCounter.store( 0, EMemoryOrder::Relaxed );
 			_state.store( EState::Initial, EMemoryOrder::Relaxed );
 			
-			constexpr uint	max_gen = GfxResourceID::MaxGeneration();
+			constexpr uint	max_gen = BufferID::MaxGeneration();
 
 			for (uint exp = _generation.load( EMemoryOrder::Relaxed);
 				 not _generation.compare_exchange_weak( INOUT exp, (exp < max_gen ? exp + 1 : 0), EMemoryOrder::Relaxed );)

@@ -1,10 +1,8 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "scripting/Impl/ClassBinder.h"
 
-namespace AE::Scripting
-{
-namespace _ae_scripting_hidden_
+namespace AE::Scripting::_hidden_
 {
 /*
 =================================================
@@ -97,6 +95,4 @@ namespace _ae_scripting_hidden_
 		RETURN_ERR( "unknown binary operator!" );
 	}
 
-}	// _ae_scripting_hidden_
-
-}	// AE::Scripting
+}	// AE::Scripting::_hidden_

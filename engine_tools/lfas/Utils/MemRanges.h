@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -20,13 +20,13 @@ namespace LFAS
 	// types
 	public:
 		using ThreadID_t		= ThreadID;
-		using Version_t			= uint64_t;
+		using Version_t			= ulong;
 		using PerThreadVer_t	= HashMap< ThreadID_t, Version_t >;
 
 		struct Range
 		{
-			BytesU			begin;
-			BytesU			end;
+			Bytes			begin;
+			Bytes			end;
 		};
 
 		struct RangeWithVersion : Range
@@ -51,9 +51,9 @@ namespace LFAS
 	public:
 		MemRangesTempl () {}
 		
-		bool  Init (BytesU size, ThreadID_t tid);
-		bool  Write (BytesU begin, BytesU end, ThreadID_t tid);
-		bool  Read (BytesU begin, BytesU end, ThreadID_t tid);
+		bool  Init (Bytes size, ThreadID_t tid);
+		bool  Write (Bytes begin, Bytes end, ThreadID_t tid);
+		bool  Read (Bytes begin, Bytes end, ThreadID_t tid);
 		
 		void  Acquire (ThreadID_t tid);
 		void  Release (ThreadID_t tid);
@@ -78,12 +78,12 @@ namespace LFAS
 	inline typename MemRangesTempl<TID>::Ranges_t::iterator  MemRangesTempl<TID>::FindFirst (const Range &otherRange)
 	{
 	#if 0
-		size_t	left	= 0;
-		size_t	right	= _ranges.size();
+		usize	left	= 0;
+		usize	right	= _ranges.size();
 
 		for (; left < right; )
 		{
-			size_t	mid = (left + right) >> 1;
+			usize	mid = (left + right) >> 1;
 
 			if ( _ranges[mid].end < otherRange.begin )
 				left = mid + 1;
@@ -97,7 +97,7 @@ namespace LFAS
 		return _ranges.end();
 	#else
 
-		for (size_t i = 0; i < _ranges.size(); ++i)
+		for (usize i = 0; i < _ranges.size(); ++i)
 		{
 			if ( _ranges[i].end <= otherRange.begin )
 				continue;
@@ -125,7 +125,7 @@ namespace LFAS
 =================================================
 */
 	template <typename TID>
-	inline bool  MemRangesTempl<TID>::Init (BytesU size, ThreadID_t tid)
+	inline bool  MemRangesTempl<TID>::Init (Bytes size, ThreadID_t tid)
 	{
 		_ranges.clear();
 
@@ -148,7 +148,7 @@ namespace LFAS
 =================================================
 */
 	template <typename TID>
-	inline bool  MemRangesTempl<TID>::Write (BytesU begin, BytesU end, ThreadID_t tid)
+	inline bool  MemRangesTempl<TID>::Write (Bytes begin, Bytes end, ThreadID_t tid)
 	{
 		CHECK_ERR( begin < end );
 
@@ -235,7 +235,7 @@ namespace LFAS
 =================================================
 */
 	template <typename TID>
-	inline bool  MemRangesTempl<TID>::Read (BytesU begin, BytesU end, ThreadID_t tid)
+	inline bool  MemRangesTempl<TID>::Read (Bytes begin, Bytes end, ThreadID_t tid)
 	{
 		CHECK_ERR( begin < end );
 
@@ -253,7 +253,7 @@ namespace LFAS
 		{
 			ASSERT( IsIntersects( *iter, range ));
 
-			const size_t	is_local = iter->unavailable.count( tid );
+			const usize	is_local = iter->unavailable.count( tid );
 
 			if ( (iter->unavailable.size() - is_local) > 0 )
 			{

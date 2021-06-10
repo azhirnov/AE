@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	Based on code from 'Breakpad', files:
 		minidump_stackwalk.cc
@@ -69,15 +69,15 @@ namespace
 		auto*	callstack	= process_state.threads()->at( requesting_thread );
 		//auto*	mem_region	= process_state.thread_memory_regions()->at( requesting_thread );
 		
-		size_t	frame_count = callstack->frames()->size();
+		usize	frame_count = callstack->frames()->size();
 		CHECK_ERR( frame_count > 0 );
 		
 		frame_count = Min( callStackDepth, frame_count );
 
-		for (size_t frame_index = 0; frame_index < frame_count; ++frame_index)
+		for (usize frame_index = 0; frame_index < frame_count; ++frame_index)
 		{
 			const auto*	frame				= callstack->frames()->at( frame_index );
-			uint64_t	instruction_address = frame->ReturnAddress();
+			ulong	instruction_address = frame->ReturnAddress();
 
 			if ( frame_index > 0 )
 				info.callstack << "\n";
@@ -118,14 +118,14 @@ namespace
 	ParseCrashReport_v1
 =================================================
 */
-	static bool  ParseCrashReport_v1 (const SharedPtr<RStream> &crashReport, const CrashFileHeader &header, Path symbolsPath, uint callStackDepth, OUT CrashInfo &info)
+	static bool  ParseCrashReport_v1 (const RC<RStream> &crashReport, const CrashFileHeader &header, Path symbolsPath, uint callStackDepth, OUT CrashInfo &info)
 	{
 		CHECK_ERR( header.version == 1 );
 
 		// decompress
-		SharedPtr<RStream>	rstream;
+		RC<RStream>	rstream;
 		{
-			auto			mem_stream	= MakeShared<MemRStream>();
+			auto			mem_stream	= MakeRC<MemRStream>();
 			BrotliRStream	brotli		{ crashReport };
 
 			CHECK_ERR( brotli.IsOpen() );
@@ -136,7 +136,7 @@ namespace
 		if ( header.symbolsId.size )
 		{
 			WString		fname;
-			CHECK_ERR( rstream->SeekSet( BytesU{header.symbolsId.offset} ));
+			CHECK_ERR( rstream->SeekSet( Bytes{header.symbolsId.offset} ));
 			CHECK_ERR( rstream->Read( header.symbolsId.size / sizeof(wchar_t), OUT fname ));
 
 			symbolsPath.append( fname + L".sym" );
@@ -144,7 +144,7 @@ namespace
 		}
 
 		UniquePtr<SimpleSymbolSupplier>		symbol_supplier;
-		symbol_supplier.reset( New<SimpleSymbolSupplier>( symbolsPath.string() ));
+		symbol_supplier.reset( new SimpleSymbolSupplier{ symbolsPath.string() });
 		
 		BasicSourceLineResolver	resolver;
 		MinidumpProcessor		minidump_processor{ symbol_supplier.get(), &resolver };
@@ -152,7 +152,7 @@ namespace
 		MinidumpThreadList::set_max_threads( std::numeric_limits<uint32_t>::max() );
 		MinidumpMemoryList::set_max_regions( std::numeric_limits<uint32_t>::max() );
 		
-		SharedPtr<RStream>	dump_file = MakeShared<RSubStream>( rstream, BytesU{header.dump.offset}, BytesU{header.dump.size} );
+		RC<RStream>	dump_file = MakeRC<RSubStream>( rstream, Bytes{header.dump.offset}, Bytes{header.dump.size} );
 		CHECK_ERR( dump_file->IsOpen() );
 
 		StreambufWrap<char>	dump_streambuf{ dump_file };
@@ -169,13 +169,13 @@ namespace
 
 		if ( header.userInfo.size )
 		{
-			CHECK_ERR( rstream->SeekSet( BytesU{header.userInfo.offset} ));
+			CHECK_ERR( rstream->SeekSet( Bytes{header.userInfo.offset} ));
 			CHECK_ERR( rstream->Read( header.userInfo.size / sizeof(wchar_t), OUT info.userInfo ));
 		}
 
 		if ( header.log.size )
 		{
-			CHECK_ERR( rstream->SeekSet( BytesU{header.log.offset} ));
+			CHECK_ERR( rstream->SeekSet( Bytes{header.log.offset} ));
 			CHECK_ERR( rstream->Read( header.log.size, OUT info.log ));
 		}
 		return true;
@@ -195,7 +195,7 @@ namespace
 		info = Default;
 
 		UniquePtr<SimpleSymbolSupplier>		symbol_supplier;
-		symbol_supplier.reset( New<SimpleSymbolSupplier>( symbolsPath.string() ));
+		symbol_supplier.reset( new SimpleSymbolSupplier{ symbolsPath.string() });
 		
 		BasicSourceLineResolver	resolver;
 		MinidumpProcessor		minidump_processor{ symbol_supplier.get(), &resolver };
@@ -219,7 +219,7 @@ namespace
 	ParseCrashReport
 =================================================
 */
-	bool  ParseCrashReport (const SharedPtr<RStream> &crashReport, Path symbolsFolder, uint callStackDepth, OUT CrashInfo &info)
+	bool  ParseCrashReport (const RC<RStream> &crashReport, Path symbolsFolder, uint callStackDepth, OUT CrashInfo &info)
 	{
 		info = Default;
 
@@ -233,7 +233,7 @@ namespace
 		switch ( header.version )
 		{
 			case CrashFileHeader::VERSION :
-				return ParseCrashReport_v1( crashReport, header, std::move(symbolsFolder), callStackDepth, OUT info );
+				return ParseCrashReport_v1( crashReport, header, RVRef(symbolsFolder), callStackDepth, OUT info );
 		}
 		
 		RETURN_ERR( "unsupported version" );

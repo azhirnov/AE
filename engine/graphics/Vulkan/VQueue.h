@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -31,23 +31,24 @@ namespace AE::Graphics
 	struct VQueue
 	{
 	// variables
-		mutable Mutex		guard;			// use when call vkQueueSubmit, vkQueueWaitIdle, vkQueueBindSparse, vkQueuePresentKHR
-		VkQueue				handle			= VK_NULL_HANDLE;
-		EQueueType			type			= Default;
-		EQueueFamily		familyIndex		= Default;
-		VkQueueFlagBits		familyFlags		= Zero;
-		uint				queueIndex		= UMax;
-		float				priority		= 0.0f;
-		uint3				minImageTransferGranularity;
-		DebugName_t			debugName;
+		mutable RecursiveMutex	guard;			// use when call vkQueueSubmit, vkQueueWaitIdle, vkQueueBindSparse, vkQueuePresentKHR
+		VkQueue					handle			= VK_NULL_HANDLE;
+		EQueueType				type			= Default;
+		EQueueFamily			familyIndex		= Default;
+		VkQueueFlagBits			familyFlags		= Zero;
+		uint					queueIndex		= UMax;
+		float					priority		= 0.0f;
+		//VkPipelineStageFlagBits	allStages		= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;	// TODO
+		uint3					minImageTransferGranularity;
+		DebugName_t				debugName;
 		
 	// methods
 		VQueue () {}
 
 		VQueue (VQueue &&other) :
 			handle{other.handle}, type{other.type}, familyIndex{other.familyIndex}, familyFlags{other.familyFlags},
-			queueIndex{other.queueIndex}, priority{other.priority}, minImageTransferGranularity{other.minImageTransferGranularity},
-			debugName{other.debugName}
+			queueIndex{other.queueIndex}, priority{other.priority}, //allStages{other.allStages},
+			minImageTransferGranularity{other.minImageTransferGranularity}, debugName{other.debugName}
 		{}
 	};
 	

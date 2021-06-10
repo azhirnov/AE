@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -320,10 +320,9 @@ namespace AE::Graphics
 			return VK_SHADER_STAGE_ALL;
 
 		VkShaderStageFlagBits	flags = Zero;
-		for (EShaderStages t = EShaderStages(1); t <= values; t = EShaderStages(uint(t) << 1)) 
+		while ( values != Zero )
 		{
-			if ( not AllBits( values, t ))
-				continue;
+			EShaderStages	t = ExtractBit( INOUT values );
 
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
@@ -533,18 +532,20 @@ namespace AE::Graphics
 	{
 		VkImageCreateFlagBits	flags = Zero;
 
-		for (EImageFlags t = EImageFlags(1); t <= values; t = EImageFlags(uint(t) << 1))
+		while ( values != Zero )
 		{
-			if ( not AllBits( values, t ))
-				continue;
+			EImageFlags	t = ExtractBit( INOUT values );
 		
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
 			{
-				case EImageFlags::CubeCompatible :		flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;	break;
+				case EImageFlags::CubeCompatible :			flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;				break;
+				case EImageFlags::MutableFormat :			flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;				break;
+				case EImageFlags::Array2DCompatible :		flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;			break;
+				case EImageFlags::BlockTexelViewCompatible:	flags |= VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT;	break;
 				case EImageFlags::_Last :
 				case EImageFlags::Unknown :
-				default :								RETURN_ERR( "unknown image flag", Zero );
+				default :									RETURN_ERR( "unknown image flag", Zero );
 			}
 			END_ENUM_CHECKS();
 		}
@@ -556,18 +557,41 @@ namespace AE::Graphics
 	ImageType
 =================================================
 */
-	ND_ inline VkImageType  VEnumCast (EImage value)
+	ND_ inline VkImageType  VEnumCast (EImageDim value)
 	{
 		BEGIN_ENUM_CHECKS();
 		switch ( value )
 		{
-			case EImage::_1D :		return VK_IMAGE_TYPE_1D;
-			case EImage::_2D :		return VK_IMAGE_TYPE_2D;
-			case EImage::_3D :		return VK_IMAGE_TYPE_3D;
-			case EImage::Unknown :	break;
+			case EImageDim_1D :		return VK_IMAGE_TYPE_1D;
+			case EImageDim_2D :		return VK_IMAGE_TYPE_2D;
+			case EImageDim_3D :		return VK_IMAGE_TYPE_3D;
+			case EImageDim::Unknown :	break;
 		}
 		END_ENUM_CHECKS();
 		RETURN_ERR( "unsupported image type", VK_IMAGE_TYPE_MAX_ENUM );
+	}
+
+/*
+=================================================
+	ImageViewType
+=================================================
+*/
+	ND_ inline VkImageViewType  VEnumCast (EImage value)
+	{
+		BEGIN_ENUM_CHECKS();
+		switch ( value )
+		{
+			case EImage_1D :			return VK_IMAGE_VIEW_TYPE_1D;
+			case EImage_1DArray :		return VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+			case EImage_2D :			return VK_IMAGE_VIEW_TYPE_2D;
+			case EImage_2DArray :		return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+			case EImage_Cube :			return VK_IMAGE_VIEW_TYPE_CUBE;
+			case EImage_CubeArray :	return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+			case EImage_3D :			return VK_IMAGE_VIEW_TYPE_3D;
+			case EImage::Unknown :		break;	// not supported
+		}
+		END_ENUM_CHECKS();
+		RETURN_ERR( "unsupported image view type", VK_IMAGE_VIEW_TYPE_MAX_ENUM );
 	}
 
 /*
@@ -594,29 +618,6 @@ namespace AE::Graphics
 
 /*
 =================================================
-	ImageViewType
-=================================================
-*/
-	ND_ inline VkImageViewType  VEnumCast (EImageView value)
-	{
-		BEGIN_ENUM_CHECKS();
-		switch ( value )
-		{
-			case EImageView::_1D :			return VK_IMAGE_VIEW_TYPE_1D;
-			case EImageView::_1DArray :		return VK_IMAGE_VIEW_TYPE_1D_ARRAY;
-			case EImageView::_2D :			return VK_IMAGE_VIEW_TYPE_2D;
-			case EImageView::_2DArray :		return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-			case EImageView::Cube :			return VK_IMAGE_VIEW_TYPE_CUBE;
-			case EImageView::CubeArray :	return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
-			case EImageView::_3D :			return VK_IMAGE_VIEW_TYPE_3D;
-			case EImageView::Unknown :		break;	// not supported
-		}
-		END_ENUM_CHECKS();
-		RETURN_ERR( "unsupported image view type", VK_IMAGE_VIEW_TYPE_MAX_ENUM );
-	}
-
-/*
-=================================================
 	ImageUsage
 =================================================
 */
@@ -624,17 +625,17 @@ namespace AE::Graphics
 	{
 		VkImageUsageFlagBits	flags = Zero;
 
-		for (EImageUsage t = EImageUsage(1); t <= values; t = EImageUsage(uint(t) << 1)) 
+		while ( values != Zero )
 		{
-			if ( not AllBits( values, t ))
-				continue;
+			EImageUsage	t = ExtractBit( INOUT values );
 			
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
 			{
 				case EImageUsage::TransferSrc :				flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;				break;
 				case EImageUsage::TransferDst :				flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;				break;
-				case EImageUsage::Sampled :					flags |= VK_IMAGE_USAGE_SAMPLED_BIT;					break;
+				case EImageUsage::Sampled :
+				case EImageUsage::SampledMinMax :			flags |= VK_IMAGE_USAGE_SAMPLED_BIT;					break;
 				case EImageUsage::StorageAtomic :
 				case EImageUsage::Storage :					flags |= VK_IMAGE_USAGE_STORAGE_BIT;					break;
 				case EImageUsage::ColorAttachmentBlend :
@@ -650,9 +651,9 @@ namespace AE::Graphics
 				#endif
 
 				#ifdef VK_EXT_fragment_density_map
-				case EImageUsage::FragmentDensityMap :		flags |= VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT;	break;
+				//case EImageUsage::FragmentDensityMap :	flags |= VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT;	break;
 				#else
-				case EImageUsage::FragmentDensityMap :		RETURN_ERR( "fragment density is not supported", Zero );
+				//case EImageUsage::FragmentDensityMap :	RETURN_ERR( "fragment density is not supported", Zero );
 				#endif
 
 				case EImageUsage::_Last :
@@ -704,10 +705,9 @@ namespace AE::Graphics
 	{
 		VkImageAspectFlagBits	flags = Zero;
 		
-		for (EImageAspect t = EImageAspect(1); t <= values; t = EImageAspect(uint(t) << 1)) 
+		while ( values != Zero )
 		{
-			if ( not AllBits( values, t ))
-				continue;
+			EImageAspect	t = ExtractBit( INOUT values );
 			
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
@@ -736,10 +736,9 @@ namespace AE::Graphics
 	{
 		VkBufferUsageFlagBits	result = Zero;
 		
-		for (EBufferUsage t = EBufferUsage(1); t <= values; t = EBufferUsage(uint(t) << 1)) 
+		while ( values != Zero )
 		{
-			if ( not AllBits( values, t ))
-				continue;
+			EBufferUsage	t = ExtractBit( INOUT values );
 			
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
@@ -835,10 +834,9 @@ namespace AE::Graphics
 	{
 		VkGeometryFlagBitsNV	result = Zero;
 		
-		for (ERayTracingGeometryFlags t = ERayTracingGeometryFlags(1); t <= values; t = ERayTracingGeometryFlags(uint(t) << 1)) 
+		while ( values != Zero )
 		{
-			if ( not AllBits( values, t ))
-				continue;
+			ERayTracingGeometryFlags	t = ExtractBit( INOUT values );
 			
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
@@ -866,10 +864,9 @@ namespace AE::Graphics
 	{
 		VkGeometryInstanceFlagBitsNV	result = Zero;
 		
-		for (ERayTracingInstanceFlags t = ERayTracingInstanceFlags(1); t <= values; t = ERayTracingInstanceFlags(uint(t) << 1)) 
+		while ( values != Zero )
 		{
-			if ( not AllBits( values, t ))
-				continue;
+			ERayTracingInstanceFlags	t = ExtractBit( INOUT values );
 		
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
@@ -899,10 +896,9 @@ namespace AE::Graphics
 	{
 		VkBuildAccelerationStructureFlagBitsNV	result = Zero;
 		
-		for (ERayTracingFlags t = ERayTracingFlags(1); t <= values; t = ERayTracingFlags(uint(t) << 1)) 
+		while ( values != Zero )
 		{
-			if ( not AllBits( values, t ))
-				continue;
+			ERayTracingFlags	t = ExtractBit( INOUT values );
 		
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
@@ -978,7 +974,6 @@ namespace AE::Graphics
 			case EResourceState::_Access_IndexBuffer :			return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 			case EResourceState::_Access_VertexBuffer :			return VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
 			case EResourceState::_Access_ConditionalRendering :	return VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
-			case EResourceState::_Access_CommandProcess :		return VK_PIPELINE_STAGE_COMMAND_PROCESS_BIT_NVX;
 
 			#ifdef VK_NV_shading_rate_image
 			case EResourceState::_Access_ShadingRateImage :		return VK_PIPELINE_STAGE_SHADING_RATE_IMAGE_BIT_NV;
@@ -1185,7 +1180,8 @@ namespace AE::Graphics
 		_builder_( R32I,				VK_FORMAT_R32_SINT ) \
 		_builder_( RG32I,				VK_FORMAT_R32G32_SINT ) \
 		_builder_( RGB32I,				VK_FORMAT_R32G32B32_SINT ) \
-		_builder_( RGBA32I,				VK_FORMAT_R32G32B32A32_UINT ) \
+		_builder_( RGBA32I,				VK_FORMAT_R32G32B32A32_SINT ) \
+		_builder_( R64I,				VK_FORMAT_R64_SINT ) \
 		_builder_( R8U,					VK_FORMAT_R8_UINT ) \
 		_builder_( RG8U,				VK_FORMAT_R8G8_UINT ) \
 		_builder_( RGB8U,				VK_FORMAT_R8G8B8_UINT ) \
@@ -1197,8 +1193,9 @@ namespace AE::Graphics
 		_builder_( R32U,				VK_FORMAT_R32_UINT ) \
 		_builder_( RG32U,				VK_FORMAT_R32G32_UINT ) \
 		_builder_( RGB32U,				VK_FORMAT_R32G32B32_UINT ) \
-		_builder_( RGBA32U,				VK_FORMAT_R32G32B32A32_SINT ) \
+		_builder_( RGBA32U,				VK_FORMAT_R32G32B32A32_UINT ) \
 		_builder_( RGB10_A2U,			VK_FORMAT_A2B10G10R10_UINT_PACK32 ) \
+		_builder_( R64U,				VK_FORMAT_R64_UINT ) \
 		_builder_( R16F,				VK_FORMAT_R16_SFLOAT ) \
 		_builder_( RG16F,				VK_FORMAT_R16G16_SFLOAT ) \
 		_builder_( RGB16F,				VK_FORMAT_R16G16B16_SFLOAT ) \
@@ -1318,15 +1315,17 @@ namespace AE::Graphics
 	AEEnumCast (VkImageType)
 =================================================
 */
-	ND_ inline EImage  AEEnumCast (VkImageType value)
+	ND_ inline EImageDim  AEEnumCast (VkImageType value)
 	{
 		BEGIN_ENUM_CHECKS();
 		switch ( value )
 		{
-			case VK_IMAGE_TYPE_1D :			return EImage::_1D;
-			case VK_IMAGE_TYPE_2D :			return EImage::_2D;
-			case VK_IMAGE_TYPE_3D :			return EImage::_3D;
+			case VK_IMAGE_TYPE_1D :			return EImageDim_1D;
+			case VK_IMAGE_TYPE_2D :			return EImageDim_2D;
+			case VK_IMAGE_TYPE_3D :			return EImageDim_3D;
+			#ifndef VK_VERSION_1_2
 			case VK_IMAGE_TYPE_RANGE_SIZE :
+			#endif
 			case VK_IMAGE_TYPE_MAX_ENUM :
 			default :						break;
 		}
@@ -1341,15 +1340,14 @@ namespace AE::Graphics
 */
 	ND_ inline EImageUsage  AEEnumCast (VkImageUsageFlagBits usage)
 	{
-		EImageUsage		result = Default;
+		EImageUsage		result = Zero;
 
-		for (VkImageUsageFlags t = 1; t < VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM; t <<= 1)
+		while ( usage != Zero )
 		{
-			if ( not AllBits( usage, t ) )
-				continue;
+			auto	t = VkImageUsageFlagBits( ExtractBit( INOUT usage ));
 			
 			BEGIN_ENUM_CHECKS();
-			switch ( VkImageUsageFlagBits(t) )
+			switch ( t )
 			{
 				case VK_IMAGE_USAGE_TRANSFER_SRC_BIT :				result |= EImageUsage::TransferSrc;				break;
 				case VK_IMAGE_USAGE_TRANSFER_DST_BIT :				result |= EImageUsage::TransferDst;				break;
@@ -1365,7 +1363,7 @@ namespace AE::Graphics
 				#endif
 
 				#ifdef VK_EXT_fragment_density_map
-				case VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT :	result |= EImageUsage::FragmentDensityMap;		break;
+				case VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT :
 				#endif
 
 				case VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM :
@@ -1399,23 +1397,22 @@ namespace AE::Graphics
 	{
 		EImageFlags	result = Zero;
 
-		for (uint t = 1; t <= uint(values); t <<= 1)
+		while ( values != Zero )
 		{
-			if ( not AllBits( values, t ))
-				continue;
+			VkImageCreateFlagBits	t = ExtractBit( INOUT values );
 		
 			BEGIN_ENUM_CHECKS();
-			switch ( VkImageCreateFlagBits(t) )
+			switch ( t )
 			{
-				case VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT :		result |= EImageFlags::CubeCompatible;
+				case VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT :		result |= EImageFlags::CubeCompatible;		break;
+				case VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT :	result |= EImageFlags::Array2DCompatible;	break;
+				case VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT :		result |= EImageFlags::MutableFormat;		break;
 
 				case VK_IMAGE_CREATE_SPARSE_BINDING_BIT :
 				case VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT :
 				case VK_IMAGE_CREATE_SPARSE_ALIASED_BIT :
-				case VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT :
 				case VK_IMAGE_CREATE_ALIAS_BIT :
 				case VK_IMAGE_CREATE_SPLIT_INSTANCE_BIND_REGIONS_BIT :
-				case VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT :
 				case VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT :
 				case VK_IMAGE_CREATE_EXTENDED_USAGE_BIT :
 				case VK_IMAGE_CREATE_PROTECTED_BIT :
@@ -1447,10 +1444,9 @@ namespace AE::Graphics
 	{
 		EBufferUsage	result = Default;
 		
-		for (uint t = 1; t <= uint(values); t <<= 1)
+		while ( values != Zero )
 		{
-			if ( not AllBits( values, t ) )
-				continue;
+			VkBufferUsageFlagBits	t = ExtractBit( INOUT values );
 			
 			BEGIN_ENUM_CHECKS();
 			switch ( VkBufferUsageFlagBits(t) )
@@ -1477,6 +1473,10 @@ namespace AE::Graphics
 				#ifdef VK_EXT_transform_feedback
 				case VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_BUFFER_BIT_EXT :
 				case VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_COUNTER_BUFFER_BIT_EXT :
+				#endif
+				#ifdef VK_KHR_acceleration_structure
+				case VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR :
+				case VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR :
 				#endif
 
 				case VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM :

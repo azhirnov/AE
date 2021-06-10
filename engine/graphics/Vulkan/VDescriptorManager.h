@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -41,7 +41,7 @@ namespace AE::Graphics
 
 	// variables
 	private:
-		VResourceManager &			_resMngr;
+		VResourceManagerImpl &		_resMngr;
 
 		Mutex						_dsPoolGuard;
 		DescriptorPoolArray_t		_dsPools;
@@ -51,17 +51,17 @@ namespace AE::Graphics
 
 	// methods
 	public:
-		explicit VDescriptorManager (VResourceManager &);
+		explicit VDescriptorManager (VResourceManagerImpl &);
 		~VDescriptorManager ();
 		
-		bool Initialize ();
-		void Deinitialize ();
+		bool  Initialize ();
+		void  Deinitialize ();
 
-		bool AllocDescriptorSet (DescriptorSetLayoutID layoutId, OUT DescSetRef &ds);
-		bool DeallocDescriptorSet (DescriptorSetLayoutID layoutId, const DescSetRef &ds);
+		bool  AllocDescriptorSet (DescriptorSetLayoutID layoutId, OUT DescSetRef &ds);
+		bool  DeallocDescriptorSet (DescriptorSetLayoutID layoutId, const DescSetRef &ds);
 
 	private:
-		bool _CreateDescriptorPool ();
+		bool  _CreateDescriptorPool ();
 	};
 
 

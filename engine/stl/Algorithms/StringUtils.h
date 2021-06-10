@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -28,7 +28,7 @@ namespace AE::STL
 	template <typename T, typename A1, typename A2>
 	forceinline std::basic_string<T,A1>&&  operator << (std::basic_string<T,A1> &&lhs, const std::basic_string<T,A2> &rhs)
 	{
-		return std::move( std::move(lhs).append( rhs.data(), rhs.size() ));
+		return RVRef( RVRef(lhs).append( rhs.data(), rhs.size() ));
 	}
 
 	template <typename T, typename A1, typename A2>
@@ -40,7 +40,7 @@ namespace AE::STL
 	template <typename T, typename A>
 	forceinline std::basic_string<T,A>&&  operator << (std::basic_string<T,A> &&lhs, const BasicStringView<T> &rhs)
 	{
-		return std::move( std::move(lhs).append( rhs.data(), rhs.size() ));
+		return RVRef( RVRef(lhs).append( rhs.data(), rhs.size() ));
 	}
 
 	template <typename T, typename A>
@@ -52,7 +52,7 @@ namespace AE::STL
 	template <typename T, typename A>
 	forceinline std::basic_string<T,A>&&  operator << (std::basic_string<T,A> &&lhs, const NtBasicStringView<T> &rhs)
 	{
-		return std::move( std::move(lhs).append( rhs.c_str(), rhs.size() ));
+		return RVRef( RVRef(lhs).append( rhs.c_str(), rhs.size() ));
 	}
 
 	template <typename T, typename A>
@@ -64,7 +64,7 @@ namespace AE::STL
 	template <typename T, typename A>
 	forceinline std::basic_string<T,A>&&  operator << (std::basic_string<T,A> &&lhs, T const * const rhs)
 	{
-		return std::move( std::move(lhs).append( rhs ));
+		return RVRef( RVRef(lhs).append( rhs ));
 	}
 
 	template <typename T, typename A>
@@ -76,7 +76,7 @@ namespace AE::STL
 	template <typename T, typename A>
 	forceinline std::basic_string<T,A>&&  operator << (std::basic_string<T,A> &&lhs, const T rhs)
 	{
-		return std::move( std::move(lhs) += rhs );
+		return RVRef( RVRef(lhs) += rhs );
 	}
 
 	template <typename T, typename A>
@@ -154,10 +154,10 @@ namespace AE::STL
 		if ( str.empty() or substr.empty() )
 			return false;
 
-		for (size_t i = 0, j = 0; i < str.length(); ++i)
+		for (usize i = 0, j = 0; i < str.length(); ++i)
 		{
 			while ( i+j < str.length() and j < substr.length() and
-					ToLowerCase( substr[j] ) == ToLowerCase( str[i+j] ) )
+					ToLowerCase( substr[j] ) == ToLowerCase( str[i+j] ))
 			{
 				++j;
 				if ( j >= substr.length() )
@@ -181,7 +181,7 @@ namespace AE::STL
 		if ( str.length() < substr.length() )
 			return false;
 
-		for (size_t i = 0; i < substr.length(); ++i)
+		for (usize i = 0; i < substr.length(); ++i)
 		{
 			if ( str[i] != substr[i] )
 				return false;
@@ -202,7 +202,7 @@ namespace AE::STL
 		if ( str.length() < substr.length() )
 			return false;
 
-		for (size_t i = 0; i < substr.length(); ++i)
+		for (usize i = 0; i < substr.length(); ++i)
 		{
 			if ( ToLowerCase(str[i]) != ToLowerCase(substr[i]) )
 				return false;
@@ -223,7 +223,7 @@ namespace AE::STL
 		if ( str.length() < substr.length() )
 			return false;
 
-		for (size_t i = 1; i <= substr.length(); ++i)
+		for (usize i = 1; i <= substr.length(); ++i)
 		{
 			if ( str[str.length() - i] != substr[substr.length() - i] )
 				return false;
@@ -244,7 +244,7 @@ namespace AE::STL
 		if ( str.length() < substr.length() )
 			return false;
 
-		for (size_t i = 1; i <= substr.length(); ++i)
+		for (usize i = 1; i <= substr.length(); ++i)
 		{
 			if ( ToLowerCase(str[str.length() - i]) != ToLowerCase(substr[substr.length() - i]) )
 				return false;
@@ -282,7 +282,7 @@ namespace AE::STL
 		BasicString<R>	result;
 		result.resize( str.size() );
 
-		for (size_t i = 0; i < str.size(); ++i)
+		for (usize i = 0; i < str.size(); ++i)
 		{
 			ASSERT( str[i] <= 0x7F );
 			result[i] = R(str[i] & 0x7F);
@@ -319,7 +319,7 @@ namespace AE::STL
 	template <typename E>
 	ND_ forceinline EnableIf<IsEnum<E>, String>  ToString (const E &value)
 	{
-		using T = Conditional< (sizeof(E) > sizeof(uint32_t)), uint32_t, uint64_t >;
+		using T = Conditional< (sizeof(E) > sizeof(uint)), uint, ulong >;
 
 		return std::to_string( T(value) );
 	}
@@ -342,10 +342,17 @@ namespace AE::STL
 			return std::to_string( value );
 		}
 		else
+		if constexpr ( Radix == 16 and sizeof(T) > sizeof(uint) )
+		{
+			std::stringstream	str;
+			str << std::hex << ulong(value);
+			return str.str();
+		}
+		else
 		if constexpr ( Radix == 16 )
 		{
 			std::stringstream	str;
-			str << std::hex << BitCast<NearUInt<T>>( value );
+			str << std::hex << uint(BitCast<NearUInt<T>>(value));
 			return str.str();
 		}else{
 			//STATIC_ASSERT( false, "not supported, yet" );
@@ -414,7 +421,7 @@ namespace AE::STL
 =================================================
 */
 	template <typename T>
-	ND_ inline String  ToString (const Bytes<T> &value)
+	ND_ inline String  ToString (const TBytes<T> &value)
 	{
 		const T	kb	= SafeLeftBitShift( T(1), 12 );
 		const T mb	= SafeLeftBitShift( T(1), 22 );
@@ -492,27 +499,27 @@ namespace AE::STL
 		return val;
 	}
 	
-	ND_ inline uint64_t  StringToUInt64 (StringView str, int base = 10)
+	ND_ inline ulong  StringToUInt64 (StringView str, int base = 10)
 	{
 		ASSERT( base == 10 or base == 16 );
-		uint64_t	val = 0;
+		ulong	val = 0;
 		std::from_chars( str.data(), str.data() + str.size(), OUT val, base );
 		return val;
 	}
-	
+	/*
 	ND_ inline float  StringToFloat (StringView str)
 	{
 		float	val = 0.0f;
-		std::from_chars( str.data(), str.data() + str.size(), OUT val );
+		std::from_chars( str.data(), str.data() + str.size(), OUT val, std::chars_format::general );
 		return val;
 	}
 	
 	ND_ inline double  StringToDouble (StringView str)
 	{
 		double	val = 0.0;
-		std::from_chars( str.data(), str.data() + str.size(), OUT val );
+		std::from_chars( str.data(), str.data() + str.size(), OUT val, std::chars_format::general );
 		return val;
 	}
-
+	*/
 
 }	// AE::STL

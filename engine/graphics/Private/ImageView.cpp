@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "graphics/Public/ImageView.h"
 
@@ -17,9 +17,9 @@ namespace {
 
 	struct HalfBits
 	{
-		uint16_t	m	: 10;	// mantissa bits
-		uint16_t	e	: 5;	// exponent bits
-		uint16_t	s	: 1;	// sign bit
+		ushort	m	: 10;	// mantissa bits
+		ushort	e	: 5;	// exponent bits
+		ushort	s	: 1;	// sign bit
 
 		HalfBits () : m{0}, e{0}, s{0} {}
 
@@ -135,7 +135,7 @@ namespace {
 		StaticArray< uint, 4 >	bits;
 		constexpr uint			px_size = (R+G+B+A+7)/8;
 
-		std::memcpy( OUT bits.data(), row.ptr + BytesU{x * px_size}, px_size );
+		std::memcpy( OUT bits.data(), row.ptr + Bytes{x * px_size}, px_size );
 
 		result.r = ReadIntScalar< R, 0 >( bits );
 		result.g = ReadIntScalar< G, R >( bits );
@@ -154,7 +154,7 @@ namespace {
 		StaticArray< uint, 4 >	bits;
 		constexpr uint			px_size = (R+G+B+A+7)/8;
 
-		std::memcpy( OUT bits.data(), row.ptr + BytesU{x * px_size}, px_size );
+		std::memcpy( OUT bits.data(), row.ptr + Bytes{x * px_size}, px_size );
 
 		result.r = ReadUIntScalar< R, 0 >( bits );
 		result.g = ReadUIntScalar< G, R >( bits );
@@ -209,9 +209,9 @@ namespace {
 		if constexpr ( R == 16 )
 		{
 			StaticArray< HalfBits, 4 >	src = {};
-			std::memcpy( OUT src.data(), row.ptr + BytesU{x * px_size}, px_size );
+			std::memcpy( OUT src.data(), row.ptr + Bytes{x * px_size}, px_size );
 
-			for (size_t i = 0; i < src.size(); ++i)
+			for (usize i = 0; i < src.size(); ++i)
 			{
 				result[i] = src[i].ToFloat();
 			}
@@ -220,7 +220,7 @@ namespace {
 		if constexpr ( R == 32 )
 		{
 			result = {};
-			std::memcpy( OUT result.data(), row.ptr + BytesU{x * px_size}, px_size );
+			std::memcpy( OUT result.data(), row.ptr + Bytes{x * px_size}, px_size );
 		}
 		else
 		{
@@ -250,7 +250,7 @@ namespace {
 		STATIC_ASSERT( sizeof(RGBBits)*8 == (11+11+10) );
 
 		RGBBits	bits;
-		std::memcpy( OUT &bits, row.ptr + BytesU{x * sizeof(RGBBits)}, sizeof(bits) );
+		std::memcpy( OUT &bits, row.ptr + Bytes{x * sizeof(RGBBits)}, sizeof(bits) );
 
 		FloatBits	f;
 		
@@ -274,8 +274,8 @@ namespace {
 	constructor
 =================================================
 */
-	ImageView::ImageView (BufferView&& content, const uint3 &dim, BytesU rowPitch, BytesU slicePitch, EPixelFormat format, EImageAspect aspect) :
-		_content{ std::move(content) },	_dimension{ dim },
+	ImageView::ImageView (BufferView&& content, const uint3 &dim, Bytes rowPitch, Bytes slicePitch, EPixelFormat format, EImageAspect aspect) :
+		_content{ RVRef(content) },	_dimension{ dim },
 		_rowPitch{ rowPitch },			_slicePitch{ slicePitch },
 		_format{ format }
 	{
@@ -529,6 +529,8 @@ namespace {
 				_loadU4			= &ReadUInt<8,8,8,8>;
 				break;
 				
+			case EPixelFormat::R64I :
+			case EPixelFormat::R64U :
 			case EPixelFormat::BGR8_UNorm :
 			case EPixelFormat::BGRA8_UNorm :
 			case EPixelFormat::BC1_RGB8_UNorm :

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "threading/TaskSystem/TaskScheduler.h"
 #include "threading/TaskSystem/WorkerThread.h"
@@ -14,21 +14,28 @@ using namespace AE::Threading;
 
 namespace
 {
-	static siv::PerlinNoise			noise;
-	static const uint				max_levels		= 5;
-	static Atomic<uint64_t>			task_complete	{0};
+	static const siv::PerlinNoise	noise;
+	static const uint				max_levels			= 6;
+	static const uint				max_levels2			= max_levels * max_levels;
+	static const uint				octave_count		= 4;
+	static Atomic<ulong>			task_complete		{0};
+	static Atomic<ulong>			task_payload_time	{0};
+	static Atomic<ulong>			task_counter		{0};
+	
+	using TimePoint_t	= std::chrono::high_resolution_clock::time_point;
+	using EThread		= IAsyncTask::EThread;
 
 
-	class HeightMap : public std::enable_shared_from_this<HeightMap>
+	class HeightMap : public EnableRC<HeightMap>
 	{
 	public:
-		static constexpr uint			W = 32;
-		static constexpr uint			H = 32;
-		StaticArray< uint8_t, W*H >		data;
+		static constexpr uint			W = 4;
+		static constexpr uint			H = 4;
+		StaticArray< ubyte, W*H >		data;
 
 		HeightMap () {}
 	};
-	using HeightMap_t = SharedPtr< HeightMap >;
+	using HeightMap_t = RC< HeightMap >;
 
 
 	class FinalTask final : public IAsyncTask
@@ -43,6 +50,7 @@ namespace
 	};
 }
 
+
 namespace
 {
 	class LargeTask1 final : public IAsyncTask
@@ -55,21 +63,25 @@ namespace
 	public:
 		LargeTask1 (const uint2 &cell, uint level) :
 			IAsyncTask{ EThread::Worker },
-			_cell{ cell }, _level{ level }, _result{ MakeShared<HeightMap>() }
+			_cell{ cell }, _level{ level }, _result{ MakeRC<HeightMap>() }
 		{}
 
 	private:
 		void Run () override
 		{
-			const double2	size	{ Pow( 0.5, double(_level) )};
-			const double2	offset	= double2(_cell) * size;
+			const TimePoint_t	start	= TimePoint_t::clock::now();
+			const double2		size	{ Pow( 0.5, double(_level) )};
+			const double2		offset	= double2(_cell) * size;
 
 			for (uint y = 0; y < HeightMap::H; ++y)
 			for (uint x = 0; x < HeightMap::W; ++x)
 			{
 				double2	c = offset + (double2(x, y) / double2(HeightMap::W, HeightMap::H)) * size;
-				noise.octaveNoise( c.x, c.y, 8 );
+				_result->data[x + y * HeightMap::W] = ubyte( noise.octaveNoise( c.x, c.y, octave_count ) * 255.0 );
 			}
+
+			task_payload_time.fetch_add( (TimePoint_t::clock::now() - start).count(), EMemoryOrder::Relaxed );
+			task_counter.fetch_add( 1, EMemoryOrder::Relaxed );
 
 			if ( _level < max_levels )
 			{
@@ -92,40 +104,47 @@ namespace
 
 	static void  Threading_Test1 ()
 	{
-		using TimePoint_t = std::chrono::high_resolution_clock::time_point;
-
 		task_complete.store( 0 );
+		task_payload_time.store( 0 );
+		task_counter.store( 0 );
 
-		const size_t		num_threads = std::thread::hardware_concurrency()-1;
+		const usize			num_threads = std::thread::hardware_concurrency()-1;
 		LocalTaskScheduler	scheduler	{num_threads};
 		{
-			for (size_t i = 0; i < num_threads; ++i) {
-				scheduler->AddThread( MakeShared<WorkerThread>(
+			for (usize i = 0; i < num_threads; ++i) {
+				scheduler->AddThread( MakeRC<WorkerThread>(
 					WorkerThread::ThreadMask{}.set(uint(WorkerThread::EThread::Worker)),
-					milliseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
+					nanoseconds{i > 0 ? 1 : 0},
+					nanoseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
 				));
 			}
 
 			const auto	start_time = TimePoint_t::clock::now();
 		
-			Unused(
-				scheduler->Run<LargeTask1>( Tuple{uint2{0,0}, 0u} ),
-				scheduler->Run<LargeTask1>( Tuple{uint2{0,1}, 0u} ),
-				scheduler->Run<LargeTask1>( Tuple{uint2{1,0}, 0u} ),
-				scheduler->Run<LargeTask1>( Tuple{uint2{1,1}, 0u} )
-			);
+			scheduler->Run<LargeTask1>( Tuple{uint2{0,0}, 0u} );
+			scheduler->Run<LargeTask1>( Tuple{uint2{0,1}, 0u} );
+			scheduler->Run<LargeTask1>( Tuple{uint2{1,0}, 0u} );
+			scheduler->Run<LargeTask1>( Tuple{uint2{1,1}, 0u} );
 
-			const uint64_t	required = 1ull << (2 + 2 * max_levels);
+			const ulong	required = 1ull << (2 + 2 * max_levels);
 
 			for (;;)
 			{
 				if ( task_complete.load( EMemoryOrder::Relaxed ) >= required )
 					break;
 
-				std::this_thread::yield();
+				scheduler->ProcessTask( EThread::Worker, 0 );
 			}
+			
+			const nanoseconds	total_time	= TimePoint_t::clock::now() - start_time;
+			const nanoseconds	total_time2	= total_time * (num_threads + 1);
+			const double		overhead	= double(total_time2.count() - task_payload_time.load()) / double(total_time2.count());
+			const ulong			task_count	= task_counter.load();
 
-			AE_LOGI( "Total time: "s << ToString( TimePoint_t::clock::now() - start_time ) << ", final jobs: " << ToString( required ) );
+			AE_LOGI( "Total time: "s << ToString( total_time ) <<
+					 ", final jobs: " << ToString( task_counter ) <<
+					 ", task time: " << ToString( nanoseconds{ task_payload_time.load() / task_counter }) <<
+					 ", overhead: " << ToString( overhead * 100.0, 2 ) << " %" );
 		}
 	}
 }
@@ -143,21 +162,25 @@ namespace
 	public:
 		LargeTask2 (const uint2 &cell, uint level) :
 			IAsyncTask{ EThread::Worker },
-			_cell{ cell }, _level{ level }, _result{ MakeShared<HeightMap>() }
+			_cell{ cell }, _level{ level }, _result{ MakeRC<HeightMap>() }
 		{}
 
 	private:
 		void Run () override
 		{
-			const double2	size	{ Pow( 0.5, double(_level) )};
-			const double2	offset	= double2(_cell) * size;
+			const TimePoint_t	start	= TimePoint_t::clock::now();
+			const double2		size	{ Pow( 0.5, double(_level) )};
+			const double2		offset	= double2(_cell) * size;
 
 			for (uint y = 0; y < HeightMap::H; ++y)
 			for (uint x = 0; x < HeightMap::W; ++x)
 			{
 				double2	c = offset + (double2(x, y) / double2(HeightMap::W, HeightMap::H)) * size;
-				noise.octaveNoise( c.x, c.y, 8 );
+				_result->data[x + y * HeightMap::W] = ubyte( noise.octaveNoise( c.x, c.y, octave_count ) * 255.0 );
 			}
+			
+			task_payload_time.fetch_add( (TimePoint_t::clock::now() - start).count(), EMemoryOrder::Relaxed );
+			task_counter.fetch_add( 1, EMemoryOrder::Relaxed );
 
 			if ( _level < max_levels )
 			{
@@ -181,40 +204,144 @@ namespace
 
 	static void  Threading_Test2 ()
 	{
-		using TimePoint_t = std::chrono::high_resolution_clock::time_point;
-
 		task_complete.store( 0 );
+		task_payload_time.store( 0 );
+		task_counter.store( 0 );
 		
-		const size_t		num_threads = std::thread::hardware_concurrency()-1;
+		const usize			num_threads = std::thread::hardware_concurrency()-1;
 		LocalTaskScheduler	scheduler	{num_threads};
 		{
-			for (size_t i = 0; i < num_threads; ++i) {
-				scheduler->AddThread( MakeShared<WorkerThread>(
+			for (usize i = 0; i < num_threads; ++i) {
+				scheduler->AddThread( MakeRC<WorkerThread>(
 					WorkerThread::ThreadMask{}.set(uint(WorkerThread::EThread::Worker)),
-					milliseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
+					nanoseconds{i > 0 ? 1 : 0},
+					nanoseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
 				));
 			}
 
 			const auto	start_time = TimePoint_t::clock::now();
 		
-			Unused(
-				scheduler->Run<LargeTask2>( Tuple{uint2{0,0}, 0u} ),
-				scheduler->Run<LargeTask2>( Tuple{uint2{0,1}, 0u} ),
-				scheduler->Run<LargeTask2>( Tuple{uint2{1,0}, 0u} ),
-				scheduler->Run<LargeTask2>( Tuple{uint2{1,1}, 0u} )
-			);
+			scheduler->Run<LargeTask2>( Tuple{uint2{0,0}, 0u} );
+			scheduler->Run<LargeTask2>( Tuple{uint2{0,1}, 0u} );
+			scheduler->Run<LargeTask2>( Tuple{uint2{1,0}, 0u} );
+			scheduler->Run<LargeTask2>( Tuple{uint2{1,1}, 0u} );
+						
+			const ulong	required = 1ull << (2 + 2 * max_levels);
 			
-			const uint64_t	required = 1ull << (2 + 2 * max_levels);
-
 			for (;;)
 			{
 				if ( task_complete.load( EMemoryOrder::Relaxed ) >= required )
 					break;
 
-				std::this_thread::yield();
+				scheduler->ProcessTask( EThread::Worker, 0 );
+			}
+			
+			const nanoseconds	total_time	= TimePoint_t::clock::now() - start_time;
+			const nanoseconds	total_time2	= total_time * (num_threads + 1);
+			const double		overhead	= double(total_time2.count() - task_payload_time.load()) / double(total_time2.count());
+			const ulong			task_count	= task_counter.load();
+
+			AE_LOGI( "Total time: "s << ToString( total_time ) <<
+					 ", final jobs: " << ToString( task_counter ) <<
+					 ", task time: " << ToString( nanoseconds{ task_payload_time.load() / task_counter }) <<
+					 ", overhead: " << ToString( overhead * 100.0, 2 ) << " %" );
+		}
+	}
+}
+
+
+namespace
+{
+	class LargeTask3 final : public IAsyncTask
+	{
+	private:
+		const uint2		_cell;
+		const uint		_level;
+		HeightMap_t		_result;
+
+	public:
+		LargeTask3 (const uint2 &cell, uint level) :
+			IAsyncTask{ EThread::Worker },
+			_cell{ cell }, _level{ level }, _result{ MakeRC<HeightMap>() }
+		{}
+
+	private:
+		void Run () override
+		{
+			if ( _level < max_levels2 )
+			{
+				Scheduler().Run<LargeTask3>( Tuple{_cell * 2 + uint2(0,0), _level+1} );
 			}
 
-			AE_LOGI( "Total time: "s << ToString( TimePoint_t::clock::now() - start_time ) << ", final jobs: " << ToString( required ) );
+			const TimePoint_t	start	= TimePoint_t::clock::now();
+			const double2		size	{ Pow( 0.5, double(_level) )};
+			const double2		offset	= double2(_cell) * size;
+
+			for (uint y = 0; y < HeightMap::H; ++y)
+			for (uint x = 0; x < HeightMap::W; ++x)
+			{
+				double2	c = offset + (double2(x, y) / double2(HeightMap::W, HeightMap::H)) * size;
+				_result->data[x + y * HeightMap::W] = ubyte( noise.octaveNoise( c.x, c.y, octave_count ) * 255.0 );
+			}
+			
+			task_payload_time.fetch_add( (TimePoint_t::clock::now() - start).count(), EMemoryOrder::Relaxed );
+			task_counter.fetch_add( 1, EMemoryOrder::Relaxed );
+			
+			if ( not (_level < max_levels2) )
+			{
+				Scheduler().Run<FinalTask>();
+			}
+		}
+
+		void OnCancel () override
+		{
+			TEST(false);
+		}
+	};
+
+	static void  Threading_Test3 ()
+	{
+		task_complete.store( 0 );
+		task_payload_time.store( 0 );
+		task_counter.store( 0 );
+		
+		const usize			num_threads = std::thread::hardware_concurrency()-1;
+		LocalTaskScheduler	scheduler	{num_threads};
+		{
+			for (usize i = 0; i < num_threads; ++i) {
+				scheduler->AddThread( MakeRC<WorkerThread>(
+					WorkerThread::ThreadMask{}.set(uint(WorkerThread::EThread::Worker)),
+					nanoseconds{i > 0 ? 1 : 0},
+					nanoseconds{i > 0 ? 10 : 0} // only one worker thread should never sleep
+				));
+			}
+
+			const auto	start_time	= TimePoint_t::clock::now();
+			const uint	grid_size	= std::thread::hardware_concurrency() * 16;
+		
+			for (uint y = 0; y < grid_size; ++y)
+			for (uint x = 0; x < grid_size; ++x)
+				scheduler->Run<LargeTask3>( Tuple{uint2{x,y}, 0u} );
+			
+			const ulong	required = grid_size * grid_size;
+			
+			for (;;)
+			{
+				if ( task_complete.load( EMemoryOrder::Relaxed ) >= required )
+					break;
+
+				scheduler->ProcessTask( EThread::Worker, 0 );
+			}
+			
+			const nanoseconds	total_time	= TimePoint_t::clock::now() - start_time;
+			const nanoseconds	total_time2	= total_time * (num_threads + 1);
+			const double		overhead	= double(total_time2.count() - task_payload_time.load()) / double(total_time2.count());
+			const ulong			task_count	= task_counter.load();
+
+			AE_LOGI( "Total time: "s << ToString( total_time ) <<
+					 ", final jobs: " << ToString( task_counter ) <<
+					 ", task time: " << ToString( nanoseconds{ task_payload_time.load() / task_counter }) <<
+					 ", overhead: " << ToString( overhead * 100.0, 2 ) << " %" );
 		}
 	}
 }
@@ -224,11 +351,19 @@ extern void PerfTest_Threading ()
 {
 	for (uint i = 0; i < 4; ++i) {
 		Threading_Test1();
+		std::this_thread::sleep_for( seconds{1} );
 	}
 
 	AE_LOGI( "------------------------" );
 	for (uint i = 0; i < 4; ++i) {
 		Threading_Test2();
+		std::this_thread::sleep_for( seconds{1} );
+	}
+	
+	AE_LOGI( "------------------------" );
+	for (uint i = 0; i < 4; ++i) {
+		Threading_Test3();
+		std::this_thread::sleep_for( seconds{1} );
 	}
 
 	AE_LOGI( "PerfTest_Threading - passed" );

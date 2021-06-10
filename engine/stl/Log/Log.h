@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -32,7 +32,7 @@ namespace AE::STL
 
 #define AE_PRIVATE_LOGX( _level_, _msg_, _file_, _line_ ) \
 	BEGIN_ENUM_CHECKS() \
-	{switch ( ::AE::STL::Logger::_level_( (_msg_), (AE_FUNCTION_NAME), (_file_), (_line_) ) ) \
+	{switch ( ::AE::STL::Logger::_level_( (_msg_), (AE_FUNCTION_NAME), (_file_), (_line_) )) \
 	{ \
 		case ::AE::STL::Logger::EResult::Continue :	break; \
 		case ::AE::STL::Logger::EResult::Break :	AE_PRIVATE_BREAK_POINT();	break; \

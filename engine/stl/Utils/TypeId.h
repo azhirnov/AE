@@ -1,10 +1,10 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "stl/Common.h"
 
-namespace AE::STL::_ae_stl_hidden_
+namespace AE::STL::_hidden_
 {
 	//
 	// Static Type ID
@@ -13,10 +13,10 @@ namespace AE::STL::_ae_stl_hidden_
 	struct StaticTypeID final
 	{
 	private:
-		size_t	_value;
+		usize	_value;
 
 	public:
-		constexpr StaticTypeID () : _value{~size_t(0)} {}
+		constexpr StaticTypeID () : _value{~usize(0)} {}
 
 		ND_ constexpr bool  operator == (StaticTypeID<UID> rhs) const	{ return _value == rhs._value; }
 		ND_ constexpr bool  operator != (StaticTypeID<UID> rhs) const	{ return _value != rhs._value; }
@@ -25,7 +25,7 @@ namespace AE::STL::_ae_stl_hidden_
 		ND_ constexpr bool  operator >= (StaticTypeID<UID> rhs) const	{ return _value >= rhs._value; }
 		ND_ constexpr bool  operator <= (StaticTypeID<UID> rhs) const	{ return _value <= rhs._value; }
 
-		ND_ constexpr size_t		Get ()	const						{ return _value; }
+		ND_ constexpr usize			Get ()	const						{ return _value; }
 		ND_ constexpr const char *	Name ()	const						{ return ""; }
 	};
 	
@@ -33,7 +33,7 @@ namespace AE::STL::_ae_stl_hidden_
 	struct BaseStaticTypeIdOf
 	{
 	protected:
-		static inline size_t	_counter = 0;
+		static inline usize	_counter = 0;
 	};
 
 	template <typename T, uint UID>
@@ -41,7 +41,7 @@ namespace AE::STL::_ae_stl_hidden_
 	{
 		ND_ static StaticTypeID<UID>  Get ()
 		{
-			static size_t id = BaseStaticTypeIdOf<UID>::_counter++;
+			static usize id = BaseStaticTypeIdOf<UID>::_counter++;
 			return BitCast< StaticTypeID<UID> >( id );
 		}
 	};
@@ -50,14 +50,14 @@ namespace AE::STL::_ae_stl_hidden_
 	template <typename T, uint UID>	struct StaticTypeIdOf< volatile T,       UID > final : StaticTypeIdOf<T, UID> {};
 	template <typename T, uint UID>	struct StaticTypeIdOf< const volatile T, UID > final : StaticTypeIdOf<T, UID> {};
 
-}	// AE::STL::_ae_stl_hidden_
+}	// AE::STL::_hidden_
 
 namespace std
 {
 	template <uint32_t UID>
-	struct hash< AE::STL::_ae_stl_hidden_::StaticTypeID<UID> >
+	struct hash< AE::STL::_hidden_::StaticTypeID<UID> >
 	{
-		ND_ size_t  operator () (const AE::STL::_ae_stl_hidden_::StaticTypeID<UID> &value) const
+		ND_ size_t  operator () (const AE::STL::_hidden_::StaticTypeID<UID> &value) const
 		{
 			return value.Get();
 		}
@@ -67,7 +67,7 @@ namespace std
 //-----------------------------------------------------------------------------
 
 	
-namespace AE::STL::_ae_stl_hidden_
+namespace AE::STL::_hidden_
 {
 	//
 	// STD Type ID
@@ -104,14 +104,14 @@ namespace AE::STL::_ae_stl_hidden_
 		}
 	};
 
-}	// AE::STL::_ae_stl_hidden_
+}	// AE::STL::_hidden_
 
 namespace std
 {
 	template <>
-	struct hash< AE::STL::_ae_stl_hidden_::StdTypeID >
+	struct hash< AE::STL::_hidden_::StdTypeID >
 	{
-		ND_ size_t  operator () (const AE::STL::_ae_stl_hidden_::StdTypeID &value) const
+		ND_ size_t  operator () (const AE::STL::_hidden_::StdTypeID &value) const
 		{
 			return std::hash< std::type_index >{}( value.Get() );
 		}
@@ -123,7 +123,7 @@ namespace std
 #if 0
 namespace AE::STL
 {
-	using TypeId = _ae_stl_hidden_::StaticTypeID<0>;
+	using TypeId = STL::_hidden_::StaticTypeID<0>;
 	
 /*
 =================================================
@@ -133,7 +133,7 @@ namespace AE::STL
 	template <typename T>
 	ND_ forceinline static TypeId  TypeIdOf ()
 	{
-		return _ae_stl_hidden_::StaticTypeIdOf<T,0>::Get();
+		return STL::_hidden_::StaticTypeIdOf<T,0>::Get();
 	}
 
 	template <typename T>
@@ -147,7 +147,7 @@ namespace AE::STL
 #else
 namespace AE::STL
 {
-	using TypeId = _ae_stl_hidden_::StdTypeID;
+	using TypeId = STL::_hidden_::StdTypeID;
 /*
 =================================================
 	TypeIdOf
@@ -156,7 +156,7 @@ namespace AE::STL
 	template <typename T>
 	ND_ forceinline static TypeId  TypeIdOf ()
 	{
-		return _ae_stl_hidden_::StdTypeIdOf<T>::Get();
+		return STL::_hidden_::StdTypeIdOf<T>::Get();
 	}
 
 	template <typename T>

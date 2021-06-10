@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Platforms/WindowsHeader.h"
 #include <curl/curl.h>
@@ -21,15 +21,15 @@ namespace
 	UploadCallback
 =================================================
 */
-	static size_t  UploadCallback (char *buffer, size_t size, size_t nitems, void *userdata)
+	static usize  UploadCallback (char *buffer, usize size, usize nitems, void *userdata)
 	{
 		MemRStream*	stream = Cast<MemRStream>( userdata );
 
 		if ( not stream or not stream->IsOpen() )
 			return CURLE_ABORTED_BY_CALLBACK;
 
-		size_t	required	= size * nitems;
-		size_t	written		= size_t( stream->Read2( OUT buffer, BytesU{required} ));
+		usize	required	= size * nitems;
+		usize	written		= usize( stream->Read2( OUT buffer, Bytes{required} ));
 		return written;
 	}
 
@@ -43,8 +43,8 @@ namespace
 	{
 		AE_LOGI( "Sending crash report to '"s << url << "' ..." );
 
-		SharedPtr<MemRStream>	rstream;
-		SharedPtr<MemWStream>	wstream		= MakeShared<MemWStream>();
+		RC<MemRStream>			rstream;
+		RC<MemWStream>			wstream		= MakeRC<MemWStream>();
 		BrotliWStream::Config	brotli_cfg;	brotli_cfg.quality = 0.7f;
 		CrashFileHeader			header		{};
 
@@ -52,12 +52,12 @@ namespace
 		header.magic	= CrashFileHeader::MAGIC;
 
 		// placeholder for header
-		CHECK_ERR( wstream->Write( &header, BytesU::SizeOf(header) ));
+		CHECK_ERR( wstream->Write( &header, Bytes::SizeOf(header) ));
 
 		// compress
 		{
 			BrotliWStream	compressed	{ wstream, brotli_cfg };
-			uint8_t			buf[ 1u << 12 ];
+			ubyte			buf[ 1u << 12 ];
 
 			// write user info
 			{
@@ -83,7 +83,7 @@ namespace
 
 				for (;;)
 				{
-					BytesU	size = rfile.Read2( buf, BytesU::SizeOf( buf ));
+					Bytes	size = rfile.Read2( buf, Bytes::SizeOf( buf ));
 					if ( size == 0_b )
 						break;
 
@@ -102,7 +102,7 @@ namespace
 
 					for (;;)
 					{
-						BytesU	size = rfile.Read2( buf, BytesU::SizeOf( buf ));
+						Bytes	size = rfile.Read2( buf, Bytes::SizeOf( buf ));
 						if ( size == 0_b )
 							break;
 
@@ -121,9 +121,9 @@ namespace
 
 		// update header
 		CHECK_ERR( wstream->SeekSet( 0_b ));
-		CHECK_ERR( wstream->Write( &header, BytesU::SizeOf(header) ));
+		CHECK_ERR( wstream->Write( &header, Bytes::SizeOf(header) ));
 
-		rstream = MakeShared<MemRStream>( wstream->GetData() );
+		rstream = MakeRC<MemRStream>( wstream->GetData() );
 
 	
 		CURL*	curl = curl_easy_init();

@@ -17,8 +17,8 @@ namespace AE::ECS::Components
 		using Data_t = StaticArray< uint, Renderer::Config::ObjectPushConstSize / 4 >;
 
 		uint16_t	stageFlags	= 0;
-		uint8_t		offset		= 0;	// multiple of 4
-		uint8_t		size		= 0;	// multiple of 4
+		ubyte		offset		= 0;	// multiple of 4
+		ubyte		size		= 0;	// multiple of 4
 		Data_t		values		= {};
 	};
 

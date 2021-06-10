@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -89,24 +89,22 @@ namespace {
 */
 	VkMemoryPropertyFlags  ConvertToMemoryProperties (EMemoryType memType)
 	{
-		const EMemoryType		values	= EMemoryType(memType);
-		VkMemoryPropertyFlags	flags	= 0;
+		VkMemoryPropertyFlags	flags = Zero;
 
-		for (EMemoryType t = EMemoryType(1); t <= memType; t = EMemoryType(uint(t) << 1)) 
+		while ( memType != Zero )
 		{
-			if ( not AllBits( values, t ) )
-				continue;
+			EMemoryType	t = ExtractBit( INOUT memType );
 
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
 			{
-				case EMemoryType::DeviceLocal :		flags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;		break;
-				case EMemoryType::Transient :		flags |= VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;	break;
+				case EMemoryType::DeviceLocal :		flags |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;											break;
+				case EMemoryType::Transient :		flags |= VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;										break;
 				case EMemoryType::HostCocherent :	flags |= VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;	break;
 				case EMemoryType::HostCached :		flags |= VK_MEMORY_PROPERTY_HOST_CACHED_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;		break;
 				case EMemoryType::Dedicated :
 				case EMemoryType::_HostVisible :
-				case EMemoryType::Shared :
+				case EMemoryType::Unified :
 				case EMemoryType::Unknown :
 				default :							break;
 			}
@@ -127,7 +125,7 @@ namespace {
 	VUniMemAllocator::VUniMemAllocator (const VDevice &dev) :
 		_device{ dev },		_allocator{ null }
 	{
-		CHECK( _CreateAllocator( OUT _allocator ) );
+		CHECK( _CreateAllocator( OUT _allocator ));
 	}
 	
 /*
@@ -162,11 +160,8 @@ namespace {
 	AllocForImage
 =================================================
 */
-	bool VUniMemAllocator::AllocForImage (const NativeImageHandle_t &imageHandle, const ImageDesc &desc, OUT Storage_t &data)
+	bool VUniMemAllocator::AllocForImage (VkImage image, const ImageDesc &desc, OUT Storage_t &data)
 	{
-		auto*	image_ptr = UnionGetIf<ImageVk_t>( &imageHandle );
-		CHECK_ERR( image_ptr and *image_ptr );
-
 		VmaAllocationCreateInfo		info = {};
 		info.flags			= ConvertToMemoryFlags( desc.memType );
 		info.usage			= ConvertToMemoryUsage( desc.memType );
@@ -176,8 +171,7 @@ namespace {
 		info.pool			= VK_NULL_HANDLE;
 		info.pUserData		= null;
 
-		VkImage			image	= BitCast<VkImage>( *image_ptr );
-		VmaAllocation	mem		= null;
+		VmaAllocation	mem	= null;
 		VK_CHECK( vmaAllocateMemoryForImage( _allocator, image, &info, OUT &mem, null ));
 
 		VK_CHECK( vmaBindImageMemory( _allocator, mem, image ));
@@ -191,11 +185,8 @@ namespace {
 	AllocForBuffer
 =================================================
 */
-	bool VUniMemAllocator::AllocForBuffer (const NativeBufferHandle_t &bufferHandle, const BufferDesc &desc, OUT Storage_t &data)
+	bool VUniMemAllocator::AllocForBuffer (VkBuffer buffer, const BufferDesc &desc, OUT Storage_t &data)
 	{
-		auto*	buffer_ptr = UnionGetIf<BufferVk_t>( &bufferHandle );
-		CHECK_ERR( buffer_ptr and *buffer_ptr );
-
 		VmaAllocationCreateInfo		info = {};
 		info.flags			= ConvertToMemoryFlags( desc.memType );
 		info.usage			= ConvertToMemoryUsage( desc.memType );
@@ -205,8 +196,7 @@ namespace {
 		info.pool			= VK_NULL_HANDLE;
 		info.pUserData		= null;
 
-		VkBuffer		buffer	= BitCast<VkBuffer>( *buffer_ptr );
-		VmaAllocation	mem		= null;
+		VmaAllocation	mem	= null;
 		VK_CHECK( vmaAllocateMemoryForBuffer( _allocator, buffer, &info, OUT &mem, null ));
 
 		VK_CHECK( vmaBindBufferMemory( _allocator, mem, buffer ));
@@ -276,7 +266,7 @@ namespace {
 	GetMemoryInfo
 =================================================
 */
-	bool VUniMemAllocator::GetInfo (const Storage_t &data, OUT NativeMemInfo_t &outInfo) const
+	bool VUniMemAllocator::GetInfo (const Storage_t &data, OUT VulkanMemoryObjInfo &outInfo) const
 	{
 		VmaAllocation		mem			= _CastStorage( data )->allocation;
 		VmaAllocationInfo	alloc_info	= {};
@@ -285,13 +275,11 @@ namespace {
 		const auto&		mem_props = _device.GetProperties().memoryProperties;
 		ASSERT( alloc_info.memoryType < mem_props.memoryTypeCount );
 
-		auto&	info = outInfo.emplace<VulkanMemoryObjInfo>();
-
-		info.memory		= BitCast<DeviceMemoryVk_t>( alloc_info.deviceMemory );
-		info.flags		= BitCast<MemoryPropertyVk_t>( mem_props.memoryTypes[ alloc_info.memoryType ].propertyFlags );
-		info.offset		= BytesU(alloc_info.offset);
-		info.size		= BytesU(alloc_info.size);
-		info.mappedPtr	= alloc_info.pMappedData;
+		outInfo.memory		= alloc_info.deviceMemory;
+		outInfo.flags		= VkMemoryPropertyFlagBits(mem_props.memoryTypes[ alloc_info.memoryType ].propertyFlags);
+		outInfo.offset		= Bytes(alloc_info.offset);
+		outInfo.size		= Bytes(alloc_info.size);
+		outInfo.mappedPtr	= alloc_info.pMappedData;
 		return true;
 	}
 

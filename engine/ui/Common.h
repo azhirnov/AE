@@ -7,8 +7,6 @@
 
 #include "threading/Primitives/DataRaceCheck.h"
 
-#include "graphics/Canvas/Canvas.h"
-#include "graphics/Canvas/Primitives.h"
 #include "graphics/Font/VectorFont.h"
 
 #include "platform/Public/InputEventQueue.h"

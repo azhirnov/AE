@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "platform/Public/IWindow.h"
 #include "platform/Public/IApplication.h"
@@ -9,6 +9,7 @@ using namespace AE::App;
 # include "graphics/Vulkan/VDevice.h"
 # include "graphics/Vulkan/VSwapchain.h"
 using namespace AE::Graphics;
+
 
 extern void Test_VulkanSwapchain (IApplication &app, IWindow &wnd)
 {
@@ -32,10 +33,5 @@ extern void Test_VulkanSwapchain (IApplication &app, IWindow &wnd)
 
 	AE_LOGI( "Test_VulkanSwapchain - passed" );
 }
-
-#else
-
-extern void Test_VulkanSwapchain (IApplication &, IWindow &)
-{}
 
 #endif	// AE_ENABLE_VULKAN

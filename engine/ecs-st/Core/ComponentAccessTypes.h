@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -17,7 +17,7 @@ namespace AE::ECS
 	public:
 		explicit WriteAccess (T* elems) : _elements{ elems } { ASSERT( _elements ); }
 
-		ND_ T&  operator [] (size_t i)	const	{ return _elements[i]; }
+		ND_ T&  operator [] (usize i)	const	{ return _elements[i]; }
 	};
 
 
@@ -31,7 +31,7 @@ namespace AE::ECS
 	public:
 		explicit ReadAccess (T const* elems) : _elements{ elems } { ASSERT( _elements ); }
 
-		ND_ T const&  operator [] (size_t i)	const	{ return _elements[i]; }
+		ND_ T const&  operator [] (usize i)	const	{ return _elements[i]; }
 	};
 	
 
@@ -45,7 +45,7 @@ namespace AE::ECS
 	public:
 		explicit OptionalWriteAccess (T* elems) : _elements{ elems } {}
 
-		ND_ T&  operator [] (size_t i)	const	{ ASSERT( _elements != null ); return _elements[i]; }
+		ND_ T&  operator [] (usize i)	const	{ ASSERT( _elements != null ); return _elements[i]; }
 		ND_ explicit operator bool ()	const	{ return _elements != null; }
 	};
 
@@ -60,7 +60,7 @@ namespace AE::ECS
 	public:
 		explicit OptionalReadAccess (T const* elems) : _elements{ elems } {}
 
-		ND_ T const&  operator [] (size_t i)	const	{ ASSERT( _elements != null ); return _elements[i]; }
+		ND_ T const&  operator [] (usize i)	const	{ ASSERT( _elements != null ); return _elements[i]; }
 		ND_ explicit operator bool ()			const	{ return _elements != null; }
 	};
 	

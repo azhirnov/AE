@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "scripting/Impl/ScriptEngine.h"
 #include "stl/Algorithms/StringUtils.h"
@@ -112,7 +112,7 @@ namespace AE::Scripting
 		}
 		AS_CALL_R( module->Build() );
 
-		return ScriptModulePtr{ New<ScriptModule>( module.release() )};
+		return ScriptModulePtr{ new ScriptModule{ module.release() }};
 	}
 	
 /*
@@ -179,12 +179,12 @@ namespace AE::Scripting
 		StringView	msg_str		= msg->message;
 		StringView	code_mark	= "(Code: ";
 
-		if ( size_t pos = msg_str.find( code_mark ); pos != StringView::npos )
+		if ( usize pos = msg_str.find( code_mark ); pos != StringView::npos )
 		{
-			const size_t	begin	= pos + code_mark.length();
+			const usize	begin	= pos + code_mark.length();
 			StringView		code	= msg_str.substr( begin );
 			
-			//if ( code.Find( ')', OUT pos ) )
+			//if ( code.Find( ')', OUT pos ))
 			//	code = code.SubString( 0, pos );
 
 			const int	int_code = std::strtol( NtStringView{code}.c_str(), null, 0 );

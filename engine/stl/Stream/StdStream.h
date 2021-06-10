@@ -1,7 +1,8 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
+#include "stl/Math/BitMath.h"
 #include "stl/Stream/Stream.h"
 #include <streambuf>
 
@@ -24,17 +25,17 @@ namespace AE::STL
 		using off_type	= typename Base_t::off_type;
 
 	private:
-		static constexpr BytesU	charSoze = SizeOf<CharT>;
+		static constexpr Bytes	charSoze = SizeOf<CharT>;
 
 
 	// variables
 	private:
-		SharedPtr<RStream>	_src;
+		RC<RStream>	_src;
 
 
 	// methods
 	public:
-		explicit StreambufWrap (const SharedPtr<RStream> &src) : _src{src} {}
+		explicit StreambufWrap (const RC<RStream> &src) : _src{src} {}
 
 
 	protected:
@@ -66,34 +67,36 @@ namespace AE::STL
 		std::streamsize  xsgetn (char_type* s, std::streamsize count) override
 		{
 			if ( _src and _src->IsOpen() )
-				return std::streamsize(_src->Read2( s, charSoze * uint64_t(count) ) / charSoze);
+				return std::streamsize(_src->Read2( s, charSoze * ulong(count) ) / charSoze);
 			else
 				return 0;
 		}
 		
 		pos_type  seekoff (off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which) override
 		{
+			Unused( which );
+
 			ASSERT( AllBits( which, std::ios_base::in ));	// only 'in' is supported
 			const auto	err = pos_type(off_type(-1));
 
 			if ( _src and _src->IsOpen() )
 			{
-				BytesU	new_pos;
+				Bytes	new_pos;
 				switch ( dir )
 				{
-					case std::ios_base::beg :	new_pos = BytesU{CheckCast<uint64_t>(off)};		break;
+					case std::ios_base::beg :	new_pos = Bytes{CheckCast<ulong>(off)};		break;
 					case std::ios_base::end :	new_pos = _src->Size() - off;					break;
 					case std::ios_base::cur :	new_pos = _src->Position() + off;				break;
 					default :					new_pos = ~0_b;									break;
 				}
 
 				if ( _src->SeekSet( new_pos ))
-					return pos_type(size_t( new_pos ));
+					return pos_type(usize( new_pos ));
 			}
 			return err;
 		}
 
-		pos_type  seekpos (pos_type pos, std::ios_base::openmode which)
+		pos_type  seekpos (pos_type pos, std::ios_base::openmode which) override
 		{
 			return seekoff( pos - pos_type(off_type(0)), std::ios_base::beg, which );
 		}

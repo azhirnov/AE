@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -16,7 +16,7 @@ namespace AE::STL
 	// types
 	private:
 		using StString_t	= FixedString<64>;
-		using UniqueIDs_t	= HashMultiMap< size_t, StString_t >;
+		using UniqueIDs_t	= HashMultiMap< usize, StString_t >;
 		
 		struct Info
 		{
@@ -40,11 +40,11 @@ namespace AE::STL
 		~NamedID_HashCollisionCheck ();
 		
 		// require write lock
-		template <size_t Size, uint UID, bool Optimize, uint Seed>
+		template <usize Size, uint UID, bool Optimize, uint Seed>
 		void  Add (const NamedID<Size, UID, Optimize, Seed> &id);
 		
 		// require read lock
-		template <size_t Size, uint UID, bool Optimize, uint Seed>
+		template <usize Size, uint UID, bool Optimize, uint Seed>
 		ND_ uint  RecalculateSeed (const NamedID<Size, UID, Optimize, Seed> &);
 
 		ND_ bool  HasCollisions () const;
@@ -59,7 +59,7 @@ namespace AE::STL
 	Add
 =================================================
 */
-	template <size_t Size, uint UID, bool Optimize, uint Seed>
+	template <usize Size, uint UID, bool Optimize, uint Seed>
 	inline void  NamedID_HashCollisionCheck::Add (const NamedID<Size, UID, Optimize, Seed> &id)
 	{
 		if constexpr( not Optimize )
@@ -67,7 +67,7 @@ namespace AE::STL
 			STATIC_ASSERT( Size <= StString_t::capacity() );
 
 			auto&	info	 = _idMap.insert({ UID, Info{Seed} }).first->second;
-			size_t	key		 = size_t(id.GetHash());
+			usize	key		 = usize(id.GetHash());
 			auto	iter	 = info.data.find( key );
 			bool	inserted = false;
 
@@ -91,7 +91,7 @@ namespace AE::STL
 	RecalculateSeed
 =================================================
 */
-	template <size_t Size, uint UID, bool Optimize, uint Seed>
+	template <usize Size, uint UID, bool Optimize, uint Seed>
 	inline uint  NamedID_HashCollisionCheck::RecalculateSeed (const NamedID<Size, UID, Optimize, Seed> &)
 	{
 		auto	iter = _idMap.find( UID );

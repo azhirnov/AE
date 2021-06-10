@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	UMax constant is maximum value of unsigned integer type.
 */
@@ -11,7 +11,7 @@ namespace AE::STL
 	//
 	// UMax
 	//
-	namespace _ae_stl_hidden_
+	namespace _hidden_
 	{
 		struct _UMax
 		{
@@ -35,14 +35,14 @@ namespace AE::STL
 			}
 		};
 	}
-	static constexpr _ae_stl_hidden_::_UMax		UMax {};
+	static constexpr STL::_hidden_::_UMax		UMax {};
 
 
 	
 	//
 	// Zero
 	//
-	namespace _ae_stl_hidden_
+	namespace _hidden_
 	{
 		struct _Zero
 		{
@@ -90,7 +90,7 @@ namespace AE::STL
 			}
 		};
 	}
-	static constexpr _ae_stl_hidden_::_Zero		Zero {};
+	static constexpr STL::_hidden_::_Zero		Zero {};
 
 
 
@@ -120,6 +120,46 @@ namespace AE::STL
 			// fail to compile
 		}
 	};
+
+
+
+	//
+	// Boolean with comment
+	//
+	namespace _hidden_
+	{
+		struct BoolType
+		{
+		private:
+			bool	_value;
+
+		public:
+			constexpr BoolType (bool value) : _value{ value } {}
+			constexpr BoolType (const BoolType &other) : _value{ other._value } {}
+
+			constexpr BoolType& operator = (const BoolType &rhs)	{ _value = rhs._value;  return *this; }
+			constexpr BoolType& operator = (bool rhs)				{ _value = rhs;  return *this; }
+
+			ND_ bool*		operator & ()							{ return &_value; }
+			ND_ bool const*	operator & ()					const	{ return &_value; }
+
+			ND_ constexpr operator bool ()					const	{ return _value; }
+		};
+
+		template <bool Value>
+		struct NamedBoolean
+		{
+			constexpr NamedBoolean ()						{}
+			explicit constexpr NamedBoolean (const char*)	{}
+
+			ND_ constexpr operator bool () const			{ return Value; }
+			ND_ constexpr operator BoolType () const		{ return BoolType{Value}; }
+		};
+	}
+
+	using False = STL::_hidden_::NamedBoolean<false>;
+	using True  = STL::_hidden_::NamedBoolean<true>;
+	using Bool  = STL::_hidden_::BoolType;
 
 
 }	// AE::STL

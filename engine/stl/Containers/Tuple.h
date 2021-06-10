@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -30,13 +30,13 @@ namespace AE::STL
 		constexpr Self&	operator = (Self &&) = default;
 
 		template <typename ...UTypes>
-		constexpr explicit Tuple (UTypes&& ...args) : Base_t{ std::forward<UTypes>(args)... } {}
+		constexpr explicit Tuple (UTypes&& ...args) : Base_t{ FwdArg<UTypes>(args)... } {}
 
 		template <typename ...UTypes>
 		constexpr Tuple (const Tuple<UTypes...> &other) : Base_t{ other.AsBase() } {}
 
 		template <typename ...UTypes>
-		constexpr Tuple (Tuple<UTypes...>&& other) : Base_t{ std::move(other).AsBase() } {}
+		constexpr Tuple (Tuple<UTypes...>&& other) : Base_t{ RVRef(other).AsBase() } {}
 
 		ND_ constexpr bool  operator == (const Self &rhs)	const	{ return Base_t::operator == ( rhs ); }
 		ND_ constexpr bool  operator != (const Self &rhs)	const	{ return Base_t::operator != ( rhs ); }
@@ -52,32 +52,32 @@ namespace AE::STL
 		ND_ constexpr T const&			Get ()	const&	{ return std::get<T>( *this ); }
 		
 		template <typename T>
-		ND_ constexpr T &&				Get () 	&&		{ return std::get<T>( std::move(*this) ); }
+		ND_ constexpr T &&				Get () 	&&		{ return std::get<T>( RVRef(*this) ); }
 
-		template <size_t I>
+		template <usize I>
 		ND_ constexpr decltype(auto)	Get ()	&		{ return std::get<I>( *this ); }
 		
-		template <size_t I>
+		template <usize I>
 		ND_ constexpr decltype(auto)	Get ()	const&	{ return std::get<I>( *this ); }
 		
-		template <size_t I>
-		ND_ constexpr decltype(auto)	Get ()	&&		{ return std::get<I>( std::move(*this) ); }
+		template <usize I>
+		ND_ constexpr decltype(auto)	Get ()	&&		{ return std::get<I>( RVRef(*this) ); }
 
-		ND_ constexpr size_t			Count () const	{ return sizeof... (Types); }
+		ND_ constexpr usize				Count () const	{ return sizeof... (Types); }
 
 		ND_ constexpr Base_t &			AsBase ()	&	{ return static_cast<Base_t &>(*this); }
-		ND_ constexpr Base_t &&			AsBase ()	&&	{ return static_cast<Base_t &&>( std::move(*this) ); }
+		ND_ constexpr Base_t &&			AsBase ()	&&	{ return static_cast<Base_t &&>( RVRef(*this) ); }
 
 		template <typename Fn>
 		constexpr decltype(auto)  Apply (Fn &&fn)
 		{
-			return std::apply( std::forward<Fn>(fn), static_cast<Base_t &>(*this) );
+			return std::apply( FwdArg<Fn>(fn), static_cast<Base_t &>(*this) );
 		}
 
 		template <typename Fn>
 		constexpr decltype(auto)  Apply (Fn &&fn) const
 		{
-			return std::apply( std::forward<Fn>(fn), static_cast<const Base_t &>(*this) );
+			return std::apply( FwdArg<Fn>(fn), static_cast<const Base_t &>(*this) );
 		}
 	};
 
@@ -97,8 +97,8 @@ namespace AE::STL
 	template <typename ...Types>
 	ND_ forceinline constexpr auto  MakeTuple (Types&& ...args)
 	{
-		using Result_t = Tuple< Unreference< std::decay_t< Types >>... >;
-		return Result_t{ std::forward<Types>(args)... };
+		using Result_t = Tuple< RemoveReference< std::decay_t< Types >>... >;
+		return Result_t{ FwdArg<Types>(args)... };
 	}
 
 }	// AE::STL

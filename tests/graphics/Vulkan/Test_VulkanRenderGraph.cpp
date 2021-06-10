@@ -1,16 +1,13 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
-# include "Test_VulkanRenderGraph.h"
-
-# include "graphics/Vulkan/RenderGraph/VRenderGraph.h"
-# include "graphics/Vulkan/VResourceManager.h"
-
 # include "stl/Algorithms/StringUtils.h"
-# include "stl/Utils/FileSystem.h"
 # include "stl/Platforms/PlatformUtils.h"
 # include "stl/Stream/FileStream.h"
+# include "stl/Algorithms/StringParser.h"
+
+# include "Test_VulkanRenderGraph.h"
 
 # include "threading/TaskSystem/WorkerThread.h"
 
@@ -19,6 +16,7 @@
 using namespace AE::App;
 using namespace AE::Threading;
 
+static constexpr bool	UpdateAllReferenceDumps = true;
 
 /*
 =================================================
@@ -39,18 +37,13 @@ extern void Test_VulkanRenderGraph (IApplication &app, IWindow &wnd)
 =================================================
 */
 VRGTest::VRGTest () :
-	_vulkan{},
-	_swapchain{ _vulkan }
+	_vulkan{ True{"enable info log"} },
+	_swapchain{ _vulkan },
+	_refDumpPath{ AE_CURRENT_DIR "/Vulkan/ref" }
 {
-	_tests.emplace_back( &VRGTest::Test_Buffer );
-	_tests.emplace_back( &VRGTest::Test_Image );
+	_tests.emplace_back( &VRGTest::Test_LocalResManager );
+	_tests.emplace_back( &VRGTest::Test_LocalResRangesManager );
 	_tests.emplace_back( &VRGTest::Test_CopyBuffer1 );
-	_tests.emplace_back( &VRGTest::Test_CopyBuffer2 );
-	_tests.emplace_back( &VRGTest::Test_CopyImage1 );
-	_tests.emplace_back( &VRGTest::Test_VirtualRes1 );
-	_tests.emplace_back( &VRGTest::Test_Draw1 );
-	_tests.emplace_back( &VRGTest::Test_DrawAsync1 );
-	_tests.emplace_back( &VRGTest::Test_Compute1 );
 }
 
 /*
@@ -81,25 +74,34 @@ bool  VRGTest::_Create (IApplication &app, IWindow &wnd)
 	CHECK_ERR( _vulkan.CreateInstance( "TestApp", "AE", _vulkan.GetRecomendedInstanceLayers(), window_ext ));
 	CHECK_ERR( _vulkan.ChooseHighPerformanceDevice() );
 	CHECK_ERR( _vulkan.CreateLogicalDevice( Default ));
+	CHECK_ERR( _vulkan.CheckConstantLimits() );
 
 	// this is a test and the test should fail for any validation error
 	_vulkan.CreateDebugCallback( DefaultDebugMessageSeverity,
-								 [] (const VDeviceInitializer::DebugReport &rep) { CHECK_FATAL(not rep.isError); });
+								 [] (const VDeviceInitializer::DebugReport &rep) { AE_LOGI(rep.message);  CHECK_FATAL(not rep.isError); });
 
-	_resourceMngr.reset( New<VResourceManager>( _vulkan ));
-	CHECK_ERR( Cast<VResourceManager>(_resourceMngr)->Initialize() );
+	_AddVulkanHooks();
+
+	VRenderGraph::CreateInstance( _vulkan );
+
+	GraphicsCreateInfo	info;
+	info.maxFrames		= 2;
+	info.staging.readStaticSize .fill( 8_Mb );
+	info.staging.writeStaticSize.fill( 8_Mb );
+	info.staging.maxReadDynamicSize		= 0_b;
+	info.staging.maxWriteDynamicSize	= 0_b;
+
+	auto&	rg = RenderGraph();
+	CHECK_ERR( rg.Initialize( info ));
 	
 	CHECK_ERR( _swapchain.CreateSurface( wnd.GetNative() ));
-	CHECK_ERR( _swapchain.Create( _resourceMngr.get(), wnd.GetSurfaceSize() ));
+	CHECK_ERR( _swapchain.Create( &rg.GetResourceManager(), wnd.GetSurfaceSize() ));
 
-	_renderGraph.reset( New<VRenderGraph>( *Cast<VResourceManager>(_resourceMngr) ));
-	CHECK_ERR( Cast<VRenderGraph>(_renderGraph)->Initialize() );
-
-	CHECK_ERR( _CompilePipelines() );
-
+	//CHECK_ERR( _CompilePipelines() );
 
 	CHECK_ERR( Scheduler().Setup( 1 ));
-	Scheduler().AddThread( MakeShared<WorkerThread>() );
+	Scheduler().AddThread( MakeRC<WorkerThread>( WorkerThread::ThreadMask{}.set( uint(WorkerThread::EThread::Worker) ).set( uint(WorkerThread::EThread::Renderer) ),
+												 nanoseconds{1}, milliseconds{4}, "render thread" ));
 
 	return true;
 }
@@ -116,8 +118,8 @@ bool  VRGTest::_CompilePipelines ()
 
 	decltype(&CompilePipelines)		compile_pipelines = null;
 
-	Path	dll_path;
-	CHECK_ERR( FileSystem::Search( "PipelineCompiler.dll", 3, 3, OUT dll_path ));
+	Path	dll_path{ AE_PIPELINE_COMPILER_LIBRARY };
+	//CHECK_ERR( FileSystem::Search( CMAKE_INTDIR "/PipelineCompiler.dll", 3, 3, OUT dll_path ));
 
 	Library		lib;
 	CHECK_ERR( lib.Load( dll_path ));
@@ -146,10 +148,10 @@ bool  VRGTest::_CompilePipelines ()
 
 	CHECK_ERR( compile_pipelines( &info ));
 
-	auto	file = MakeShared<FileRStream>( output );
+	auto	file = MakeRC<FileRStream>( output );
 	CHECK_ERR( file->IsOpen() );
 
-	_pipelinePack = _resourceMngr->LoadPipelinePack( file );
+	_pipelinePack = RenderGraph().GetResourceManager().LoadPipelinePack( file );
 	CHECK_ERR( _pipelinePack );
 #endif
 
@@ -167,8 +169,12 @@ bool  VRGTest::_RunTests ()
 	{
 		if ( not _tests.empty() )
 		{
+			_EnableLogging( true );
+
 			TestFunc_t&	func	= _tests.front();
 			bool		passed	= (this->*func)();
+			
+			_EnableLogging( false );
 
 			_testsPassed += uint(passed);
 			_testsFailed += uint(not passed);
@@ -192,27 +198,96 @@ bool  VRGTest::_RunTests ()
 */
 void  VRGTest::_Destroy ()
 {
-	if ( _renderGraph )
-	{
-		Cast<VRenderGraph>(_renderGraph)->Deinitialize();
-		_renderGraph.reset();
-	}
+	_RemoveVulkanHooks();
 
-	_swapchain.Destroy( _resourceMngr.get() );
+	_swapchain.Destroy( &RenderGraph().GetResourceManager() );
 	_swapchain.DestroySurface();
 
-	if ( _resourceMngr )
-	{
-		_resourceMngr->ReleaseResource( _pipelinePack );
-
-		Cast<VResourceManager>(_resourceMngr)->Deinitialize();
-		_resourceMngr.reset();
-	}
+	RenderGraph().GetResourceManager().ReleaseResource( _pipelinePack );
+	VRenderGraph::DestroyInstance();
 
 	CHECK( _vulkan.DestroyLogicalDevice() );
 	CHECK( _vulkan.DestroyInstance() );
+}
 
-	Scheduler().Release();
+/*
+=================================================
+	_CompareDumps
+=================================================
+*/
+bool  VRGTest::_CompareDumps (StringView filename) const
+{
+	Path	fname = _refDumpPath;	fname.append( String{filename} << ".txt" );
+
+	String	right;
+	_GetLog( OUT right );
+		
+	// override dump
+	if ( UpdateAllReferenceDumps )
+	{
+		FileWStream		wfile{ fname };
+		CHECK_ERR( wfile.IsOpen() );
+		CHECK_ERR( wfile.Write( StringView{right} ));
+		return true;
+	}
+
+	// read from file
+	String	left;
+	{
+		FileRStream		rfile{ fname };
+		CHECK_ERR( rfile.IsOpen() );
+		CHECK_ERR( rfile.Read( usize(rfile.Size()), OUT left ));
+	}
+
+	usize		l_pos	= 0;
+	usize		r_pos	= 0;
+	uint2		line_number;
+	StringView	line_str[2];
+
+	const auto	LeftValid	= [&l_pos, &left ] ()	{ return l_pos < left.length(); };
+	const auto	RightValid	= [&r_pos, &right] ()	{ return r_pos < right.length(); };
+		
+	const auto	IsEmptyLine	= [] (StringView str)
+	{
+		for (auto& c : str) {
+			if ( c != '\n' and c != '\r' and c != ' ' and c != '\t' )
+				return false;
+		}
+		return true;
+	};
+
+
+	// compare line by line
+	for (; LeftValid() and RightValid(); )
+	{
+		// read left line
+		do {
+			StringParser::ReadLineToEnd( left, INOUT l_pos, OUT line_str[0] );
+			++line_number[0];
+		}
+		while ( IsEmptyLine( line_str[0] ) and LeftValid() );
+
+		// read right line
+		do {
+			StringParser::ReadLineToEnd( right, INOUT r_pos, OUT line_str[1] );
+			++line_number[1];
+		}
+		while ( IsEmptyLine( line_str[1] ) and RightValid() );
+
+		if ( line_str[0] != line_str[1] )
+		{
+			RETURN_ERR( "in: "s << filename << "\n\n"
+						<< "line mismatch:" << "\n(" << ToString( line_number[0] ) << "): " << line_str[0]
+						<< "\n(" << ToString( line_number[1] ) << "): " << line_str[1] );
+		}
+	}
+
+	if ( LeftValid() != RightValid() )
+	{
+		RETURN_ERR( "in: "s << filename << "\n\n" << "sizes of dumps are not equal!" );
+	}
+		
+	return true;
 }
 
 #endif	// AE_ENABLE_VULKAN

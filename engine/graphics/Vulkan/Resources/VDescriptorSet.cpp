@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -61,7 +61,7 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool  VDescriptorSet::Create (VResourceManager &resMngr, const VDescriptorSetLayout &dsLayout, bool quiet)
+	bool  VDescriptorSet::Create (VResourceManagerImpl &resMngr, const VDescriptorSetLayout &dsLayout, Bool quiet)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( not _descriptorSet.handle );
@@ -86,7 +86,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void  VDescriptorSet::Destroy (VResourceManager &resMngr)
+	void  VDescriptorSet::Destroy (VResourceManagerImpl &resMngr)
 	{
 		EXLOCK( _drCheck );
 
@@ -112,16 +112,16 @@ namespace AE::Graphics
 	IsAllResourcesAlive
 =================================================
 */
-	bool  VDescriptorSet::IsAllResourcesAlive (const VResourceManager &resMngr) const
+	bool  VDescriptorSet::IsAllResourcesAlive (const VResourceManagerImpl &resMngr) const
 	{
 		SHAREDLOCK( _drCheck );
 
 		struct Visitor
 		{
-			VResourceManager const&	resMngr;
+			VResourceManagerImpl const&	resMngr;
 			bool					alive	= true;
 			
-			Visitor (const VResourceManager &resMngr) : resMngr{resMngr}
+			Visitor (const VResourceManagerImpl &resMngr) : resMngr{resMngr}
 			{}
 
 			void operator () (const UniformName &, EDescriptorType, const DescriptorSet::Buffer &buf)
@@ -206,7 +206,7 @@ namespace AE::Graphics
 	_AddResource
 =================================================
 */
-	bool  VDescriptorSet::_AddResource (VResourceManager &resMngr, bool quiet, EDescriptorType type, INOUT DescriptorSet::Buffer &buf, INOUT UpdateDescriptors &list)
+	bool  VDescriptorSet::_AddResource (VResourceManagerImpl &resMngr, bool quiet, EDescriptorType type, INOUT DescriptorSet::Buffer &buf, INOUT UpdateDescriptors &list)
 	{
 		ASSERT( type == EDescriptorType::UniformBuffer or
 				type == EDescriptorType::StorageBuffer );
@@ -215,15 +215,8 @@ namespace AE::Graphics
 
 		for (uint i = 0; i < buf.elementCount; ++i)
 		{
-			auto&	elem = buf.elements[i];
-
-			if ( elem.bufferId.ResourceType() != GfxResourceID::EType::Buffer )
-			{
-				CHECK( not quiet and "buffer resource required" );
-				continue;
-			}
-
-			VBuffer const*	buffer = resMngr.GetResource( VBufferID{ elem.bufferId.Index(), elem.bufferId.Generation() });
+			const auto&		elem	= buf.elements[i];
+			VBuffer const*	buffer	= resMngr.GetResource( elem.bufferId );
 
 			if ( not buffer )
 			{
@@ -258,7 +251,7 @@ namespace AE::Graphics
 	_AddResource
 =================================================
 */
-	bool  VDescriptorSet::_AddResource (VResourceManager &resMngr, bool quiet, EDescriptorType type, INOUT DescriptorSet::TexelBuffer &texbuf, INOUT UpdateDescriptors &list)
+	bool  VDescriptorSet::_AddResource (VResourceManagerImpl &resMngr, bool quiet, EDescriptorType type, INOUT DescriptorSet::TexelBuffer &texbuf, INOUT UpdateDescriptors &list)
 	{
 		ASSERT( type == EDescriptorType::UniformTexelBuffer or
 				type == EDescriptorType::StorageTexelBuffer );
@@ -267,15 +260,8 @@ namespace AE::Graphics
 
 		for (uint i = 0; i < texbuf.elementCount; ++i)
 		{
-			auto&	elem = texbuf.elements[i];
-
-			if ( elem.bufferId.ResourceType() != GfxResourceID::EType::Buffer )
-			{
-				CHECK( not quiet and "buffer resource required" );
-				continue;
-			}
-
-			VBuffer const*	buffer = resMngr.GetResource( VBufferID{ elem.bufferId.Index(), elem.bufferId.Generation() });
+			const auto&		elem	= texbuf.elements[i];
+			VBuffer const*	buffer	= resMngr.GetResource( elem.bufferId );
 
 			if ( not buffer )
 			{
@@ -305,7 +291,7 @@ namespace AE::Graphics
 	_AddResource
 =================================================
 */
-	bool  VDescriptorSet::_AddResource (VResourceManager &resMngr, bool quiet, EDescriptorType type, INOUT DescriptorSet::Image &img, INOUT UpdateDescriptors &list)
+	bool  VDescriptorSet::_AddResource (VResourceManagerImpl &resMngr, bool quiet, EDescriptorType type, INOUT DescriptorSet::Image &img, INOUT UpdateDescriptors &list)
 	{
 		ASSERT( type == EDescriptorType::StorageImage or
 				type == EDescriptorType::SampledImage or
@@ -316,15 +302,8 @@ namespace AE::Graphics
 
 		for (uint i = 0; i < img.elementCount; ++i)
 		{
-			auto&	elem = img.elements[i];
-
-			if ( elem.imageId.ResourceType() != GfxResourceID::EType::Image )
-			{
-				CHECK( not quiet and "image resource required" );
-				continue;
-			}
-
-			VImage const*	image = resMngr.GetResource( VImageID{ elem.imageId.Index(), elem.imageId.Generation() });
+			auto&			elem	= img.elements[i];
+			VImage const*	image	= resMngr.GetResource( elem.imageId );
 
 			if ( not image )
 			{
@@ -358,7 +337,7 @@ namespace AE::Graphics
 	_AddResource
 =================================================
 */
-	bool  VDescriptorSet::_AddResource (VResourceManager &resMngr, bool quiet, EDescriptorType type, INOUT DescriptorSet::Texture &tex, INOUT UpdateDescriptors &list)
+	bool  VDescriptorSet::_AddResource (VResourceManagerImpl &resMngr, bool quiet, EDescriptorType type, INOUT DescriptorSet::Texture &tex, INOUT UpdateDescriptors &list)
 	{
 		ASSERT( type == EDescriptorType::CombinedImage );
 
@@ -366,15 +345,8 @@ namespace AE::Graphics
 
 		for (uint i = 0; i < tex.elementCount; ++i)
 		{
-			auto&	elem = tex.elements[i];
-
-			if ( elem.imageId.ResourceType() != GfxResourceID::EType::Image )
-			{
-				CHECK( not quiet and "image resource required" );
-				continue;
-			}
-
-			VImage const*	image	= resMngr.GetResource( VImageID{ elem.imageId.Index(), elem.imageId.Generation() });
+			auto&			elem	= tex.elements[i];
+			VImage const*	image	= resMngr.GetResource( elem.imageId );
 			VkSampler		sampler	= resMngr.GetVkSampler( elem.sampler );
 
 			if ( not (image and sampler) )
@@ -405,7 +377,7 @@ namespace AE::Graphics
 	_AddResource
 =================================================
 */
-	bool  VDescriptorSet::_AddResource (VResourceManager &resMngr, bool quiet, EDescriptorType type, const DescriptorSet::Sampler &samp, INOUT UpdateDescriptors &list)
+	bool  VDescriptorSet::_AddResource (VResourceManagerImpl &resMngr, bool quiet, EDescriptorType type, const DescriptorSet::Sampler &samp, INOUT UpdateDescriptors &list)
 	{
 		ASSERT( type == EDescriptorType::Sampler );
 
@@ -444,7 +416,7 @@ namespace AE::Graphics
 	_AddResource
 =================================================
 *
-	bool  VDescriptorSet::_AddResource (VResourceManager &resMngr, bool quiet, EDescriptorType type, const DescriptorSet::RayTracingScene &rtScene, INOUT UpdateDescriptors &list)
+	bool  VDescriptorSet::_AddResource (VResourceManagerImpl &resMngr, bool quiet, EDescriptorType type, const DescriptorSet::RayTracingScene &rtScene, INOUT UpdateDescriptors &list)
 	{
 		auto*	tlas = list.allocator.Alloc<VkAccelerationStructureNV>( rtScene.elementCount );
 
@@ -481,7 +453,7 @@ namespace AE::Graphics
 	_AddResource
 =================================================
 */
-	bool  VDescriptorSet::_AddResource (VResourceManager &, bool quiet, EDescriptorType type, const NullUnion &, INOUT UpdateDescriptors &)
+	bool  VDescriptorSet::_AddResource (VResourceManagerImpl &, bool quiet, EDescriptorType type, const NullUnion &, INOUT UpdateDescriptors &)
 	{
 		if ( not quiet )
 		{

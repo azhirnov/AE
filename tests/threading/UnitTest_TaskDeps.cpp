@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "threading/TaskSystem/WorkerThread.h"
 #include "threading/Primitives/DataRaceCheck.h"
@@ -7,50 +7,70 @@
 
 namespace
 {
+	struct ExeOrder
+	{
+		Mutex	guard;
+		String	str;
+
+		ExeOrder ()
+		{
+			EXLOCK( guard );
+			str.reserve( 128 );
+			str = "0";
+		}
+	};
+//-----------------------------------------------------------------------------
+
+
 	
 	class Test1_Task1 : public IAsyncTask
 	{
 	public:
-		uint&	value;
+		ExeOrder&	value;
 
-		Test1_Task1 (uint &val) : IAsyncTask{ EThread::Worker }, value{val} {}
+		Test1_Task1 (ExeOrder &val) : IAsyncTask{ EThread::Worker }, value{val} {}
 
 		void Run () override
 		{
-			value = (value << 4) | 1;
+			TEST( value.guard.try_lock() );
+			value.str += '1';
+			value.guard.unlock();
 		}
 	};
 
 	class Test1_Task2 : public IAsyncTask
 	{
 	public:
-		uint&	value;
+		ExeOrder&	value;
 		
-		Test1_Task2 (uint &val) : IAsyncTask{ EThread::Worker }, value{val} {}
+		Test1_Task2 (ExeOrder &val) : IAsyncTask{ EThread::Worker }, value{val} {}
 
 		void Run () override
 		{
-			value = (value << 4) | 2;
+			TEST( value.guard.try_lock() );
+			value.str += '2';
+			value.guard.unlock();
 		}
 	};
 
 	static void  TaskDeps_Test1 ()
 	{
 		LocalTaskScheduler	scheduler {1};
-
-		uint			value	= 1;	// access to value protected by internal synchronizations
-		const uint		required = (((1 << 4) | 1) << 4) | 2;
-
-		AsyncTask		task1	= scheduler->Run<Test1_Task1>( Tuple{std::ref(value)} );
-		AsyncTask		task2	= scheduler->Run<Test1_Task2>( Tuple{std::ref(value)}, Tuple{StrongDep{task1}} );
+		
+		ExeOrder		value;	// access to value protected by internal synchronizations
+		AsyncTask		task1	= scheduler->Run<Test1_Task1>( Tuple{ArgRef(value)} );
+		AsyncTask		task2	= scheduler->Run<Test1_Task2>( Tuple{ArgRef(value)}, Tuple{task1} );
 		TEST( task1 and task2 );
 
-		scheduler->AddThread( MakeShared<WorkerThread>() );
+		scheduler->AddThread( MakeRC<WorkerThread>() );
 		
 		TEST( scheduler->Wait({ task1, task2 }));
 		TEST( task1->Status() == IAsyncTask::EStatus::Completed );
 		TEST( task2->Status() == IAsyncTask::EStatus::Completed );
-		TEST( value == required );
+
+		TEST( value.guard.try_lock() );
+		TEST( value.str == "012" );
+		value.guard.unlock();
 	}
 //-----------------------------------------------------------------------------
 
@@ -59,36 +79,44 @@ namespace
 	class Test2_Task1 : public IAsyncTask
 	{
 	public:
-		uint&	value;
+		ExeOrder&	value;
 
-		Test2_Task1 (uint &val) : IAsyncTask{ EThread::Worker }, value{val} {}
+		Test2_Task1 (ExeOrder &val) : IAsyncTask{ EThread::Worker }, value{val} {}
 
 		void Run () override
 		{
-			value = (value << 4) | 1;
+			TEST( value.guard.try_lock() );
+			value.str += 'A';
+			value.guard.unlock();
 		}
 
 		void OnCancel () override
 		{
-			value = (value << 4) | 2;
+			TEST( value.guard.try_lock() );
+			value.str += '1';
+			value.guard.unlock();
 		}
 	};
 
 	class Test2_Task2 : public IAsyncTask
 	{
 	public:
-		uint&	value;
+		ExeOrder&	value;
 		
-		Test2_Task2 (uint &val) : IAsyncTask{ EThread::Worker }, value{val} {}
+		Test2_Task2 (ExeOrder &val) : IAsyncTask{ EThread::Worker }, value{val} {}
 
 		void Run () override
 		{
-			value = (value << 4) | 2;
+			TEST( value.guard.try_lock() );
+			value.str += 'B';
+			value.guard.unlock();
 		}
 
 		void OnCancel () override
 		{
-			value = (value << 4) | 1;
+			TEST( value.guard.try_lock() );
+			value.str += '2';
+			value.guard.unlock();
 		}
 	};
 
@@ -96,22 +124,24 @@ namespace
 	{
 		LocalTaskScheduler	scheduler {1};
 
-		uint			value	= 1;	// access to value protected by internal synchronizations
-		const uint		required = (((1 << 4) | 2) << 4) | 1;
+		ExeOrder		value;	// access to value protected by internal synchronizations
 
-		AsyncTask		task1	= scheduler->Run<Test2_Task1>( Tuple{std::ref(value)} );
+		AsyncTask		task1	= scheduler->Run<Test2_Task1>( Tuple{ArgRef(value)} );
 		TEST( task1 );
 		scheduler->Cancel( task1 );
 
-		AsyncTask		task2	= scheduler->Run<Test2_Task2>( Tuple{std::ref(value)}, Tuple{StrongDep{task1}} );
+		AsyncTask		task2	= scheduler->Run<Test2_Task2>( Tuple{ArgRef(value)}, Tuple{StrongDep{task1}} );
 		TEST( task2 );
 
-		scheduler->AddThread( MakeShared<WorkerThread>() );
+		scheduler->AddThread( MakeRC<WorkerThread>() );
 		
 		TEST( scheduler->Wait({ task1, task2 }));
 		TEST( task1->Status() == IAsyncTask::EStatus::Canceled );
 		TEST( task2->Status() == IAsyncTask::EStatus::Canceled );
-		TEST( value == required );
+		
+		TEST( value.guard.try_lock() );
+		TEST( value.str == "012" );
+		value.guard.unlock();
 	}
 //-----------------------------------------------------------------------------
 	
@@ -120,36 +150,44 @@ namespace
 	class Test3_Task1 : public IAsyncTask
 	{
 	public:
-		uint&	value;
+		ExeOrder&	value;
 
-		Test3_Task1 (uint &val) : IAsyncTask{ EThread::Worker }, value{val} {}
+		Test3_Task1 (ExeOrder &val) : IAsyncTask{ EThread::Worker }, value{val} {}
 
 		void Run () override
 		{
-			value = (value << 4) | 1;
+			TEST( value.guard.try_lock() );
+			value.str += 'A';
+			value.guard.unlock();
 		}
 
 		void OnCancel () override
 		{
-			value = (value << 4) | 2;
+			TEST( value.guard.try_lock() );
+			value.str += '1';
+			value.guard.unlock();
 		}
 	};
 
 	class Test3_Task2 : public IAsyncTask
 	{
 	public:
-		uint&	value;
+		ExeOrder&	value;
 		
-		Test3_Task2 (uint &val) : IAsyncTask{ EThread::Worker }, value{val} {}
+		Test3_Task2 (ExeOrder &val) : IAsyncTask{ EThread::Worker }, value{val} {}
 
 		void Run () override
 		{
-			value = (value << 4) | 2;
+			TEST( value.guard.try_lock() );
+			value.str += '2';
+			value.guard.unlock();
 		}
 
 		void OnCancel () override
 		{
-			value = (value << 4) | 1;
+			TEST( value.guard.try_lock() );
+			value.str += 'B';
+			value.guard.unlock();
 		}
 	};
 	
@@ -157,22 +195,24 @@ namespace
 	{
 		LocalTaskScheduler	scheduler {1};
 
-		uint			value	 = 1;	// access to value protected by internal synchronizations
-		const uint		required = (((1 << 4) | 2) << 4) | 2;
+		ExeOrder	value;	// access to value protected by internal synchronizations
 
-		AsyncTask		task1	= scheduler->Run<Test3_Task1>( Tuple{std::ref(value)} );
+		AsyncTask	task1	= scheduler->Run<Test3_Task1>( Tuple{ArgRef(value)} );
 		TEST( task1 );
 		scheduler->Cancel( task1 );
 
-		AsyncTask		task2	= scheduler->Run<Test3_Task2>( Tuple{std::ref(value)}, Tuple{WeakDep{task1}} );
+		AsyncTask	task2	= scheduler->Run<Test3_Task2>( Tuple{ArgRef(value)}, Tuple{WeakDep{task1}} );
 		TEST( task2 );
 
-		scheduler->AddThread( MakeShared<WorkerThread>() );
+		scheduler->AddThread( MakeRC<WorkerThread>() );
 		
 		TEST( scheduler->Wait({ task1, task2 }));
 		TEST( task1->Status() == IAsyncTask::EStatus::Canceled );
 		TEST( task2->Status() == IAsyncTask::EStatus::Completed );
-		TEST( value == required );
+		
+		TEST( value.guard.try_lock() );
+		TEST( value.str == "012" );
+		value.guard.unlock();
 	}
 //-----------------------------------------------------------------------------
 	
@@ -198,9 +238,9 @@ namespace
 		class UpdateTask : public IAsyncTask
 		{
 		public:
-			SharedPtr<Test4_TaskDepManager>	_mngr;
+			RC<Test4_TaskDepManager>	_mngr;
 
-			UpdateTask (const SharedPtr<Test4_TaskDepManager> &mngr) : IAsyncTask{ EThread::Worker }, _mngr{mngr}
+			UpdateTask (const RC<Test4_TaskDepManager> &mngr) : IAsyncTask{ EThread::Worker }, _mngr{mngr}
 			{}
 
 			void Run () override
@@ -231,7 +271,7 @@ namespace
 			}
 
 			if ( _depsList.size() > 0 )
-				Scheduler().Run<UpdateTask>( Tuple{Cast<Test4_TaskDepManager>(shared_from_this())} );
+				Scheduler().Run<UpdateTask>( Tuple{Cast<Test4_TaskDepManager>(GetRC())} );
 		}
 
 		bool  Resolve (AnyTypeCRef dep, const AsyncTask &task, INOUT uint &bitIndex) override
@@ -243,7 +283,7 @@ namespace
 			++bitIndex;
 
 			if ( _depsList.size() == 1 )
-				Scheduler().Run<UpdateTask>( Tuple{Cast<Test4_TaskDepManager>(shared_from_this())} );
+				Scheduler().Run<UpdateTask>( Tuple{Cast<Test4_TaskDepManager>(GetRC())} );
 
 			return true;
 		}
@@ -252,36 +292,44 @@ namespace
 	class Test4_Task1 : public IAsyncTask
 	{
 	public:
-		uint&	value;
+		ExeOrder&	value;
 
-		Test4_Task1 (uint &val) : IAsyncTask{ EThread::Worker }, value{val} {}
+		Test4_Task1 (ExeOrder &val) : IAsyncTask{ EThread::Worker }, value{val} {}
 
 		void Run () override
 		{
-			value = (value << 4) | 1;
+			TEST( value.guard.try_lock() );
+			value.str += '1';
+			value.guard.unlock();
 		}
 
 		void OnCancel () override
 		{
-			value = (value << 4) | 2;
+			TEST( value.guard.try_lock() );
+			value.str += 'A';
+			value.guard.unlock();
 		}
 	};
 
 	class Test4_Task2 : public IAsyncTask
 	{
 	public:
-		uint&	value;
+		ExeOrder&	value;
 		
-		Test4_Task2 (uint &val) : IAsyncTask{ EThread::Worker }, value{val} {}
+		Test4_Task2 (ExeOrder &val) : IAsyncTask{ EThread::Worker }, value{val} {}
 
 		void Run () override
 		{
-			value = (value << 4) | 2;
+			TEST( value.guard.try_lock() );
+			value.str += '2';
+			value.guard.unlock();
 		}
 
 		void OnCancel () override
 		{
-			value = (value << 4) | 1;
+			TEST( value.guard.try_lock() );
+			value.str += 'B';
+			value.guard.unlock();
 		}
 	};
 
@@ -290,20 +338,19 @@ namespace
 		LocalTaskScheduler	scheduler	{1};
 		Atomic<bool>		flag		{false};
 		Test4_CustomDep		custom_dep	{&flag};
-		auto				task_mngr	= MakeShared<Test4_TaskDepManager>();
+		auto				task_mngr	= MakeRC<Test4_TaskDepManager>();
 		
-		uint			value	 = 1;	// access to value protected by internal synchronizations
-		const uint		required = (((1 << 4) | 1) << 4) | 2;
+		ExeOrder	value;	// access to value protected by internal synchronizations
 		
 		scheduler->RegisterDependency<Test4_CustomDep>( task_mngr );
 
-		AsyncTask		task1	= scheduler->Run<Test4_Task1>( Tuple{std::ref(value)} );
+		AsyncTask	task1	= scheduler->Run<Test4_Task1>( Tuple{ArgRef(value)} );
 		TEST( task1 );
 		
-		AsyncTask		task2	= scheduler->Run<Test4_Task2>( Tuple{std::ref(value)}, Tuple{task1, custom_dep} );
+		AsyncTask	task2	= scheduler->Run<Test4_Task2>( Tuple{ArgRef(value)}, Tuple{task1, custom_dep} );
 		TEST( task2 );
 		
-		scheduler->AddThread( MakeShared<WorkerThread>() );
+		scheduler->AddThread( MakeRC<WorkerThread>() );
 		
 		TEST( scheduler->Wait( {task1} ));
 		TEST( task1->Status() == IAsyncTask::EStatus::Completed );
@@ -314,7 +361,10 @@ namespace
 		TEST( scheduler->Wait({ task1, task2 }));
 		TEST( task2->Status() == IAsyncTask::EStatus::Completed );
 		TEST( flag.load() == true );
-		TEST( value == required );
+		
+		TEST( value.guard.try_lock() );
+		TEST( value.str == "012" );
+		value.guard.unlock();
 	}
 //-----------------------------------------------------------------------------
 
@@ -324,7 +374,7 @@ namespace
 	{
 		RWDataRaceCheck		drCheck;
 		Atomic<uint>		completedTasks {0};
-		Atomic<uint64_t>	sum {0};
+		Atomic<ulong>	sum {0};
 		Array<uint>			values;
 	};
 
@@ -366,7 +416,7 @@ namespace
 			uint	min_val = UMax;
 			{
 				SHAREDLOCK( data.drCheck );
-				for (size_t i = 0; i < data.values.size(); ++i) {
+				for (usize i = 0; i < data.values.size(); ++i) {
 					min_val = Min( min_val, data.values[i] );
 				}
 			}
@@ -418,16 +468,16 @@ namespace
 									&rw_lock
 								 };
 		
-		scheduler->AddThread( MakeShared<WorkerThread>() );
-		scheduler->AddThread( MakeShared<WorkerThread>() );
+		scheduler->AddThread( MakeRC<WorkerThread>() );
+		scheduler->AddThread( MakeRC<WorkerThread>() );
 
 		const uint	total_tasks = 300;
 
 		for (uint i = 0; i < total_tasks/3; ++i)
 		{
-			TEST( scheduler->Run<Test5_Task2>( Tuple{std::ref(shared)}, Tuple{r_dep} ));
-			TEST( scheduler->Run<Test5_Task1>( Tuple{std::ref(shared)}, Tuple{w_dep} ));
-			TEST( scheduler->Run<Test5_Task2>( Tuple{std::ref(shared)}, Tuple{r_dep} ));
+			TEST( scheduler->Run<Test5_Task2>( Tuple{ArgRef(shared)}, Tuple{r_dep} ));
+			TEST( scheduler->Run<Test5_Task1>( Tuple{ArgRef(shared)}, Tuple{w_dep} ));
+			TEST( scheduler->Run<Test5_Task2>( Tuple{ArgRef(shared)}, Tuple{r_dep} ));
 		}
 
 		for (;;)
@@ -445,6 +495,8 @@ namespace
 
 extern void UnitTest_TaskDeps ()
 {
+	STATIC_ASSERT( alignof(IAsyncTask) == AE_CACHE_LINE );
+
 	TaskDeps_Test1();
 	TaskDeps_Test2();
 	TaskDeps_Test3();

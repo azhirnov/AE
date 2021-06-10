@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -117,7 +117,7 @@ namespace AE::Math
 	
 
 	using FractionalI	= Fractional< int >;
-	using FractionalI16	= Fractional< int16_t >;
+	using FractionalI16	= Fractional< sshort >;
 
 
 }	// AE::Math

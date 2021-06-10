@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -48,7 +48,7 @@ namespace AE::Graphics
 		uint	max_set = 1;
 		auto	ds_iter = _descriptorSets.begin();
 
-		for (size_t i = 0; ds_iter != _descriptorSets.end(); ++i, ++ds_iter)
+		for (usize i = 0; ds_iter != _descriptorSets.end(); ++i, ++ds_iter)
 		{
 			auto&	ds = ds_iter->second;
 			ASSERT( vk_layouts[ ds.index ] == emptyLayout );
@@ -91,7 +91,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void  VPipelineLayout::Destroy (const VResourceManager &resMngr)
+	void  VPipelineLayout::Destroy (const VResourceManagerImpl &resMngr)
 	{
 		EXLOCK( _drCheck );
 
@@ -139,11 +139,11 @@ namespace AE::Graphics
 	{
 		SHAREDLOCK( _drCheck );
 
-		info.layout	= BitCast<PipelineLayoutVk_t>( _layout );
+		info.layout	= _layout;
 		info.dsLayouts.clear();
 
 		for (auto& ds : _descriptorSets) {
-			info.dsLayouts.insert_or_assign( ds.first, MakeTuple( ds.second.index, BitCast<DescriptorSetLayoutVk_t>(ds.second.layout) ));
+			info.dsLayouts.insert_or_assign( ds.first, MakeTuple( ds.second.index, ds.second.layout ));
 		}
 	}
 

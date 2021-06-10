@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -17,10 +17,10 @@ Run (const ScriptEnginePtr &se, StringView script, const String &entry, OUT R &r
 {
 	auto mod = se->CreateModule({ ScriptEngine::ModuleSource{"def", script} });
 	auto scr = se->CreateScript<Fn>( entry, mod );
-	auto res = scr->Run( std::forward<Args>(args)... );
+	auto res = scr->Run( FwdArg<Args>(args)... );
 	if ( not res.has_value() )
 		return false;
-	result = std::move(res.value());
+	result = RVRef(res.value());
 	return true;
 }
 
@@ -30,5 +30,5 @@ Run (const ScriptEnginePtr &se, StringView script, const String &entry, Args&& .
 {
 	auto mod = se->CreateModule({ ScriptEngine::ModuleSource{"def", script} });
 	auto scr = se->CreateScript<Fn>( entry, mod );
-	return scr->Run( std::forward<Args>(args)... );
+	return scr->Run( FwdArg<Args>(args)... );
 }

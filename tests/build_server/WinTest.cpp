@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef PLATFORM_WINDOWS
 
@@ -87,11 +87,11 @@ if ( api.CTest( "", "Release" ))
 		StringView	str{ (char*)resp->content.data(), resp->content.size() };
 		StringView	key = "BuildID: ";
 
-		size_t		pos1 = str.find( key );
+		usize		pos1 = str.find( key );
 		CHECK_ERR( pos1 != StringView::npos );
 		pos1 += key.length();
 
-		size_t		pos2 = pos1;
+		usize		pos2 = pos1;
 		for (; pos2 < str.length(); ++pos2)
 		{
 			char	c = str[pos2];

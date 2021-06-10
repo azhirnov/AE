@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -36,8 +36,8 @@ namespace AE::App
 	// interface
 	public:
 		ND_ virtual WindowPtr				CreateWindow (WndListenerPtr, const WindowDesc &) = 0;
-		ND_ virtual VRDevicePtr				CreateVRDevice () = 0;
-		ND_ virtual SharedPtr<RStream>		OpenResource () = 0;
+		//ND_ virtual VRDevicePtr			CreateVRDevice () = 0;
+		ND_ virtual RC<RStream>				OpenResource () = 0;
 		ND_ virtual Monitors_t				GetMonitors () = 0;
 		ND_ virtual ArrayView<const char*>	GetVulkanInstanceExtensions () = 0;
 		ND_ virtual EGraphicsApi			GetSupportedGAPI () = 0;

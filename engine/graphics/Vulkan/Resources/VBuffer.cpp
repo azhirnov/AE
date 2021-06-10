@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -26,17 +26,16 @@ namespace AE::Graphics
 	GetAllBufferReadAccessMasks
 =================================================
 *
-	static VkAccessFlags  GetAllBufferReadAccessMasks (VkBufferUsageFlags usage)
+	static VkAccessFlags  GetAllBufferReadAccessMasks (VkBufferUsageFlagBits usage)
 	{
-		VkAccessFlags	result = 0;
+		VkAccessFlags	result = Zero;
 
-		for (VkBufferUsageFlags t = 1; t <= usage; t <<= 1)
+		while ( usage != Zero )
 		{
-			if ( not AllBits( usage, t ) )
-				continue;
+			VkBufferUsageFlagBits	t = ExtractBit( INOUT usage );
 
 			BEGIN_ENUM_CHECKS();
-			switch ( VkBufferUsageFlagBits(t) )
+			switch ( t )
 			{
 				case VK_BUFFER_USAGE_TRANSFER_SRC_BIT :			result |= VK_ACCESS_TRANSFER_READ_BIT;			break;
 				case VK_BUFFER_USAGE_TRANSFER_DST_BIT :			break;
@@ -64,13 +63,16 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool  VBuffer::Create (VResourceManager &resMngr, const BufferDesc &desc, GfxMemAllocatorPtr allocator, StringView dbgName)
+	bool  VBuffer::Create (VResourceManagerImpl &resMngr, const BufferDesc &desc, VMemAllocatorPtr allocator, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( _buffer == VK_NULL_HANDLE );
 		CHECK_ERR( allocator );
+		CHECK_ERR( desc.size > 0 );
+		CHECK_ERR( desc.usage != Default );
 
 		auto&	dev = resMngr.GetDevice();
+		ASSERT( IsSupported( dev, desc ));
 
 		_desc = desc;
 
@@ -104,14 +106,14 @@ namespace AE::Graphics
 
 		VK_CHECK( dev.vkCreateBuffer( dev.GetVkDevice(), &info, null, OUT &_buffer ));
 
-		CHECK_ERR( allocator->AllocForBuffer( BitCast<BufferVk_t>(_buffer), _desc, INOUT _memStorage ));
+		CHECK_ERR( allocator->AllocForBuffer( _buffer, _desc, INOUT _memStorage ));
 
 		if ( not dbgName.empty() )
 		{
 			dev.SetObjectName( BitCast<uint64_t>(_buffer), dbgName, VK_OBJECT_TYPE_BUFFER );
 		}
 		
-		_memAllocator	= std::move(allocator);
+		_memAllocator	= RVRef(allocator);
 		_debugName		= dbgName;
 		_canBeDestroyed	= true;
 
@@ -127,10 +129,14 @@ namespace AE::Graphics
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( _buffer == VK_NULL_HANDLE );
+		CHECK_ERR( desc.buffer != VK_NULL_HANDLE );
 
-		_buffer		= BitCast<VkBuffer>( desc.buffer );
-		_desc.size	= desc.size;
-		_desc.usage	= AEEnumCast( BitCast<VkBufferUsageFlagBits>( desc.usage ));
+		_buffer			= desc.buffer;
+		_desc.size		= desc.size;
+		_desc.usage		= AEEnumCast( desc.usage );
+		_desc.memType	= Default;
+		
+		ASSERT( IsSupported( dev, _desc ));
 
 		if ( dbgName.size() )
 			dev.SetObjectName( BitCast<uint64_t>(_buffer), dbgName, VK_OBJECT_TYPE_BUFFER );
@@ -146,7 +152,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void  VBuffer::Destroy (VResourceManager &resMngr)
+	void  VBuffer::Destroy (VResourceManagerImpl &resMngr)
 	{
 		EXLOCK( _drCheck );
 
@@ -180,31 +186,7 @@ namespace AE::Graphics
 	GetMemoryInfo
 =================================================
 */
-	bool  VBuffer::GetMemoryInfo (OUT VResourceMemoryInfo &outInfo) const
-	{
-		SHAREDLOCK( _drCheck );
-		CHECK_ERR( _memAllocator );
-
-		IGfxMemAllocator::NativeMemInfo_t	info;
-		CHECK_ERR( _memAllocator->GetInfo( _memStorage, OUT info ));
-
-		auto*	vk_info = UnionGetIf<VulkanMemoryObjInfo>( &info );
-		CHECK_ERR( vk_info );
-
-		outInfo.memory		= BitCast<VkDeviceMemory>( vk_info->memory );
-		outInfo.flags		= BitCast<VkMemoryPropertyFlagBits>( vk_info->flags );
-		outInfo.offset		= vk_info->offset;
-		outInfo.size		= vk_info->size;
-		outInfo.mappedPtr	= vk_info->mappedPtr;
-		return true;
-	}
-	
-/*
-=================================================
-	GetMemoryInfo
-=================================================
-*/
-	bool  VBuffer::GetMemoryInfo (OUT IGfxMemAllocator::NativeMemInfo_t &info) const
+	bool  VBuffer::GetMemoryInfo (OUT VulkanMemoryObjInfo &info) const
 	{
 		SHAREDLOCK( _drCheck );
 		CHECK_ERR( _memAllocator );
@@ -250,6 +232,8 @@ namespace AE::Graphics
 */
 	bool  VBuffer::_CreateView (const VDevice &dev, const BufferViewDesc &desc, OUT VkBufferView &outView) const
 	{
+		ASSERT( IsSupported( dev, desc ));
+
 		VkBufferViewCreateInfo	info = {};
 		info.sType		= VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
 		info.flags		= 0;
@@ -294,8 +278,8 @@ namespace AE::Graphics
 	VulkanBufferDesc  VBuffer::GetNativeDescription () const
 	{
 		VulkanBufferDesc	desc;
-		desc.buffer			= BitCast<BufferVk_t>( _buffer );
-		desc.usage			= BitCast<BufferUsageVk_t>( VEnumCast( _desc.usage ));
+		desc.buffer			= _buffer;
+		desc.usage			= VEnumCast( _desc.usage );
 		desc.size			= _desc.size;
 		desc.canBeDestroyed	= _canBeDestroyed;
 		return desc;
@@ -308,10 +292,9 @@ namespace AE::Graphics
 */
 	bool  VBuffer::IsSupported (const VDevice &dev, const BufferDesc &desc)
 	{
-		for (EBufferUsage t = EBufferUsage(1); t <= desc.usage; t = EBufferUsage(uint(t) << 1))
+		for (EBufferUsage usage = desc.usage; usage != Zero;)
 		{
-			if ( not AllBits( desc.usage, t ))
-				continue;
+			EBufferUsage	t = ExtractBit( INOUT usage );
 
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
@@ -353,20 +336,19 @@ namespace AE::Graphics
 		VkFormatProperties	props = {};
 		vkGetPhysicalDeviceFormatProperties( dev.GetVkPhysicalDevice(), VEnumCast( desc.format ), OUT &props );
 		
-		const VkFormatFeatureFlags	dev_flags	= props.bufferFeatures;
-		VkFormatFeatureFlags		buf_flags	= 0;
+		const VkFormatFeatureFlags	available_flags	= props.bufferFeatures;
+		VkFormatFeatureFlags		required_flags	= 0;
 		
-		for (EBufferUsage t = EBufferUsage(1); t <= _desc.usage; t = EBufferUsage(uint(t) << 1))
+		for (EBufferUsage usage = _desc.usage; usage != Zero;)
 		{
-			if ( not AllBits( _desc.usage, t ))
-				continue;
+			EBufferUsage	t = ExtractBit( INOUT usage );
 
 			BEGIN_ENUM_CHECKS();
 			switch ( t )
 			{
-				case EBufferUsage::UniformTexel :		buf_flags |= VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;		break;
-				case EBufferUsage::StorageTexel :		buf_flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT;		break;
-				case EBufferUsage::StorageTexelAtomic:	buf_flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT;	break;
+				case EBufferUsage::UniformTexel :		required_flags |= VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;			break;
+				case EBufferUsage::StorageTexel :		required_flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT;			break;
+				case EBufferUsage::StorageTexelAtomic:	required_flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT;	break;
 				case EBufferUsage::TransferSrc :		break;
 				case EBufferUsage::TransferDst :		break;
 				case EBufferUsage::Uniform :			break;
@@ -386,8 +368,8 @@ namespace AE::Graphics
 			}
 			END_ENUM_CHECKS();
 		}
-
-		return (dev_flags & buf_flags);
+		
+		return AllBits( available_flags, required_flags );
 	}
 
 

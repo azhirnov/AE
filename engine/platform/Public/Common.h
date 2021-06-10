@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -33,12 +33,12 @@ namespace AE::App
 	
 	class IApplication;
 	class IWindow;
-	class IVRDevice;
+	//class IVRDevice;
 
 
-	using ApplicationPtr	= SharedPtr< IApplication >;
+	using ApplicationPtr	= RC< IApplication >;
 	using WindowPtr			= SharedPtr< IWindow >;
-	using VRDevicePtr		= SharedPtr< IVRDevice >;
+	//using VRDevicePtr		= RC< IVRDevice >;
 
 
 }	// AE::App

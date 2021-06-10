@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -62,7 +62,7 @@ namespace AE::STL
 
 #	define AE_TIMEPROFILER( ... ) \
 		::AE::STL::TimeProfiler	AE_PRIVATE_UNITE_RAW( __timeProf, __COUNTER__ ) ( \
-								AE_PRIVATE_GETRAW( AE_PRIVATE_GETARG_0( "" __VA_ARGS__, "no name" ) ), \
+								AE_PRIVATE_GETRAW( AE_PRIVATE_GETARG_0( "" __VA_ARGS__, "no name" )), \
 								AE_FUNCTION_NAME, \
 								__FILE__, \
 								__LINE__ ) \

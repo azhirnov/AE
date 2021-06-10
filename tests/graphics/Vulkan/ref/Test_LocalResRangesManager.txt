@@ -1,0 +1,358 @@
+--------------------------------------------------
+name: CmdBuf
+{
+  PipelineBarrier
+    stage: TRANSFER ---> TRANSFER
+    BufferBarrier:
+      name:   Buffer
+      access: TRANSFER_WRITE ---> TRANSFER_READ
+      range:  [0 b, 64 b)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> VERTEX_SHADER
+    BufferBarrier:
+      name:   Buffer
+      access: TRANSFER_WRITE ---> UNIFORM_READ
+      range:  [64 b, 128 b)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> FRAGMENT_SHADER
+    BufferBarrier:
+      name:   Buffer
+      access: TRANSFER_WRITE ---> UNIFORM_READ
+      range:  [256 b, 320 b)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> VERTEX_SHADER
+    BufferBarrier:
+      name:   Buffer
+      access: TRANSFER_WRITE ---> UNIFORM_READ
+      range:  [288 b, 320 b)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> GEOMETRY_SHADER
+    BufferBarrier:
+      name:   Buffer
+      access: TRANSFER_WRITE ---> UNIFORM_READ
+      range:  [272 b, 304 b)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> GEOMETRY_SHADER
+    BufferBarrier:
+      name:   Buffer
+      access: TRANSFER_WRITE ---> UNIFORM_READ
+      range:  [16 b, 32 b)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> COMPUTE_SHADER
+    BufferBarrier:
+      name:   Buffer
+      access: TRANSFER_WRITE ---> SHADER_READ
+      range:  [0 b, 288 b)
+  ----------
+
+  PipelineBarrier
+    stage: VERTEX_SHADER | GEOMETRY_SHADER | COMPUTE_SHADER ---> TRANSFER
+    BufferBarrier:
+      name:   Buffer
+      access: SHADER_READ ---> TRANSFER_WRITE
+      range:  [64 b, 288 b)
+    BufferBarrier:
+      name:   Buffer
+      access: UNIFORM_READ ---> TRANSFER_WRITE
+      range:  [288 b, 304 b)
+    BufferBarrier:
+      name:   Buffer
+      access: UNIFORM_READ ---> TRANSFER_WRITE
+      range:  [304 b, 320 b)
+  ----------
+
+  PipelineBarrier
+    stage: COMPUTE_SHADER | TRANSFER ---> ALL_COMMANDS
+    BufferBarrier:
+      name:   Buffer
+      access: TRANSFER_WRITE ---> 0
+      range:  [0 b, 64 b)
+    BufferBarrier:
+      name:   Buffer
+      access: TRANSFER_WRITE ---> 0
+      range:  [64 b, 512 b)
+    BufferBarrier:
+      name:   Buffer
+      access: SHADER_WRITE ---> 0
+      range:  [512 b, 576 b)
+  ----------
+
+}
+--------------------------------------------------
+--------------------------------------------------
+name: CmdBuf
+{
+  PipelineBarrier
+    stage: TOP_OF_PIPE ---> TRANSFER
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> TRANSFER_DST_OPTIMAL
+      access:  0 ---> TRANSFER_WRITE
+      aspect:  COLOR
+      mipmaps: [0, 1)
+      layers:  [0, 1)
+  ----------
+
+  PipelineBarrier
+    stage: TOP_OF_PIPE | TRANSFER ---> ALL_COMMANDS
+    ImageBarrier:
+      name:    Image
+      layout:  TRANSFER_DST_OPTIMAL ---> COLOR_ATTACHMENT_OPTIMAL
+      access:  TRANSFER_WRITE ---> 0
+      aspect:  COLOR
+      mipmaps: [0, 1)
+      layers:  [0, 1)
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> COLOR_ATTACHMENT_OPTIMAL
+      access:  0 ---> 0
+      aspect:  COLOR
+      mipmaps: [1, 7)
+      layers:  [0, 1)
+  ----------
+
+}
+--------------------------------------------------
+--------------------------------------------------
+name: CmdBuf
+{
+  PipelineBarrier
+    stage: TOP_OF_PIPE ---> TRANSFER
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> TRANSFER_DST_OPTIMAL
+      access:  0 ---> TRANSFER_WRITE
+      aspect:  COLOR
+      mipmaps: [0, 1)
+      layers:  [0, 2)
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> TRANSFER_DST_OPTIMAL
+      access:  0 ---> TRANSFER_WRITE
+      aspect:  COLOR
+      mipmaps: [1, 2)
+      layers:  [0, 2)
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> TRANSFER_DST_OPTIMAL
+      access:  0 ---> TRANSFER_WRITE
+      aspect:  COLOR
+      mipmaps: [2, 3)
+      layers:  [0, 2)
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> TRANSFER_DST_OPTIMAL
+      access:  0 ---> TRANSFER_WRITE
+      aspect:  COLOR
+      mipmaps: [3, 4)
+      layers:  [0, 2)
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> TRANSFER_DST_OPTIMAL
+      access:  0 ---> TRANSFER_WRITE
+      aspect:  COLOR
+      mipmaps: [4, 5)
+      layers:  [0, 2)
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> TRANSFER_DST_OPTIMAL
+      access:  0 ---> TRANSFER_WRITE
+      aspect:  COLOR
+      mipmaps: [5, 6)
+      layers:  [0, 2)
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> TRANSFER_DST_OPTIMAL
+      access:  0 ---> TRANSFER_WRITE
+      aspect:  COLOR
+      mipmaps: [6, 7)
+      layers:  [0, 2)
+  ----------
+
+  PipelineBarrier
+    stage: TOP_OF_PIPE | TRANSFER ---> FRAGMENT_SHADER
+    ImageBarrier:
+      name:    Image
+      layout:  TRANSFER_DST_OPTIMAL ---> SHADER_READ_ONLY_OPTIMAL
+      access:  TRANSFER_WRITE ---> SHADER_READ
+      aspect:  COLOR
+      mipmaps: [0, 1)
+      layers:  [0, 2)
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> SHADER_READ_ONLY_OPTIMAL
+      access:  0 ---> SHADER_READ
+      aspect:  COLOR
+      mipmaps: [0, 1)
+      layers:  [2, 8)
+    ImageBarrier:
+      name:    Image
+      layout:  TRANSFER_DST_OPTIMAL ---> SHADER_READ_ONLY_OPTIMAL
+      access:  TRANSFER_WRITE ---> SHADER_READ
+      aspect:  COLOR
+      mipmaps: [1, 2)
+      layers:  [0, 2)
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> SHADER_READ_ONLY_OPTIMAL
+      access:  0 ---> SHADER_READ
+      aspect:  COLOR
+      mipmaps: [1, 2)
+      layers:  [2, 8)
+  ----------
+
+  PipelineBarrier
+    stage: TOP_OF_PIPE | FRAGMENT_SHADER | TRANSFER ---> COMPUTE_SHADER
+    ImageBarrier:
+      name:    Image
+      layout:  SHADER_READ_ONLY_OPTIMAL ---> GENERAL
+      access:  SHADER_READ ---> SHADER_WRITE
+      aspect:  COLOR
+      mipmaps: [0, 1)
+      layers:  [0, 8)
+    ImageBarrier:
+      name:    Image
+      layout:  SHADER_READ_ONLY_OPTIMAL ---> GENERAL
+      access:  SHADER_READ ---> SHADER_WRITE
+      aspect:  COLOR
+      mipmaps: [1, 2)
+      layers:  [0, 8)
+    ImageBarrier:
+      name:    Image
+      layout:  TRANSFER_DST_OPTIMAL ---> GENERAL
+      access:  TRANSFER_WRITE ---> SHADER_WRITE
+      aspect:  COLOR
+      mipmaps: [2, 3)
+      layers:  [0, 2)
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> GENERAL
+      access:  0 ---> SHADER_WRITE
+      aspect:  COLOR
+      mipmaps: [2, 3)
+      layers:  [2, 8)
+    ImageBarrier:
+      name:    Image
+      layout:  TRANSFER_DST_OPTIMAL ---> GENERAL
+      access:  TRANSFER_WRITE ---> SHADER_WRITE
+      aspect:  COLOR
+      mipmaps: [3, 4)
+      layers:  [0, 2)
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> GENERAL
+      access:  0 ---> SHADER_WRITE
+      aspect:  COLOR
+      mipmaps: [3, 4)
+      layers:  [2, 8)
+    ImageBarrier:
+      name:    Image
+      layout:  TRANSFER_DST_OPTIMAL ---> GENERAL
+      access:  TRANSFER_WRITE ---> SHADER_WRITE
+      aspect:  COLOR
+      mipmaps: [4, 5)
+      layers:  [0, 2)
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> GENERAL
+      access:  0 ---> SHADER_WRITE
+      aspect:  COLOR
+      mipmaps: [4, 5)
+      layers:  [2, 8)
+    ImageBarrier:
+      name:    Image
+      layout:  TRANSFER_DST_OPTIMAL ---> GENERAL
+      access:  TRANSFER_WRITE ---> SHADER_WRITE
+      aspect:  COLOR
+      mipmaps: [5, 6)
+      layers:  [0, 2)
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> GENERAL
+      access:  0 ---> SHADER_WRITE
+      aspect:  COLOR
+      mipmaps: [5, 6)
+      layers:  [2, 8)
+    ImageBarrier:
+      name:    Image
+      layout:  TRANSFER_DST_OPTIMAL ---> GENERAL
+      access:  TRANSFER_WRITE ---> SHADER_WRITE
+      aspect:  COLOR
+      mipmaps: [6, 7)
+      layers:  [0, 2)
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> GENERAL
+      access:  0 ---> SHADER_WRITE
+      aspect:  COLOR
+      mipmaps: [6, 7)
+      layers:  [2, 8)
+  ----------
+
+  PipelineBarrier
+    stage: COMPUTE_SHADER ---> ALL_COMMANDS
+    ImageBarrier:
+      name:    Image
+      layout:  GENERAL ---> COLOR_ATTACHMENT_OPTIMAL
+      access:  SHADER_WRITE ---> 0
+      aspect:  COLOR
+      mipmaps: [0, 1)
+      layers:  [0, 8)
+    ImageBarrier:
+      name:    Image
+      layout:  GENERAL ---> COLOR_ATTACHMENT_OPTIMAL
+      access:  SHADER_WRITE ---> 0
+      aspect:  COLOR
+      mipmaps: [1, 2)
+      layers:  [0, 8)
+    ImageBarrier:
+      name:    Image
+      layout:  GENERAL ---> COLOR_ATTACHMENT_OPTIMAL
+      access:  SHADER_WRITE ---> 0
+      aspect:  COLOR
+      mipmaps: [2, 3)
+      layers:  [0, 8)
+    ImageBarrier:
+      name:    Image
+      layout:  GENERAL ---> COLOR_ATTACHMENT_OPTIMAL
+      access:  SHADER_WRITE ---> 0
+      aspect:  COLOR
+      mipmaps: [3, 4)
+      layers:  [0, 8)
+    ImageBarrier:
+      name:    Image
+      layout:  GENERAL ---> COLOR_ATTACHMENT_OPTIMAL
+      access:  SHADER_WRITE ---> 0
+      aspect:  COLOR
+      mipmaps: [4, 5)
+      layers:  [0, 8)
+    ImageBarrier:
+      name:    Image
+      layout:  GENERAL ---> COLOR_ATTACHMENT_OPTIMAL
+      access:  SHADER_WRITE ---> 0
+      aspect:  COLOR
+      mipmaps: [5, 6)
+      layers:  [0, 8)
+    ImageBarrier:
+      name:    Image
+      layout:  GENERAL ---> COLOR_ATTACHMENT_OPTIMAL
+      access:  SHADER_WRITE ---> 0
+      aspect:  COLOR
+      mipmaps: [6, 7)
+      layers:  [0, 8)
+  ----------
+
+}
+--------------------------------------------------

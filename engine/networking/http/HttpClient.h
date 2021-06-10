@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -22,7 +22,7 @@ namespace AE::Networking
 			milliseconds	transferTimout		{0};
 			milliseconds	responseDelay		{60'000};
 			milliseconds	minFrameTime		{10};
-			BytesU			downloadBufferSize	{64u << 10};
+			Bytes			downloadBufferSize	{64u << 10};
 		};
 
 
@@ -47,7 +47,7 @@ namespace AE::Networking
 		template <typename ...Deps>
 		Request  Send (const HttpRequestDesc &desc, const Tuple<Deps...> &dependsOn = Default);
 
-		ND_ Promise<Array<uint8_t>>	Download (String url);
+		ND_ Promise<Array<ubyte>>	Download (String url);
 
 	private:
 		HttpClient ();
@@ -67,7 +67,7 @@ namespace AE::Networking
 	template <typename ...Deps>
 	inline Request  HttpClient::Send (HttpRequestDesc &&desc, const Tuple<Deps...> &dependsOn)
 	{
-		Request	req = _CreateTask( std::move(desc) );
+		Request	req = _CreateTask( RVRef(desc) );
 		Scheduler().Run( req, dependsOn );
 		return req;
 	}

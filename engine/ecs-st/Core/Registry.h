@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -26,7 +26,7 @@ namespace AE::ECS
 	// Registry
 	//
 
-	class Registry final : public std::enable_shared_from_this< Registry >
+	class Registry final : public EnableRC< Registry >
 	{
 	// types
 	public:
@@ -40,12 +40,12 @@ namespace AE::ECS
 			using Ctor_t = void (*) (void *);
 
 			Ctor_t				ctor		= null;
-			Bytes<uint16_t>		align;
-			Bytes<uint16_t>		size;
+			TBytes<uint16_t>		align;
+			TBytes<uint16_t>		size;
 			bool				created		= false;
 			
 			DEBUG_ONLY(
-				using DbgView_t	= UniquePtr<IComponentDbgView> (*) (void *, size_t);
+				using DbgView_t	= UniquePtr<IComponentDbgView> (*) (void *, usize);
 				DbgView_t		dbgView		= null;
 			)
 
@@ -229,14 +229,14 @@ namespace AE::ECS
 
 			void  _OnNewArchetype (ArchetypePair_t *);
 			
-			static void  _IncreaseStorageSize (ArchetypeStorage *, size_t addCount);
+			static void  _IncreaseStorageSize (ArchetypeStorage *, usize addCount);
 			static void  _DecreaseStorageSize (ArchetypeStorage *);
 
-			template <typename ArgsList, size_t I>
+			template <typename ArgsList, usize I>
 		ND_ static bool  _IsArchetypeSupported (const Archetype &arch);
 
 			template <typename ...Args>
-		ND_ static Tuple<size_t, Args...>  _GetChunk (ArchetypeStorage* storage, const TypeList<Args...> *);
+		ND_ static Tuple<usize, Args...>  _GetChunk (ArchetypeStorage* storage, const TypeList<Args...> *);
 
 			template <typename Fn, typename Chunk, typename ...Types>
 			void _WithSingleComponents (Fn &&fn, ArrayView<Chunk> chunks, const Tuple<Types...> *);
@@ -298,7 +298,7 @@ namespace AE::ECS
 			{
 				auto*	ptr = storage->GetComponent<T>( index );
 				ASSERT( ptr );
-				*ptr = std::forward<T>( comp );
+				*ptr = FwdArg<T>( comp );
 			}
 		}
 	}	// _reg_detail_
@@ -310,7 +310,7 @@ namespace AE::ECS
 		
 		EntityID		ent_id = CreateEntity();
 		ArchetypeDesc	desc;
-		( desc.Add<std::remove_cv_t<Components>>(), ... );
+		( desc.Add<RemoveCV<Components>>(), ... );
 		
 		ArchetypeStorage*	storage = null;
 		Index_t				index;
@@ -318,7 +318,7 @@ namespace AE::ECS
 		_AddEntity( Archetype{desc}, ent_id, OUT storage, OUT index );
 		ASSERT( storage );
 		
-		(_reg_detail_::CopyComponent( storage, index, std::forward<Components>(comps) ), ...);
+		(_reg_detail_::CopyComponent( storage, index, FwdArg<Components>(comps) ), ...);
 
 		#if AE_ECS_ENABLE_DEFAULT_MESSAGES
 			for (auto& comp_id : storage->GetComponentIDs())
@@ -346,10 +346,10 @@ DEBUG_ONLY(
 			std::type_info const&	_type;
 
 		public:
-			ComponentDbgView (T const* ptr, size_t count) : _comps{ptr, count}, _type{typeid(T)} {}
+			ComponentDbgView (T const* ptr, usize count) : _comps{ptr, count}, _type{typeid(T)} {}
 			~ComponentDbgView () override {}
 
-			UniquePtr<IComponentDbgView>  ElementView (size_t index) const override {
+			UniquePtr<IComponentDbgView>  ElementView (usize index) const override {
 				return MakeUnique<ComponentDbgView<T>>( _comps.section( index, 1 ).data(), 1u );
 			}
 		};
@@ -367,7 +367,7 @@ DEBUG_ONLY(
 		EXLOCK( _drCheck );
 
 		using	Info = ComponentTypeInfo<T>;
-		CHECK_ERR( Info::id.value < _componentInfo->size(), void());
+		CHECK_ERRV( Info::id.value < _componentInfo->size() );
 
 		auto&	comp = _componentInfo->operator[]( Info::id.value );
 		if ( not comp.created )
@@ -378,7 +378,7 @@ DEBUG_ONLY(
 			comp.created	= true;
 
 			DEBUG_ONLY(
-			  comp.dbgView	= [] (void *ptr, size_t count) -> UniquePtr<IComponentDbgView> {
+			  comp.dbgView	= [] (void *ptr, usize count) -> UniquePtr<IComponentDbgView> {
 									return MakeUnique< _reg_detail_::ComponentDbgView<T> >( Cast<T>(ptr), count );
 								};
 			)
@@ -431,7 +431,7 @@ DEBUG_ONLY(
 			if ( auto* comps = src_storage->GetComponents<T>(); comps )
 			{
 				// already exists
-				return comps[ size_t(src_index) ];
+				return comps[ usize(src_index) ];
 			}
 			else
 			{
@@ -451,7 +451,7 @@ DEBUG_ONLY(
 		
 		T* result = dst_storage->GetComponent<T>( dst_index );
 
-		ASSERT( dst_storage->IsInMemoryRange( result, BytesU{sizeof(T)} ));
+		ASSERT( dst_storage->IsInMemoryRange( result, Bytes{sizeof(T)} ));
 		return *result;
 	}
 	
@@ -526,9 +526,9 @@ DEBUG_ONLY(
 	_IncreaseStorageSize
 =================================================
 */
-	inline void  Registry::_IncreaseStorageSize (ArchetypeStorage *storage, size_t addCount)
+	inline void  Registry::_IncreaseStorageSize (ArchetypeStorage *storage, usize addCount)
 	{
-		const size_t	new_size = storage->Count() + addCount;
+		const usize	new_size = storage->Count() + addCount;
 
 		if ( new_size > storage->Capacity() )
 		{
@@ -557,7 +557,7 @@ DEBUG_ONLY(
 			{
 				ASSERT( not storage->IsLocked() );
 			}
-			return storage->GetComponent< std::remove_const_t<T> >( index );
+			return storage->GetComponent< RemoveConst<T> >( index );
 		}
 		return null;
 	}
@@ -585,19 +585,19 @@ DEBUG_ONLY(
 		
 		if ( storage )
 		{
-			if constexpr( not TypeList<Types...>::template ForEach_And<std::is_const>() )
+			if constexpr( not TypeList<Types...>::template ForEach_And< std::is_class >() )
 			{
 				ASSERT( not storage->IsLocked() );
 			}
-			return Tuple<Ptr<Types>...>{ storage->GetComponent< std::remove_const_t<Types> >( index )... };
+			return Tuple<Ptr<Types>...>{ storage->GetComponent< RemoveConst<Types> >( index )... };
 		}
 		return Default;
 	}
 	
 	template <typename ...Types>
-	inline Tuple<Ptr<std::add_const_t<Types>>...>  Registry::GetComponenets (EntityID entId) const
+	inline Tuple<Ptr<AddConst<Types>>...>  Registry::GetComponenets (EntityID entId) const
 	{
-		return const_cast<Registry*>(this)->GetComponenets< std::add_const_t<Types>... >( entId );
+		return const_cast<Registry*>(this)->GetComponenets< AddConst<Types>... >( entId );
 	}
 
 /*
@@ -654,7 +654,7 @@ DEBUG_ONLY(
 		auto&	comp = _singleComponents[ TypeIdOf<T>() ];
 		if ( not comp.data )
 		{
-			comp.data	 = New<T>();
+			comp.data	 = new T{};
 			comp.deleter = [](void* ptr) { delete Cast<T>(ptr); };
 
 			// TODO: message that single component was created ?
@@ -787,10 +787,10 @@ DEBUG_ONLY(
 
 
 		template <template <typename, typename> class Comparator,
-				  typename RefType, typename ArgsList, size_t ExceptIdx>
+				  typename RefType, typename ArgsList, usize ExceptIdx>
 		struct CompareComponents
 		{
-			template <size_t I>
+			template <usize I>
 			static constexpr bool  Cmp ()
 			{
 				if constexpr( I == ExceptIdx )
@@ -816,7 +816,7 @@ DEBUG_ONLY(
 		template <typename T>
 		struct CheckForDuplicateComponents< WriteAccess<T> >
 		{
-			template <size_t I, typename ArgsList>
+			template <usize I, typename ArgsList>
 			static constexpr bool  Test () {
 				return not CompareComponents< CompareSingleComponents, T, ArgsList, I >::template Cmp<0>();
 			}
@@ -825,7 +825,7 @@ DEBUG_ONLY(
 		template <typename T>
 		struct CheckForDuplicateComponents< ReadAccess<T> >
 		{
-			template <size_t I, typename ArgsList>
+			template <usize I, typename ArgsList>
 			static constexpr bool  Test () {
 				return not CompareComponents< CompareSingleComponents, T, ArgsList, I >::template Cmp<0>();
 			}
@@ -834,7 +834,7 @@ DEBUG_ONLY(
 		template <typename T>
 		struct CheckForDuplicateComponents< OptionalWriteAccess<T> >
 		{
-			template <size_t I, typename ArgsList>
+			template <usize I, typename ArgsList>
 			static constexpr bool  Test () {
 				return not CompareComponents< CompareSingleComponents, T, ArgsList, I >::template Cmp<0>();
 			}
@@ -843,7 +843,7 @@ DEBUG_ONLY(
 		template <typename T>
 		struct CheckForDuplicateComponents< OptionalReadAccess<T> >
 		{
-			template <size_t I, typename ArgsList>
+			template <usize I, typename ArgsList>
 			static constexpr bool  Test () {
 				return not CompareComponents< CompareSingleComponents, T, ArgsList, I >::template Cmp<0>();
 			}
@@ -854,7 +854,7 @@ DEBUG_ONLY(
 		{
 			STATIC_ASSERT( CountOf<Types...>() > 0 );
 			
-			template <size_t I, typename ArgsList>
+			template <usize I, typename ArgsList>
 			static constexpr bool  Test () {
 				return not (CompareComponents< CompareMultiComponents, Types, ArgsList, I >::template Cmp<0>() or ...);
 			}
@@ -865,7 +865,7 @@ DEBUG_ONLY(
 		{
 			STATIC_ASSERT( CountOf<Types...>() > 0 );
 			
-			template <size_t I, typename ArgsList>
+			template <usize I, typename ArgsList>
 			static constexpr bool  Test () {
 				return not (CompareComponents< CompareMultiComponents, Types, ArgsList, I >::template Cmp<0>() or ...);
 			}
@@ -876,14 +876,14 @@ DEBUG_ONLY(
 		{
 			STATIC_ASSERT( CountOf<Types...>() > 0 );
 			
-			template <size_t I, typename ArgsList>
+			template <usize I, typename ArgsList>
 			static constexpr bool  Test () {
 				return not (CompareComponents< CompareMultiComponents, Types, ArgsList, I >::template Cmp<0>() or ...);
 			}
 		};
 
 		
-		template <typename ArgsList, size_t I = 0>
+		template <typename ArgsList, usize I = 0>
 		static constexpr void  CheckForDuplicates ()
 		{
 			if constexpr( I < ArgsList::Count )
@@ -924,7 +924,7 @@ DEBUG_ONLY(
 		template <typename T>
 		struct SC_CheckForDuplicateComponents< T* >
 		{
-			template <typename ArgsList, size_t I>
+			template <typename ArgsList, usize I>
 			static constexpr bool  Test () {
 				return not CompareComponents< SC_Comparator, T, ArgsList, I >::template Cmp<0>();
 			}
@@ -933,7 +933,7 @@ DEBUG_ONLY(
 		template <typename T>
 		struct SC_CheckForDuplicateComponents< T const* >
 		{
-			template <typename ArgsList, size_t I>
+			template <typename ArgsList, usize I>
 			static constexpr bool  Test () {
 				return not CompareComponents< SC_Comparator, T, ArgsList, I >::template Cmp<0>();
 			}
@@ -942,13 +942,13 @@ DEBUG_ONLY(
 		template <typename T>
 		struct SC_CheckForDuplicateComponents< T& >
 		{
-			template <typename ArgsList, size_t I>
+			template <typename ArgsList, usize I>
 			static constexpr bool  Test () {
 				return not CompareComponents< SC_Comparator, T, ArgsList, I >::template Cmp<0>();
 			}
 		};
 
-		template <typename ArgsList, size_t I = 0>
+		template <typename ArgsList, usize I = 0>
 		static constexpr void  SC_CheckForDuplicates ()
 		{
 			if constexpr( I < ArgsList::Count )
@@ -970,7 +970,7 @@ DEBUG_ONLY(
 */
 	namespace _reg_detail_
 	{
-		template <typename Args, size_t ArgsCount>
+		template <typename Args, usize ArgsCount>
 		struct _SystemFnInfoImpl;
 		
 		template <typename Args>
@@ -985,7 +985,7 @@ DEBUG_ONLY(
 
 			using ChunkTL = TypeList< Chunk >;
 			STATIC_ASSERT( ChunkTL::Count > 1 );
-			STATIC_ASSERT( IsSameTypes< typename ChunkTL::template Get<0>, size_t >);
+			STATIC_ASSERT( IsSameTypes< typename ChunkTL::template Get<0>, usize >);
 
 			using CompOnly = typename ChunkTL::PopFront::type;
 			using SCTuple  = Tuple<>;
@@ -1021,7 +1021,7 @@ DEBUG_ONLY(
 	template <typename Obj, typename Class, typename ...Args>
 	inline void  Registry::Enque (QueryID query, Obj obj, void (Class::*fn)(Args&&...))
 	{
-		return Enque( query, [obj, fn](Args&& ...args) { return (obj->*fn)( std::forward<Args>(args)... ); });
+		return Enque( query, [obj, fn](Args&& ...args) { return (obj->*fn)( FwdArg<Args>(args)... ); });
 	}
 
 	template <typename Fn>
@@ -1031,14 +1031,14 @@ DEBUG_ONLY(
 
 		if constexpr( FunctionInfo<Fn>::args::Count == 0 )
 		{
-			_pendingEvents.push_back( std::forward<Fn>(fn) );
+			_pendingEvents.push_back( FwdArg<Fn>(fn) );
 		}
 		else
 		{
 			_pendingEvents.push_back(
-				[this, query, fn = std::forward<Fn>(fn)] ()
+				[this, query, fn = FwdArg<Fn>(fn)] ()
 				{
-					Execute( query, std::move(fn) );
+					Execute( query, RVRef(fn) );
 				});
 		}
 	}
@@ -1057,9 +1057,9 @@ DEBUG_ONLY(
 		EXLOCK( _drCheck );
 
 		if constexpr( IsSpecializationOf< typename Args::template Get<0>, ArrayView >)
-			return _Execute_v1( query, std::forward<Fn>(fn) );
+			return _Execute_v1( query, FwdArg<Fn>(fn) );
 		else
-			return _Execute_v2( query, std::forward<Fn>(fn), (const Args*)null );
+			return _Execute_v2( query, FwdArg<Fn>(fn), (const Args*)null );
 	}
 	
 /*
@@ -1097,7 +1097,7 @@ DEBUG_ONLY(
 			chunks.emplace_back( _GetChunk( storage.get(), (const CompOnly *)null ));
 		}
 
-		_WithSingleComponents( std::move(fn), ArrayView<Chunk>{chunks.data(), chunks.size()}, (const SCTuple*)null );
+		_WithSingleComponents( RVRef(fn), ArrayView<Chunk>{chunks.data(), chunks.size()}, (const SCTuple*)null );
 				
 		for (auto* st : storages)
 		{
@@ -1165,7 +1165,7 @@ DEBUG_ONLY(
 		struct GetStorageElement
 		{
 			template <typename ChunkType>
-			static decltype(auto)  Get (ChunkType &chunk, size_t i) {
+			static decltype(auto)  Get (ChunkType &chunk, usize i) {
 				return chunk.template Get< MapCompType<T> >()[i];
 			}
 		};
@@ -1174,7 +1174,7 @@ DEBUG_ONLY(
 		struct GetStorageElement< T * >
 		{
 			template <typename ChunkType>
-			static T*  Get (ChunkType &chunk, size_t i) {
+			static T*  Get (ChunkType &chunk, usize i) {
 				auto&	arr = chunk.template Get< MapCompType<T*> >();
 				return arr ? &arr[i] : null;
 			}
@@ -1184,7 +1184,7 @@ DEBUG_ONLY(
 		struct GetStorageElement< Require<Types...> >
 		{
 			template <typename ChunkType>
-			static Require<Types...>  Get (ChunkType &, size_t) {
+			static Require<Types...>  Get (ChunkType &, usize) {
 				return {};
 			}
 		};
@@ -1193,7 +1193,7 @@ DEBUG_ONLY(
 		struct GetStorageElement< RequireAny<Types...> >
 		{
 			template <typename ChunkType>
-			static RequireAny<Types...>  Get (ChunkType &, size_t) {
+			static RequireAny<Types...>  Get (ChunkType &, usize) {
 				return {};
 			}
 		};
@@ -1202,7 +1202,7 @@ DEBUG_ONLY(
 		struct GetStorageElement< Subtractive<Types...> >
 		{
 			template <typename ChunkType>
-			static Subtractive<Types...>  Get (ChunkType &, size_t) {
+			static Subtractive<Types...>  Get (ChunkType &, usize) {
 				return {};
 			}
 		};
@@ -1218,11 +1218,11 @@ DEBUG_ONLY(
 	inline void  Registry::_Execute_v2 (QueryID query, Fn &&fn, const TypeList<Args...>*)
 	{
 		_Execute_v1( query,
-			[&fn] (ArrayView<Tuple< size_t, _reg_detail_::MapCompType<Args>... >> chunks)
+			[&fn] (ArrayView<Tuple< usize, _reg_detail_::MapCompType<Args>... >> chunks)
 			{
 				for (auto& chunk : chunks)
 				{
-					for (size_t i = 0, cnt = chunk.template Get<0>(); i < cnt; ++i)
+					for (usize i = 0, cnt = chunk.template Get<0>(); i < cnt; ++i)
 					{
 						fn( _reg_detail_::GetStorageElement<Args>::template Get( chunk, i )... );
 					}
@@ -1231,7 +1231,8 @@ DEBUG_ONLY(
 	}
 //-----------------------------------------------------------------------------
 	
-#ifdef AE_DEBUG
+
+#if defined(AE_DEBUG) or defined(AE_DEVELOP)
 /*
 =================================================
 	ArchetypeCompatibility
@@ -1346,7 +1347,7 @@ DEBUG_ONLY(
 	_IsArchetypeSupported
 =================================================
 */
-	template <typename ArgsList, size_t I>
+	template <typename ArgsList, usize I>
 	inline bool  Registry::_IsArchetypeSupported (const Archetype &arch)
 	{
 		if constexpr( I < ArgsList::Count )
@@ -1362,7 +1363,7 @@ DEBUG_ONLY(
 			return true;
 		}
 	}
-#endif	// AE_DEBUG
+#endif	// AE_DEBUG or AE_DEVELOP
 
 /*
 =================================================
@@ -1446,7 +1447,7 @@ DEBUG_ONLY(
 =================================================
 */
 	template <typename ...Args>
-	inline Tuple<size_t, Args...>  Registry::_GetChunk (ArchetypeStorage* storage, const TypeList<Args...> *)
+	inline Tuple<usize, Args...>  Registry::_GetChunk (ArchetypeStorage* storage, const TypeList<Args...> *)
 	{
 		return MakeTuple(	storage->Count(),
 							_reg_detail_::GetStorageComponent<Args>::Get( storage )... );
@@ -1462,13 +1463,13 @@ DEBUG_ONLY(
 	{
 		if constexpr( IsPointer<T> )
 		{
-			using A = std::remove_pointer_t<T>;
+			using A = RemovePointer<T>;
 			return GetSingleComponent<A>();		// can be null
 		}
 		else
-		if constexpr( std::is_reference_v<T> )
+		if constexpr( IsReference<T> )
 		{
-			using A = std::remove_reference_t<T>;
+			using A = RemoveReference<T>;
 			ASSERT( GetSingleComponent<A>() );	// TODO: component must be created
 			return AssignSingleComponent<A>();
 		}
@@ -1506,7 +1507,7 @@ DEBUG_ONLY(
 		EXLOCK( _drCheck );
 		STATIC_ASSERT( IsEmpty<Ev> );
 
-		_eventListeners.insert({ TypeIdOf<Ev>(), EventListener_t{ std::forward<Fn>(fn) }});
+		_eventListeners.insert({ TypeIdOf<Ev>(), EventListener_t{ FwdArg<Fn>(fn) }});
 	}
 	
 /*
@@ -1555,7 +1556,7 @@ DEBUG_ONLY(
 	template <typename Comp, typename Tag, typename Fn>
 	inline void  Registry::AddMessageListener (Fn &&fn)
 	{
-		_messages.AddListener<Comp, Tag>( std::forward<Fn>( fn ));
+		_messages.AddListener<Comp, Tag>( FwdArg<Fn>( fn ));
 	}
 	
 /*

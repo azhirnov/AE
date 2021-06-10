@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -42,7 +42,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void VComputePipeline::Destroy (VResourceManager &resMngr)
+	void VComputePipeline::Destroy (VResourceManagerImpl &resMngr)
 	{
 		EXLOCK( _drCheck );
 
@@ -98,7 +98,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void VComputePipelineTemplate::Destroy (const VResourceManager &)
+	void VComputePipelineTemplate::Destroy (const VResourceManagerImpl &)
 	{
 		EXLOCK( _drCheck );
 

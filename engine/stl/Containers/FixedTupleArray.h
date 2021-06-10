@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -13,7 +13,7 @@ namespace AE::STL
 	// Fixed Size Tuple Array
 	//
 
-	template <size_t ArraySize, typename ...Types>
+	template <usize ArraySize, typename ...Types>
 	struct FixedTupleArray
 	{
 		STATIC_ASSERT( ArraySize < 256 );
@@ -30,7 +30,7 @@ namespace AE::STL
 
 	// variables
 	private:
-		size_t		_count	= 0;
+		usize		_count	= 0;
 		Array_t		_arrays;
 
 
@@ -45,22 +45,22 @@ namespace AE::STL
 		}
 
 		
-		template <size_t I>
+		template <usize I>
 		ND_ constexpr auto			get ()			const	{ return ArrayView<typename Types_t::template Get<I>>{ _Data<I>(), _count }; }
 
 		template <typename T>
 		ND_ constexpr ArrayView<T>	get ()			const	{ return get< Types_t::template Index<T> >(); }
 
-		template <size_t I>
-		ND_ decltype(auto)			at (size_t i)			{ ASSERT( i < _count ); return _Data<I>()[i]; }
+		template <usize I>
+		ND_ decltype(auto)			at (usize i)			{ ASSERT( i < _count ); return _Data<I>()[i]; }
 		
-		template <size_t I>
-		ND_ decltype(auto)			at (size_t i)	const	{ ASSERT( i < _count ); return _Data<I>()[i]; }
+		template <usize I>
+		ND_ decltype(auto)			at (usize i)	const	{ ASSERT( i < _count ); return _Data<I>()[i]; }
 
-		ND_ constexpr size_t		size ()			const	{ return _count; }
+		ND_ constexpr usize		size ()			const	{ return _count; }
 		ND_ constexpr bool			empty ()		const	{ return _count == 0; }
 
-		ND_ static constexpr size_t	capacity ()				{ return ArraySize; }
+		ND_ static constexpr usize	capacity ()				{ return ArraySize; }
 
 		
 		constexpr void  push_back (const Types&... values)
@@ -73,7 +73,7 @@ namespace AE::STL
 		constexpr void  push_back (Types&&... values)
 		{
 			ASSERT( _count < capacity() );
-			_PushBack<0>( std::forward<Types>(values)... );
+			_PushBack<0>( FwdArg<Types>(values)... );
 			++_count;
 		}
 		
@@ -93,7 +93,7 @@ namespace AE::STL
 		{
 			if ( _count < capacity() )
 			{
-				_PushBack<0>( std::forward<Types>(values)... );
+				_PushBack<0>( FwdArg<Types>(values)... );
 				++_count;
 				return true;
 			}
@@ -115,7 +115,7 @@ namespace AE::STL
 			_Destroy<0>( _count );
 		}
 		
-		constexpr void  insert (size_t pos, const Types&... values)
+		constexpr void  insert (usize pos, const Types&... values)
 		{
 			ASSERT( _count < capacity() );
 			if ( pos >= _count ) {
@@ -127,26 +127,26 @@ namespace AE::STL
 			++_count;
 		}
 
-		constexpr void  insert (size_t pos, Types&&... values)
+		constexpr void  insert (usize pos, Types&&... values)
 		{
 			ASSERT( _count < capacity() );
 			if ( pos >= _count ) {
-				_PushBack<0>( std::forward<Types>(values)... );
+				_PushBack<0>( FwdArg<Types>(values)... );
 			}else{
 				_Move<0>( pos, pos+1, _count - pos );
-				_Insert<0>( pos, std::forward<Types>(values)... );
+				_Insert<0>( pos, FwdArg<Types>(values)... );
 			}
 			++_count;
 		}
 
-		constexpr void resize (size_t newSize)
+		constexpr void resize (usize newSize)
 		{
 			newSize = Min( newSize, capacity() );
 
 			if ( newSize < _count )
 			{
 				// delete elements
-				for (size_t i = newSize; i < _count; ++i) {
+				for (usize i = newSize; i < _count; ++i) {
 					_Destroy<0>( i );
 				}
 			}
@@ -154,7 +154,7 @@ namespace AE::STL
 			if ( newSize > _count )
 			{
 				// create elements
-				for (size_t i = _count; i < newSize; ++i) {
+				for (usize i = _count; i < newSize; ++i) {
 					_Create<0>( i );
 				}
 			}
@@ -162,7 +162,7 @@ namespace AE::STL
 			_count = newSize;
 		}
 
-		constexpr void  erase (size_t pos)
+		constexpr void  erase (usize pos)
 		{
 			ASSERT( _count > 0 );
 			--_count;
@@ -175,7 +175,7 @@ namespace AE::STL
 			}
 		}
 
-		constexpr void  fast_erase (size_t pos)
+		constexpr void  fast_erase (usize pos)
 		{
 			ASSERT( _count > 0 );
 			--_count;
@@ -187,7 +187,7 @@ namespace AE::STL
 
 		constexpr void clear ()
 		{
-			for (size_t i = 0; i < _count; ++i) {
+			for (usize i = 0; i < _count; ++i) {
 				_Destroy<0>( i );
 			}
 
@@ -208,38 +208,38 @@ namespace AE::STL
 
 
 	private:
-		template <size_t I>		ND_ constexpr auto*	_Data () const	{ return &(*&_arrays.template Get<I>())[0]; }
-		template <size_t I>		ND_ constexpr auto*	_Data ()		{ return &(*&_arrays.template Get<I>())[0]; }
+		template <usize I>		ND_ constexpr auto*	_Data () const	{ return &(*&_arrays.template Get<I>())[0]; }
+		template <usize I>		ND_ constexpr auto*	_Data ()		{ return &(*&_arrays.template Get<I>())[0]; }
 
 
-		template <size_t I, typename Arg0, typename ...Args>
+		template <usize I, typename Arg0, typename ...Args>
 		constexpr void  _PushBack (Arg0 &&arg0, Args&&... args)
 		{
 			using T = std::remove_const_t< std::remove_reference_t< Arg0 >>;
 
-			PlacementNew<T>( _Data<I>() + _count, std::forward<Arg0>(arg0) );
+			PlacementNew<T>( _Data<I>() + _count, FwdArg<Arg0>(arg0) );
 			
 			if constexpr( I+1 < Types_t::Count )
-				_PushBack<I+1>( std::forward<Args&&>(args)... );
+				_PushBack<I+1>( FwdArg<Args&&>(args)... );
 		}
 		
 
-		template <size_t I, typename Arg0, typename ...Args>
-		constexpr void  _Insert (size_t pos, Arg0 &&arg0, Args&&... args)
+		template <usize I, typename Arg0, typename ...Args>
+		constexpr void  _Insert (usize pos, Arg0 &&arg0, Args&&... args)
 		{
 			using T = std::remove_const_t< std::remove_reference_t< Arg0 >>;
 			T* data = _Data<I>();
 			
 			data[pos].~T();
-			PlacementNew<T>( data + pos, std::forward<Arg0>(arg0) );
+			PlacementNew<T>( data + pos, FwdArg<Arg0>(arg0) );
 			
 			if constexpr( I+1 < Types_t::Count )
-				_Insert<I+1>( pos, std::forward<Args&&>(args)... );
+				_Insert<I+1>( pos, FwdArg<Args&&>(args)... );
 		}
 
 
-		template <size_t I>
-		constexpr void  _Destroy (size_t index)
+		template <usize I>
+		constexpr void  _Destroy (usize index)
 		{
 			using T = typename TypeList< Types... >::template Get<I>;
 			T* data = _Data<I>();
@@ -252,14 +252,14 @@ namespace AE::STL
 		}
 		
 
-		template <size_t I>
-		constexpr void  _Move (size_t srcIdx, size_t dstIdx, size_t count)
+		template <usize I>
+		constexpr void  _Move (usize srcIdx, usize dstIdx, usize count)
 		{
 			using T = typename Types_t::template Get<I>;
 			T* data = _Data<I>();
 
-			for (size_t i = 0; i < count; ++i) {
-				PlacementNew<T>( data + dstIdx + i, std::move(data[srcIdx + i]) );
+			for (usize i = 0; i < count; ++i) {
+				PlacementNew<T>( data + dstIdx + i, RVRef(data[srcIdx + i]) );
 			}
 
 			if constexpr( I+1 < Types_t::Count )
@@ -267,13 +267,13 @@ namespace AE::STL
 		}
 
 
-		template <size_t I>
-		constexpr void  _Replace (size_t srcIdx, size_t dstIdx)
+		template <usize I>
+		constexpr void  _Replace (usize srcIdx, usize dstIdx)
 		{
 			using T = typename Types_t::template Get<I>;
 			T* data = _Data<I>();
 
-			PlacementNew<T>( data + dstIdx, std::move(data[srcIdx]) );
+			PlacementNew<T>( data + dstIdx, RVRef(data[srcIdx]) );
 
 			data[srcIdx].~T();
 			DEBUG_ONLY( std::memset( data + srcIdx, 0xCD, sizeof(T) ));
@@ -283,8 +283,8 @@ namespace AE::STL
 		}
 
 
-		template <size_t I>
-		constexpr void  _Create (size_t index)
+		template <usize I>
+		constexpr void  _Create (usize index)
 		{
 			using T = typename Types_t::template Get<I>;
 			PlacementNew<T>( _Data<I>() + index );

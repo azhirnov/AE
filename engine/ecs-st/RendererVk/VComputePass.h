@@ -98,17 +98,17 @@ namespace AE::ECS::Systems
 
 		_owner.Execute(
 			_query.updatePpln,
-			[this] (ArrayView<Tuple< size_t,
+			[this] (ArrayView<Tuple< usize,
 									 WriteAccess<VPipeline>,
 									 WriteAccess<VComputePipelineRef> >> chunks)
 			{
 				for (auto& chunk : chunks)
 				{
-					size_t	count	= chunk.template Get<0>();
+					usize	count	= chunk.template Get<0>();
 					auto&	dst		= chunk.template Get<1>();
 					auto&	src		= chunk.template Get<2>();
 
-					for (size_t i = 0; i < count; ++i)
+					for (usize i = 0; i < count; ++i)
 					{
 						auto	ppln = _resMngr.GetGraphicsPipeline( src[i].name, src[i].desc );
 						auto	desc = _resMngr.GetPipelineNativeDesc( ppln );
@@ -143,7 +143,7 @@ namespace AE::ECS::Systems
 		
 		_owner.Execute(
 			_query.dispatchPC,
-			[this] (ArrayView<Tuple< size_t,
+			[this] (ArrayView<Tuple< usize,
 									 ReadAccess<VDispatchCompute>,
 									 ReadAccess<VDescriptorSets>,
 									 ReadAccess<VPipeline>,
@@ -151,13 +151,13 @@ namespace AE::ECS::Systems
 			{
 				for (auto& chunk : chunks)
 				{
-					size_t	count	= chunk.template Get<0>();
+					usize	count	= chunk.template Get<0>();
 					auto	disp	= chunk.template Get<1>();
 					auto	ds		= chunk.template Get<2>();
 					auto	ppln	= chunk.template Get<3>();
 					auto	pc		= chunk.template Get<4>();
 					
-					for (size_t i = 0; i < count; ++i)
+					for (usize i = 0; i < count; ++i)
 					{
 						vkCmdBindPipeline( _primaryCmd, VK_PIPELINE_BIND_POINT_COMPUTE, ppln[i].handle );
 						vkCmdBindDescriptorSets( _primaryCmd, VK_PIPELINE_BIND_POINT_COMPUTE, ppln[i].layout, RendererVk::Config::DrawCallDSIndex, uint(ds[i].value.size()), ds[i].value.data(), 0, null );
@@ -168,7 +168,7 @@ namespace AE::ECS::Systems
 			});
 		_owner.Execute(
 			_query.dispatchBasePC,
-			[this] (ArrayView<Tuple< size_t,
+			[this] (ArrayView<Tuple< usize,
 									 ReadAccess<VDispatchComputeBase>,
 									 ReadAccess<VDescriptorSets>,
 									 ReadAccess<VPipeline>,
@@ -176,13 +176,13 @@ namespace AE::ECS::Systems
 			{
 				for (auto& chunk : chunks)
 				{
-					size_t	count	= chunk.template Get<0>();
+					usize	count	= chunk.template Get<0>();
 					auto	disp	= chunk.template Get<1>();
 					auto	ds		= chunk.template Get<2>();
 					auto	ppln	= chunk.template Get<3>();
 					auto	pc		= chunk.template Get<4>();
 					
-					for (size_t i = 0; i < count; ++i)
+					for (usize i = 0; i < count; ++i)
 					{
 						vkCmdBindPipeline( _primaryCmd, VK_PIPELINE_BIND_POINT_COMPUTE, ppln[i].handle );
 						vkCmdBindDescriptorSets( _primaryCmd, VK_PIPELINE_BIND_POINT_COMPUTE, ppln[i].layout, RendererVk::Config::DrawCallDSIndex, uint(ds[i].value.size()), ds[i].value.data(), 0, null );
@@ -194,19 +194,19 @@ namespace AE::ECS::Systems
 
 		_owner.Execute(
 			_query.dispatch,
-			[this] (ArrayView<Tuple< size_t,
+			[this] (ArrayView<Tuple< usize,
 									 ReadAccess<VDispatchCompute>,
 									 ReadAccess<VDescriptorSets>,
 									 ReadAccess<VPipeline> >> chunks)
 			{
 				for (auto& chunk : chunks)
 				{
-					size_t	count	= chunk.template Get<0>();
+					usize	count	= chunk.template Get<0>();
 					auto	disp	= chunk.template Get<1>();
 					auto	ds		= chunk.template Get<2>();
 					auto	ppln	= chunk.template Get<3>();
 					
-					for (size_t i = 0; i < count; ++i)
+					for (usize i = 0; i < count; ++i)
 					{
 						vkCmdBindPipeline( _primaryCmd, VK_PIPELINE_BIND_POINT_COMPUTE, ppln[i].handle );
 						vkCmdBindDescriptorSets( _primaryCmd, VK_PIPELINE_BIND_POINT_COMPUTE, ppln[i].layout, RendererVk::Config::DrawCallDSIndex, uint(ds[i].value.size()), ds[i].value.data(), 0, null );
@@ -216,19 +216,19 @@ namespace AE::ECS::Systems
 			});
 		_owner.Execute(
 			_query.dispatchBase,
-			[this] (ArrayView<Tuple< size_t,
+			[this] (ArrayView<Tuple< usize,
 									 ReadAccess<VDispatchComputeBase>,
 									 ReadAccess<VDescriptorSets>,
 									 ReadAccess<VPipeline> >> chunks)
 			{
 				for (auto& chunk : chunks)
 				{
-					size_t	count	= chunk.template Get<0>();
+					usize	count	= chunk.template Get<0>();
 					auto	disp	= chunk.template Get<1>();
 					auto	ds		= chunk.template Get<2>();
 					auto	ppln	= chunk.template Get<3>();
 					
-					for (size_t i = 0; i < count; ++i)
+					for (usize i = 0; i < count; ++i)
 					{
 						vkCmdBindPipeline( _primaryCmd, VK_PIPELINE_BIND_POINT_COMPUTE, ppln[i].handle );
 						vkCmdBindDescriptorSets( _primaryCmd, VK_PIPELINE_BIND_POINT_COMPUTE, ppln[i].layout, RendererVk::Config::DrawCallDSIndex, uint(ds[i].value.size()), ds[i].value.data(), 0, null );

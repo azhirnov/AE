@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -187,7 +187,7 @@ namespace AE::Math
 	template <typename T>
 	ND_ inline RadiansTempl<T>  ASinH (const T& x)
 	{
-		return RadiansTempl<T>( SignOrZero( x ) * Ln( x + Sqrt( (x*x) + T(1) ) ) );
+		return RadiansTempl<T>( SignOrZero( x ) * Ln( x + Sqrt( (x*x) + T(1) )));
 	}
 	
 /*
@@ -199,7 +199,7 @@ namespace AE::Math
 	ND_ inline RadiansTempl<T>  ACosH (const T& x)
 	{
 		ASSERT( x >= T(1) );
-		return RadiansTempl<T>{Ln( x + Sqrt( (x*x) - T(1) ) )};
+		return RadiansTempl<T>{ Ln( x + Sqrt( (x*x) - T(1) ))};
 	}
 	
 /*

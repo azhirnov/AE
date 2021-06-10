@@ -29,7 +29,7 @@ namespace AE::SamplerPacker
 		CHECK_ERR( info->outputPackName != null );
 		
 		HashSet<Filename>	sampler_files;
-		ScriptEnginePtr		script_engine	= MakeShared<ScriptEngine>();
+		ScriptEnginePtr		script_engine	= MakeRC<ScriptEngine>();
 		SamplerStorage		sampler_storage;
 		SamplerStorage::SetInstance( &sampler_storage );
 
@@ -61,7 +61,7 @@ namespace AE::SamplerPacker
 			
 			ScriptEngine::ModuleSource	src;
 			
-			if ( not file.Read( size_t(file.RemainingSize()), OUT src.script ))
+			if ( not file.Read( usize(file.RemainingSize()), OUT src.script ))
 			{
 				AE_LOGI( "Failed to read sampler file: '"s << Path{path}.string() << "'" );
 				continue;
@@ -84,7 +84,7 @@ namespace AE::SamplerPacker
 			Unused( fn->Run() );
 		}
 
-		auto	file = MakeShared<FileWStream>( info->outputPackName );
+		auto	file = MakeRC<FileWStream>( info->outputPackName );
 		CHECK_ERR( file->IsOpen() );
 
 		Serializing::Serializer	ser;

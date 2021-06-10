@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "networking/http/HttpRequest.h"
 #include "stl/Algorithms/StringUtils.h"
@@ -13,14 +13,14 @@ namespace AE::Networking
 */
 	HttpRequestDesc&  HttpRequestDesc::Url (String value) &
 	{
-		_url = std::move(value);
+		_url = RVRef(value);
 		return *this;
 	}
 
 	HttpRequestDesc&& HttpRequestDesc::Url (String value) &&
 	{
-		_url = std::move(value);
-		return std::move(*this);
+		_url = RVRef(value);
+		return RVRef(*this);
 	}
 		
 /*
@@ -37,7 +37,7 @@ namespace AE::Networking
 	HttpRequestDesc&& HttpRequestDesc::Method (EMethod value) &&
 	{
 		_method = value;
-		return std::move(*this);
+		return RVRef(*this);
 	}
 	
 /*
@@ -54,7 +54,7 @@ namespace AE::Networking
 	HttpRequestDesc&& HttpRequestDesc::Redirections (uint value) &&
 	{
 		_redirections = value;
-		return std::move(*this);
+		return RVRef(*this);
 	}
 	
 /*
@@ -71,7 +71,7 @@ namespace AE::Networking
 	HttpRequestDesc&& HttpRequestDesc::VerifyPeer (bool value) &&
 	{
 		_verifyPeer = value;
-		return std::move(*this);
+		return RVRef(*this);
 	}
 
 /*
@@ -88,7 +88,7 @@ namespace AE::Networking
 	HttpRequestDesc&& HttpRequestDesc::AddHeader (StringView name, StringView value) &&
 	{
 		_headers.push_back( String(name) << ": " << value );
-		return std::move(*this);
+		return RVRef(*this);
 	}
 	
 /*
@@ -105,7 +105,7 @@ namespace AE::Networking
 	HttpRequestDesc&& HttpRequestDesc::Content (StringView value) &&
 	{
 		_content = MakeUnique<MemRStream>( value );
-		return std::move(*this);
+		return RVRef(*this);
 	}
 	
 /*
@@ -113,16 +113,16 @@ namespace AE::Networking
 	Content
 =================================================
 */
-	HttpRequestDesc&  HttpRequestDesc::Content (Array<uint8_t> &&value) &
+	HttpRequestDesc&  HttpRequestDesc::Content (Array<ubyte> &&value) &
 	{
-		_content = MakeUnique<MemRStream>( std::move(value) );
+		_content = MakeUnique<MemRStream>( RVRef(value) );
 		return *this;
 	}
 
-	HttpRequestDesc&& HttpRequestDesc::Content (Array<uint8_t> &&value) &&
+	HttpRequestDesc&& HttpRequestDesc::Content (Array<ubyte> &&value) &&
 	{
-		_content = MakeUnique<MemRStream>( std::move(value) );
-		return std::move(*this);
+		_content = MakeUnique<MemRStream>( RVRef(value) );
+		return RVRef(*this);
 	}
 
 /*
@@ -132,14 +132,14 @@ namespace AE::Networking
 */
 	HttpRequestDesc&  HttpRequestDesc::Content (UniquePtr<RStream> value) &
 	{
-		_content = std::move(value);
+		_content = RVRef(value);
 		return *this;
 	}
 
 	HttpRequestDesc&& HttpRequestDesc::Content (UniquePtr<RStream> value) &&
 	{
-		_content = std::move(value);
-		return std::move(*this);
+		_content = RVRef(value);
+		return RVRef(*this);
 	}
 //-----------------------------------------------------------------------------
 
@@ -151,7 +151,7 @@ namespace AE::Networking
 */
 	HttpRequest::HttpRequest () :
 		IAsyncTask{ EThread::Network },
-		_response{ New<ResponseData>() },
+		_response{ new ResponseData{} },
 		_bytesSent{ 0 },
 		_bytesReceived{ 0 }
 	{}
@@ -169,7 +169,7 @@ namespace AE::Networking
 			return null;
 		}
 
-		return std::move(_response);
+		return RVRef(_response);
 	}
 	
 /*
@@ -177,9 +177,9 @@ namespace AE::Networking
 	Sent
 =================================================
 */
-	BytesU  HttpRequest::Sent ()
+	Bytes  HttpRequest::Sent ()
 	{
-		return BytesU{ _bytesSent.load( EMemoryOrder::Relaxed )};
+		return Bytes{ _bytesSent.load( EMemoryOrder::Relaxed )};
 	}
 	
 /*
@@ -187,9 +187,9 @@ namespace AE::Networking
 	Received
 =================================================
 */
-	BytesU  HttpRequest::Received ()
+	Bytes  HttpRequest::Received ()
 	{
-		return BytesU{ _bytesReceived.load( EMemoryOrder::Relaxed )};
+		return Bytes{ _bytesReceived.load( EMemoryOrder::Relaxed )};
 	}
 
 }	// AE::Networking

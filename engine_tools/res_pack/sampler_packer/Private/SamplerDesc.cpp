@@ -273,7 +273,7 @@ namespace AE::SamplerPacker
 		CHECK_ERR( _samplerRefs.size() );
 		CHECK_ERR( not _hashCollisionCheck.HasCollisions() );
 		
-		using SamplerMap_t		= HashMultiMap< size_t, SamplerUID >;
+		using SamplerMap_t		= HashMultiMap< usize, SamplerUID >;
 		using SamplerArr_t		= Array< SamplerDesc >;
 		using SamplerNameMap_t	= HashMap< SamplerName, SamplerUID >;
 
@@ -289,7 +289,7 @@ namespace AE::SamplerPacker
 			result << HashOf( desc.mipLodBias ) << HashOf( desc.minLod ) << HashOf( desc.maxLod );
 			result << HashOf( desc.maxAnisotropy ) << HashOf( desc.compareOp );
 			result << HashOf( desc.borderColor ) << HashOf( desc.unnormalizedCoordinates );
-			return size_t(result);
+			return usize(result);
 		};
 
 		const auto	SamplerDescEqual = [] (const SamplerDesc &lhs, const SamplerDesc &rhs)
@@ -309,12 +309,12 @@ namespace AE::SamplerPacker
 
 		const auto	AddSampler = [&] (const SamplerDesc &desc)
 		{
-			const size_t	hash	= SamplerDescHash( desc );
+			const usize	hash	= SamplerDescHash( desc );
 			auto			iter	= unique_samplers.find( hash );
 
 			for (; iter != unique_samplers.end() and iter->first == hash; ++iter)
 			{
-				auto&	lhs = sampler_arr[ size_t(iter->second) ];
+				auto&	lhs = sampler_arr[ usize(iter->second) ];
 			
 				if ( SamplerDescEqual( lhs, desc ))
 				{

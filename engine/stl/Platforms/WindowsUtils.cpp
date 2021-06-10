@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Platforms/WindowsUtils.h"
 #include "stl/Platforms/WindowsHeader.h"
@@ -97,7 +97,7 @@ namespace
 			return false;
 
 		WCHAR	str[256] = {};
-		for (size_t i = 0, cnt = Min( name.size(), CountOf(str)-1 ); i < cnt; ++i) {
+		for (usize i = 0, cnt = Min( name.size(), CountOf(str)-1 ); i < cnt; ++i) {
 			str[i] = WCHAR(name.c_str()[i]);
 		}
 
@@ -148,7 +148,7 @@ namespace
 */
 	void WindowsUtils::SetThreadName (NtStringView name)
 	{
-		if ( SetCurrentThreadName10( name ) )
+		if ( SetCurrentThreadName10( name ))
 			return;
 
 		SetCurrentThreadNameXP( name.c_str() );
@@ -176,7 +176,7 @@ namespace
 	{
 		DWORD_PTR	mask;
 		
-		//ASSERT( cpuCore < std::thread::hardware_concurrency() );
+		ASSERT( cpuCore < std::thread::hardware_concurrency() );
 
 		#if PLATFORM_BITS == 64
 		{
@@ -193,6 +193,33 @@ namespace
 		return ::SetThreadAffinityMask( handle, mask ) != 0;
 	}
 	
+/*
+=================================================
+	SetThreadPriority
+=================================================
+*/
+	bool  WindowsUtils::SetThreadPriority (const std::thread::native_handle_type &handle, float priorityFactor)
+	{
+		static const Pair<float, int>	priorities[] = {
+			{-0.9f, THREAD_PRIORITY_IDLE},
+			{-0.4f, THREAD_PRIORITY_LOWEST},
+			{-0.1f, THREAD_PRIORITY_BELOW_NORMAL},
+			{ 0.0f, THREAD_PRIORITY_NORMAL},
+			{ 0.1f, THREAD_PRIORITY_ABOVE_NORMAL},
+			{ 0.5f, THREAD_PRIORITY_HIGHEST},
+			{ 1.1f, THREAD_PRIORITY_TIME_CRITICAL}
+		};
+
+		priorityFactor = Min( 1.0f, priorityFactor );
+
+		for (auto& [factor, priority] : priorities)
+		{
+			if ( priorityFactor < factor )
+				return ::SetThreadPriority( handle, priority ) != FALSE;
+		}
+		return false;
+	}
+
 /*
 =================================================
 	CheckErrors
@@ -221,6 +248,22 @@ namespace
 
 		AE_LOGE( str, file, line );
 		return false;
+	}
+	
+/*
+=================================================
+	GetMemoryPageInfo
+=================================================
+*/
+	bool  WindowsUtils::GetMemoryPageInfo (OUT MemoryPageInfo &info)
+	{
+		SYSTEM_INFO		sys_info = {};
+		::GetSystemInfo( OUT &sys_info );
+
+		info.pageSize				= Bytes{ sys_info.dwPageSize };
+		info.allocationGranularity	= Bytes{ sys_info.dwAllocationGranularity };
+
+		return true;
 	}
 
 }	// AE::STL

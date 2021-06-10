@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Algorithms/StringUtils.h"
 #include "stl/Containers/NtStringView.h"
@@ -7,18 +7,41 @@
 using namespace AE::STL;
 
 
+namespace {
+/*
+=================================================
+	ToShortPath
+=================================================
+*/
+	ND_ inline StringView  ToShortPath (StringView file)
+	{
+		const uint	max_parts = 2;
+
+		usize	i = file.length()-1;
+		uint	j = 0;
+
+		for (; i < file.length() and j < max_parts; --i)
+		{
+			const char	c = file[i];
+
+			if ( (c == '\\') | (c == '/') )
+				++j;
+		}
+
+		return file.substr( i + (j == max_parts ? 2 : 0) );
+	}
+
 /*
 =================================================
 	ConsoleOutput
 =================================================
 */
-namespace {
 	static void  ConsoleOutput (StringView message, StringView file, int line, bool isError)
 	{
-		const String str = String{file} << '(' << ToString( line ) << "): " << message;
+		const String str = String{ ToShortPath( file )} << '(' << ToString( line ) << "): " << message;
 
 		if ( isError )
-			std::cerr << str << std::endl;
+			std::cerr << "\x1B[31m" << str << "\033[0m" << std::endl;
 		else
 			std::cout << str << std::endl;
 	}
@@ -58,7 +81,7 @@ namespace {
 */
 	Logger::EResult  AE::STL::Logger::Info (StringView msg, StringView func, StringView file, int line)
 	{
-		(void)__android_log_write( ANDROID_LOG_WARN, AE_ANDROID_TAG, (String{} << file << " (" << ToString( line ) << "): " << msg).c_str() );
+		(void)__android_log_print( ANDROID_LOG_INFO, AE_ANDROID_TAG, "%s (%i): %s", ToShortPath( file ).data(), line, msg.data() );
 		return EResult::Continue;
 	}
 	
@@ -69,7 +92,7 @@ namespace {
 */
 	Logger::EResult  AE::STL::Logger::Error (StringView msg, StringView func, StringView file, int line)
 	{
-		(void)__android_log_write( ANDROID_LOG_ERROR, AE_ANDROID_TAG, (String{} << file << " (" << ToString( line ) << "): " << msg).c_str() );
+		(void)__android_log_print( ANDROID_LOG_ERROR, AE_ANDROID_TAG, "%s (%i): %s", ToShortPath( file ).data(), line, msg.data() );
 		return EResult::Continue;
 	}
 //-----------------------------------------------------------------------------
@@ -121,15 +144,15 @@ namespace {
 		#ifndef AE_CI_BUILD
 		{
 			const String	caption	= "Error message";
-
-			const String	str		= "File: "s << file <<
+			
+			const String	str		= "File: "s << ToShortPath( file ) <<
 									  "\nLine: " << ToString( line ) <<
 									  "\nFunction: " << func <<
 									  "\n\nMessage:\n" << msg;
 
 			int	result = ::MessageBoxExA( null, str.c_str(), caption.c_str(),
 										  MB_ABORTRETRYIGNORE | MB_ICONERROR | MB_SETFOREGROUND | MB_TOPMOST | MB_DEFBUTTON3,
-										  MAKELANGID( LANG_ENGLISH, SUBLANG_ENGLISH_US ) );
+										  MAKELANGID( LANG_ENGLISH, SUBLANG_ENGLISH_US ));
 			switch ( result )
 			{
 				case IDABORT :	return Logger::EResult::Abort;

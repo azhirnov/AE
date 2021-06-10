@@ -1,8 +1,7 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Platforms/PlatformUtils.h"
 #include "stl/Stream/FileStream.h"
-#include "serializing/Deserializer.h"
 #include "serializing/ObjectFactory.h"
 #include "pipeline_compiler/PipelineCompiler.h"
 #include "pipeline_compiler/Public/PipelinePack.h"
@@ -18,6 +17,8 @@ namespace
 
 	using EMarker			= PipelineStorage::EMarker;
 	using TopologyBits_t	= GraphicsPipelineDesc::TopologyBits_t;
+
+	constexpr uint	UNDEFINED_SPECIALIZATION = UMax;
 
 
 	static void  PipelineCompiler_Test1 ()
@@ -46,7 +47,7 @@ namespace
 		TEST( compile_pipelines( &info ));
 
 
-		auto	file = MakeShared<FileRStream>( output );
+		auto	file = MakeRC<FileRStream>( output );
 		TEST( file->IsOpen() );
 
 		AE::Serializing::Deserializer	des;
@@ -163,7 +164,7 @@ namespace
 		TEST( render_pass_names[0].first == RenderPassName{"ColorPass"} );
 		TEST( render_pass_names[0].second == RenderPassUID(0) );
 
-		TEST( spirv_shaders.size() == 4 );
+		TEST( spirv_shaders.size() == 5 );
 		TEST( rt_count == 0 );
 
 		TEST( gpipelines.size() == 1 );
@@ -187,32 +188,46 @@ namespace
 		TEST( gpipelines[0].patchControlPoints == 0 );
 		TEST( gpipelines[0].earlyFragmentTests == true );
 		
-		TEST( mpipelines.size() == 1 );
+		TEST( mpipelines.size() == 2 );
 		TEST( mpipelines[0].layout == PipelineLayoutUID(1) );
 		TEST( mpipelines[0].renderPass == RenderPassUID(0) );
 		TEST( mpipelines[0].shaders.size() == 2 );
 		TEST( mpipelines[0].topology == EPrimitive::TriangleList );
 		TEST( mpipelines[0].maxVertices == 3 );
 		TEST( mpipelines[0].maxIndices == 3 );
-		TEST( All( mpipelines[0].defaultTaskGroupSize == uint3{0} ));
-		TEST( All( mpipelines[0].taskSizeSpec == uint3{~0u} ));
-		TEST( All( mpipelines[0].defaultMeshGroupSize == uint3{3, 1, 1} ));
-		TEST( All( mpipelines[0].meshSizeSpec == uint3{~0u} ));
+		TEST( All( mpipelines[0].defaultTaskGroupSize == 0 ));
+		TEST( All( mpipelines[0].taskSizeSpec == UNDEFINED_SPECIALIZATION ));
+		TEST( All( mpipelines[0].defaultMeshGroupSize == 3 ));
+		TEST( All( mpipelines[0].meshSizeSpec == UNDEFINED_SPECIALIZATION ));
 		TEST( mpipelines[0].specialization.size() == 0 );
 		TEST( mpipelines[0].earlyFragmentTests == true );
 		
+		TEST( mpipelines[1].layout == PipelineLayoutUID(1) );
+		TEST( mpipelines[1].renderPass == RenderPassUID(0) );
+		TEST( mpipelines[1].shaders.size() == 2 );
+		TEST( mpipelines[1].topology == EPrimitive::TriangleList );
+		TEST( mpipelines[1].maxVertices == 32 );
+		TEST( mpipelines[1].maxIndices == 64*3 );
+		TEST( All( mpipelines[1].defaultTaskGroupSize == 0 ));
+		TEST( All( mpipelines[1].taskSizeSpec == UNDEFINED_SPECIALIZATION ));
+		TEST( All( mpipelines[1].defaultMeshGroupSize <= 1 ));
+		TEST( All( mpipelines[1].meshSizeSpec == 0 ));
+		TEST( mpipelines[1].specialization.size() == 0 );
+		TEST( mpipelines[1].earlyFragmentTests == true );
+
 		TEST( cpipelines.size() == 1 );
 		TEST( cpipelines[0].layout == PipelineLayoutUID(2) );
 		//TEST( cpipelines[0].shader == ShaderUID(0) );
 		TEST( All( cpipelines[0].defaultLocalGroupSize == uint3{8, 8, 1} ));
-		TEST( All( cpipelines[0].localSizeSpec == uint3{0, 1, ~0u} ));
+		TEST( All( cpipelines[0].localSizeSpec == uint3{0, 1, UNDEFINED_SPECIALIZATION} ));
 		TEST( cpipelines[0].specialization.size() == 0 );
 
-		TEST( ppln_names.size() == 4 );
+		TEST( ppln_names.size() == 5 );
 		TEST( ppln_names[0].first == PipelineName{"graphics_2"} );
 		TEST( ppln_names[1].first == PipelineName{"mesh_1"} );
 		TEST( ppln_names[2].first == PipelineName{"compute_1"} );
 		TEST( ppln_names[3].first == PipelineName{"graphics_1"} );
+		TEST( ppln_names[4].first == PipelineName{"mesh_2"} );
 	}
 }
 
@@ -220,14 +235,14 @@ namespace
 extern void Test_PipelineCompiler ()
 {
 	{
-		Path	dll_path;
-		TEST( FileSystem::Search( "PipelineCompiler.dll", 3, 3, OUT dll_path ));
+		Path	dll_path{ AE_PIPELINE_COMPILER_LIBRARY };
+		//TEST( FileSystem::Search( "PipelineCompiler.dll", 3, 3, OUT dll_path ));
 
 		Library		lib;
 		TEST( lib.Load( dll_path ));
 		TEST( lib.GetProcAddr( "CompilePipelines", OUT compile_pipelines ));
 		
-		TEST( FileSystem::FindAndSetCurrent( "pipeline_test", 5 ));
+		TEST( FileSystem::SetCurrentPath( AE_CURRENT_DIR "/pipeline_test" ));
 
 		PipelineCompiler_Test1();
 	}

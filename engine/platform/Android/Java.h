@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -20,7 +20,7 @@ namespace AE::Java
 	template <typename Fn>
 	class JavaMethod;
 	
-	namespace _ae_java_hidden_
+	namespace _hidden_
 	{
 		template <typename T>
 		struct JavaMethodResult;
@@ -87,7 +87,7 @@ namespace AE::Java
 		private:																						\
 			_type_*		_data			= null;															\
 			jarray_t	_jarray			= null;															\
-			size_t		_count			= 0;															\
+			usize		_count			= 0;															\
 			bool		_readOnly		= false;														\
 			bool		_fromNative		= false;														\
 																										\
@@ -111,7 +111,7 @@ namespace AE::Java
 				_count	= je->GetArrayLength( _jarray );												\
 																										\
 				ASSERT( arr.size() == _count );															\
-				for (size_t i = 0; i < _count; ++i) {													\
+				for (usize i = 0; i < _count; ++i) {													\
 					_data[i] = arr[i];																	\
 				}																						\
 			}																							\
@@ -145,7 +145,7 @@ namespace AE::Java
 				return *this;																			\
 			}																							\
 																										\
-			ND_ const _type_&	operator [] (size_t i) const											\
+			ND_ const _type_&	operator [] (usize i) const											\
 			{																							\
 				ASSERT( i < _count );																	\
 				return _data[i];																		\
@@ -153,7 +153,7 @@ namespace AE::Java
 																										\
 			ND_ const _type_*	data ()			const	{ return _data; }								\
 																										\
-			ND_ size_t			size ()			const	{ return _count; }								\
+			ND_ usize			size ()			const	{ return _count; }								\
 																										\
 			ND_ bool			IsReadOnly ()	const	{ return _readOnly; }							\
 																										\
@@ -202,7 +202,7 @@ namespace AE::Java
 	// variables
 	private:
 		const char*		_data		= null;
-		size_t			_length		= 0;
+		usize			_length		= 0;
 		jstring			_jstr		= null;
 		bool			_fromNative	= false;	// true if created in native code
 
@@ -223,8 +223,8 @@ namespace AE::Java
 
 		ND_ jstring			Get ()		const	{ return _jstr; }
 		ND_ const char *	c_str ()	const	{ return _data; }
-		ND_ size_t			length ()	const	{ return _length; }
-		ND_ size_t			size ()		const	{ return _length; }
+		ND_ usize			length ()	const	{ return _length; }
+		ND_ usize			size ()		const	{ return _length; }
 
 		ND_ operator StringView ()		const	{ return StringView{ c_str(), length() }; }
 
@@ -357,7 +357,7 @@ namespace AE::Java
 		JavaStaticMethod (const JavaClass& jc, jmethodID method) : _class{jc}, _method{method} {}
 
 		template <typename ...ArgTypes>
-		_ae_java_hidden_::JavaMethodResult<Ret>  operator () (const ArgTypes&... args) const;
+		Java::_hidden_::JavaMethodResult<Ret>  operator () (const ArgTypes&... args) const;
 		
 		ND_ explicit operator bool () const		{ return _method != null; }
 	};
@@ -389,7 +389,7 @@ namespace AE::Java
 		JavaMethod (const JavaObj& obj, jmethodID method) : _obj{obj}, _method{method} {}
 		
 		template <typename ...ArgTypes>
-		_ae_java_hidden_::JavaMethodResult<Ret>  operator () (const ArgTypes&... args) const;
+		Java::_hidden_::JavaMethodResult<Ret>  operator () (const ArgTypes&... args) const;
 		
 		ND_ explicit operator bool () const		{ return _method != null; }
 	};
@@ -601,7 +601,7 @@ namespace AE::Java
 //-----------------------------------------------------------------------------
 // JavaMethodSignature
 
-	namespace _ae_java_hidden_
+	namespace _hidden_
 	{
 		//
 		// Jni Type Name
@@ -691,7 +691,7 @@ namespace AE::Java
 			}
 		};
 
-	}	// _ae_java_hidden_
+	}	// _hidden_
 
 
 
@@ -707,7 +707,7 @@ namespace AE::Java
 	inline JavaClass::JavaClass (InPlaceType<T>)
 	{
 		String	class_name;
-		_ae_java_hidden_::JniTypeName<T>::Append( INOUT class_name );
+		Java::_hidden_::JniTypeName<T>::Append( INOUT class_name );
 
 		// remove first 'L'
 		if ( class_name.length() > 0 and class_name.front() == 'L' ) {
@@ -739,7 +739,7 @@ namespace AE::Java
 		CHECK_ERR( _class );
 
 		JavaEnv	je;
-		_ae_java_hidden_::JavaMethodSignature<Ret (Args...)> sig;
+		Java::_hidden_::JavaMethodSignature<Ret (Args...)> sig;
 
 		JNINativeMethod	info = {
 			name.c_str(),
@@ -762,7 +762,7 @@ namespace AE::Java
 		CHECK_ERR( _class );
 
 		JavaEnv	je;
-		_ae_java_hidden_::JavaMethodSignature<Ret (Args...)> sig;
+		Java::_hidden_::JavaMethodSignature<Ret (Args...)> sig;
 		JNINativeMethod info = {
 			name.c_str(),
 			sig.signature().c_str(),
@@ -792,7 +792,7 @@ namespace AE::Java
 		CHECK_ERR( _class );
 		
 		JavaEnv	je;
-		_ae_java_hidden_::JavaMethodSignature<Fn> sig;
+		Java::_hidden_::JavaMethodSignature<Fn> sig;
 		
 		jmethodID	m_id = je->GetStaticMethodID( _class, name.c_str(), sig.signature().c_str() );
 		CHECK_ERR( m_id != 0 );
@@ -820,7 +820,7 @@ namespace AE::Java
 		}
 
 		JavaEnv	je;
-		_ae_java_hidden_::JavaMethodSignature<void (Args...)> sig;
+		Java::_hidden_::JavaMethodSignature<void (Args...)> sig;
 
 		jmethodID	ctor_id = je->GetMethodID( jc.Get(), "<init>", sig.signature().c_str() );
 		if ( not ctor_id ) {
@@ -828,7 +828,7 @@ namespace AE::Java
 			return;
 		}
 
-		jobject		jo = je->NewObjectV( jc.Get(), std::forward<Args>(args)... );
+		jobject		jo = je->NewObjectV( jc.Get(), FwdArg<Args>(args)... );
 		if ( not jo ) {
 			CHECK( !"failed to create java object" );
 			return;
@@ -873,7 +873,7 @@ namespace AE::Java
 		CHECK_ERR( _obj );
 
 		JavaEnv	je;
-		_ae_java_hidden_::JavaMethodSignature<Fn> sig;
+		Java::_hidden_::JavaMethodSignature<Fn> sig;
 
 		jmethodID	m_id = je->GetMethodID( JavaClass(*this).Get(), name.c_str(), sig.signature().c_str() );
 		CHECK_ERR( m_id != 0 );
@@ -886,7 +886,7 @@ namespace AE::Java
 //-----------------------------------------------------------------------------
 // JavaMethodCaller
 
-	namespace _ae_java_hidden_
+	namespace _hidden_
 	{
 		//
 		// JavaMethodResult
@@ -931,7 +931,7 @@ namespace AE::Java
 			{
 				JavaEnv	je;
 				ASSERT( not je.HasException() );
-				je->CallStaticVoidMethod( jc.Get(), method, std::forward<Args>(args)... );
+				je->CallStaticVoidMethod( jc.Get(), method, FwdArg<Args>(args)... );
 				CHECK_ERR( not je.HasException() );
 				return JavaMethodResult<void>(true);
 			}
@@ -941,7 +941,7 @@ namespace AE::Java
 			{
 				JavaEnv	je;
 				ASSERT( not je.HasException() );
-				je->CallNonvirtualVoidMethod( obj.Get(), jc.Get(), method, std::forward<Args>(args)... );
+				je->CallNonvirtualVoidMethod( obj.Get(), jc.Get(), method, FwdArg<Args>(args)... );
 				CHECK_ERR( not je.HasException() );
 				return JavaMethodResult<void>(true);
 			}
@@ -951,7 +951,7 @@ namespace AE::Java
 			{
 				JavaEnv	je;
 				ASSERT( not je.HasException() );
-				je->CallVoidMethod( obj.Get(), method, std::forward<Args>(args)... );
+				je->CallVoidMethod( obj.Get(), method, FwdArg<Args>(args)... );
 				CHECK_ERR( not je.HasException() );
 				return JavaMethodResult<void>(true);
 			}
@@ -965,7 +965,7 @@ namespace AE::Java
 			{
 				JavaEnv	je;
 				ASSERT( not je.HasException() );
-				auto result = static_cast<jstring>( je->CallStaticObjectMethod( jc.Get(), method, std::forward<Args>(args)... ));
+				auto result = static_cast<jstring>( je->CallStaticObjectMethod( jc.Get(), method, FwdArg<Args>(args)... ));
 				CHECK_ERR( not je.HasException() );
 				return result;
 			}
@@ -975,7 +975,7 @@ namespace AE::Java
 			{
 				JavaEnv	je;
 				ASSERT( not je.HasException() );
-				auto result = static_cast<jstring>( je->CallNonvirtualObjectMethod( obj.Get(), jc.Get(), method, std::forward<Args>(args)... ));
+				auto result = static_cast<jstring>( je->CallNonvirtualObjectMethod( obj.Get(), jc.Get(), method, FwdArg<Args>(args)... ));
 				CHECK_ERR( not je.HasException() );
 				return result;
 			}
@@ -985,7 +985,7 @@ namespace AE::Java
 			{
 				JavaEnv	je;
 				ASSERT( not je.HasException() );
-				auto result = static_cast<jstring>( je->CallObjectMethod( obj.Get(), method, std::forward<Args>(args)... ));
+				auto result = static_cast<jstring>( je->CallObjectMethod( obj.Get(), method, FwdArg<Args>(args)... ));
 				CHECK_ERR( not je.HasException() );
 				return result;
 			}
@@ -1000,7 +1000,7 @@ namespace AE::Java
 				{																																	\
 					JavaEnv	je;																														\
 					ASSERT( not je.HasException() );																								\
-					auto result = je->CallStatic ## _suffix_ ## Method( jc.Get(), method, std::forward<Args>(args)... );							\
+					auto result = je->CallStatic ## _suffix_ ## Method( jc.Get(), method, FwdArg<Args>(args)... );							\
 					CHECK_ERR( not je.HasException() );																								\
 					return result;																													\
 				}																																	\
@@ -1010,7 +1010,7 @@ namespace AE::Java
 				{																																	\
 					JavaEnv	je;																														\
 					ASSERT( not je.HasException() );																								\
-					auto result = je->CallNonvirtual ## _suffix_ ## Method( obj.Get(), jc.Get(), method, std::forward<Args>(args)... );				\
+					auto result = je->CallNonvirtual ## _suffix_ ## Method( obj.Get(), jc.Get(), method, FwdArg<Args>(args)... );				\
 					CHECK_ERR( not je.HasException() );																								\
 					return result;																													\
 				}																																	\
@@ -1020,7 +1020,7 @@ namespace AE::Java
 				{																																	\
 					JavaEnv	je;																														\
 					ASSERT( not je.HasException() );																								\
-					auto result = je->Call ## _suffix_ ## Method( obj.Get(), method, std::forward<Args>(args)... );									\
+					auto result = je->Call ## _suffix_ ## Method( obj.Get(), method, FwdArg<Args>(args)... );									\
 					CHECK_ERR( not je.HasException() );																								\
 					return result;																													\
 				}																																	\
@@ -1053,7 +1053,7 @@ namespace AE::Java
 		DECL_TYPE_TO_JAVATYPE( jdouble,		jdouble );
 		DECL_TYPE_TO_JAVATYPE( jboolean,	bool );
 		DECL_TYPE_TO_JAVATYPE( jint,		uint32_t );
-		DECL_TYPE_TO_JAVATYPE( jlong,		uint64_t );
+		DECL_TYPE_TO_JAVATYPE( jlong,		ulong );
 		#undef DECL_TYPE_TO_JAVATYPE
 
 		ND_ inline jobject  TypeToJava (const JavaObj &obj) {
@@ -1069,7 +1069,7 @@ namespace AE::Java
 			return arr.Get();
 		}
 
-	}	// _ae_java_hidden_
+	}	// _hidden_
 	
 
 
@@ -1083,18 +1083,18 @@ namespace AE::Java
 */
 	template <typename Ret, typename ...Args>
 	template <typename ...ArgTypes>
-	inline _ae_java_hidden_::JavaMethodResult<Ret>  JavaStaticMethod< Ret (Args...) >::operator () (const ArgTypes&... args) const
+	inline Java::_hidden_::JavaMethodResult<Ret>  JavaStaticMethod< Ret (Args...) >::operator () (const ArgTypes&... args) const
 	{
 		ASSERT( _method );
-		return _ae_java_hidden_::JavaMethodCaller<Ret>::CallStatic( _class, _method, _ae_java_hidden_::TypeToJava(args)... );
+		return Java::_hidden_::JavaMethodCaller<Ret>::CallStatic( _class, _method, Java::_hidden_::TypeToJava(args)... );
 	}
 	
 	template <typename Ret, typename ...Args>
 	template <typename ...ArgTypes>
-	inline _ae_java_hidden_::JavaMethodResult<Ret>  JavaMethod< Ret (Args...) >::operator () (const ArgTypes&... args) const
+	inline Java::_hidden_::JavaMethodResult<Ret>  JavaMethod< Ret (Args...) >::operator () (const ArgTypes&... args) const
 	{
 		ASSERT( _method );
-		return _ae_java_hidden_::JavaMethodCaller<Ret>::Call( _obj, _method, _ae_java_hidden_::TypeToJava(args)... );
+		return Java::_hidden_::JavaMethodCaller<Ret>::Call( _obj, _method, Java::_hidden_::TypeToJava(args)... );
 	}
 
 

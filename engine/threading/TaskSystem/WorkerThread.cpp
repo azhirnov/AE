@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "threading/TaskSystem/WorkerThread.h"
 #include "stl/Platforms/PlatformUtils.h"
@@ -12,12 +12,15 @@ namespace AE::Threading
 =================================================
 */
 	WorkerThread::WorkerThread () :
-		WorkerThread{ ThreadMask{}.set(uint(EThread::Worker)), milliseconds{4} }
+		WorkerThread{ ThreadMask{}.set(uint(EThread::Worker)), nanoseconds{4}, microseconds{10} }
 	{}
 
-	WorkerThread::WorkerThread (ThreadMask mask, milliseconds sleepOnIdle, StringView name) :
-		_threadMask{ mask }, _sleepOnIdle{ sleepOnIdle }, _name{ name }
-	{}
+	WorkerThread::WorkerThread (ThreadMask mask, nanoseconds sleepStep, nanoseconds maxSleepOnIdle, StringView name) :
+		_threadMask{ mask }, _sleepStep{ sleepStep }, _maxSleepOnIdle{ maxSleepOnIdle }, _name{ name }
+	{
+		ASSERT( (_maxSleepOnIdle.count() == 0) == (_sleepStep.count() == 0) );
+		ASSERT( _threadMask.to_ullong() != 0 );
+	}
 
 /*
 =================================================
@@ -30,33 +33,42 @@ namespace AE::Threading
 
 		_thread = std::thread{[this, uid] ()
 		{
-			uint	seed			= uid;
-			uint	idle_counter	= 0;
+			uint		seed			= uid;
+			nanoseconds	sleep_time		= _sleepStep;
+			uint		thread_id		= uid % std::thread::hardware_concurrency();
 
 			PlatformUtils::SetThreadName( _name );
 			AE_VTUNE( __itt_thread_set_name( _name.c_str() ));
-			//CHECK( PlatformUtils::SetThreadAffinity( _thread.native_handle(), uid ));
+			CHECK( PlatformUtils::SetThreadAffinity( _thread.native_handle(), thread_id ));
 			
 			for (; _looping.load( EMemoryOrder::Relaxed );)
 			{
-				bool	processed = false;
+				uint	processed = 0;
 
 				for (uint t = 0; t < _threadMask.size(); ++t)
 				{
-					if ( not _threadMask[t] )
+					if ( not _threadMask[t] )	// TODO: optimize
 						continue;
 
-					processed |= Scheduler().ProcessTask( EThread(t), ++seed );
+					processed |= uint(Scheduler().ProcessTask( EThread(t), seed ));
 				}
-
-				if ( not processed and _sleepOnIdle.count() )
+				
+				if ( not processed )
+					++seed;
+					 
+				// suspend thread
+				if ( _maxSleepOnIdle.count() )
 				{
-					idle_counter = Min( 4u, idle_counter );
-					std::this_thread::sleep_for( _sleepOnIdle * idle_counter );
-					++idle_counter;
+					if ( not processed )
+					{
+						sleep_time = Min( sleep_time, _maxSleepOnIdle );
+
+						std::this_thread::sleep_for( sleep_time );
+						sleep_time += _sleepStep;
+					}
+					else
+						sleep_time = _sleepStep;
 				}
-				else
-					idle_counter = 0;
 			}
 		}};
 		return true;

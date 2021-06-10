@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -28,7 +28,7 @@ namespace AE::Threading
 	private:
 		union {
 			T			_value;
-			uint8_t		_data [ sizeof(T) ];	// don't use it!
+			ubyte		_data [ sizeof(T) ];	// don't use it!
 		};
 		bool			_hasValue	= false;
 
@@ -37,7 +37,7 @@ namespace AE::Threading
 	public:
 		PromiseResult () = delete;
 
-		PromiseResult (T &&value) : _value{std::move(value)}, _hasValue{true} {}
+		PromiseResult (T &&value) : _value{RVRef(value)}, _hasValue{true} {}
 		PromiseResult (const T &value) : _value{value}, _hasValue{true} {}
 		PromiseResult (const PromiseNullResult &) {}
 
@@ -97,7 +97,7 @@ namespace AE::Threading
 		using EThread	= IAsyncTask::EThread;
 		
 		class _InternalImpl;
-		using _InternalImplPtr = SharedPtr< _InternalImpl >;
+		using _InternalImplPtr = RC< _InternalImpl >;
 
 
 	// variables
@@ -173,7 +173,7 @@ namespace AE::Threading
 		template <typename Fn>
 		_InternalImpl (Fn &&fn, bool except, EThread thread);
 
-		ND_ auto  Result () const
+		ND_ decltype(auto)  Result () const
 		{
 			ASSERT( Status() == EStatus::Completed );
 			ThreadFence( EMemoryOrder::Acquire );
@@ -210,7 +210,7 @@ namespace AE::Threading
 		_hasValue{ other._hasValue }
 	{
 		if ( _hasValue )
-			PlacementNew<T>( &_value, std::move(other._value) );
+			PlacementNew<T>( &_value, RVRef(other._value) );
 	}
 
 /*
@@ -242,7 +242,7 @@ namespace AE::Threading
 
 		if ( _hasValue )
 		{
-			PlacementNew<T>( &_value, std::move(rhs._value) );
+			PlacementNew<T>( &_value, RVRef(rhs._value) );
 			rhs._value.~T();
 			rhs._hasValue = false;
 		}
@@ -268,7 +268,7 @@ namespace AE::Threading
 			_value.~T();
 		
 		_hasValue = true;
-		PlacementNew<T>( &_value, std::move(rhs) );
+		PlacementNew<T>( &_value, RVRef(rhs) );
 
 		return *this;
 	}
@@ -280,7 +280,7 @@ namespace AE::Threading
 	ResultToPromise
 =================================================
 */
-namespace _ae_threading_hidden_
+namespace _hidden_
 {
 	template <typename T>
 	struct ResultToPromise {
@@ -297,7 +297,7 @@ namespace _ae_threading_hidden_
 		using type = Promise< void >;
 	};
 
-}	// _ae_threading_hidden_
+}	// _hidden_
 //-----------------------------------------------------------------------------
 
 
@@ -309,7 +309,7 @@ namespace _ae_threading_hidden_
 	template <typename T>
 	template <typename Fn, typename ...Deps>
 	inline Promise<T>::Promise (Fn &&fn, bool except, EThread thread, const Tuple<Deps...> &dependsOn) :
-		_impl{ Cast<_InternalImpl>( Scheduler().Run<_InternalImpl>( Tuple{std::forward<Fn>(fn), except, thread}, dependsOn ))}
+		_impl{ Cast<_InternalImpl>( Scheduler().Run<_InternalImpl>( Tuple{FwdArg<Fn>(fn), except, thread}, dependsOn ))}
 	{}
 
 /*
@@ -322,14 +322,14 @@ namespace _ae_threading_hidden_
 	inline auto  Promise<T>::Then (Fn &&fn, EThread thread)
 	{
 		using FI		= FunctionInfo< Fn >;
-		using Result	= typename _ae_threading_hidden_::ResultToPromise< typename FI::result >::type;
+		using Result	= typename Threading::_hidden_::ResultToPromise< typename FI::result >::type;
 
 		if ( _impl )
 		{
 			if ( _impl->IsExcept() )
-				return _Then( std::forward<Fn>(fn), thread, Tuple{WeakDep{_impl}} );
+				return _Then( FwdArg<Fn>(fn), thread, Tuple{WeakDep{_impl}} );
 			else
-				return _Then( std::forward<Fn>(fn), thread, Tuple{StrongDep{_impl}} );
+				return _Then( FwdArg<Fn>(fn), thread, Tuple{StrongDep{_impl}} );
 		}
 		return Result{};
 	}
@@ -344,13 +344,13 @@ namespace _ae_threading_hidden_
 	inline auto  Promise<T>::_Then (Fn &&fn, EThread thread, const Tuple<Deps...> &dependsOn)
 	{
 		using FI		= FunctionInfo< Fn >;
-		using Result	= typename _ae_threading_hidden_::ResultToPromise< typename FI::result >::type;
+		using Result	= typename Threading::_hidden_::ResultToPromise< typename FI::result >::type;
 
 		if constexpr( IsVoid<T> and IsVoid< typename FI::result > )
 		{
 			STATIC_ASSERT( FI::args::Count == 0 );
 		
-			return Result{	[fn = std::forward<Fn>(fn)] () {
+			return Result{	[fn = FwdArg<Fn>(fn)] () {
 								fn();
 								return PromiseResult<void>{};
 							},
@@ -363,7 +363,7 @@ namespace _ae_threading_hidden_
 		{
 			STATIC_ASSERT( FI::args::Count == 0 );
 		
-			return Result{ std::forward<Fn>(fn), false, thread, dependsOn };
+			return Result{ FwdArg<Fn>(fn), false, thread, dependsOn };
 		}
 		else
 		if constexpr( IsVoid< typename FI::result > )
@@ -371,7 +371,7 @@ namespace _ae_threading_hidden_
 			STATIC_ASSERT( FI::args::Count == 1 );
 			STATIC_ASSERT( IsSameTypes< typename FI::args::template Get<0>, const T& >);
 
-			return Result{	[fn = std::forward<Fn>(fn), in = _impl] () {
+			return Result{	[fn = FwdArg<Fn>(fn), in = _impl] () {
 								fn( in->Result() );
 								return PromiseResult<void>{};
 							},
@@ -384,7 +384,7 @@ namespace _ae_threading_hidden_
 			STATIC_ASSERT( FI::args::Count == 1 );
 			STATIC_ASSERT( IsSameTypes< typename FI::args::template Get<0>, const T& >);
 
-			return Result{	[fn = std::forward<Fn>(fn), in = _impl] () {
+			return Result{	[fn = FwdArg<Fn>(fn), in = _impl] () {
 								return fn( in->Result() );
 							},
 							false,
@@ -403,7 +403,7 @@ namespace _ae_threading_hidden_
 	inline auto  Promise<T>::Except (Fn &&fn, EThread thread)
 	{
 		using FI		= FunctionInfo< Fn >;
-		using Result	= typename _ae_threading_hidden_::ResultToPromise< typename FI::result >::type;
+		using Result	= typename Threading::_hidden_::ResultToPromise< typename FI::result >::type;
 		
 		STATIC_ASSERT( FI::args::Count == 0 );
 		
@@ -411,7 +411,7 @@ namespace _ae_threading_hidden_
 		{
 			if constexpr( IsVoid< typename FI::result > )
 			{
-				return Result{	[fn = std::forward<Fn>(fn)] () {
+				return Result{	[fn = FwdArg<Fn>(fn)] () {
 									fn();
 									return PromiseResult<void>{};
 								},
@@ -421,7 +421,7 @@ namespace _ae_threading_hidden_
 			}
 			else
 			{
-				return Result{ std::forward<Fn>(fn), true, thread, Tuple{StrongDep{_impl}} };
+				return Result{ FwdArg<Fn>(fn), true, thread, Tuple{StrongDep{_impl}} };
 			}
 		}
 		return Result{};
@@ -460,7 +460,7 @@ namespace _ae_threading_hidden_
 	template <typename Fn>
 	inline Promise<T>::_InternalImpl::_InternalImpl (Fn &&fn, bool except, EThread thread) :
 		IAsyncTask{ thread },
-		_func{ std::forward<Fn>(fn) },
+		_func{ FwdArg<Fn>(fn) },
 		_result{ CancelPromise },
 		_isExept{ except }
 	{
@@ -516,11 +516,11 @@ namespace _ae_threading_hidden_
 		STATIC_ASSERT( std::is_invocable_v<Fn> );
 
 		using Value_t	= typename FunctionInfo< Fn >::result;
-		using Result	= typename _ae_threading_hidden_::ResultToPromise< Value_t >::type;
+		using Result	= typename Threading::_hidden_::ResultToPromise< Value_t >::type;
 
 		if constexpr( IsVoid< Value_t > )
 		{
-			return Result{	[fn = std::forward<Fn>(fn)] () {
+			return Result{	[fn = FwdArg<Fn>(fn)] () {
 								fn();
 								return PromiseResult<void>{};
 							},
@@ -530,14 +530,14 @@ namespace _ae_threading_hidden_
 		}
 		else
 		{
-			return Result{ std::forward<Fn>(fn), false, thread, dependsOn };
+			return Result{ FwdArg<Fn>(fn), false, thread, dependsOn };
 		}
 	}
 	
 	template <typename Fn, typename ...Deps>
 	ND_ forceinline auto  MakePromise (Fn &&fn, const Tuple<Deps...> &dependsOn = Default)
 	{
-		return MakePromise( std::forward<Fn>(fn), IAsyncTask::EThread::Worker, dependsOn );
+		return MakePromise( FwdArg<Fn>(fn), IAsyncTask::EThread::Worker, dependsOn );
 	}
 
 /*

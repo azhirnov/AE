@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -52,15 +52,15 @@ namespace AE::Graphics
 		explicit VDescriptorSet (INOUT DescriptorSet &desc);
 		~VDescriptorSet ();
 
-			bool Create (VResourceManager &, const VDescriptorSetLayout &, bool quiet);
-			void Destroy (VResourceManager &);
+			bool  Create (VResourceManagerImpl &, const VDescriptorSetLayout &, Bool quiet);
+			void  Destroy (VResourceManagerImpl &);
 
-		ND_ bool IsAllResourcesAlive (const VResourceManager &) const;
+		ND_ bool  IsAllResourcesAlive (const VResourceManagerImpl &) const;
 
-		ND_ bool operator == (const VDescriptorSet &rhs) const;
+		ND_ bool  operator == (const VDescriptorSet &rhs) const;
 		
 			template <typename Fn>
-			void ForEachUniform (Fn&& fn) const				{ SHAREDLOCK( _drCheck );  ASSERT( _dataPtr );  _dataPtr->ForEachUniform( fn ); }
+			void  ForEachUniform (Fn&& fn)			const	{ SHAREDLOCK( _drCheck );  ASSERT( _dataPtr );  _dataPtr->ForEachUniform( fn ); }
 
 		ND_ VkDescriptorSet			Handle ()		const	{ SHAREDLOCK( _drCheck );  return _descriptorSet.handle; }
 		ND_ DescriptorSetLayoutID	GetLayoutID ()	const	{ SHAREDLOCK( _drCheck );  return _layoutId; }
@@ -70,13 +70,13 @@ namespace AE::Graphics
 
 
 	private:
-		bool _AddResource (VResourceManager &, bool quiet, EDescriptorType type, INOUT DescriptorSet::Buffer &, INOUT UpdateDescriptors &);
-		bool _AddResource (VResourceManager &, bool quiet, EDescriptorType type, INOUT DescriptorSet::TexelBuffer &, INOUT UpdateDescriptors &);
-		bool _AddResource (VResourceManager &, bool quiet, EDescriptorType type, INOUT DescriptorSet::Image &, INOUT UpdateDescriptors &);
-		bool _AddResource (VResourceManager &, bool quiet, EDescriptorType type, INOUT DescriptorSet::Texture &, INOUT UpdateDescriptors &);
-		bool _AddResource (VResourceManager &, bool quiet, EDescriptorType type, const DescriptorSet::Sampler &, INOUT UpdateDescriptors &);
-		//bool _AddResource (VResourceManager &, bool quiet, EDescriptorType type, const DescriptorSet::RayTracingScene &, INOUT UpdateDescriptors &);
-		bool _AddResource (VResourceManager &, bool quiet, EDescriptorType type, const NullUnion &, INOUT UpdateDescriptors &);
+		bool _AddResource (VResourceManagerImpl &, bool quiet, EDescriptorType type, INOUT DescriptorSet::Buffer &, INOUT UpdateDescriptors &);
+		bool _AddResource (VResourceManagerImpl &, bool quiet, EDescriptorType type, INOUT DescriptorSet::TexelBuffer &, INOUT UpdateDescriptors &);
+		bool _AddResource (VResourceManagerImpl &, bool quiet, EDescriptorType type, INOUT DescriptorSet::Image &, INOUT UpdateDescriptors &);
+		bool _AddResource (VResourceManagerImpl &, bool quiet, EDescriptorType type, INOUT DescriptorSet::Texture &, INOUT UpdateDescriptors &);
+		bool _AddResource (VResourceManagerImpl &, bool quiet, EDescriptorType type, const DescriptorSet::Sampler &, INOUT UpdateDescriptors &);
+		//bool _AddResource (VResourceManagerImpl &, bool quiet, EDescriptorType type, const DescriptorSet::RayTracingScene &, INOUT UpdateDescriptors &);
+		bool _AddResource (VResourceManagerImpl &, bool quiet, EDescriptorType type, const NullUnion &, INOUT UpdateDescriptors &);
 	};
 	
 

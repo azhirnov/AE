@@ -101,7 +101,7 @@ namespace AE::PipelineCompiler
 	Merge
 =================================================
 */
-	bool DescriptorSetLayoutDesc::Merge (const DescriptorSetLayoutDesc &other, OUT size_t &merged)
+	bool DescriptorSetLayoutDesc::Merge (const DescriptorSetLayoutDesc &other, OUT usize &merged)
 	{
 		merged = 0;
 
@@ -203,7 +203,7 @@ namespace AE::PipelineCompiler
 						dst_un.combinedImageWithSampler.image.state |= (src_un.combinedImageWithSampler.image.state & EResourceState::_ShaderMask);
 
 						// compare samplers
-						for (size_t i = 0; i < dst_un.arraySize; ++i)
+						for (usize i = 0; i < dst_un.arraySize; ++i)
 						{
 							auto&	dst_samp = samplerStorage[ dst_un.combinedImageWithSampler.samplerOffsetInStorage + i ];
 							auto&	src_samp = other.samplerStorage[ src_un.combinedImageWithSampler.samplerOffsetInStorage + i ];
@@ -228,7 +228,7 @@ namespace AE::PipelineCompiler
 					}
 					case EDescriptorType::ImmutableSampler :
 					{
-						for (size_t i = 0; i < dst_un.arraySize; ++i)
+						for (usize i = 0; i < dst_un.arraySize; ++i)
 						{
 							auto&	dst_samp = samplerStorage[ dst_un.immutableSampler.offsetInStorage + i ];
 							auto&	src_samp = other.samplerStorage[ src_un.immutableSampler.offsetInStorage + i ];
@@ -262,7 +262,7 @@ namespace AE::PipelineCompiler
 			{
 				dst_un.combinedImageWithSampler.samplerOffsetInStorage = samplerStorage.size();
 
-				for (size_t i = 0; i < src_un.arraySize; ++i) {
+				for (usize i = 0; i < src_un.arraySize; ++i) {
 					samplerStorage.push_back( other.samplerStorage[ src_un.combinedImageWithSampler.samplerOffsetInStorage + i ]);
 				}
 			}
@@ -271,7 +271,7 @@ namespace AE::PipelineCompiler
 			{
 				dst_un.immutableSampler.offsetInStorage = samplerStorage.size();
 
-				for (size_t i = 0; i < src_un.arraySize; ++i) {
+				for (usize i = 0; i < src_un.arraySize; ++i) {
 					samplerStorage.push_back( other.samplerStorage[ src_un.immutableSampler.offsetInStorage + i ]);
 				}
 			}
@@ -516,12 +516,12 @@ namespace {
 
 		UpdateBufferDynamicOffsets( INOUT desc );
 
-		const size_t	hash	= size_t(DescriptorSetLayoutHash( desc ));
+		const usize	hash	= usize(DescriptorSetLayoutHash( desc ));
 		auto			iter	= _dsLayoutMap.find( hash );
 
 		for (; iter != _dsLayoutMap.end() and iter->first == hash; ++iter)
 		{
-			auto&	lhs = _dsLayouts[ size_t(iter->second) ];
+			auto&	lhs = _dsLayouts[ usize(iter->second) ];
 
 			if ( Equal( lhs, desc ))
 				return iter->second;
@@ -542,12 +542,12 @@ namespace {
 */
 	PipelineLayoutUID  PipelineStorage::AddPipelineLayout (PipelineLayoutDesc &&desc)
 	{
-		const size_t	hash	= size_t(PipelineLayoutHash( desc ));
+		const usize	hash	= usize(PipelineLayoutHash( desc ));
 		auto			iter	= _pplnLayoutMap.find( hash );
 
 		for (; iter != _pplnLayoutMap.end() and iter->first == hash; ++iter)
 		{
-			auto&	lhs = _pplnLayouts[ size_t(iter->second) ];
+			auto&	lhs = _pplnLayouts[ usize(iter->second) ];
 
 			if ( Equal( lhs, desc ))
 				return iter->second;
@@ -570,12 +570,12 @@ namespace {
 	{
 		CHECK_ERR( name.IsDefined() );
 
-		const size_t	hash	= size_t(GraphicsPipelineHash( desc ));
+		const usize	hash	= usize(GraphicsPipelineHash( desc ));
 		auto			iter	= _gpipelineMap.find( hash );
 
 		for (; iter != _gpipelineMap.end() and iter->first == hash; ++iter)
 		{
-			auto&	lhs = _graphicsPipelines[ size_t(iter->second) & size_t(~PipelineUID::_Mask) ];
+			auto&	lhs = _graphicsPipelines[ usize(iter->second) & usize(~PipelineUID::_Mask) ];
 
 			if ( Equal( lhs, desc ))
 			{
@@ -603,12 +603,12 @@ namespace {
 	{
 		CHECK_ERR( name.IsDefined() );
 
-		const size_t	hash	= size_t(MeshPipelineHash( desc ));
+		const usize	hash	= usize(MeshPipelineHash( desc ));
 		auto			iter	= _mpipelineMap.find( hash );
 
 		for (; iter != _mpipelineMap.end() and iter->first == hash; ++iter)
 		{
-			auto&	lhs = _meshPipelines[ size_t(iter->second) & size_t(~PipelineUID::_Mask) ];
+			auto&	lhs = _meshPipelines[ usize(iter->second) & usize(~PipelineUID::_Mask) ];
 			
 			if ( Equal( lhs, desc ))
 			{
@@ -636,12 +636,12 @@ namespace {
 	{
 		CHECK_ERR( name.IsDefined() );
 
-		const size_t	hash	= size_t(ComputePipelineHash( desc ));
+		const usize	hash	= usize(ComputePipelineHash( desc ));
 		auto			iter	= _cpipelineMap.find( hash );
 
 		for (; iter != _cpipelineMap.end() and iter->first == hash; ++iter)
 		{
-			auto&	lhs = _computePipelines[ size_t(iter->second) & size_t(~PipelineUID::_Mask) ];
+			auto&	lhs = _computePipelines[ usize(iter->second) & usize(~PipelineUID::_Mask) ];
 			
 			if ( Equal( lhs, desc ))
 			{
@@ -668,12 +668,12 @@ namespace {
 	ShaderUID  PipelineStorage::AddShader (uint version, Array<uint> &&spirv, const SpecConstants_t &spec)
 	{
 		SpirvShaderCode	code	{ version, std::move(spirv), spec };
-		const size_t	hash	= size_t(SpirvShaderCodeHash( code ));
+		const usize	hash	= usize(SpirvShaderCodeHash( code ));
 		auto			iter	= _spirvShaderMap.find( hash );
 		
 		for (; iter != _spirvShaderMap.end() and iter->first == hash; ++iter)
 		{
-			auto&	lhs = _spirvShaders[ size_t(iter->second) & ~uint(ShaderUID::_Mask) ];
+			auto&	lhs = _spirvShaders[ usize(iter->second) & ~uint(ShaderUID::_Mask) ];
 
 			if ( Equal( lhs, code ))
 				return iter->second;
@@ -694,7 +694,7 @@ namespace {
 */
 	RenderPassUID  PipelineStorage::AddRenderPass (const RenderPassName &name, const RenderPassInfo &info)
 	{
-		for (size_t i = 0; i < _renderPasses.size(); ++i)
+		for (usize i = 0; i < _renderPasses.size(); ++i)
 		{
 			if ( _renderPasses[i].fragmentOutputs == info.fragmentOutputs )
 			{
@@ -713,7 +713,7 @@ namespace {
 		if ( new_name.GetName().empty() )
 		{
 			// make unique name
-			for (size_t i = 0; i < 1000; ++i)
+			for (usize i = 0; i < 1000; ++i)
 			{
 				new_name = RenderPassName{ "RP_"s << ToString(i) };
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -22,7 +22,7 @@ namespace AE::Graphics
 	public:
 		constexpr MultiSamples () : _value(0) {}
 
-		explicit MultiSamples (uint samples) : _value( IntLog2( samples ) ) {}
+		explicit MultiSamples (uint samples) : _value( IntLog2( samples )) {}
 
 		ND_ constexpr uint	Get ()								const		{ return 1u << _value; }
 		ND_ constexpr uint	GetPowerOf2 ()						const		{ return _value; }
@@ -38,7 +38,7 @@ namespace AE::Graphics
 	};
 	
 
-	ND_ inline MultiSamples operator "" _samples (unsigned long long value)		{ return MultiSamples( uint(value) ); }
+	ND_ inline MultiSamples operator "" _samples (unsigned long long value)	{ return MultiSamples( uint(value) ); }
 
 
 }	// AE::Graphics

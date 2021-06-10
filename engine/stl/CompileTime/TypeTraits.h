@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -22,7 +22,10 @@ namespace AE::STL
 	static constexpr bool	IsUnsignedInteger	= std::is_integral_v<T> and std::is_unsigned_v<T>;
 
 	template <typename T>
-	static constexpr bool	IsStaticArray		= std::is_array_v<T>;
+	static constexpr bool	IsSigned			= std::is_signed_v<T>;
+
+	template <typename T>
+	static constexpr bool	IsUnsigned			= std::is_unsigned_v<T>;
 
 	template <typename T>
 	static constexpr bool	IsScalar			= std::is_scalar_v<T>;
@@ -34,10 +37,22 @@ namespace AE::STL
 	static constexpr bool	IsScalarOrEnum		= std::is_scalar_v<T> or std::is_enum_v<T>;
 
 	template <typename T>
-	static constexpr bool	IsPOD				= std::is_pod_v<T>;
+	static constexpr bool	IsPOD				= std::is_trivially_destructible_v<T>;		// TODO: deprecated
 
 	template <typename T>
 	static constexpr bool	IsPointer			= std::is_pointer_v<T>;
+
+	template <typename T>
+	static constexpr bool	IsNullPtr			= std::is_null_pointer_v<T>;
+
+	template <typename T>
+	static constexpr bool	IsLValueRef			= std::is_lvalue_reference_v<T>;
+	
+	template <typename T>
+	static constexpr bool	IsRValueRef			= std::is_rvalue_reference_v<T>;
+	
+	template <typename T>
+	static constexpr bool	IsReference			= std::is_reference_v<T>;
 
 	template <typename T>
 	static constexpr bool	IsClass				= std::is_class_v<T>;
@@ -47,6 +62,9 @@ namespace AE::STL
 
 	template <typename T>
 	static constexpr bool	IsConst				= std::is_const_v<T>;
+	
+	template <typename T>
+	static constexpr bool	IsVolatile			= std::is_volatile_v<T>;
 
 	template <typename T1, typename T2>
 	static constexpr bool	IsSameTypes			= std::is_same_v<T1, T2>;
@@ -67,6 +85,25 @@ namespace AE::STL
 	static constexpr bool	IsArithmetic		= std::is_arithmetic_v<T>;
 
 	
+	template <typename T>
+	using RemovePointer		= std::remove_pointer_t<T>;
+	
+	template <typename T>
+	using RemoveReference	= std::remove_reference_t<T>;
+
+	template <typename T>
+	using RemoveCV			= std::remove_cv_t<T>;	// remove 'const', 'volatile', 'const volatile'
+
+	template <typename T>
+	using AddConst			= std::add_const_t<T>;
+
+	template <typename T>
+	using RemoveConst		= std::remove_const_t<T>;
+
+	template <typename T>
+	using RemoveAllExtents	= std::remove_all_extents_t<T>;
+
+	
 	template <typename T>	using InPlaceType	= std::in_place_type_t<T>;
 	template <typename T>	constexpr InPlaceType<T> InPlaceObj {};
 
@@ -82,18 +119,18 @@ namespace AE::STL
 	using Conditional	= std::conditional_t< Test, IfTrue, IfFalse >;
 
 
-	template <size_t Bits>
-	using BitSizeToUInt		= Conditional< Bits <= sizeof(uint8_t), uint8_t,
-								Conditional< Bits <= sizeof(uint16_t), uint16_t,
-									Conditional< Bits <= sizeof(uint32_t), uint32_t,
-										Conditional< Bits <= sizeof(uint64_t), uint64_t,
+	template <usize Bits>
+	using BitSizeToUInt		= Conditional< Bits <= sizeof(ubyte), ubyte,
+								Conditional< Bits <= sizeof(ushort), ushort,
+									Conditional< Bits <= sizeof(uint), uint,
+										Conditional< Bits <= sizeof(ulong), ulong,
 											void >>>>;
 
-	template <size_t Bits>
-	using BitSizeToInt		= Conditional< Bits <= sizeof(int8_t), int8_t,
-								Conditional< Bits <= sizeof(int16_t), int16_t,
-									Conditional< Bits <= sizeof(int32_t), int32_t,
-										Conditional< Bits <= sizeof(int64_t), int64_t,
+	template <usize Bits>
+	using BitSizeToInt		= Conditional< Bits <= sizeof(sbyte), sbyte,
+								Conditional< Bits <= sizeof(sshort), sshort,
+									Conditional< Bits <= sizeof(sint), sint,
+										Conditional< Bits <= sizeof(slong), slong,
 											void >>>>;
 
 
@@ -104,7 +141,7 @@ namespace AE::STL
 	using ToSignedInteger	= BitSizeToInt< sizeof(T) >;
 
 	
-	namespace _ae_stl_hidden_
+	namespace _hidden_
 	{
 		template <typename T, template <typename...> class Templ>
 		struct is_specialization_of : std::bool_constant<false> {};
@@ -118,14 +155,14 @@ namespace AE::STL
 		template <template <typename ...> class T>
 		struct IsSameTemplates< T, T >	{ static const bool  value = true; };
 
-	}	// _ae_stl_hidden_
+	}	// _hidden_
 
 	
 	template <typename T, template <typename...> class Templ>
-	static constexpr bool	IsSpecializationOf = _ae_stl_hidden_::is_specialization_of< T, Templ >::value;
+	static constexpr bool	IsSpecializationOf	= STL::_hidden_::is_specialization_of< T, Templ >::value;
 	
 	template <template <typename ...> class Left, template <typename ...> class Right>
-	static constexpr bool	IsSameTemplates = _ae_stl_hidden_::IsSameTemplates< Left, Right >::value;
+	static constexpr bool	IsSameTemplates		= STL::_hidden_::IsSameTemplates< Left, Right >::value;
 
 
 }	// AE::STL

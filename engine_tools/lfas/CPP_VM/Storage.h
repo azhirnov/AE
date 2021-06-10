@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -6,9 +6,7 @@
 #include "stl/Memory/MemUtils.h"
 #include "stl/CompileTime/TemplateUtils.h"
 
-namespace LFAS::CPP
-{
-namespace _lfas_cpp_hidden_
+namespace LFAS::CPP::_hidden_
 {
 
 	//
@@ -66,7 +64,7 @@ namespace _lfas_cpp_hidden_
 		ND_ const M  Read (M T::*member) const;
 		
 		template <typename V>
-		void  Write (V&& value)		{ return ValueStorage<T>::Write( std::forward<V>( value )); }
+		void  Write (V&& value)		{ return ValueStorage<T>::Write( FwdArg<V>( value )); }
 
 		template <typename M, typename V>
 		void  Write (M T::*member, V&& value);
@@ -88,7 +86,7 @@ namespace _lfas_cpp_hidden_
 
 	// variables
 	protected:
-		static constexpr size_t		_Count = Count::value;
+		static constexpr usize		_Count = Count::value;
 
 		StaticArray< T, _Count >	_arr;
 
@@ -103,10 +101,10 @@ namespace _lfas_cpp_hidden_
 		Self&  operator = (const Self &) = delete;
 		Self&  operator = (Self &&) = delete;
 
-		ND_ const T  Read (size_t idx) const;
+		ND_ const T  Read (usize idx) const;
 
 		template <typename V>
-		void  Write (size_t idx, V&& value);
+		void  Write (usize idx, V&& value);
 	};
 	
 
@@ -123,29 +121,35 @@ namespace _lfas_cpp_hidden_
 	// methods
 	public:
 		template <typename M>
-		ND_ const M  Read (size_t idx, M T::*member) const;
+		ND_ const M  Read (usize idx, M T::*member) const;
 		
 		template <typename M, typename V>
-		void  Write (size_t idx, M T::*member, V&& value);
+		void  Write (usize idx, M T::*member, V&& value);
 	};
 
 
-}	// _lfas_cpp_hidden_
+}	// LFAS::CPP::_hidden_
 //-----------------------------------------------------------------------------
 
 
+namespace LFAS::CPP
+{
+
 	template <typename T>
 	using Storage = typename Conditional< IsClass<T>,
-						DeferredTemplate< _lfas_cpp_hidden_::ClassStorage, T >,
-						DeferredTemplate< _lfas_cpp_hidden_::ValueStorage, T > >::type;
+						DeferredTemplate< LFAS::CPP::_hidden_::ClassStorage, T >,
+						DeferredTemplate< LFAS::CPP::_hidden_::ValueStorage, T > >::type;
 	
-	template <typename T, size_t Count>
+	template <typename T, usize Count>
 	using ArrayStorage = typename Conditional< IsClass<T>,
-							DeferredTemplate< _lfas_cpp_hidden_::ArrayClassStorage, T, ValueToType<Count> >,
-							DeferredTemplate< _lfas_cpp_hidden_::ArrayValueStorage, T, ValueToType<Count> > >::type;
+							DeferredTemplate< LFAS::CPP::_hidden_::ArrayClassStorage, T, ValueToType<Count> >,
+							DeferredTemplate< LFAS::CPP::_hidden_::ArrayValueStorage, T, ValueToType<Count> > >::type;
+
+}	// LFAS::CPP
+//-----------------------------------------------------------------------------
 
 
-namespace _lfas_cpp_hidden_
+namespace LFAS::CPP::_hidden_
 {
 /*
 =================================================
@@ -228,7 +232,7 @@ namespace _lfas_cpp_hidden_
 	inline void  ValueStorage<T>::Write (V&& value)
 	{
 		VirtualMachine::Instance().StorageWriteAccess( AddressOf(_value), 0_b, SizeOf<T> );
-		_value = std::forward<V>( value );
+		_value = FwdArg<V>( value );
 	}
 //-----------------------------------------------------------------------------
 
@@ -257,7 +261,7 @@ namespace _lfas_cpp_hidden_
 	inline void  ClassStorage<T>::Write (M T::*member, V&& value)
 	{
 		VirtualMachine::Instance().StorageWriteAccess( AddressOf(_value), OffsetOf(member), SizeOf<M> );
-		_value.*member = std::forward<V>( value );
+		_value.*member = FwdArg<V>( value );
 	}
 //-----------------------------------------------------------------------------
 
@@ -291,7 +295,7 @@ namespace _lfas_cpp_hidden_
 =================================================
 */
 	template <typename T, typename C>
-	inline const T  ArrayValueStorage<T,C>::Read (size_t idx) const
+	inline const T  ArrayValueStorage<T,C>::Read (usize idx) const
 	{
 		CHECK( idx < _arr.size() );
 		VirtualMachine::Instance().StorageReadAccess( AddressOf(_arr), AddressDistance( _arr[idx], _arr ), SizeOf<T> );
@@ -305,10 +309,10 @@ namespace _lfas_cpp_hidden_
 */
 	template <typename T, typename C>
 	template <typename V>
-	inline void  ArrayValueStorage<T,C>::Write (size_t idx, V&& value)
+	inline void  ArrayValueStorage<T,C>::Write (usize idx, V&& value)
 	{
 		VirtualMachine::Instance().StorageWriteAccess( AddressOf(_arr), AddressDistance( _arr[idx], _arr ), SizeOf<T> );
-		_arr[idx] = std::forward<V>( value );
+		_arr[idx] = FwdArg<V>( value );
 	}
 //-----------------------------------------------------------------------------
 
@@ -321,7 +325,7 @@ namespace _lfas_cpp_hidden_
 */
 	template <typename T, typename C>
 	template <typename M>
-	inline const M  ArrayClassStorage<T,C>::Read (size_t idx, M T::*member) const
+	inline const M  ArrayClassStorage<T,C>::Read (usize idx, M T::*member) const
 	{
 		CHECK( idx < _arr.size() );
 		VirtualMachine::Instance().StorageReadAccess( AddressOf(_arr), AddressDistance( _arr[idx], _arr ) + OffsetOf(member), SizeOf<M> );
@@ -335,12 +339,10 @@ namespace _lfas_cpp_hidden_
 */
 	template <typename T, typename C>	
 	template <typename M, typename V>
-	inline void  ArrayClassStorage<T,C>::Write (size_t idx, M T::*member, V&& value)
+	inline void  ArrayClassStorage<T,C>::Write (usize idx, M T::*member, V&& value)
 	{
 		VirtualMachine::Instance().StorageWriteAccess( AddressOf(_arr), AddressDistance( _arr[idx], _arr ) + OffsetOf(member), SizeOf<M> );
-		_arr[idx].*member = std::forward<V>( value );
+		_arr[idx].*member = FwdArg<V>( value );
 	}
 
-
-}	// _lfas_cpp_hidden_
-}	// LFAS::CPP
+}	// LFAS::CPP::_hidden_

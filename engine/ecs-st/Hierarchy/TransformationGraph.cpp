@@ -14,7 +14,7 @@ namespace AE::ECS::Systems
 	void TransformationGraph::Node::AddChild (const NodePtr &n)
 	{
 		childs.push_back( n );
-		n->parent = shared_from_this();
+		n->parent = GetRC();
 	}
 
 /*
@@ -62,7 +62,7 @@ namespace AE::ECS::Systems
 =================================================
 */
 	TransformationGraph::TransformationGraph (Registry &reg) :
-		_root{ New<Node>() },
+		_root{ new Node{} },
 		_owner{ &reg }
 	{
 		reg.AddMessageListener< Components::GlobalTransformation, MsgTag_AddedComponent >(
@@ -72,7 +72,7 @@ namespace AE::ECS::Systems
 				{
 					NodePtr&	node = _entityToNode[id];
 					if ( not node )
-						node.reset( New<Node>( id ));
+						node.reset( new Node{ id });
 
 					if ( not node->parent )
 						_root->AddChild( node );
@@ -82,14 +82,14 @@ namespace AE::ECS::Systems
 		reg.AddMessageListener< Components::ParentID, MsgTag_ComponentChanged >(
 			[this] (ArrayView<EntityID> entities, ArrayView<Components::ParentID> components)
 			{
-				CHECK_ERR( entities.size() == components.size(), void());
+				CHECK_ERRV( entities.size() == components.size() );
 
-				for (size_t i = 0; i < entities.size(); ++i)
+				for (usize i = 0; i < entities.size(); ++i)
 				{
 					EntityID	id		= entities[i];
 					NodePtr&	node	= _entityToNode[id];
 					if ( not node )
-						node.reset( New<Node>( id ));
+						node.reset( new Node{ id });
 
 					node->RemoveSelf();
 

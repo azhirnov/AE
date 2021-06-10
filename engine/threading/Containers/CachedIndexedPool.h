@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -13,8 +13,8 @@ namespace AE::Threading
 
 	template <typename ValueType,
 			  typename IndexType,
-			  size_t ChunkSize,
-			  size_t MaxChunks = 16,
+			  usize ChunkSize,
+			  usize MaxChunks = 16,
 			  typename AllocatorType = UntypedAlignedAllocator
 			 >
 	struct CachedIndexedPool final
@@ -27,7 +27,7 @@ namespace AE::Threading
 		using Allocator_t	= AllocatorType;
 
 	private:
-		struct THash  { size_t operator () (const Value_t *value) const						{ return std::hash<Value_t>()( *value ); }};
+		struct THash  { usize operator () (const Value_t *value) const						{ return std::hash<Value_t>()( *value ); }};
 		struct TEqual { bool   operator () (const Value_t *lhs, const Value_t *rhs) const	{ return *lhs == *rhs; }};
 
 		using Pool_t		= IndexedPool< Value_t, IndexType, ChunkSize, MaxChunks, AllocatorType >;
@@ -117,16 +117,16 @@ namespace AE::Threading
 		}
 		
 
-		ND_ BytesU  DynamicSize () const
+		ND_ Bytes  DynamicSize () const
 		{
 			SHAREDLOCK( _cacheGuard );
-			BytesU	sz = _pool.DynamicSize();
+			Bytes	sz = _pool.DynamicSize();
 			//sz += _cache.max_bucket_count() * _cache.max_size();	// TODO
 			return sz;
 		}
 
 
-		ND_ static constexpr BytesU  MaxDynamicSize ()
+		ND_ constexpr Bytes  MaxDynamicSize ()
 		{
 			return	capacity() * (SizeOf<ValueType> + SizeOf<IndexType>) +
 					(capacity() * SizeOf<typename Cache_t::value_type>);
@@ -134,10 +134,10 @@ namespace AE::Threading
 
 
 		template <typename ArrayType>
-		ND_ size_t  Assign (size_t count, INOUT ArrayType &arr)			{ return _pool.Assign( count, INOUT arr ); }
+		ND_ usize  Assign (usize count, INOUT ArrayType &arr)			{ return _pool.Assign( count, INOUT arr ); }
 		
 		template <typename ArrayType>
-			void  Unassign (size_t count, INOUT ArrayType &arr)			{ return _pool.Unassign( count, INOUT arr ); }
+			void  Unassign (usize count, INOUT ArrayType &arr)			{ return _pool.Unassign( count, INOUT arr ); }
 
 		ND_ bool  Assign (OUT Index_t &index)							{ return _pool.Assign( OUT index ); }
 			void  Unassign (Index_t index)								{ return _pool.Unassign( index ); }
@@ -146,8 +146,8 @@ namespace AE::Threading
 		ND_ Value_t const&		operator [] (Index_t index)		const	{ return _pool[ index ]; }
 
 		ND_ bool				empty ()						const	{ return _pool.empty(); }
-		ND_ size_t				size ()							const	{ return _pool.size(); }
-		ND_ constexpr size_t	capacity ()						const	{ return _pool.capacity(); }
+		ND_ usize				size ()							const	{ return _pool.size(); }
+		ND_ constexpr usize	capacity ()						const	{ return _pool.capacity(); }
 	};
 	
 	

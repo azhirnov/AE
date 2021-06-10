@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "scripting/Impl/ClassBinder.h"
 #include "scripting/Impl/EnumBinder.h"
@@ -325,7 +325,7 @@ namespace
 			}
 		)#";
 
-		Test8_Ptr	arg{ New<Test8_CL>(), false };
+		Test8_Ptr	arg{ new Test8_CL{}, false };
 		Test8_Ptr	res;
 
 		TEST( Run< Test8_Ptr (Test8_Ptr) >( se, script, "main", OUT res, arg ));
@@ -340,7 +340,7 @@ namespace
 
 extern void UnitTest_Class ()
 {
-	auto	se = MakeShared<ScriptEngine>();
+	auto	se = MakeRC<ScriptEngine>();
 	TEST( se->Create() );
 
 	ScriptClass_Test1( se );

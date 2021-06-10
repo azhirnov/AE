@@ -1,8 +1,6 @@
 // Copyright (c) 2018-2019,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "ui/StyleCollection.h"
-#include "serializing/Serializer.h"
-#include "serializing/Deserializer.h"
 #include "serializing/ObjectFactory.h"
 #include "graphics/Canvas/Vertices.h"
 

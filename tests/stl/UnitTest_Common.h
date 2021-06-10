@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -9,16 +9,16 @@ using namespace AE::STL;
 #define TEST	CHECK_FATAL
 
 
-template <typename T, size_t UID>
+template <typename T, usize UID>
 struct DebugInstanceCounter
 {
-	inline static int64_t	_counter		= 0;
-	inline static int64_t	_emptyCtorCnt	= 0;
-	inline static int64_t	_copyCtorCnt	= 0;
-	inline static int64_t	_moveCtorCnt	= 0;
-	inline static int64_t	_dtorCnt		= 0;
+	inline static slong		_counter		= 0;
+	inline static slong		_emptyCtorCnt	= 0;
+	inline static slong		_copyCtorCnt	= 0;
+	inline static slong		_moveCtorCnt	= 0;
+	inline static slong		_dtorCnt		= 0;
 	
-	int64_t					_magicNumber;
+	slong					_magicNumber;
 	T						value;
 
 	DebugInstanceCounter () : _magicNumber( _counter + (1ll << 62)), value{}
@@ -38,7 +38,7 @@ struct DebugInstanceCounter
 		++_copyCtorCnt;
 	}
 
-	DebugInstanceCounter (DebugInstanceCounter &&other) : _magicNumber{ other._magicNumber }, value{ std::move(other.value) }
+	DebugInstanceCounter (DebugInstanceCounter &&other) : _magicNumber{ other._magicNumber }, value{ RVRef(other.value) }
 	{
 		++_counter;
 		++_moveCtorCnt;
@@ -62,7 +62,7 @@ struct DebugInstanceCounter
 	DebugInstanceCounter& operator = (DebugInstanceCounter &&right)
 	{
 		_magicNumber = right._magicNumber;
-		value = std::move( right.value );
+		value = RVRef( right.value );
 		return *this;
 	}
 		

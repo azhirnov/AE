@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "threading/TaskSystem/TaskScheduler.h"
 #include "stl/Algorithms/StringUtils.h"
@@ -7,7 +7,7 @@
 namespace AE::Threading
 {
 DEBUG_ONLY(
-	Atomic<int64_t>	asyncTaskCounter {0};
+	Atomic<slong>	asyncTaskCounter {0};
 )
 
 /*
@@ -70,6 +70,9 @@ DEBUG_ONLY(
 			// status has been changed in another thread
 			if ( (expected == EStatus::Cancellation) | (expected > EStatus::_Finished) )
 				return false;
+			
+			// 'compare_exchange_weak' can return 'false' even if expected value is the same as current value in atomic
+			ASSERT( expected == EStatus::Initial or expected == EStatus::Pending );
 		}
 		return true;
 	}
@@ -79,20 +82,41 @@ DEBUG_ONLY(
 	OnFailure
 =================================================
 */
-	bool  IAsyncTask::OnFailure ()
+	void  IAsyncTask::OnFailure ()
 	{
 		for (EStatus expected = EStatus::InProgress;
 			 not _status.compare_exchange_weak( INOUT expected, EStatus::Failed, EMemoryOrder::Relaxed );)
 		{
 			// status has been changed in another thread
 			if ( expected > EStatus::_Finished )
-				return false;
+				return;
 
 			ASSERT( expected != EStatus::Cancellation );	// TODO: Failed or Canceled ?
 		}
 		
 		EXLOCK( _outputGuard );
 		_FreeOutputChunks( true );
+	}
+	
+/*
+=================================================
+	Continue
+=================================================
+*/
+	bool  IAsyncTask::Continue ()
+	{
+		_waitBits.store( 0, EMemoryOrder::Relaxed );
+
+		for (EStatus expected = EStatus::InProgress;
+			 not _status.compare_exchange_weak( INOUT expected, EStatus::Continue, EMemoryOrder::Relaxed );)
+		{
+			// status has been changed in another thread
+			if ( expected > EStatus::_Finished )
+				return false;
+			
+			// 'compare_exchange_weak' can return 'false' even if expected value is the same as current value in atomic
+			ASSERT( expected == EStatus::InProgress );
+		}
 		return true;
 	}
 
@@ -101,17 +125,24 @@ DEBUG_ONLY(
 	_OnFinish
 =================================================
 */
-	void  IAsyncTask::_OnFinish ()
+	void  IAsyncTask::_OnFinish (OUT bool& rerun)
 	{
 		EStatus	expected = EStatus::InProgress;
 	
 		EXLOCK( _outputGuard );
-		ASSERT( _waitBits.load() == 0 );
+		ASSERT( _waitBits.load( EMemoryOrder::Relaxed ) == 0 );
 		
 		// try to set completed state	
 		if ( _status.compare_exchange_strong( INOUT expected, EStatus::Completed, EMemoryOrder::Relaxed ) or expected == EStatus::Failed )
 		{
-			_FreeOutputChunks( false );
+			_FreeOutputChunks( False{"NOT canceled"} );
+			return;
+		}
+
+		// continue task execution
+		if ( expected == EStatus::Continue )
+		{
+			rerun = true;
 			return;
 		}
 
@@ -122,7 +153,7 @@ DEBUG_ONLY(
 
 			_status.store( EStatus::Canceled, EMemoryOrder::Relaxed );
 
-			_FreeOutputChunks( true );
+			_FreeOutputChunks( True{"canceled"} );
 			return;
 		}
 
@@ -156,6 +187,8 @@ DEBUG_ONLY(
 */
 	void  IAsyncTask::_FreeOutputChunks (bool isCanceled)
 	{
+		// '_outputGuard' must be locked
+
 		auto&	chunk_pool = OutputChunk::_GetPool();
 
 		for (OutputChunk* chunk = _output; chunk;)
@@ -165,7 +198,7 @@ DEBUG_ONLY(
 				if ( isCanceled and is_strong )
 					dep->_canceledDepsCount.fetch_add( 1, EMemoryOrder::Relaxed );
 
-				dep->_waitBits.fetch_and( ~(1ull << idx), EMemoryOrder::Relaxed );
+				dep->_waitBits.fetch_and( ~(1ull << idx), EMemoryOrder::Relaxed ); // 1 -> 0
 			}
 			chunk->tasks.clear();
 
@@ -221,11 +254,19 @@ DEBUG_ONLY(
 		using EStatus = IAsyncTask::EStatus;
 
 		AE_VTUNE( __itt_task_begin( Scheduler().GetVTuneDomain(), __itt_null, __itt_null, __itt_string_handle_createA( task->DbgName().c_str() )));
+
+		bool	rerun = false;
 		task->Run();
-		task->_OnFinish();
+		task->_OnFinish( OUT rerun );
+
 		AE_VTUNE( __itt_task_end( Scheduler().GetVTuneDomain() ));
 		
 		CHECK( task->_interlockDep.Unlock() );
+
+		if ( rerun )
+		{
+			Scheduler().Enqueue( task );
+		}
 	}
 	
 /*
@@ -235,7 +276,10 @@ DEBUG_ONLY(
 */
 	void  IThread::_OnTaskFinish (const AsyncTask &task)
 	{
-		task->_OnFinish();
+		bool	rerun = false;
+		task->_OnFinish( OUT rerun );
+
+		ASSERT( not rerun && "rerun is not supported here" );
 
 		CHECK( task->_interlockDep.Unlock() );
 	}
@@ -252,7 +296,7 @@ DEBUG_ONLY(
 		if ( cancel )
 			task->_canceledDepsCount.fetch_add( 1, EMemoryOrder::Relaxed );
 
-		task->_waitBits.fetch_and( ~(1ull << depIndex), EMemoryOrder::Relaxed );
+		task->_waitBits.fetch_and( ~(1ull << depIndex), EMemoryOrder::Relaxed ); // 1 -> 0
 	}
 //-----------------------------------------------------------------------------
 
@@ -262,7 +306,7 @@ DEBUG_ONLY(
 	constructor
 =================================================
 */
-	template <size_t N>
+	template <usize N>
 	TaskScheduler::_TaskQueue<N>::_TaskQueue ()
 	{
 		STATIC_ASSERT( N >= 2 );
@@ -274,8 +318,8 @@ DEBUG_ONLY(
 	Resize
 =================================================
 */
-	template <size_t N>
-	void  TaskScheduler::_TaskQueue<N>::Resize (size_t count)
+	template <usize N>
+	void  TaskScheduler::_TaskQueue<N>::Resize (usize count)
 	{
 		ASSERT( count >= 2 );
 		queues.resize( count );
@@ -344,7 +388,7 @@ DEBUG_ONLY(
 	Setup
 =================================================
 */
-	bool  TaskScheduler::Setup (size_t maxWorkerThreads)
+	bool  TaskScheduler::Setup (usize maxWorkerThreads)
 	{
 		{
 			EXLOCK( _threadGuard );
@@ -352,7 +396,7 @@ DEBUG_ONLY(
 		}
 
 		_mainQueue.Resize( 2 );
-		_workerQueue.Resize( Max( 2u, (maxWorkerThreads + 2) / 3 ));
+		_workerQueue.Resize( Max( 2u, (maxWorkerThreads + 1) / 2 ));
 		_renderQueue.Resize( 2 );
 		_fileQueue.Resize( 2 );
 		_networkQueue.Resize( 2 );
@@ -465,14 +509,14 @@ DEBUG_ONLY(
 	_PullTask
 =================================================
 */
-	template <size_t N>
+	template <usize N>
 	AsyncTask  TaskScheduler::_PullTask (_TaskQueue<N> &tq, uint seed) const
 	{
 		AE_SCHEDULER_PROFILING(
 			const auto	start_time = TimePoint_t::clock::now();
 		)
 
-		for (size_t j = 0; j < tq.queues.size(); ++j)
+		for (usize j = 0; j < tq.queues.size(); ++j)
 		{
 			auto&	q = tq.queues[ (j + seed) % tq.queues.size() ];
 
@@ -488,8 +532,8 @@ DEBUG_ONLY(
 				bool	ready = false;
 
 				// check input dependencies
-				if ( curr->_canceledDepsCount.load( EMemoryOrder::Relaxed ) > 0 or
-					 curr->_waitBits.load( EMemoryOrder::Relaxed ) == 0 )
+				if ( (curr->_canceledDepsCount.load( EMemoryOrder::Relaxed ) > 0) |
+					 (curr->_waitBits.load( EMemoryOrder::Relaxed ) == 0) )
 				{
 					ready = true;
 				}
@@ -560,8 +604,8 @@ DEBUG_ONLY(
 	_ProcessTask
 =================================================
 */
-	template <size_t N>
-	bool  TaskScheduler::_ProcessTask (_TaskQueue<N> &tq, uint seed) const
+	template <usize N>
+	bool  TaskScheduler::_ProcessTask (_TaskQueue<N> &tq, uint seed)
 	{
 		if ( AsyncTask task = _PullTask( tq, seed ))
 		{
@@ -570,8 +614,11 @@ DEBUG_ONLY(
 			)
 
 			AE_VTUNE( __itt_task_begin( _vtuneDomain, __itt_null, __itt_null, __itt_string_handle_createA( task->DbgName().c_str() )));
+			
+			bool	rerun = false;
 			task->Run();
-			task->_OnFinish();
+			task->_OnFinish( OUT rerun );
+
 			AE_VTUNE( __itt_task_end( _vtuneDomain ));
 				
 			CHECK( task->_interlockDep.Unlock() );
@@ -579,6 +626,11 @@ DEBUG_ONLY(
 			AE_SCHEDULER_PROFILING(
 				tq._workTime += (TimePoint_t::clock::now() - start_time).count();
 			)
+
+			if ( rerun )
+			{
+				Enqueue( task );
+			}
 			return true;
 		}
 		return false;
@@ -633,7 +685,7 @@ DEBUG_ONLY(
 	_AddTaskDependencies
 =================================================
 */
-	bool  TaskScheduler::_AddTaskDependencies (const AsyncTask &task, const AsyncTask &dep, bool isStrong, INOUT uint &bitIndex)
+	bool  TaskScheduler::_AddTaskDependencies (const AsyncTask &task, const AsyncTask &dep, Bool isStrong, INOUT uint &bitIndex)
 	{
 		if ( not dep )
 			return true;
@@ -668,7 +720,7 @@ DEBUG_ONLY(
 					continue;
 				}
 
-				if ( (*chunk_ref)->tasks.try_push_back({ task, bitIndex, uint(isStrong) }))
+				if ( (*chunk_ref)->tasks.try_emplace_back( task, bitIndex, uint(isStrong) ))
 				{
 					++bitIndex;
 					break;
@@ -682,6 +734,7 @@ DEBUG_ONLY(
 		if ( isStrong and status > EStatus::_Interropted )
 		{
 			task->_Cancel();
+			bitIndex = 0;
 			return true;
 		}
 
@@ -708,11 +761,18 @@ DEBUG_ONLY(
 */
 	AsyncTask  TaskScheduler::_InsertTask (const AsyncTask &task, uint bitIndex)
 	{
-		// some dependencies may complete so merge bit mask with current
-		task->_waitBits.fetch_and( ToBitMask<uint64_t>( bitIndex ), EMemoryOrder::Relaxed );
+		// some dependencies may be already completed, so merge bit mask with current
+		task->_waitBits.fetch_and( ToBitMask<ulong>( bitIndex ), EMemoryOrder::Relaxed );
+		
+		for (EStatus old_status = EStatus::Initial;
+			 not task->_status.compare_exchange_weak( INOUT old_status, EStatus::Pending, EMemoryOrder::Relaxed );)
+		{
+			if_unlikely( old_status == EStatus::Canceled )
+				return task;
 
-		EStatus  old_status = task->_status.exchange( EStatus::Pending, EMemoryOrder::Relaxed );
-		CHECK_ERR( old_status == EStatus::Initial );
+			// 'compare_exchange_weak' can return 'false' even if expected value is the same as current value in atomic
+			ASSERT( old_status == EStatus::Initial );
+		}
 
 		BEGIN_ENUM_CHECKS();
 		switch ( task->Type() )
@@ -728,24 +788,58 @@ DEBUG_ONLY(
 		END_ENUM_CHECKS();
 		return task;
 	}
+	
+/*
+=================================================
+	Enqueue
+=================================================
+*/
+	bool  TaskScheduler::Enqueue (const AsyncTask &task)
+	{
+		CHECK_ERR( task );
+		
+		for (EStatus old_status = EStatus::Initial;
+			 not task->_status.compare_exchange_weak( INOUT old_status, EStatus::Pending, EMemoryOrder::Relaxed );)
+		{
+			if_unlikely( old_status == EStatus::Canceled )
+				return true;
+
+			// 'compare_exchange_weak' can return 'false' even if expected value is the same as current value in atomic
+			ASSERT( old_status == EStatus::Initial or old_status == EStatus::Continue );
+		}
+
+		BEGIN_ENUM_CHECKS();
+		switch ( task->Type() )
+		{
+			case EThread::Main :		_AddTask( _mainQueue,    task );	break;
+			case EThread::Worker :		_AddTask( _workerQueue,  task );	break;
+			case EThread::Renderer :	_AddTask( _renderQueue,  task );	break;
+			case EThread::FileIO :		_AddTask( _fileQueue,    task );	break;
+			case EThread::Network :		_AddTask( _networkQueue, task );	break;
+			case EThread::_Count :
+			default :					RETURN_ERR( "not supported" );
+		}
+		END_ENUM_CHECKS();
+		return true;
+	}
 
 /*
 =================================================
 	_AddTask
 =================================================
 */
-	template <size_t N>
+	template <usize N>
 	void  TaskScheduler::_AddTask (_TaskQueue<N> &tq, const AsyncTask &task) const
 	{
 		AE_SCHEDULER_PROFILING(
 			const auto	start_time = TimePoint_t::clock::now();
 		)
 
-		const size_t	seed = size_t(HashOf( std::this_thread::get_id() ));
+		const usize	seed = usize(HashOf( std::this_thread::get_id() ));
 
 		for (;;)
 		{
-			for (size_t j = 0; j < tq.queues.size(); ++j)
+			for (usize j = 0; j < tq.queues.size(); ++j)
 			{
 				auto&	q = tq.queues[ (j + seed) % tq.queues.size() ];
 			
@@ -768,9 +862,10 @@ DEBUG_ONLY(
 	_WriteProfilerStat
 =================================================
 */
-	template <size_t N>
+	template <usize N>
 	void  TaskScheduler::_WriteProfilerStat (StringView name, const _TaskQueue<N> &tq)
 	{
+		Unused( name, tq );
 		AE_SCHEDULER_PROFILING(
 			auto	work_time	= tq._workTime.load();
 			auto	stall_time	= tq._stallTime.load();
@@ -786,7 +881,7 @@ DEBUG_ONLY(
 			AE_LOGI( String(name)
 				<< " queue total work: " << ToString( nanoseconds(work_time) )
 				<< ", stall: " << ToString( factor * 100.0, 2 ) << " %"
-				<< ", queue count: " << ToString( tq.queues.size() ) );
+				<< ", queue count: " << ToString( tq.queues.size() ));
 		)
 	}
 

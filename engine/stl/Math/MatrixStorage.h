@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -16,7 +16,7 @@ namespace AE::Math
 	};
 
 
-	template <typename T, uint Columns, uint Rows, EMatrixOrder Order, size_t Align = alignof(T)>
+	template <typename T, uint Columns, uint Rows, EMatrixOrder Order, usize Align = alignof(T)>
 	struct MatrixStorage;
 
 
@@ -25,7 +25,7 @@ namespace AE::Math
 	// Column-major Matrix Storage
 	//
 
-	template <typename T, uint Columns, uint Rows, size_t Align>
+	template <typename T, uint Columns, uint Rows, usize Align>
 	struct MatrixStorage< T, Columns, Rows, EMatrixOrder::ColumnMajor, Align >
 	{
 	// types
@@ -69,7 +69,7 @@ namespace AE::Math
 								(CountOf<Arg0, Args...>() == Columns) );
 		}
 
-		template <uint Columns2, uint Rows2, size_t Align2>
+		template <uint Columns2, uint Rows2, usize Align2>
 		constexpr explicit MatrixStorage (const MatrixStorage< T, Columns2, Rows2, EMatrixOrder::ColumnMajor, Align2 > &other)
 		{
 			for (uint c = 0; c < Columns; ++c)
@@ -78,7 +78,7 @@ namespace AE::Math
 			}
 		}
 		
-		template <uint Columns2, uint Rows2, size_t Align2>
+		template <uint Columns2, uint Rows2, usize Align2>
 		constexpr explicit MatrixStorage (const MatrixStorage< T, Columns2, Rows2, EMatrixOrder::RowMajor, Align2 > &other)
 		{
 			for (uint c = 0; c < Columns; ++c)
@@ -132,7 +132,7 @@ namespace AE::Math
 			return result;
 		}
 
-		ND_ static constexpr size_t		size ()							{ return Columns; }
+		ND_ static constexpr usize		size ()							{ return Columns; }
 		//ND_ static constexpr uint2	Dimension ()					{ return {Columns, Rows}; }
 
 		ND_ static constexpr bool		IsColumnMajor ()				{ return true; }
@@ -167,7 +167,7 @@ namespace AE::Math
 	// Row-major Matrix Storage
 	//
 
-	template <typename T, uint Columns, uint Rows, size_t Align>
+	template <typename T, uint Columns, uint Rows, usize Align>
 	struct MatrixStorage< T, Columns, Rows, EMatrixOrder::RowMajor, Align >
 	{
 	// types
@@ -214,7 +214,7 @@ namespace AE::Math
 								(CountOf<Arg0, Args...>() == Rows) );
 		}
 		
-		template <uint Columns2, uint Rows2, size_t Align2>
+		template <uint Columns2, uint Rows2, usize Align2>
 		constexpr explicit MatrixStorage (const MatrixStorage< T, Columns2, Rows2, EMatrixOrder::RowMajor, Align2 > &other)
 		{
 			for (uint r = 0; r < Rows; ++r)
@@ -223,7 +223,7 @@ namespace AE::Math
 			}
 		}
 		
-		template <uint Columns2, uint Rows2, size_t Align2>
+		template <uint Columns2, uint Rows2, usize Align2>
 		constexpr explicit MatrixStorage (const MatrixStorage< T, Columns2, Rows2, EMatrixOrder::ColumnMajor, Align2 > &other)
 		{
 			for (uint r = 0; r < Rows; ++r)
@@ -277,7 +277,7 @@ namespace AE::Math
 			return result;
 		}
 
-		ND_ static constexpr size_t		size ()							{ return Rows; }
+		ND_ static constexpr usize		size ()							{ return Rows; }
 		//ND_ static constexpr uint2	Dimension ()					{ return {Columns, Rows}; }
 		
 		ND_ static constexpr bool		IsColumnMajor ()				{ return false; }

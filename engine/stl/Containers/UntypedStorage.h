@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -11,7 +11,7 @@ namespace AE::STL
 	// Untyped Storage
 	//
 
-	template <size_t Size, size_t Align>
+	template <usize Size, usize Align>
 	struct UntypedStorage final
 	{
 	// types
@@ -32,14 +32,14 @@ namespace AE::STL
 		}
 
 		template <typename T>
-		ND_ T*  Cast (BytesU offset = 0_b)
+		ND_ T*  Cast (Bytes offset = 0_b)
 		{
 			ASSERT( SizeOf<T> + offset <= sizeof(_buffer) );
 			return BitCast<T *>( _buffer + offset );
 		}
 
 		template <typename T>
-		ND_ T const*  Cast (BytesU offset = 0_b) const
+		ND_ T const*  Cast (Bytes offset = 0_b) const
 		{
 			ASSERT( SizeOf<T> + offset <= sizeof(_buffer) );
 			return BitCast<T const*>( _buffer + offset );

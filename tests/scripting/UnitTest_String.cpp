@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "scripting/Bindings/CoreBindings.h"
 #include "UnitTest_Common.h"
@@ -108,7 +108,7 @@ namespace
 
 extern void UnitTest_String ()
 {
-	auto	se = MakeShared<ScriptEngine>();
+	auto	se = MakeRC<ScriptEngine>();
 	TEST( se->Create() );
 
 	CoreBindings::BindString( se );

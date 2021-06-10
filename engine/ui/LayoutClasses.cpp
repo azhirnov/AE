@@ -3,8 +3,7 @@
 #include "ui/LayoutClasses.h"
 #include "ui/Drawable.h"
 #include "ui/Controller.h"
-#include "serializing/Serializer.h"
-#include "serializing/Deserializer.h"
+#include "serializing/ObjectFactory.h"
 
 namespace AE::UI
 {
@@ -235,10 +234,10 @@ namespace AE::UI
 	RectF AutoSizeLayout::GetPreferredSize (const RectF &parentRect) const
 	{
 		RectF const		max_region	= RectF( parentRect.Size() );
-		const size_t	count		= _childs.size();
+		const usize	count		= _childs.size();
 		RectF			region		= count ? _childs.front()->GetPreferredSize( max_region ) : RectF{};
 
-		for (size_t i = 1; i < count; ++i)
+		for (usize i = 1; i < count; ++i)
 		{
 			region.Join( _childs[i]->GetPreferredSize( max_region ));
 		}
@@ -262,10 +261,10 @@ namespace AE::UI
 	{
 		auto*			self		= Cast< AutoSizeLayout >( layout );
 		RectF const		max_region	= self->State().LocalRect();
-		const size_t	count		= self->_childs.size();
+		const usize	count		= self->_childs.size();
 		RectF			region		= count ? self->_childs.front()->State().LocalRect() : RectF{};
 
-		for (size_t i = 1; i < count; ++i)
+		for (usize i = 1; i < count; ++i)
 		{
 			region.Join( self->_childs[i]->State().LocalRect() );
 		}
@@ -357,7 +356,7 @@ namespace AE::UI
 		float2			offset;
 		RectF			local_rect;
 
-		for (size_t i = 0; i < _childs.size(); ++i)
+		for (usize i = 0; i < _childs.size(); ++i)
 		{
 			queue.EnqueueLayout( this, _childs[i].get() );
 
@@ -503,7 +502,7 @@ namespace AE::UI
 
 		float	weight_sum = 0.0f;
 
-		for (size_t i = 0; i < _childs.size(); ++i)
+		for (usize i = 0; i < _childs.size(); ++i)
 		{
 			weight_sum += Cast< FillStackLayoutCell >( _childs[i].get() )->Weight();
 		}
@@ -512,7 +511,7 @@ namespace AE::UI
 		float2 const	size	= State().LocalRect().Size();
 		float2 const	scale	= SafeDiv( size - _spacing * float(_childs.size()+1), weight_sum );	// TODO: spacing may be greater then size
 
-		for (size_t i = 0; i < _childs.size(); ++i)
+		for (usize i = 0; i < _childs.size(); ++i)
 		{
 			queue.EnqueueLayout( this, _childs[i].get() );
 

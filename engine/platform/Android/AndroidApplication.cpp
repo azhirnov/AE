@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "platform/Android/AndroidApplication.h"
 
@@ -32,7 +32,7 @@ namespace {
 */
 	AndroidApplication*&  AndroidApplication::_GetAppInstance ()
 	{
-		static AndroidApplication*	app = New<AndroidApplication>{ AE_OnAppCreated() };
+		static AndroidApplication*	app = new AndroidApplication{ AE_OnAppCreated() };
 		return app;
 	}
 
@@ -42,7 +42,7 @@ namespace {
 =================================================
 */
 	AndroidApplication::AndroidApplication (UniquePtr<IAppListener> listener) :
-		_listener{ std::move(listener) }
+		_listener{ RVRef(listener) }
 	{
 	}
 	
@@ -69,7 +69,7 @@ namespace {
 
 		if ( _windows.size() and not _windows.front().second->_listener )
 		{
-			_windows.front().second->_SetListener( std::move(listener) );
+			_windows.front().second->_SetListener( RVRef(listener) );
 			return _windows.front().second;
 		}
 
@@ -80,7 +80,7 @@ namespace {
 =================================================
 	CreateVRDevice
 =================================================
-*/
+*
 	VRDevicePtr  AndroidApplication::CreateVRDevice ()
 	{
 		return null;
@@ -91,7 +91,7 @@ namespace {
 	OpenResource
 =================================================
 */
-	SharedPtr<RStream>  AndroidApplication::OpenResource ()
+	RC<RStream>  AndroidApplication::OpenResource ()
 	{
 		// TODO
 		return null;
@@ -172,7 +172,7 @@ namespace {
 		
 		Threading::Scheduler().ProcessTask( Threading::IThread::EThread::Main, 0 );
 		
-		for (size_t i = 0; i < _windows.size();)
+		for (usize i = 0; i < _windows.size();)
 		{
 			if ( _windows[i].second->_wndState != IWindow::EState::Destroyed )
 				++i;
@@ -283,8 +283,8 @@ namespace {
 			JavaClass	app_class{ "AE/engine/BaseApplication" };
 			CHECK_ERR( app_class );
 
-			app_class.RegisterStaticMethod( "native_OnCreate", &AndroidApplication::native_OnCreate );
-			app_class.RegisterStaticMethod( "native_SetDirectories", &AndroidApplication::native_SetDirectories );
+			app_class.RegisterStaticMethod( "native_OnCreate",			&AndroidApplication::native_OnCreate );
+			app_class.RegisterStaticMethod( "native_SetDirectories",	&AndroidApplication::native_SetDirectories );
 		}
 
 		// register activity native methods
@@ -292,18 +292,18 @@ namespace {
 			JavaClass	wnd_class{ "AE/engine/BaseActivity" };
 			CHECK_ERR( wnd_class );
 
-			wnd_class.RegisterStaticMethod( "native_OnCreate", &AndroidWindow::native_OnCreate );
-			wnd_class.RegisterStaticMethod( "native_OnDestroy", &AndroidWindow::native_OnDestroy );
-			wnd_class.RegisterStaticMethod( "native_OnStart", &AndroidWindow::native_OnStart );
-			wnd_class.RegisterStaticMethod( "native_OnStop", &AndroidWindow::native_OnStop );
-			wnd_class.RegisterStaticMethod( "native_OnEnterForeground", &AndroidWindow::native_OnEnterForeground );
-			wnd_class.RegisterStaticMethod( "native_OnEnterBackground", &AndroidWindow::native_OnEnterBackground );
-			wnd_class.RegisterStaticMethod( "native_SurfaceChanged", &AndroidWindow::native_SurfaceChanged );
-			wnd_class.RegisterStaticMethod( "native_SurfaceDestroyed", &AndroidWindow::native_SurfaceDestroyed );
-			wnd_class.RegisterStaticMethod( "native_Update", &AndroidWindow::native_Update );
-			wnd_class.RegisterStaticMethod( "native_OnKey", &AndroidWindow::native_OnKey );
-			wnd_class.RegisterStaticMethod( "native_OnTouch", &AndroidWindow::native_OnTouch );
-			wnd_class.RegisterStaticMethod( "native_OnOrientationChanged", &AndroidWindow::native_OnOrientationChanged );
+			wnd_class.RegisterStaticMethod( "native_OnCreate",				&AndroidWindow::native_OnCreate );
+			wnd_class.RegisterStaticMethod( "native_OnDestroy",				&AndroidWindow::native_OnDestroy );
+			wnd_class.RegisterStaticMethod( "native_OnStart",				&AndroidWindow::native_OnStart );
+			wnd_class.RegisterStaticMethod( "native_OnStop",				&AndroidWindow::native_OnStop );
+			wnd_class.RegisterStaticMethod( "native_OnEnterForeground",		&AndroidWindow::native_OnEnterForeground );
+			wnd_class.RegisterStaticMethod( "native_OnEnterBackground",		&AndroidWindow::native_OnEnterBackground );
+			wnd_class.RegisterStaticMethod( "native_SurfaceChanged",		&AndroidWindow::native_SurfaceChanged );
+			wnd_class.RegisterStaticMethod( "native_SurfaceDestroyed",		&AndroidWindow::native_SurfaceDestroyed );
+			wnd_class.RegisterStaticMethod( "native_Update",				&AndroidWindow::native_Update );
+			wnd_class.RegisterStaticMethod( "native_OnKey",					&AndroidWindow::native_OnKey );
+			wnd_class.RegisterStaticMethod( "native_OnTouch",				&AndroidWindow::native_OnTouch );
+			wnd_class.RegisterStaticMethod( "native_OnOrientationChanged",	&AndroidWindow::native_OnOrientationChanged );
 		}
 
 		CHECK( AndroidApplication::_GetAppInstance() != null );

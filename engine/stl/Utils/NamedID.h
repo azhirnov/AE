@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -12,7 +12,7 @@ namespace AE::STL
 	// ID With String
 	//
 
-	template <size_t Size, uint UID, bool Optimize, uint Seed = UMax>
+	template <usize Size, uint UID, bool Optimize, uint Seed = UMax>
 	struct NamedID
 	{
 	// types
@@ -52,7 +52,7 @@ namespace AE::STL
 	// ID With String
 	//
 
-	template <size_t Size, uint UID, uint Seed>
+	template <usize Size, uint UID, uint Seed>
 	struct NamedID< Size, UID, false, Seed >
 	{
 	// types
@@ -63,8 +63,8 @@ namespace AE::STL
 
 	// variables
 	private:
-		FixedString<Size>			_name;
 		HashVal						_hash;
+		FixedString<Size>			_name;
 		static constexpr HashVal	_emptyHash	= CT_Hash( "", 0, Seed );
 
 
@@ -72,11 +72,11 @@ namespace AE::STL
 	public:
 		constexpr NamedID () : _hash{_emptyHash} {}
 		explicit constexpr NamedID (HashVal hash) : _hash{hash} {}
-		explicit constexpr NamedID (StringView name)  : _name{name}, _hash{CT_Hash( name.data(), name.length(), Seed )} {}
-		explicit constexpr NamedID (const char *name) : _name{name}, _hash{CT_Hash( name, UMax, Seed )} {}
+		explicit constexpr NamedID (StringView name)  : _hash{CT_Hash( name.data(), name.length(), Seed )}, _name{name} {}
+		explicit constexpr NamedID (const char *name) : _hash{CT_Hash( name, UMax, Seed )}, _name{name} {}
 
-		template <size_t StrSize>
-		explicit constexpr NamedID (const FixedString<StrSize> &name) : _name{name}, _hash{CT_Hash( name.data(), name.length(), Seed )} {}
+		template <usize StrSize>
+		explicit constexpr NamedID (const FixedString<StrSize> &name) : _hash{CT_Hash( name.data(), name.length(), Seed )}, _name{name} {}
 
 		ND_ constexpr bool operator == (const Self &rhs) const		{ return _hash == rhs._hash; }
 		ND_ constexpr bool operator != (const Self &rhs) const		{ return not (*this == rhs); }

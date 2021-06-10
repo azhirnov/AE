@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -65,17 +65,16 @@ namespace {
 	GetAllImageAccessMasks
 =================================================
 *
-	ND_ static VkAccessFlags  GetAllImageAccessMasks (VkImageUsageFlags usage)
+	ND_ static VkAccessFlags  GetAllImageAccessMasks (VkImageUsageFlagBits usage)
 	{
-		VkAccessFlags	result = 0;
-
-		for (VkImageUsageFlags t = 1; t <= usage; t <<= 1)
+		VkAccessFlags	result = Zero;
+		
+		while ( usage != Zero )
 		{
-			if ( not AllBits( usage, t ) )
-				continue;
+			VkImageUsageFlagBits	t = ExtractBit( INOUT usage );
 
 			BEGIN_ENUM_CHECKS();
-			switch ( VkImageUsageFlagBits(t) )
+			switch ( t )
 			{
 				case VK_IMAGE_USAGE_TRANSFER_SRC_BIT :				result |= VK_ACCESS_TRANSFER_READ_BIT;					break;
 				case VK_IMAGE_USAGE_TRANSFER_DST_BIT :				break;
@@ -114,11 +113,13 @@ namespace {
 	Create
 =================================================
 */
-	bool  VImage::Create (VResourceManager &resMngr, const ImageDesc &desc, GfxMemAllocatorPtr allocator, EResourceState defaultState, StringView dbgName)
+	bool  VImage::Create (VResourceManagerImpl &resMngr, const ImageDesc &desc, VMemAllocatorPtr allocator, EResourceState defaultState, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( _image == VK_NULL_HANDLE );
 		CHECK_ERR( allocator );
+		CHECK_ERR( desc.format != Default );
+		CHECK_ERR( desc.usage != Default );
 		
 		_desc = desc;
 		_desc.Validate();
@@ -126,6 +127,8 @@ namespace {
 		auto&		dev			= resMngr.GetDevice();
 		const bool	opt_tiling	= not AnyBits( _desc.memType, EMemoryType::_HostVisible );
 		
+		ASSERT( IsSupported( dev, _desc ));
+
 		// create image
 		VkImageCreateInfo	info = {};
 		info.sType			= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -165,12 +168,12 @@ namespace {
 
 		VK_CHECK( dev.vkCreateImage( dev.GetVkDevice(), &info, null, OUT &_image ));
 
-		CHECK_ERR( allocator->AllocForImage( BitCast<ImageVk_t>(_image), _desc, INOUT _memStorage ));
+		CHECK_ERR( allocator->AllocForImage( _image, _desc, INOUT _memStorage ));
 		
 		if ( dbgName.size() )
 			dev.SetObjectName( BitCast<uint64_t>(_image), dbgName, VK_OBJECT_TYPE_IMAGE );
 
-		_memAllocator	= std::move(allocator);
+		_memAllocator	= RVRef(allocator);
 		_aspectMask		= ChooseAspect( _desc.format );
 		_defaultLayout	= ChooseDefaultLayout( _desc.usage, EResourceState_ToImageLayout( defaultState, _aspectMask ));
 		_debugName		= dbgName;
@@ -189,21 +192,24 @@ namespace {
 		EXLOCK( _drCheck );
 		CHECK_ERR( _image == VK_NULL_HANDLE );
 		
-		_image				= BitCast<VkImage>( desc.image );
-		_desc.imageType		= AEEnumCast( BitCast<VkImageType>( desc.imageType ));
-		_desc.flags			= AEEnumCast( BitCast<VkImageCreateFlagBits>( desc.flags ));
-		_desc.usage			= AEEnumCast( BitCast<VkImageUsageFlagBits>( desc.usage ));
-		_desc.format		= AEEnumCast( BitCast<VkFormat>( desc.format ));
-		_desc.samples		= AEEnumCast( BitCast<VkSampleCountFlagBits>( desc.samples ));
+		_image				= desc.image;
+		_desc.imageType		= AEEnumCast( desc.imageType );
+		_desc.flags			= AEEnumCast( desc.flags );
 		_desc.dimension		= desc.dimension;
+		_desc.format		= AEEnumCast( desc.format );
+		_desc.usage			= AEEnumCast( desc.usage );
 		_desc.arrayLayers	= ImageLayer{ desc.arrayLayers };
 		_desc.maxLevel		= MipmapLevel{ desc.maxLevels };
+		_desc.samples		= AEEnumCast( desc.samples );
+		_desc.memType		= Default; // TODO
+
+		ASSERT( IsSupported( dev, _desc ));
 
 		if ( dbgName.size() )
 			dev.SetObjectName( BitCast<uint64_t>(_image), dbgName, VK_OBJECT_TYPE_IMAGE );
 
 		_aspectMask		= ChooseAspect( _desc.format );
-		_defaultLayout	= ChooseDefaultLayout( _desc.usage, BitCast<VkImageLayout>(desc.defaultLayout) );
+		_defaultLayout	= ChooseDefaultLayout( _desc.usage, desc.defaultLayout );
 		_debugName		= dbgName;
 		_canBeDestroyed	= desc.canBeDestroyed;
 
@@ -215,7 +221,7 @@ namespace {
 	Destroy
 =================================================
 */
-	void  VImage::Destroy (VResourceManager &resMngr)
+	void  VImage::Destroy (VResourceManagerImpl &resMngr)
 	{
 		EXLOCK( _drCheck );
 		
@@ -251,31 +257,7 @@ namespace {
 	GetMemoryInfo
 =================================================
 */
-	bool  VImage::GetMemoryInfo (OUT VResourceMemoryInfo &outInfo) const
-	{
-		SHAREDLOCK( _drCheck );
-		CHECK_ERR( _memAllocator );
-
-		IGfxMemAllocator::NativeMemInfo_t	info;
-		CHECK_ERR( _memAllocator->GetInfo( _memStorage, OUT info ));
-		
-		auto*	vk_info = UnionGetIf<VulkanMemoryObjInfo>( &info );
-		CHECK_ERR( vk_info );
-
-		outInfo.memory		= BitCast<VkDeviceMemory>( vk_info->memory );
-		outInfo.flags		= BitCast<VkMemoryPropertyFlagBits>( vk_info->flags );
-		outInfo.offset		= vk_info->offset;
-		outInfo.size		= vk_info->size;
-		outInfo.mappedPtr	= vk_info->mappedPtr;
-		return true;
-	}
-	
-/*
-=================================================
-	GetMemoryInfo
-=================================================
-*/
-	bool  VImage::GetMemoryInfo (OUT IGfxMemAllocator::NativeMemInfo_t &info) const
+	bool  VImage::GetMemoryInfo (OUT VulkanMemoryObjInfo &info) const
 	{
 		SHAREDLOCK( _drCheck );
 		CHECK_ERR( _memAllocator );
@@ -319,7 +301,7 @@ namespace {
 	GetView
 =================================================
 */
-	VkImageView  VImage::GetView (const VDevice &dev, bool isDefault, INOUT ImageViewDesc &viewDesc) const
+	VkImageView  VImage::GetView (const VDevice &dev, Bool isDefault, INOUT ImageViewDesc &viewDesc) const
 	{
 		SHAREDLOCK( _drCheck );
 
@@ -390,14 +372,14 @@ namespace {
 	VulkanImageDesc  VImage::GetNativeDescription () const
 	{
 		VulkanImageDesc		desc;
-		desc.image			= BitCast<ImageVk_t>( _image );
-		desc.imageType		= BitCast<ImageTypeVk_t>( VEnumCast( _desc.imageType ));
-		desc.flags			= BitCast<ImageFlagsVk_t>( VEnumCast( _desc.flags ));
-		desc.usage			= BitCast<ImageUsageVk_t>( VEnumCast( _desc.usage ));
-		desc.format			= BitCast<FormatVk_t>( VEnumCast( _desc.format ));
-		desc.currentLayout	= BitCast<ImageLayoutVk_t>( _defaultLayout );
+		desc.image			= _image;
+		desc.imageType		= VEnumCast( _desc.imageType );
+		desc.flags			= VEnumCast( _desc.flags );
+		desc.usage			= VEnumCast( _desc.usage );
+		desc.format			= VEnumCast( _desc.format );
+		desc.currentLayout	= _defaultLayout;
 		desc.defaultLayout	= desc.currentLayout;
-		desc.samples		= BitCast<SampleCountVk_t>( VEnumCast( _desc.samples ));
+		desc.samples		= VEnumCast( _desc.samples );
 		desc.dimension		= _desc.dimension;
 		desc.arrayLayers	= _desc.arrayLayers.Get();
 		desc.maxLevels		= _desc.maxLevel.Get();
@@ -412,49 +394,82 @@ namespace {
 */
 	bool  VImage::IsSupported (const VDevice &dev, const ImageDesc &desc)
 	{
-		VkFormatProperties	props = {};
-		vkGetPhysicalDeviceFormatProperties( dev.GetVkPhysicalDevice(), VEnumCast( desc.format ), OUT &props );
-		
-		const bool					opt_tiling	= not AnyBits( desc.memType, EMemoryType::_HostVisible );
-		const VkFormatFeatureFlags	dev_flags	= opt_tiling ? props.optimalTilingFeatures : props.linearTilingFeatures;
-		VkFormatFeatureFlags		img_flags	= 0;
+		const bool		opt_tiling	= not AnyBits( desc.memType, EMemoryType::_HostVisible );
+		const VkFormat	format		= VEnumCast( desc.format );
 
-		for (EImageUsage t = EImageUsage(1); t <= desc.usage; t = EImageUsage(uint(t) << 1))
+		// check available creation flags
 		{
-			if ( not AllBits( desc.usage, t ))
-				continue;
+			VkImageCreateFlagBits	required	= VEnumCast( desc.flags );
+			VkImageCreateFlagBits	available	= dev.GetFlags().imageCreateFlags;
 
-			BEGIN_ENUM_CHECKS();
-			switch ( t )
-			{
-				case EImageUsage::TransferSrc :				img_flags |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT | VK_FORMAT_FEATURE_BLIT_SRC_BIT;	break;
-				case EImageUsage::TransferDst :				img_flags |= VK_FORMAT_FEATURE_TRANSFER_DST_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;	break;
-				case EImageUsage::Sampled :					img_flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;	break;
-				case EImageUsage::Storage :					img_flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;				break;
-				case EImageUsage::StorageAtomic :			img_flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;		break;
-				case EImageUsage::ColorAttachment :			img_flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;			break;
-				case EImageUsage::ColorAttachmentBlend :	img_flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;		break;
-				case EImageUsage::DepthStencilAttachment :	img_flags |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;	break;
-				case EImageUsage::TransientAttachment :		break;	// TODO
-				case EImageUsage::InputAttachment :			break;
-				case EImageUsage::ShadingRate :				if ( not dev.GetFeatures().shadingRateImageNV ) return false;	break;
-				
-				#ifdef VK_EXT_fragment_density_map
-				case EImageUsage::FragmentDensityMap :		img_flags |= VK_FORMAT_FEATURE_FRAGMENT_DENSITY_MAP_BIT_EXT;	break;
-				#else
-				case EImageUsage::FragmentDensityMap :		ASSERT(false);	break;
-				#endif
-
-				case EImageUsage::_Last :
-				case EImageUsage::All :
-				case EImageUsage::Transfer :
-				case EImageUsage::Unknown :
-				default :									ASSERT(false);	break;
-			}
-			END_ENUM_CHECKS();
+			if ( not AllBits( available, required ))
+				return false;
 		}
 
-		return (dev_flags & img_flags);
+		// check format features
+		{
+			VkFormatProperties	props = {};
+			vkGetPhysicalDeviceFormatProperties( dev.GetVkPhysicalDevice(), format, OUT &props );
+		
+			const VkFormatFeatureFlags	available	= opt_tiling ? props.optimalTilingFeatures : props.linearTilingFeatures;
+			VkFormatFeatureFlags		required	= 0;
+			
+			for (EImageUsage usage = desc.usage; usage != Zero;)
+			{
+				EImageUsage	t = ExtractBit( INOUT usage );
+
+				BEGIN_ENUM_CHECKS();
+				switch ( t )
+				{
+					case EImageUsage::TransferSrc :				required |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT | VK_FORMAT_FEATURE_BLIT_SRC_BIT;	break;
+					case EImageUsage::TransferDst :				required |= VK_FORMAT_FEATURE_TRANSFER_DST_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT;	break;
+					case EImageUsage::Sampled :					required |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;break;
+					case EImageUsage::Storage :					required |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;					break;
+					case EImageUsage::SampledMinMax :			required |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_MINMAX_BIT_EXT;	break;
+					case EImageUsage::StorageAtomic :			required |= VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;				break;
+					case EImageUsage::ColorAttachment :			required |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;					break;
+					case EImageUsage::ColorAttachmentBlend :	required |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;			break;
+					case EImageUsage::DepthStencilAttachment :	required |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;			break;
+					case EImageUsage::TransientAttachment :		break;	// TODO
+					case EImageUsage::InputAttachment :			break;
+					case EImageUsage::ShadingRate :				if ( not dev.GetFeatures().shadingRateImageNV ) return false;		break;
+					//case EImageUsage::FragmentDensityMap :	return false;	// not supported yet
+					case EImageUsage::_Last :
+					case EImageUsage::All :
+					case EImageUsage::Transfer :
+					case EImageUsage::Unknown :
+					default :									ASSERT(false);	break;
+				}
+				END_ENUM_CHECKS();
+			}
+
+			if ( not AllBits( available, required ))
+				return false;
+		}
+
+		// check image properties
+		{
+			VkImageFormatProperties	props = {};
+			VK_CHECK( vkGetPhysicalDeviceImageFormatProperties( dev.GetVkPhysicalDevice(), format, VEnumCast( desc.imageType ),
+																opt_tiling ? VK_IMAGE_TILING_OPTIMAL : VK_IMAGE_TILING_LINEAR,
+																VEnumCast( desc.usage ), VEnumCast( desc.flags ), OUT &props ));
+
+			if ( desc.dimension.x > props.maxExtent.width  or
+			 	 desc.dimension.y > props.maxExtent.height or
+				 desc.dimension.z > props.maxExtent.depth )
+				return false;
+
+			if ( desc.maxLevel.Get() > props.maxMipLevels )
+				return false;
+
+			if ( desc.arrayLayers.Get() > props.maxArrayLayers )
+				return false;
+
+			if ( not AllBits( props.sampleCounts, desc.samples.Get() ))
+				return false;
+		}
+
+		return true;
 	}
 	
 /*
@@ -465,20 +480,73 @@ namespace {
 	bool  VImage::IsSupported (const VDevice &dev, const ImageViewDesc &desc) const
 	{
 		SHAREDLOCK( _drCheck );
-
-		if ( desc.viewType == EImageView::CubeArray )
+		
+		if ( desc.viewType == EImage_CubeArray )
 		{
 			if ( not dev.GetProperties().features.imageCubeArray )
 				return false;
 
+			if ( _desc.imageType != EImageDim_2D or (_desc.imageType == EImageDim_3D and AllBits( _desc.flags, EImageFlags::Array2DCompatible)) )
+				return false;
+
 			if ( not AllBits( _desc.flags, EImageFlags::CubeCompatible ))
+				return false;
+
+			if ( desc.layerCount % 6 != 0 )
 				return false;
 		}
 
-		// TODO: mutable format
+		if ( desc.viewType == EImage_Cube )
+		{
+			if ( not AllBits( _desc.flags, EImageFlags::CubeCompatible ))
+				return false;
+
+			if ( desc.layerCount != 6 )
+				return false;
+		}
+
+		if ( _desc.imageType == EImageDim_3D and desc.viewType != EImage_3D )
+		{
+			if ( not AllBits( _desc.flags, EImageFlags::Array2DCompatible ))
+				return false;
+		}
 
 		if ( desc.format != Default and desc.format != _desc.format )
-			return false;
+		{
+			auto&	required	= EPixelFormat_GetInfo( _desc.format );
+			auto&	origin		= EPixelFormat_GetInfo( desc.format );
+			bool	req_comp	= Any( required.blockSize > 1u );
+			bool	orig_comp	= Any( origin.blockSize > 1u );
+			
+			if ( not AllBits( _desc.flags, EImageFlags::MutableFormat ))
+				return false;
+
+			// compressed to uncompressed
+			if ( AllBits( _desc.flags, EImageFlags::BlockTexelViewCompatible ) and orig_comp and not req_comp )
+			{
+				if ( required.bitsPerBlock != origin.bitsPerBlock )
+					return false;
+			}
+			else
+			{
+				if ( req_comp != orig_comp )
+					return false;
+
+				if ( Any( required.blockSize != origin.blockSize ))
+					return false;
+
+				if ( desc.aspectMask == EImageAspect::Stencil )
+				{
+					if ( required.bitsPerBlock2 != origin.bitsPerBlock2 )
+						return false;
+				}
+				else
+				{
+					if ( required.bitsPerBlock != origin.bitsPerBlock )
+						return false;
+				}
+			}
+		}
 
 		return true;
 	}

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "CPP_VM/VirtualMachine.h"
 #include "CPP_VM/Atomic.h"
@@ -33,7 +33,7 @@ namespace
 			struct PerThread
 			{
 				EAction		act		= EAction::Put;
-				size_t		count	= 32;
+				usize		count	= 32;
 			};
 
 			struct
@@ -61,7 +61,7 @@ namespace
 				{
 					case EAction::Put :
 					{
-						for (size_t i = 0; i < pt->count; ++i)
+						for (usize i = 0; i < pt->count; ++i)
 						{
 							if ( not g->pool.Put( TS{T(int(i))} ))
 								break;
@@ -74,7 +74,7 @@ namespace
 
 					case EAction::Extract :
 					{
-						for (size_t i = 0; i < pt->count; ++i)
+						for (usize i = 0; i < pt->count; ++i)
 						{
 							TS	val;
 							if ( g->pool.Extract( OUT val ))

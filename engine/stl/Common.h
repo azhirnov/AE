@@ -1,36 +1,8 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "stl/Defines.h"
-
-// mem leak check
-#if defined(COMPILER_MSVC) && defined(AE_ENABLE_MEMLEAK_CHECKS) && defined(_DEBUG)
-#	define _CRTDBG_MAP_ALLOC
-#	include <stdlib.h>
-#	include <crtdbg.h>
-
-	// call at exit
-	// returns 'true' if no mem leaks
-#	define AE_DUMP_MEMLEAKS()	(::_CrtDumpMemoryLeaks() != 1)
-#else
-
-#	undef  AE_ENABLE_MEMLEAK_CHECKS
-#	define AE_DUMP_MEMLEAKS()	(true)
-#endif
-
-// Config
-#ifndef AE_FAST_HASH
-#	define AE_FAST_HASH		0
-#endif
-
-#ifndef AE_OPTIMIZE_IDS
-# ifdef AE_DEBUG
-#	define AE_OPTIMIZE_IDS	0
-# else
-#	define AE_OPTIMIZE_IDS	1
-# endif
-#endif
 
 #include <vector>
 #include <string>
@@ -42,23 +14,30 @@
 #include <bitset>
 #include <cstring>
 #include <cmath>
-#include <malloc.h>
 #include <optional>
 #include <string_view>
 #include <typeindex>
 #include <type_traits>
 #include <chrono>
-
-#include "stl/Log/Log.h"
-#include "stl/Algorithms/Hash.h"
-#include "stl/CompileTime/TypeTraits.h"
-#include "stl/CompileTime/Constants.h"
-#include "stl/CompileTime/DefaultType.h"
-#include "stl/Containers/Tuple.h"
+#include <algorithm>
 
 namespace AE
 {
-	namespace STL {}
+	namespace STL
+	{
+		using sbyte		= int8_t;
+		using ubyte		= uint8_t;
+		using sshort	= int16_t;
+		using ushort	= uint16_t;
+		using sint		= int32_t;
+		using uint 		= uint32_t;
+		using slong		= int64_t;
+		using ulong		= uint64_t;
+		using ssize		= intptr_t;
+		using usize		= size_t;
+
+	} // STL
+
 	namespace Math {}
 }
 
@@ -67,11 +46,16 @@ namespace AE::Math
 	using namespace AE::STL;
 }
 
+#include "stl/Log/Log.h"
+#include "stl/Algorithms/Hash.h"
+#include "stl/CompileTime/TypeTraits.h"
+#include "stl/CompileTime/Constants.h"
+#include "stl/CompileTime/DefaultType.h"
+#include "stl/Containers/Tuple.h"
+
 namespace AE::STL
 {
 	using namespace AE::Math;
-
-	using uint 		= uint32_t;
 
 							using String		= std::string;
 							using WString		= std::wstring;
@@ -84,7 +68,7 @@ namespace AE::STL
 
 	template <typename T>	using Deque			= std::deque< T >;
 
-	template <size_t N>		using BitSet		= std::bitset< N >;
+	template <usize N>		using BitSet		= std::bitset< N >;
 	
 	template <typename T>	using Optional		= std::optional< T >;
 	
@@ -100,7 +84,7 @@ namespace AE::STL
 	using UniquePtr		= std::unique_ptr< T, Deleter >;
 
 	template <typename T,
-			  size_t ArraySize>
+			  usize ArraySize>
 	using StaticArray	= std::array< T, ArraySize >;
 
 
@@ -144,43 +128,48 @@ namespace AE::STL
 =================================================
 */
 	template <typename... Args>
-	constexpr void Unused (Args&& ...) {}
+	constexpr void  Unused (Args&& ...) {}
 	
 /*
 =================================================
-	New
+	ArgRef (same as std::ref)
 =================================================
 */
-#if defined(COMPILER_MSVC) and defined(AE_ENABLE_MEMLEAK_CHECKS)
-namespace _ae_stl_hidden_
-{
-	struct DbgNew
+	template <typename T>
+	ND_ forceinline constexpr std::reference_wrapper<T>  ArgRef (T& arg) noexcept
 	{
-		const char *	file;
-		int				line;
-
-		DbgNew (const char *file, int line) : file{file}, line{line}
-		{}
-
-		template <typename T, typename ...Types>
-		ND_ forceinline T*  New (Types&&... args)	
-		{
-			return new( _NORMAL_BLOCK, file, line ) T{ std::forward<Types>( args )... };
-		}
-	};
-}
-#	define New	_ae_stl_hidden_::DbgNew{ __FILE__, __LINE__ }.New
-
-#else
-
-	template <typename T, typename ...Types>
-	ND_ forceinline T*  New (Types&&... args)
+		return std::reference_wrapper<T>{ arg };
+	}
+	
+/*
+=================================================
+	RVRef (same as std::move)
+=================================================
+*/
+	template <typename T>
+	ND_ forceinline constexpr RemoveReference<T> &&  RVRef (T& arg) noexcept
 	{
-		return new T{ std::forward<Types>( args )... };
+		return static_cast< RemoveReference<T> && >( arg );
 	}
 
-#endif
-	
+/*
+=================================================
+	FwdArg (same as std::forward)
+=================================================
+*/
+	template <typename T>
+	ND_ forceinline constexpr T &&  FwdArg (RemoveReference<T>& arg) noexcept
+	{
+		return static_cast<T &&>( arg );
+	}
+
+	template <typename T>
+	ND_ forceinline constexpr T &&  FwdArg (RemoveReference<T>&& arg) noexcept
+	{
+		STATIC_ASSERT( not IsLValueReference<T> );
+		return static_cast<T &&>( arg );
+	}
+
 /*
 =================================================
 	MakeShared
@@ -189,7 +178,7 @@ namespace _ae_stl_hidden_
 	template <typename T, typename ...Types>
 	ND_ forceinline SharedPtr<T>  MakeShared (Types&&... args)
 	{
-		return std::make_shared<T>( std::forward<Types>( args )... );
+		return std::make_shared<T>( FwdArg<Types>( args )... );
 	}
 
 /*
@@ -197,31 +186,24 @@ namespace _ae_stl_hidden_
 	MakeUnique
 =================================================
 */
-#if defined(COMPILER_MSVC) and defined(AE_ENABLE_MEMLEAK_CHECKS)
-namespace _ae_stl_hidden_
-{
-	struct DbgMakeUnique
-	{
-		const char *	file;
-		int				line;
-
-		template <typename T, typename ...Types>
-		ND_ forceinline UniquePtr<T>  MakeUnique (Types&&... args)
-		{
-			return UniquePtr<T>{ new( _NORMAL_BLOCK, file, line ) T{ std::forward<Types>( args )... }};
-		}
-	};
-}
-#	define MakeUnique	_ae_stl_hidden_::DbgMakeUnique{ __FILE__, __LINE__ }.MakeUnique
-
-#else
-
 	template <typename T, typename ...Types>
 	ND_ forceinline UniquePtr<T>  MakeUnique (Types&&... args)
 	{
-		return std::make_unique<T>( std::forward<Types>( args )... );
+		return std::make_unique<T>( FwdArg<Types>( args )... );
 	}
-
-#endif
-
+	
 }	// AE::STL
+
+namespace AE
+{
+#	ifndef AE_NO_EXCEPTIONS
+	class Exception final : public std::runtime_error
+	{
+	public:
+		explicit Exception (STL::StringView sv) : runtime_error{ STL::String{sv} } {}
+		explicit Exception (STL::String str) : runtime_error{ STL::RVRef(str) } {}
+		explicit Exception (const char *str) : runtime_error{ STL::String{str} } {}
+	};
+#	endif
+
+}	// AE

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "threading/Containers/IndexedPool.h"
 #include "threading/Containers/CachedIndexedPool.h"
@@ -13,14 +13,14 @@ namespace
 		constexpr uint							count = 1024;
 		IndexedPool< int, uint, count/16, 16 >	pool;
 	
-		for (size_t i = 0; i < count; ++i)
+		for (usize i = 0; i < count; ++i)
 		{
 			uint	idx;
 			TEST( pool.Assign( OUT idx ) == (i < count) );
 			TEST( (idx == i) == (i < count) );
 		}
 	
-		for (size_t i = 0; i < count; ++i)
+		for (usize i = 0; i < count; ++i)
 		{
 			pool.Unassign( uint(i) );
 		}
@@ -33,7 +33,7 @@ namespace
 		IndexedPool< int, uint, count/16, 16 >	pool;
 		FixedArray< uint, 16 >					arr;
 
-		for (size_t i = 0; i < count; i += arr.capacity())
+		for (usize i = 0; i < count; i += arr.capacity())
 		{
 			TEST( pool.Assign( UMax, INOUT arr ) > 0 );
 			TEST( arr.size() == arr.capacity() );
@@ -51,14 +51,14 @@ namespace
 			constexpr uint							count = 1024;
 			IndexedPool< T, uint, count/16, 16 >	pool;
 	
-			for (size_t i = 0; i < count; ++i)
+			for (usize i = 0; i < count; ++i)
 			{
 				uint	idx;
 				TEST( pool.Assign( OUT idx ) == (i < count) );
 				TEST( (idx == i) == (i < count) );
 			}
 	
-			for (size_t i = 0; i < count; ++i)
+			for (usize i = 0; i < count; ++i)
 			{
 				pool.Unassign( uint(i) );
 			}

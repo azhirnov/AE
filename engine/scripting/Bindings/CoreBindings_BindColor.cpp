@@ -81,17 +81,17 @@ namespace AE::Scripting
 		if constexpr( IsSameTypes< T, RGBA32f > )
 		{
 			binder.AddConstructor( &RGBA32f_Ctor_HSV_Alpha );
-			binder.AddConstructor( &RGBA32f_Ctor_RGBA<uint8_t> );
+			binder.AddConstructor( &RGBA32f_Ctor_RGBA<ubyte> );
 			binder.AddConstructor( &RGBA32f_Ctor_RGBA<uint> );
 		}
 		if constexpr( IsSameTypes< T, RGBA32i > )
 		{
-			binder.AddConstructor( &RGBA32i_Ctor_RGBA<uint8_t> );
+			binder.AddConstructor( &RGBA32i_Ctor_RGBA<ubyte> );
 			binder.AddConstructor( &RGBA32i_Ctor_RGBA<uint> );
 		}
 		if constexpr( IsSameTypes< T, RGBA32u > )
 		{
-			binder.AddConstructor( &RGBA32u_Ctor_RGBA<uint8_t> );
+			binder.AddConstructor( &RGBA32u_Ctor_RGBA<ubyte> );
 			binder.AddConstructor( &RGBA32u_Ctor_RGBA<int> );
 		}
 		if constexpr( IsSameTypes< T, RGBA8u > )

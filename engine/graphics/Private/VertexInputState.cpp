@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "graphics/Public/VertexInputState.h"
 
@@ -54,7 +54,7 @@ namespace AE::Graphics
 		bufferBinding{ BindingIndex_Auto }
 	{}
 
-	VertexInputState::VertexInput::VertexInput (EVertexType type, Bytes<uint> offset, uint bufferBinding) :
+	VertexInputState::VertexInput::VertexInput (EVertexType type, TBytes<uint> offset, uint bufferBinding) :
 		type{ type },
 		index{ VertexIndex_Unknown },
 		offset{ offset },
@@ -132,7 +132,7 @@ namespace AE::Graphics
 		index( VertexIndex_Unknown ), rate( EVertexInputRate::Unknown )
 	{}
 
-	VertexInputState::BufferBinding::BufferBinding (uint index, Bytes<uint> stride, EVertexInputRate rate) :
+	VertexInputState::BufferBinding::BufferBinding (uint index, TBytes<uint> stride, EVertexInputRate rate) :
 		index(index), stride(stride), rate(rate)
 	{}
 	
@@ -156,7 +156,7 @@ namespace AE::Graphics
 	Add
 =================================================
 */
-	VertexInputState&  VertexInputState::Add (const VertexName &id, EVertexType type, BytesU offset, const VertexBufferName &bufferId)
+	VertexInputState&  VertexInputState::Add (const VertexName &id, EVertexType type, Bytes offset, const VertexBufferName &bufferId)
 	{
 		ASSERT( id.IsDefined() );
 		ASSERT( _vertices.count( id ) == 0 );
@@ -164,7 +164,7 @@ namespace AE::Graphics
 		auto	iter = _bindings.find( bufferId );
 		CHECK_ERR( iter != _bindings.end(), *this );
 
-		_vertices.insert_or_assign( id, VertexInput{ type, Bytes<uint>(offset), iter->second.index });
+		_vertices.insert_or_assign( id, VertexInput{ type, TBytes<uint>(offset), iter->second.index });
 		return *this;
 	}
 	
@@ -173,7 +173,7 @@ namespace AE::Graphics
 	Bind
 =================================================
 */
-	VertexInputState&  VertexInputState::Bind (const VertexBufferName &bufferId, Bytes<uint> stride, uint index, EVertexInputRate rate)
+	VertexInputState&  VertexInputState::Bind (const VertexBufferName &bufferId, TBytes<uint> stride, uint index, EVertexInputRate rate)
 	{
 		//ASSERT( _bindings.count( bufferId ) == 0 );
 
@@ -184,9 +184,9 @@ namespace AE::Graphics
 		return *this;
 	}
 
-	VertexInputState&  VertexInputState::Bind (const VertexBufferName &bufferId, BytesU stride, uint index, EVertexInputRate rate)
+	VertexInputState&  VertexInputState::Bind (const VertexBufferName &bufferId, Bytes stride, uint index, EVertexInputRate rate)
 	{
-		return Bind( bufferId, Bytes<uint>{stride}, index, rate );
+		return Bind( bufferId, TBytes<uint>{stride}, index, rate );
 	}
 
 /*
@@ -234,7 +234,7 @@ namespace AE::Graphics
 	HashVal  VertexInputState::CalcHash () const
 	{
 	#if AE_FAST_HASH
-		return size_t(HashOf( AddressOf(*this), sizeof(*this) ));
+		return usize(HashOf( AddressOf(*this), sizeof(*this) ));
 	#else
 		HashVal	result;
 		result << HashOf( _vertices.size() );

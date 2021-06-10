@@ -15,7 +15,7 @@ namespace AE::ECS::Renderer
 
 	struct Config
 	{
-		static constexpr uint	MaxFrames				= 3;
+		//static constexpr uint	MaxFrames				= 3;
 		//static constexpr uint	RenderPassPushConstSize	= 32;
 		static constexpr uint	ObjectPushConstSize		= 128;
 	};

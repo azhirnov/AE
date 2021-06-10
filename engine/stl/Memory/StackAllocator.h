@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -28,7 +28,7 @@ namespace AE::STL
 		using Self			= StackAllocator< AllocatorType, MaxBlocks, false >;
 		using Allocator_t	= AllocatorType;
 
-		enum class Bookmark : size_t {};
+		enum class Bookmark : usize {};
 		
 		static constexpr bool	IsThreadSafe = false;
 
@@ -36,24 +36,24 @@ namespace AE::STL
 		struct Block
 		{
 			void *		ptr			= null;
-			BytesU		size;		// used memory size
-			BytesU		capacity;	// size of block
+			Bytes		size;		// used memory size
+			Bytes		capacity;	// size of block
 		};
 
 		using Blocks_t			= FixedArray< Block, MaxBlocks >;
 		using BookmarkStack_t	= FixedArray< Bookmark, 32 >;
 
 		static constexpr uint	_PtrOffset		= (CT_IntLog2< MaxBlocks > + not IsPowerOfTwo( MaxBlocks ));
-		static constexpr size_t	_BlockIndexMask	= (1u << _PtrOffset) - 1;
+		static constexpr usize	_BlockIndexMask	= (1u << _PtrOffset) - 1;
 
 
 	// variables
 	private:
 		Blocks_t					_blocks;
 		BookmarkStack_t				_bookmarks;
-		BytesU						_blockSize	= 1024_b;
+		Bytes						_blockSize	= 1024_b;
 		Allocator_t					_alloc;
-		static constexpr BytesU		_ptrAlign	= SizeOf<void *>;
+		static constexpr Bytes		_ptrAlign	= SizeOf<void *>;
 
 
 	// methods
@@ -64,10 +64,10 @@ namespace AE::STL
 		{}
 		
 		StackAllocator (Self &&other) :
-			_blocks{ std::move(other._blocks) },
-			_bookmarks{ std::move(other._bookmarks) },
+			_blocks{ RVRef(other._blocks) },
+			_bookmarks{ RVRef(other._bookmarks) },
 			_blockSize{ other._blockSize },
-			_alloc{ std::move(other._alloc) }
+			_alloc{ RVRef(other._alloc) }
 		{}
 
 		StackAllocator (const Self &) = delete;
@@ -78,10 +78,10 @@ namespace AE::STL
 		Self& operator = (Self &&rhs)
 		{
 			Release();
-			_blocks		= std::move(rhs._blocks);
-			_bookmarks	= std::move(rhs._bookmarks);
+			_blocks		= RVRef(rhs._blocks);
+			_bookmarks	= RVRef(rhs._bookmarks);
 			_blockSize	= rhs._blockSize;
-			_alloc		= std::move(rhs._alloc);
+			_alloc		= RVRef(rhs._alloc);
 			return *this;
 		}
 
@@ -92,19 +92,19 @@ namespace AE::STL
 		}
 
 
-		void SetBlockSize (BytesU size)
+		void SetBlockSize (Bytes size)
 		{
 			_blockSize = size;
 		}
 
 
-		ND_ AE_ALLOCATOR void*  Alloc (const BytesU size, const BytesU align)
+		ND_ AE_ALLOCATOR void*  Alloc (const Bytes size, const Bytes align)
 		{
-			size_t	idx	= _blocks.size() ? 0u : UMax;
+			usize	idx	= _blocks.size() ? 0u : UMax;
 
 			if ( _bookmarks.size() )
 			{
-				size_t	off = 0;
+				usize	off = 0;
 				std::tie( idx, off ) = _UnpackBookmark( _bookmarks.back() );
 
 				ASSERT( idx >= _blocks.size() or _blocks[idx].size >= off );
@@ -113,7 +113,7 @@ namespace AE::STL
 			for (; idx < _blocks.size(); ++idx)
 			{
 				auto&	block	= _blocks[idx];
-				BytesU	offset	= AlignToLarger( size_t(block.ptr) + block.size, align ) - size_t(block.ptr);
+				Bytes	offset	= AlignToLarger( usize(block.ptr) + block.size, align ) - usize(block.ptr);
 				
 				if ( size <= (block.capacity - offset) )
 				{
@@ -128,7 +128,7 @@ namespace AE::STL
 				return null;
 			}
 
-			BytesU	block_size	= _blockSize * (1 + _blocks.size()/2);
+			Bytes	block_size	= _blockSize * (1 + _blocks.size()/2);
 					block_size	= size*2 < block_size ? block_size : block_size*2;
 			void*	ptr			= _alloc.Allocate( block_size, _ptrAlign );
 
@@ -139,9 +139,9 @@ namespace AE::STL
 			}
 
 			auto&	block		= _blocks.emplace_back(Block{ ptr, 0_b, block_size });
-			BytesU	offset		= AlignToLarger( size_t(block.ptr) + block.size, align ) - size_t(block.ptr);
+			Bytes	offset		= AlignToLarger( usize(block.ptr) + block.size, align ) - usize(block.ptr);
 
-			DEBUG_ONLY( std::memset( block.ptr, 0xCD, size_t(block.capacity) ));
+			DEBUG_ONLY( std::memset( block.ptr, 0xCD, usize(block.capacity) ));
 			
 			block.size = offset + size;
 			return block.ptr + offset;
@@ -149,7 +149,7 @@ namespace AE::STL
 
 
 		template <typename T>
-		ND_ AE_ALLOCATOR T*  Alloc (size_t count = 1)
+		ND_ AE_ALLOCATOR T*  Alloc (usize count = 1)
 		{
 			return Cast<T>( Alloc( SizeOf<T> * count, AlignOf<T> ));
 		}
@@ -161,7 +161,7 @@ namespace AE::STL
 
 			if ( _blocks.size() )
 			{
-				bm = Bookmark( (_blocks.size()-1) | (size_t(_blocks.back().size) << _PtrOffset) );
+				bm = Bookmark( (_blocks.size()-1) | (usize(_blocks.back().size) << _PtrOffset) );
 			}
 
 			if ( _bookmarks.size() == _bookmarks.capacity() )
@@ -177,7 +177,7 @@ namespace AE::STL
 
 		void Pop (Bookmark bm)
 		{
-			for (size_t i = 0; i < _bookmarks.size(); ++i)
+			for (usize i = 0; i < _bookmarks.size(); ++i)
 			{
 				if ( _bookmarks[i] == bm )
 				{
@@ -186,9 +186,9 @@ namespace AE::STL
 					for (; idx < _blocks.size(); ++idx)
 					{
 						auto& block = _blocks[idx];
-						block.size = BytesU{off};
+						block.size = Bytes{off};
 
-						DEBUG_ONLY( std::memset( block.ptr + block.size, 0xCD, size_t(block.capacity - block.size) ));
+						DEBUG_ONLY( std::memset( block.ptr + block.size, 0xCD, usize(block.capacity - block.size) ));
 						off = 0;
 					}
 
@@ -204,7 +204,7 @@ namespace AE::STL
 			for (auto& block : _blocks)
 			{
 				block.size = 0_b;
-				DEBUG_ONLY( std::memset( block.ptr, 0xCD, size_t(block.capacity) ));
+				DEBUG_ONLY( std::memset( block.ptr, 0xCD, usize(block.capacity) ));
 			}
 			_bookmarks.clear();
 		}
@@ -220,11 +220,11 @@ namespace AE::STL
 
 
 	private:
-		ND_ static Pair<size_t, size_t>  _UnpackBookmark (Bookmark bm)
+		ND_ static Pair<usize, usize>  _UnpackBookmark (Bookmark bm)
 		{
-			size_t	u	= BitCast<size_t>( bm );
-			size_t	idx	= u & _BlockIndexMask;
-			size_t	off	= u >> _PtrOffset;
+			usize	u	= BitCast<usize>( bm );
+			usize	idx	= u & _BlockIndexMask;
+			usize	off	= u >> _PtrOffset;
 			return { idx, off };
 		}
 	};

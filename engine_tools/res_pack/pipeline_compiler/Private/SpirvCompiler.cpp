@@ -8,20 +8,53 @@
 #include "graphics/Private/EnumUtils.h"
 
 // glslang includes
-#include "glslang/Include/revision.h"
+#ifdef COMPILER_MSVC
+#	pragma warning (push)
+#	pragma warning (disable: 4005)
+#endif
+#ifdef COMPILER_CLANG
+#	pragma clang diagnostic push
+#	pragma clang diagnostic ignored "-Wdouble-promotion"
+#endif
+
+#include "glslang/build_info.h"
 #include "glslang/Public/ShaderLang.h"
 #include "glslang/MachineIndependent/localintermediate.h"
 #include "glslang/Include/intermediate.h"
-#include "SPIRV/doc.h"
-#include "SPIRV/disassemble.h"
-#include "SPIRV/GlslangToSpv.h"
-#include "SPIRV/GLSL.std.450.h"
+#include "glslang/SPIRV/doc.h"
+#include "glslang/SPIRV/disassemble.h"
+#include "glslang/SPIRV/GlslangToSpv.h"
+#include "glslang/SPIRV/GLSL.std.450.h"
+
+#ifdef COMPILER_MSVC
+#	pragma warning (pop)
+#endif
+#ifdef COMPILER_CLANG
+#	pragma clang diagnostic pop
+#endif
 
 // SPIRV-Tools includes
 #ifdef ENABLE_OPT
 #	include "spirv-tools/optimizer.hpp"
 #	include "spirv-tools/libspirv.h"
+#else
+#	pragma message("SPIRV-Tolls library is missing, SPIRV optimization will be disabled")
 #endif
+
+#ifndef AE_ENABLE_GLSL_TRACE
+#	pragma message("GLSL-Trace library is missing, shader debugging and profiling will be disabled")
+#endif
+
+#if GLSLANG_VERSION_MAJOR != 11 || GLSLANG_VERSION_MINOR != 0 || GLSLANG_VERSION_PATCH != 0
+#	error invalid glslang version
+#endif
+
+#if 0 //def AE_ENABLE_SPIRV_CROSS
+#	include "spirv_cross.hpp"
+#	include "spirv_msl.hpp"
+#	include "spirv_glsl.hpp"
+#endif
+
 
 namespace AE::PipelineCompiler
 {
@@ -41,7 +74,7 @@ namespace AE::PipelineCompiler
 				IncludeResult{headerName, null, 0, userData}, _data{std::move(data)}
 			{
 				const_cast<const char*&>(headerData) = _data.c_str();
-				const_cast<size_t&>(headerLength)    = _data.length();
+				const_cast<usize&>(headerLength)    = _data.length();
 			}
 
 			ND_ StringView	GetSource () const	{ return _data; }
@@ -64,34 +97,15 @@ namespace AE::PipelineCompiler
 		explicit ShaderIncluder (IncludeDirs_t dirs) : _directories{dirs} {}
 		~ShaderIncluder () override {}
 
-		//bool GetHeaderSource (StringView header, OUT StringView &source) const;
-
 		ND_ IncludedFiles_t const&  GetIncludedFiles () const	{ return _includedFiles; }
 
 		// TShader::Includer //
-		IncludeResult* includeSystem (const char* headerName, const char* includerName, size_t inclusionDepth) override;
-		IncludeResult* includeLocal (const char* headerName, const char* includerName, size_t inclusionDepth) override;
+		IncludeResult*  includeSystem (const char* headerName, const char* includerName, usize inclusionDepth) override;
+		IncludeResult*  includeLocal (const char* headerName, const char* includerName, usize inclusionDepth) override;
 
-		void releaseInclude (IncludeResult *) override {}
+		void  releaseInclude (IncludeResult *) override {}
 	};
 
-	
-/*
-=================================================
-	GetHeaderSource
-=================================================
-*
-	bool SpirvCompiler::ShaderIncluder::GetHeaderSource (StringView header, OUT StringView &source) const
-	{
-		auto	iter = _includedFiles.find( String{header} );
-
-		if ( iter != _includedFiles.end() )
-		{
-			source = iter->second->GetSource();
-			return true;
-		}
-		return false;
-	}
 
 /*
 =================================================
@@ -99,7 +113,7 @@ namespace AE::PipelineCompiler
 =================================================
 */
 	SpirvCompiler::ShaderIncluder::IncludeResult*
-		SpirvCompiler::ShaderIncluder::includeSystem (const char*, const char *, size_t)
+		SpirvCompiler::ShaderIncluder::includeSystem (const char*, const char *, usize)
 	{
 		return null;
 	}
@@ -110,7 +124,7 @@ namespace AE::PipelineCompiler
 =================================================
 */
 	SpirvCompiler::ShaderIncluder::IncludeResult*
-		SpirvCompiler::ShaderIncluder::includeLocal (const char* headerName, const char *, size_t)
+		SpirvCompiler::ShaderIncluder::includeLocal (const char* headerName, const char *, usize)
 	{
 		ASSERT( _directories.size() );
 
@@ -131,7 +145,7 @@ namespace AE::PipelineCompiler
 			CHECK_ERR( file.IsOpen() );
 
 			String	data;
-			CHECK_ERR( file.Read( size_t(file.Size()), OUT data ));
+			CHECK_ERR( file.Read( usize(file.Size()), OUT data ));
 
 			auto*	result = _results.emplace_back(new IncludeResultImpl{ std::move(data), headerName }).get();
 
@@ -182,7 +196,7 @@ namespace AE::PipelineCompiler
 	BuildReflection
 =================================================
 */
-	bool SpirvCompiler::BuildReflection (EShader shaderType, uint spirvVersion, NtStringView entry, NtStringView source, OUT ShaderReflection &outReflection, OUT String &log)
+	bool  SpirvCompiler::BuildReflection (EShader shaderType, uint spirvVersion, NtStringView entry, NtStringView source, OUT ShaderReflection &outReflection, OUT String &log)
 	{
 		log.clear();
 
@@ -215,7 +229,7 @@ namespace AE::PipelineCompiler
 	Compile
 =================================================
 */
-	bool SpirvCompiler::Compile (EShader shaderType, uint spirvVersion, NtStringView entry, NtStringView source, OUT Array<uint> &outSpirv, OUT String &log)
+	bool  SpirvCompiler::Compile (EShader shaderType, uint spirvVersion, NtStringView entry, NtStringView source, OUT Array<uint> &outSpirv, OUT String &log)
 	{
 		log.clear();
 
@@ -250,12 +264,12 @@ namespace AE::PipelineCompiler
 			case EShader::Compute :			return EShLangCompute;
 			case EShader::MeshTask :		return EShLangTaskNV;
 			case EShader::Mesh :			return EShLangMeshNV;
-			case EShader::RayGen :			return EShLangRayGenNV;
-			case EShader::RayAnyHit :		return EShLangAnyHitNV;
-			case EShader::RayClosestHit :	return EShLangClosestHitNV;
-			case EShader::RayMiss :			return EShLangMissNV;
-			case EShader::RayIntersection:	return EShLangIntersectNV;
-			case EShader::RayCallable :		return EShLangCallableNV;
+			case EShader::RayGen :			return EShLangRayGen;
+			case EShader::RayAnyHit :		return EShLangAnyHit;
+			case EShader::RayClosestHit :	return EShLangClosestHit;
+			case EShader::RayMiss :			return EShLangMiss;
+			case EShader::RayIntersection:	return EShLangIntersect;
+			case EShader::RayCallable :		return EShLangCallable;
 			case EShader::Unknown :
 			case EShader::_Count :			break;	// to shutup warnings
 		}
@@ -284,38 +298,43 @@ namespace AE::PipelineCompiler
 		const EProfile					sh_profile		= ECoreProfile;
 		const EShSource					sh_source		= EShSourceGlsl;
 
-		if ( spirvVersion < 130 )
-		{
-			_spirvTraget	= SPV_ENV_VULKAN_1_0;
-			client_version	= EShTargetVulkan_1_0;
-			vk_version		= 100;
-		}
-		else
-		if ( spirvVersion >= 130 )
-		{
-			_spirvTraget	= SPV_ENV_VULKAN_1_1;
-			client_version	= EShTargetVulkan_1_1;
-			vk_version		= 110;
-		}
-
 		switch ( spirvVersion )
 		{
 			case 100 :
+				_spirvTraget	= SPV_ENV_VULKAN_1_0;
 				target_version	= EShTargetSpv_1_0;
+				vk_version		= 100;
+				client_version	= EShTargetVulkan_1_0;
 				break;
 			case 110 :
+				_spirvTraget	= SPV_ENV_VULKAN_1_0;
 				target_version	= EShTargetSpv_1_1;
+				vk_version		= 100;
+				client_version	= EShTargetVulkan_1_0;
 				break;
 			case 120 :
+				_spirvTraget	= SPV_ENV_VULKAN_1_0;
 				target_version	= EShTargetSpv_1_2;
+				vk_version		= 100;
+				client_version	= EShTargetVulkan_1_0;
 				break;
 			case 130 :
+				_spirvTraget	= SPV_ENV_VULKAN_1_1;
 				target_version	= EShTargetSpv_1_3;
+				vk_version		= 110;
+				client_version	= EShTargetVulkan_1_1;
 				break;
 			case 140 :
 				_spirvTraget	= SPV_ENV_VULKAN_1_1_SPIRV_1_4;
 				target_version	= EShTargetSpv_1_4;
+				vk_version		= 110;
+				client_version	= EShTargetVulkan_1_1;
 				break;
+			case 150 :
+				_spirvTraget	= SPV_ENV_VULKAN_1_2;
+				target_version	= EShTargetSpv_1_5;
+				vk_version		= 120;
+				client_version	= EShTargetVulkan_1_2;
 			default :
 				RETURN_ERR( "unsupported SPIRV version" );
 		}
@@ -364,7 +383,7 @@ namespace AE::PipelineCompiler
 	_CompileSPIRV
 =================================================
 */
-	bool SpirvCompiler::_CompileSPIRV (const GLSLangResult &glslangData, OUT Array<uint> &spirv, OUT String &log) const
+	bool  SpirvCompiler::_CompileSPIRV (const GLSLangResult &glslangData, OUT Array<uint> &spirv, OUT String &log) const
 	{
 		using namespace glslang;
 
@@ -395,7 +414,7 @@ namespace AE::PipelineCompiler
 	DisassembleSPIRV
 =================================================
 */
-	inline bool DisassembleSPIRV (spv_target_env targetEnv, const Array<uint> &spirv, OUT String &result)
+	inline bool  DisassembleSPIRV (spv_target_env targetEnv, const Array<uint> &spirv, OUT String &result)
 	{
 		result.clear();
 
@@ -422,7 +441,7 @@ namespace AE::PipelineCompiler
 	_OptimizeSPIRV
 =================================================
 */
-	bool SpirvCompiler::_OptimizeSPIRV (INOUT Array<uint> &spirv, INOUT String &log) const
+	bool  SpirvCompiler::_OptimizeSPIRV (INOUT Array<uint> &spirv, INOUT String &log) const
 	{
 		spv_target_env	target_env = BitCast<spv_target_env>( _spirvTraget );
 
@@ -475,9 +494,9 @@ namespace AE::PipelineCompiler
 	ReadLine
 =================================================
 */
-	inline bool ReadLine (StringView log, INOUT size_t &pos, OUT StringView &line)
+	inline bool  ReadLine (StringView log, INOUT usize &pos, OUT StringView &line)
 	{
-		size_t	begin = pos;
+		usize	begin = pos;
 
 		line = Default;
 
@@ -516,23 +535,23 @@ namespace AE::PipelineCompiler
 		StringView	description;
 		StringView	fileName;
 		uint		sourceIndex;
-		size_t		line;
+		usize		line;
 		bool		isError;
 
 		GLSLErrorInfo () : sourceIndex{0}, line{UMax}, isError{false} {}
 	};
 	
-	static bool ParseGLSLError (StringView line, OUT GLSLErrorInfo &info)
+	static bool  ParseGLSLError (StringView line, OUT GLSLErrorInfo &info)
 	{
 		const StringView	c_error		= "error";
 		const StringView	c_warning	= "warning";
 
-		size_t				pos = 0;
+		usize				pos = 0;
 
 		const auto			ReadToken	= [&line, &pos] (OUT bool &isNumber)
 		{{
 							isNumber= true;
-			const size_t	start	= pos;
+			const usize	start	= pos;
 
 			for (; pos < line.length() and line[pos] != ':'; ++pos) {
 				isNumber &= (line[pos] >= '0' and line[pos] <= '9');
@@ -609,7 +628,7 @@ namespace AE::PipelineCompiler
 	_OnCompilationFailed
 =================================================
 */
-	bool SpirvCompiler::_OnCompilationFailed (ArrayView<const char *> source, INOUT String &log) const
+	bool  SpirvCompiler::_OnCompilationFailed (ArrayView<const char *> source, INOUT String &log) const
 	{
 		// glslang errors format:
 		// pattern: <error/warning>: <number>:<line>: <description>
@@ -617,10 +636,10 @@ namespace AE::PipelineCompiler
 		
 		StringView		line;
 		uint			line_number = 0;
-		size_t			prev_line	= UMax;
-		size_t			pos			= 0;
+		usize			prev_line	= UMax;
+		usize			pos			= 0;
 		String			str;		str.reserve( log.length() );
-		Array<size_t>	num_lines;	num_lines.resize( source.size() );
+		Array<usize>	num_lines;	num_lines.resize( source.size() );
 
 		for (; ReadLine( log, INOUT pos, OUT line ); ++line_number)
 		{
@@ -642,7 +661,7 @@ namespace AE::PipelineCompiler
 				{
 					// search in sources
 					StringView	cur_source	= error_info.sourceIndex < source.size() ? source[ error_info.sourceIndex ] : "";
-					size_t		lines_count	= error_info.sourceIndex < num_lines.size() ? num_lines[ error_info.sourceIndex ] : 0;
+					usize		lines_count	= error_info.sourceIndex < num_lines.size() ? num_lines[ error_info.sourceIndex ] : 0;
 
 					if ( lines_count == 0 and error_info.sourceIndex < num_lines.size() )
 					{
@@ -652,7 +671,7 @@ namespace AE::PipelineCompiler
 					
 					CHECK( error_info.line <= lines_count );
 
-					size_t	line_pos = 0;
+					usize	line_pos = 0;
 					CHECK( StringParser::MoveToLine( cur_source, INOUT line_pos, error_info.line-1 ));
 
 					StringView	line_str;
@@ -667,9 +686,9 @@ namespace AE::PipelineCompiler
 					/*StringView	src;
 					if ( includer.GetHeaderSource( error_info.fileName, OUT src ))
 					{
-						const size_t	lines_count = StringParser::CalculateNumberOfLines( src ) + 1;
-						const size_t	local_line	= error_info.line;
-						size_t			line_pos	= 0;
+						const usize	lines_count = StringParser::CalculateNumberOfLines( src ) + 1;
+						const usize	local_line	= error_info.line;
+						usize			line_pos	= 0;
 						StringView		line_str;
 
 						CHECK( local_line < lines_count );
@@ -698,7 +717,7 @@ namespace AE::PipelineCompiler
 	_BuildReflection 
 =================================================
 */
-	bool SpirvCompiler::_BuildReflection (const GLSLangResult &glslangData, OUT ShaderReflection &result)
+	bool  SpirvCompiler::_BuildReflection (const GLSLangResult &glslangData, OUT ShaderReflection &result)
 	{
 		_intermediate = glslangData.prog.getIntermediate( glslangData.shader->getStage() );
 		COMP_CHECK_ERR( _intermediate );
@@ -740,7 +759,7 @@ namespace AE::PipelineCompiler
 			}
 		};
 
-		size_t	pos = LowerBound( layout.uniforms, Key{name} );
+		usize	pos = LowerBound( layout.uniforms, Key{name} );
 		return pos < layout.uniforms.size() ? &layout.uniforms[pos].second : null;
 	}
 
@@ -766,9 +785,9 @@ namespace AE::PipelineCompiler
 			Annotation () : writeDiscard{false}, dynamicOffset{false} {}
 		};
 
-		const auto	ReadWord = [] (StringView src, INOUT size_t &pos)
+		const auto	ReadWord = [] (StringView src, INOUT usize &pos)
 		{
-			const size_t	start = pos;
+			const usize	start = pos;
 
 			for (bool is_word = true; is_word & (pos < src.length()); pos += is_word)
 			{
@@ -779,9 +798,9 @@ namespace AE::PipelineCompiler
 			return src.substr( start, pos - start );
 		};
 
-		const auto	ParseDescSet = [this, &reflection] (StringView src, INOUT size_t &pos) -> bool
+		const auto	ParseDescSet = [this, &reflection] (StringView src, INOUT usize &pos) -> bool
 		{
-			size_t	start		= UMax;
+			usize	start		= UMax;
 			uint	mode		= 0;
 			uint	ds_index	= 0;
 			bool	is_string	= false;
@@ -846,7 +865,7 @@ namespace AE::PipelineCompiler
 			return false;
 		};
 		
-		const auto	ParseUniform = [this, &reflection] (StringView src, INOUT size_t &pos, const Annotation &annot) -> bool
+		const auto	ParseUniform = [this, &reflection] (StringView src, INOUT usize &pos, const Annotation &annot) -> bool
 		{
 			// patterns:
 			//	buffer <SSBO> {...
@@ -855,9 +874,9 @@ namespace AE::PipelineCompiler
 			
 			constexpr char		buffer_key[]	= "buffer";
 			constexpr char		uinform_key[]	= "uniform";
-			constexpr size_t	max_length		= Max( CountOf(buffer_key), CountOf(uinform_key) ) - 1;
+			constexpr usize	max_length		= Max( CountOf(buffer_key), CountOf(uinform_key) ) - 1;
 
-			size_t	key_start = 0;
+			usize	key_start = 0;
 			for (; pos < src.length() - max_length; ++pos)
 			{
 				const char*	s		= src.data() + pos;
@@ -867,14 +886,14 @@ namespace AE::PipelineCompiler
 				if ( is_buf | is_un )
 				{
 					key_start = pos;
-					pos += max_length - size_t(is_buf);
+					pos += max_length - usize(is_buf);
 					break;
 				}
 			}
 
 			// skip 'image*'
 			const char	image_key[] = "image";
-			for (size_t i = pos; i < src.length()-1; ++i)
+			for (usize i = pos; i < src.length()-1; ++i)
 			{
 				const char	c = src[i];
 				const char	n = src[i+1];
@@ -891,7 +910,7 @@ namespace AE::PipelineCompiler
 			}
 
 			// read uniform name
-			size_t	word_start = UMax, word_end = 0;
+			usize	word_start = UMax, word_end = 0;
 			for (; pos < src.length()-1; ++pos)
 			{
 				const char	c = src[pos];
@@ -937,7 +956,7 @@ namespace AE::PipelineCompiler
 						case EDescriptorType::StorageBuffer :
 							ASSERT( annot.dynamicOffset or annot.writeDiscard );
 							found = true;
-							if ( annot.writeDiscard )	iter->buffer.state |= EResourceState::InvalidateBefore;
+							//if ( annot.writeDiscard )	iter->buffer.state |= EResourceState::InvalidateBefore; // TODO
 							if ( annot.dynamicOffset )	iter->buffer.dynamicOffsetIndex = 0;
 							break;
 							
@@ -945,40 +964,32 @@ namespace AE::PipelineCompiler
 						case EDescriptorType::StorageTexelBuffer :
 							ASSERT( not annot.dynamicOffset );
 							found = true;
-							if ( annot.writeDiscard )
-								iter->texelBuffer.state |= EResourceState::InvalidateBefore;
+							//if ( annot.writeDiscard )	iter->texelBuffer.state |= EResourceState::InvalidateBefore;
 							break;
 
 						case EDescriptorType::StorageImage :
 							ASSERT( not annot.dynamicOffset );
 							ASSERT( annot.writeDiscard );
 							found = true;
-							if ( annot.writeDiscard )
-								iter->storageImage.state |= EResourceState::InvalidateBefore;
+							//if ( annot.writeDiscard )	iter->storageImage.state |= EResourceState::InvalidateBefore;
 							break;
 
 						case EDescriptorType::SampledImage :
 							ASSERT( not annot.dynamicOffset );
-							ASSERT( annot.writeDiscard );
+							ASSERT( not annot.writeDiscard );
 							found = true;
-							if ( annot.writeDiscard )
-								iter->sampledImage.state |= EResourceState::InvalidateBefore;
 							break;
 
 						case EDescriptorType::CombinedImage :
 							ASSERT( not annot.dynamicOffset );
-							ASSERT( annot.writeDiscard );
+							ASSERT( not annot.writeDiscard );
 							found = true;
-							if ( annot.writeDiscard )
-								iter->combinedImage.state |= EResourceState::InvalidateBefore;
 							break;
 
 						case EDescriptorType::CombinedImage_ImmutableSampler :
 							ASSERT( not annot.dynamicOffset );
-							ASSERT( annot.writeDiscard );
+							ASSERT( not annot.writeDiscard );
 							found = true;
-							if ( annot.writeDiscard )
-								iter->combinedImageWithSampler.image.state |= EResourceState::InvalidateBefore;
 							break;
 
 						case EDescriptorType::SubpassInput :
@@ -1020,7 +1031,7 @@ namespace AE::PipelineCompiler
 		bool	singleline_comment	= false;
 		uint	line_number			= 0;
 
-		for (size_t pos = 0; pos < source.length();)
+		for (usize pos = 0; pos < source.length();)
 		{
 			// search for annotation key
 			{
@@ -1033,7 +1044,7 @@ namespace AE::PipelineCompiler
 
 				if ( newline1 | newline2 )
 				{
-					pos += size_t(newline1);
+					pos += usize(newline1);
 					singleline_comment = false;
 					++line_number;
 
@@ -1202,7 +1213,8 @@ namespace AE::PipelineCompiler
 			case TBasicType::EbtSampler :
 			case TBasicType::EbtStruct :
 			case TBasicType::EbtBlock :
-			case TBasicType::EbtAccStructNV :
+			case TBasicType::EbtAccStruct :
+			case TBasicType::EbtRayQuery :
 			case TBasicType::EbtReference :
 			case TBasicType::EbtString :
 			case TBasicType::EbtNumTypes :
@@ -1313,6 +1325,8 @@ namespace AE::PipelineCompiler
 			case TLayoutFormat::ElfRg8ui :			return EPixelFormat::RG8U;
 			case TLayoutFormat::ElfR16ui :			return EPixelFormat::R16U;
 			case TLayoutFormat::ElfR8ui :			return EPixelFormat::R8U;
+			case TLayoutFormat::ElfR64i :			return EPixelFormat::R64I;
+			case TLayoutFormat::ElfR64ui :			return EPixelFormat::R64U;
 			case TLayoutFormat::ElfEsFloatGuard :
 			case TLayoutFormat::ElfFloatGuard :
 			case TLayoutFormat::ElfEsIntGuard :
@@ -1435,7 +1449,8 @@ namespace AE::PipelineCompiler
 			case TBasicType::EbtSampler :
 			case TBasicType::EbtStruct :
 			case TBasicType::EbtBlock :
-			case TBasicType::EbtAccStructNV :
+			case TBasicType::EbtAccStruct :
+			case TBasicType::EbtRayQuery :
 			case TBasicType::EbtString :
 			case TBasicType::EbtReference :
 			case TBasicType::EbtNumTypes :
@@ -1494,7 +1509,7 @@ namespace AE::PipelineCompiler
 	based on TParseContext::fixBlockUniformOffsets
 =================================================
 */
-	bool SpirvCompiler::_CalculateStructSize (const glslang::TType &bufferType, OUT BytesU &staticSize, OUT BytesU &arrayStride, OUT BytesU &minOffset) const
+	bool  SpirvCompiler::_CalculateStructSize (const glslang::TType &bufferType, OUT Bytes &staticSize, OUT Bytes &arrayStride, OUT Bytes &minOffset) const
 	{
 		using namespace glslang;
 
@@ -1510,7 +1525,7 @@ namespace AE::PipelineCompiler
 		int		offset			= 0;
 		auto&	struct_fields	= *bufferType.getStruct();
 
-		for (size_t member = 0; member < struct_fields.size(); ++member)
+		for (usize member = 0; member < struct_fields.size(); ++member)
 		{
 			const TType&		member_type			= *struct_fields[member].type;
 			const TQualifier&	member_qualifier	= member_type.getQualifier();
@@ -1552,10 +1567,10 @@ namespace AE::PipelineCompiler
 			{
 				ASSERT( member_size == 0 );
 
-				arrayStride = BytesU(uint( dummy_stride ));
+				arrayStride = Bytes(uint( dummy_stride ));
 			}
 		}
-		staticSize = BytesU(uint( offset ));
+		staticSize = Bytes(uint( offset ));
 		return true;
 	}
 
@@ -1564,7 +1579,7 @@ namespace AE::PipelineCompiler
 	_DeserializeExternalObjects
 =================================================
 */
-	bool SpirvCompiler::_DeserializeExternalObjects (TIntermNode* node, INOUT ShaderReflection &result) const
+	bool  SpirvCompiler::_DeserializeExternalObjects (TIntermNode* node, INOUT ShaderReflection &result) const
 	{
 		using namespace glslang;
 
@@ -1633,8 +1648,8 @@ namespace AE::PipelineCompiler
 			{
 				auto&[name, un]	= descriptor_set.layout.uniforms.emplace_back();
 				name			= ExtractUniformID( node );
-				un.index		= CheckCast<uint16_t>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
-				un.arraySize	= CheckCast<uint16_t>( GetArraySize( type ));
+				un.index		= CheckCast<ushort>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
+				un.arraySize	= CheckCast<ushort>( GetArraySize( type ));
 				un.type			= EDescriptorType::StorageImage;
 				un.storageImage.type	= _ExtractImageType( type );
 				un.storageImage.state	= ExtractShaderAccessType( qual ) | EResourceState_FromShaders( _currentStage );
@@ -1647,8 +1662,8 @@ namespace AE::PipelineCompiler
 			{
 				auto&[name, un]	= descriptor_set.layout.uniforms.emplace_back();
 				name			= ExtractUniformID( node );
-				un.index		= CheckCast<uint16_t>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
-				un.arraySize	= CheckCast<uint16_t>( GetArraySize( type ));
+				un.index		= CheckCast<ushort>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
+				un.arraySize	= CheckCast<ushort>( GetArraySize( type ));
 				un.type			= EDescriptorType::SubpassInput;
 				un.subpassInput.state	= EResourceState::InputAttachment | EResourceState_FromShaders( _currentStage );
 				un.subpassInput.type	= _ExtractImageType( type );
@@ -1662,8 +1677,8 @@ namespace AE::PipelineCompiler
 			{
 				auto&[name, un]	= descriptor_set.layout.uniforms.emplace_back();
 				name			= ExtractUniformID( node );
-				un.index		= CheckCast<uint16_t>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
-				un.arraySize	= CheckCast<uint16_t>( GetArraySize( type ));
+				un.index		= CheckCast<ushort>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
+				un.arraySize	= CheckCast<ushort>( GetArraySize( type ));
 				un.type			= EDescriptorType::Sampler;
 				un.sampler.stageFlags	= _currentStage;
 				return true;
@@ -1676,8 +1691,8 @@ namespace AE::PipelineCompiler
 				
 				auto&[name, un]	= descriptor_set.layout.uniforms.emplace_back();
 				name			= ExtractUniformID( node );
-				un.index		= CheckCast<uint16_t>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
-				un.arraySize	= CheckCast<uint16_t>( GetArraySize( type ));
+				un.index		= CheckCast<ushort>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
+				un.arraySize	= CheckCast<ushort>( GetArraySize( type ));
 				un.type			= qual.storage == TStorageQualifier::EvqUniform ? EDescriptorType::UniformTexelBuffer : EDescriptorType::StorageTexelBuffer;
 				un.texelBuffer.state	= EResourceState::ShaderSample | EResourceState_FromShaders( _currentStage );
 				return true;
@@ -1688,8 +1703,8 @@ namespace AE::PipelineCompiler
 			{
 				auto&[name, un]	= descriptor_set.layout.uniforms.emplace_back();
 				name			= ExtractUniformID( node );
-				un.index		= CheckCast<uint16_t>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
-				un.arraySize	= CheckCast<uint16_t>( GetArraySize( type ));
+				un.index		= CheckCast<ushort>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
+				un.arraySize	= CheckCast<ushort>( GetArraySize( type ));
 				un.type			= EDescriptorType::CombinedImage;
 				un.combinedImage.state	= EResourceState::ShaderSample | EResourceState_FromShaders( _currentStage );
 				un.combinedImage.type	= _ExtractImageType( type );
@@ -1700,8 +1715,9 @@ namespace AE::PipelineCompiler
 		// push constants
 		if ( qual.layoutPushConstant )
 		{
-			BytesU	size, stride, offset;
+			Bytes	size, stride, offset;
 			COMP_CHECK_ERR( _CalculateStructSize( type, OUT size, OUT stride, OUT offset ));
+			size -= offset;
 
 			COMP_CHECK_ERR( result.layout.pushConstants.items.insert_or_assign( PushConstantName{type.getTypeName().c_str()}, PushConstant{ _currentStage, offset, size }).second );
 			return true;
@@ -1713,7 +1729,7 @@ namespace AE::PipelineCompiler
 		{
 			COMP_CHECK_ERR( type.isStruct() );
 
-			if ( qual.layoutShaderRecordNV )
+			if ( qual.layoutShaderRecord )
 				return true;
 
 			// uniform block
@@ -1721,15 +1737,16 @@ namespace AE::PipelineCompiler
 			{
 				auto&[name, un]	= descriptor_set.layout.uniforms.emplace_back();
 				name			= ExtractBufferUniformID( type );
-				un.index		= CheckCast<uint16_t>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
-				un.arraySize	= CheckCast<uint16_t>( GetArraySize( type ));
+				un.index		= CheckCast<ushort>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
+				un.arraySize	= CheckCast<ushort>( GetArraySize( type ));
 				un.type			= EDescriptorType::UniformBuffer;
 				un.buffer.state				= EResourceState::UniformRead | EResourceState_FromShaders( _currentStage );
 				un.buffer.arrayStride		= 0_b;
 				un.buffer.dynamicOffsetIndex= UMax;
 				
-				BytesU	stride, offset;
+				Bytes	stride, offset;
 				COMP_CHECK_ERR( _CalculateStructSize( type, OUT un.buffer.staticSize, OUT stride, OUT offset ));
+				COMP_CHECK_ERR( offset == 0_b );
 				return true;
 			}
 
@@ -1738,35 +1755,36 @@ namespace AE::PipelineCompiler
 			{
 				auto&[name, un]	= descriptor_set.layout.uniforms.emplace_back();
 				name			= ExtractBufferUniformID( type );
-				un.index		= CheckCast<uint16_t>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
-				un.arraySize	= CheckCast<uint16_t>( GetArraySize( type ));
+				un.index		= CheckCast<ushort>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
+				un.arraySize	= CheckCast<ushort>( GetArraySize( type ));
 				un.type			= EDescriptorType::StorageBuffer;
 				un.buffer.state				= ExtractShaderAccessType( qual ) | EResourceState_FromShaders( _currentStage );
 				un.buffer.dynamicOffsetIndex= UMax;
 
-				BytesU	offset;
+				Bytes	offset;
 				COMP_CHECK_ERR( _CalculateStructSize( type, OUT un.buffer.staticSize, OUT un.buffer.arrayStride, OUT offset ));
+				COMP_CHECK_ERR( offset == 0_b );
 				return true;
 			}
 		}
 		
 		// acceleration structure
-		if ( type.getBasicType() == TBasicType::EbtAccStructNV )
+		if ( type.getBasicType() == TBasicType::EbtAccStruct )
 		{
 			auto&[name, un]	= descriptor_set.layout.uniforms.emplace_back();
 			name			= ExtractUniformID( node );
-			un.index		= CheckCast<uint16_t>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
-			un.arraySize	= CheckCast<uint16_t>( GetArraySize( type ));
+			un.index		= CheckCast<ushort>( qual.hasBinding() ? uint(qual.layoutBinding) : UMax );
+			un.arraySize	= CheckCast<ushort>( GetArraySize( type ));
 			un.type			= EDescriptorType::RayTracingScene;
 			//rt_scene.state = EResourceState::_RayTracingShader | EResourceState::ShaderRead;
 			return true;
 		}
 
-		if ( qual.storage == TStorageQualifier::EvqPayloadNV		or
-			 qual.storage == TStorageQualifier::EvqPayloadInNV		or
-			 qual.storage == TStorageQualifier::EvqHitAttrNV		or
-			 qual.storage == TStorageQualifier::EvqCallableDataNV	or
-			 qual.storage == TStorageQualifier::EvqCallableDataInNV )
+		if ( qual.storage == TStorageQualifier::EvqPayload		or
+			 qual.storage == TStorageQualifier::EvqPayloadIn	or
+			 qual.storage == TStorageQualifier::EvqHitAttr		or
+			 qual.storage == TStorageQualifier::EvqCallableData	or
+			 qual.storage == TStorageQualifier::EvqCallableDataIn )
 		{
 			return true;	// TODO
 		}
@@ -1785,7 +1803,7 @@ namespace AE::PipelineCompiler
 	_MergeWithGeometryInputPrimitive
 =================================================
 */
-	void SpirvCompiler::_MergeWithGeometryInputPrimitive (INOUT GraphicsPipelineDesc::TopologyBits_t &topologyBits, uint type) const
+	void  SpirvCompiler::_MergeWithGeometryInputPrimitive (INOUT GraphicsPipelineDesc::TopologyBits_t &topologyBits, uint type) const
 	{
 		using namespace glslang;
 
@@ -1794,38 +1812,38 @@ namespace AE::PipelineCompiler
 		{
 			case TLayoutGeometry::ElgPoints : {
 				topologyBits.set( uint(EPrimitive::Point) );
-				break;
+				return;
 			}
 			case TLayoutGeometry::ElgLines : {
 				topologyBits.set( uint(EPrimitive::LineList) );
 				topologyBits.set( uint(EPrimitive::LineStrip) );
-				break;
+				return;
 			}
 			case TLayoutGeometry::ElgLinesAdjacency : {
 				topologyBits.set( uint(EPrimitive::LineListAdjacency) );
 				topologyBits.set( uint(EPrimitive::LineStripAdjacency) );
-				break;
+				return;
 			}
 			case TLayoutGeometry::ElgTriangles : {
 				topologyBits.set( uint(EPrimitive::TriangleList) );
 				topologyBits.set( uint(EPrimitive::TriangleStrip) );
 				topologyBits.set( uint(EPrimitive::TriangleFan) );
-				break;
+				return;
 			}
 			case TLayoutGeometry::ElgTrianglesAdjacency : {
 				topologyBits.set( uint(EPrimitive::TriangleListAdjacency) );
 				topologyBits.set( uint(EPrimitive::TriangleStripAdjacency) );
-				break;
+				return;
 			}
-			case TLayoutGeometry::ElgNone :	// to shutup warnings
+			case TLayoutGeometry::ElgNone :
 			case TLayoutGeometry::ElgLineStrip :
 			case TLayoutGeometry::ElgTriangleStrip :
 			case TLayoutGeometry::ElgQuads :
 			case TLayoutGeometry::ElgIsolines :
-			default :
-				COMP_RETURN_ERR( "invalid geometry input primitive type!", void() );
+				break;	// to shutup warnings
 		}
 		END_ENUM_CHECKS();
+		COMP_RETURN_ERR( "invalid geometry input primitive type!", void() );
 	}
 	
 /*
@@ -1833,7 +1851,7 @@ namespace AE::PipelineCompiler
 	_ProcessShaderInfo
 =================================================
 */
-	bool SpirvCompiler::_ProcessShaderInfo (INOUT ShaderReflection &result) const
+	bool  SpirvCompiler::_ProcessShaderInfo (INOUT ShaderReflection &result) const
 	{
 		using namespace glslang;
 
@@ -1883,40 +1901,40 @@ namespace AE::PipelineCompiler
 				break;
 			}
 
-			case EShLangRayGenNV :
+			case EShLangRayGen :
 			{
 				break;
 			}
-			case EShLangIntersectNV :
+			case EShLangIntersect :
 			{
 				break;
 			}
-			case EShLangAnyHitNV :
+			case EShLangAnyHit :
 			{
 				break;
 			}
-			case EShLangClosestHitNV :
+			case EShLangClosestHit :
 			{
 				break;
 			}
-			case EShLangMissNV :
+			case EShLangMiss :
 			{
 				break;
 			}
-			case EShLangCallableNV :
+			case EShLangCallable :
 			{
 				break;
 			}
 
 			case EShLangTaskNV :
 			{
-				result.mesh.taskGroupSize.x	= _intermediate->getLocalSize(0);
-				result.mesh.taskGroupSize.y = _intermediate->getLocalSize(1);
-				result.mesh.taskGroupSize.z	= _intermediate->getLocalSize(2);
+				result.mesh.taskGroupSize			= _intermediate->getLocalSize(0);
+				result.mesh.taskGroupSpecialization = uint(_intermediate->getLocalSizeSpecId(0));
 
-				result.mesh.taskGroupSpecialization.x = uint(_intermediate->getLocalSizeSpecId(0));
-				result.mesh.taskGroupSpecialization.y = uint(_intermediate->getLocalSizeSpecId(1));
-				result.mesh.taskGroupSpecialization.z = uint(_intermediate->getLocalSizeSpecId(2));
+				CHECK( _intermediate->getLocalSize(1) <= 1 );
+				CHECK( _intermediate->getLocalSize(2) <= 1 );
+				CHECK( _intermediate->getLocalSizeSpecId(1) == -1 );
+				CHECK( _intermediate->getLocalSizeSpecId(2) == -1 );
 				break;
 			}
 			case EShLangMeshNV :
@@ -1929,17 +1947,17 @@ namespace AE::PipelineCompiler
 				switch ( _intermediate->getOutputPrimitive() )
 				{
 					case TLayoutGeometry::ElgPoints :
-						result.mesh.topology = EPrimitive::Point;
+						result.mesh.topology    = EPrimitive::Point;
 						result.mesh.maxIndices *= 1;
 						break;
 
 					case TLayoutGeometry::ElgLines :
-						result.mesh.topology = EPrimitive::LineList;
+						result.mesh.topology    = EPrimitive::LineList;
 						result.mesh.maxIndices *= 2;
 						break;
 
 					case TLayoutGeometry::ElgTriangles :
-						result.mesh.topology = EPrimitive::TriangleList;
+						result.mesh.topology    = EPrimitive::TriangleList;
 						result.mesh.maxIndices *= 3;
 						break;
 
@@ -1949,13 +1967,13 @@ namespace AE::PipelineCompiler
 				}
 				BEGIN_ENUM_CHECKS();
 
-				result.mesh.meshGroupSize.x	= _intermediate->getLocalSize(0);
-				result.mesh.meshGroupSize.y = _intermediate->getLocalSize(1);
-				result.mesh.meshGroupSize.z	= _intermediate->getLocalSize(2);
-
-				result.mesh.meshGroupSpecialization.x = uint(_intermediate->getLocalSizeSpecId(0));
-				result.mesh.meshGroupSpecialization.y = uint(_intermediate->getLocalSizeSpecId(1));
-				result.mesh.meshGroupSpecialization.z = uint(_intermediate->getLocalSizeSpecId(2));
+				result.mesh.meshGroupSize			= _intermediate->getLocalSize(0);
+				result.mesh.meshGroupSpecialization	= uint(_intermediate->getLocalSizeSpecId(0));
+				
+				CHECK( _intermediate->getLocalSize(1) <= 1 );
+				CHECK( _intermediate->getLocalSize(2) <= 1 );
+				CHECK( _intermediate->getLocalSizeSpecId(1) == -1 );
+				CHECK( _intermediate->getLocalSizeSpecId(2) == -1 );
 				break;
 			}
 

@@ -53,7 +53,7 @@ namespace AE::STL
 	// Compile Time Counter
 	//
 
-	namespace _ae_stl_hidden_
+	namespace _hidden_
 	{
 		template <typename Tag = void, typename Type = uint>
 		class CT_Counter_Impl
@@ -100,11 +100,11 @@ namespace AE::STL
 		template <uint N>
 		class CT_UniqueType_Impl {};
 
-	}	// _ae_stl_hidden_
+	}	// _hidden_
 
 	
 	template <typename Type = uint, uint I = CT_UniqueValue::value<>>
-	using CT_Counter = _ae_stl_hidden_::CT_Counter_Impl< _ae_stl_hidden_::CT_UniqueType_Impl<I>, Type >;
+	using CT_Counter = STL::_hidden_::CT_Counter_Impl< STL::_hidden_::CT_UniqueType_Impl<I>, Type >;
 	
 	
 
@@ -113,7 +113,7 @@ namespace AE::STL
 	//
 
 	template <uint I = CT_UniqueValue::value<>>
-	using CT_UniqueType = _ae_stl_hidden_::CT_UniqueType_Impl<I>;
+	using CT_UniqueType = STL::_hidden_::CT_UniqueType_Impl<I>;
 
 
 }	// AE::STL

@@ -69,15 +69,14 @@ namespace AE::PipelineCompiler
 			}					compute;
 
 			struct {
-				uint3				taskGroupSize;
-				uint3				taskGroupSpecialization;
-
-				uint3				meshGroupSize;
-				uint3				meshGroupSpecialization;
-				EPrimitive			topology		= Default;
-				uint				maxPrimitives	= 0;
-				uint				maxIndices		= 0;
-				uint				maxVertices		= 0;
+				uint				taskGroupSize			= 0;
+				uint				taskGroupSpecialization	= UMax;
+				uint				meshGroupSize			= 0;
+				uint				meshGroupSpecialization	= UMax;
+				EPrimitive			topology				= Default;
+				uint				maxPrimitives			= 0;
+				uint				maxIndices				= 0;
+				uint				maxVertices				= 0;
 			}					mesh;
 		};
 
@@ -104,7 +103,7 @@ namespace AE::PipelineCompiler
 
 		static constexpr bool		_quietWarnings		= true;
 		static constexpr bool		_parseAnnotations	= true;
-		static constexpr size_t		_maxDescrSets		= PipelineLayoutDesc::DescrSetMap_t::capacity();
+		static constexpr usize		_maxDescrSets		= PipelineLayoutDesc::DescrSetMap_t::capacity();
 
 
 	// methods
@@ -112,39 +111,39 @@ namespace AE::PipelineCompiler
 		explicit SpirvCompiler (IncludeDirs_t includeDirs);
 		~SpirvCompiler ();
 		
-		bool SetDefaultResourceLimits ();
+		bool  SetDefaultResourceLimits ();
 		
-		bool BuildReflection (EShader shaderType, uint spirvVersion, NtStringView entry, NtStringView source, OUT ShaderReflection &outReflection, OUT String &log);
-		bool Compile (EShader shaderType, uint spirvVersion, NtStringView entry, NtStringView source, OUT Array<uint> &outSpirv, OUT String &log);
+		bool  BuildReflection (EShader shaderType, uint spirvVersion, NtStringView entry, NtStringView source, OUT ShaderReflection &outReflection, OUT String &log);
+		bool  Compile (EShader shaderType, uint spirvVersion, NtStringView entry, NtStringView source, OUT Array<uint> &outSpirv, OUT String &log);
 		
 
 	private:
-		bool _ParseGLSL (EShader shaderType, uint spirvVersion, NtStringView entry, ArrayView<const char *> source,
-						 INOUT ShaderIncluder &includer, OUT GLSLangResult &glslangData, INOUT String &log);
+		bool  _ParseGLSL (EShader shaderType, uint spirvVersion, NtStringView entry, ArrayView<const char *> source,
+						  INOUT ShaderIncluder &includer, OUT GLSLangResult &glslangData, INOUT String &log);
 
-		bool _CompileSPIRV (const GLSLangResult &glslangData, OUT Array<uint> &spirv, INOUT String &log) const;
-		bool _OptimizeSPIRV (INOUT Array<uint> &spirv, INOUT String &log) const;
+		bool  _CompileSPIRV (const GLSLangResult &glslangData, OUT Array<uint> &spirv, INOUT String &log) const;
+		bool  _OptimizeSPIRV (INOUT Array<uint> &spirv, INOUT String &log) const;
 
-		bool _BuildReflection (const GLSLangResult &glslangData, OUT ShaderReflection &reflection);
+		bool  _BuildReflection (const GLSLangResult &glslangData, OUT ShaderReflection &reflection);
 
-		bool _OnCompilationFailed (ArrayView<const char *> source, INOUT String &log) const;
+		bool  _OnCompilationFailed (ArrayView<const char *> source, INOUT String &log) const;
 
-		bool _ParseAnnotations (StringView source, INOUT ShaderReflection &) const;
+		bool  _ParseAnnotations (StringView source, INOUT ShaderReflection &) const;
 
 		static void _GenerateResources (OUT TBuiltInResource& res);
 
 
 	// GLSL deserializer
 	private:
-		bool _ProcessExternalObjects (TIntermNode* root, TIntermNode* node, INOUT ShaderReflection &result) const;
+		bool  _ProcessExternalObjects (TIntermNode* root, TIntermNode* node, INOUT ShaderReflection &result) const;
 
-		bool _DeserializeExternalObjects (TIntermNode* node, INOUT ShaderReflection &result) const;
+		bool  _DeserializeExternalObjects (TIntermNode* node, INOUT ShaderReflection &result) const;
 
-		bool _ProcessShaderInfo (INOUT ShaderReflection &result) const;
+		bool  _ProcessShaderInfo (INOUT ShaderReflection &result) const;
 		
-		bool _CalculateStructSize (const glslang::TType &bufferType, OUT BytesU &staticSize, OUT BytesU &arrayStride, OUT BytesU &offset) const;
+		bool  _CalculateStructSize (const glslang::TType &bufferType, OUT Bytes &staticSize, OUT Bytes &arrayStride, OUT Bytes &offset) const;
 		
-		void _MergeWithGeometryInputPrimitive (INOUT GraphicsPipelineDesc::TopologyBits_t &topologyBits, /*TLayoutGeometry*/uint type) const;
+		void  _MergeWithGeometryInputPrimitive (INOUT GraphicsPipelineDesc::TopologyBits_t &topologyBits, /*TLayoutGeometry*/uint type) const;
 
 		ND_ EImageType		_ExtractImageType (const glslang::TType &type) const;
 		ND_ EVertexType		_ExtractVertexType (const glslang::TType &type) const;

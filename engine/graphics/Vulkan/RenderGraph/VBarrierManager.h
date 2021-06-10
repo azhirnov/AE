@@ -1,137 +1,122 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
+
+#pragma once
+
+#ifdef AE_ENABLE_VULKAN
+
+# include "graphics/Vulkan/VCommon.h"
 
 namespace AE::Graphics
 {
-namespace
-{
 
 	//
-	// Barrier Manager
+	// Vulkan Pipeline Barriers Manager
 	//
 
 	class VBarrierManager
 	{
 	// types
-	private:
-		struct MemRange
+	public:
+		struct PipelineBarrier
 		{
-			VkDeviceMemory		handle	= VK_NULL_HANDLE;
-			VkDeviceSize		offset	= 0;
-			VkDeviceSize		size	= 0;
-
-			ND_ bool  operator == (const MemRange &) const;
+			VkPipelineStageFlagBits			srcStageMask;
+			VkPipelineStageFlagBits			dstStageMask;
+			VkMemoryBarrier const *			memoryBarriers;
+			VkBufferMemoryBarrier const *	bufferBarriers;
+			VkImageMemoryBarrier const *	imageBarriers;
+			uint							memoryBarrierCount;
+			uint							bufferBarrierCount;
+			uint							imageBarrierCount;
 		};
 
-		struct MemRangeHash {
-			ND_ size_t  operator () (const MemRange &) const;
-		};
 
+	private:
 		// TODO: custom allocator
 		using ImageMemoryBarriers_t		= Array< VkImageMemoryBarrier >;
 		using BufferMemoryBarriers_t	= Array< VkBufferMemoryBarrier >;
-		using MemoryRanges_t			= HashSet< MemRange, MemRangeHash >;	// TODO: flat map
 
 
 	// variables
 	private:
-		ImageMemoryBarriers_t		_imageBarriers;
-		BufferMemoryBarriers_t		_bufferBarriers;
-		//VkMemoryBarrier			_memoryBarrier;
-
 		VkPipelineStageFlagBits		_srcStageMask		= Zero;
 		VkPipelineStageFlagBits		_dstStageMask		= Zero;
-		VkDependencyFlags			_dependencyFlags	= 0;
 
-		MemoryRanges_t				_flushMemRanges;
+		ImageMemoryBarriers_t		_imageBarriers;
+		BufferMemoryBarriers_t		_bufferBarriers;
+		VkMemoryBarrier				_memoryBarrier		= {};
+
+		//MemoryRanges_t			_flushMemRanges;
 
 
 	// methods
 	public:
-		VBarrierManager ();
+		explicit VBarrierManager (const VCommandBatch &);
+		~VBarrierManager ();
 
-		// device cache & sync
-		void Commit (const VDevice &dev, VkCommandBuffer cmd);
-		void ForceCommit (const VDevice &dev, VkCommandBuffer cmd, VkPipelineStageFlagBits srcStage, VkPipelineStageFlagBits dstStage);
+		ND_ bool  GetBarriers (OUT PipelineBarrier &) const;
 
-		void ClearBarriers ();
+		void  ClearBarriers ();
 
-		void AddBufferBarrier (VkPipelineStageFlagBits		srcStageMask,
-							   VkPipelineStageFlagBits		dstStageMask,
-							   const VkBufferMemoryBarrier	&barrier);
+		void  AddBufferBarrier (VkPipelineStageFlagBits		srcStageMask,
+								VkPipelineStageFlagBits		dstStageMask,
+								const VkBufferMemoryBarrier	&barrier);
 		
-		void AddImageBarrier (VkPipelineStageFlagBits		srcStageMask,
-							  VkPipelineStageFlagBits		dstStageMask,
-							  VkDependencyFlagBits			dependencyFlags,
-							  const VkImageMemoryBarrier	&barrier);
+		void  AddImageBarrier (VkPipelineStageFlagBits		srcStageMask,
+							   VkPipelineStageFlagBits		dstStageMask,
+							   const VkImageMemoryBarrier	&barrier);
 
-
-		// host cache control
-		void FlushMemory (VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size);
-		void FlushMemoryRanges (const VDevice &dev);
+		void  AddMemoryBarrier (VkPipelineStageFlagBits		srcStageMask,
+								VkPipelineStageFlagBits		dstStageMask,
+								const VkMemoryBarrier		&barrier);
 	};
-//-----------------------------------------------------------------------------
 
 	
 	
-	inline bool  VBarrierManager::MemRange::operator == (const MemRange &rhs) const
-	{
-		return (handle == rhs.handle) & (offset == rhs.offset) & (size == rhs.size);
-	}
-
-	inline size_t  VBarrierManager::MemRangeHash::operator () (const MemRange &value) const
-	{
-		return size_t(HashOf( value.handle ) + HashOf( value.offset ) + HashOf( value.size ));
-	}
-//-----------------------------------------------------------------------------
-
-
-
 /*
 =================================================
 	constructor
 =================================================
 */
-	VBarrierManager::VBarrierManager ()
+	inline VBarrierManager::VBarrierManager (const VCommandBatch &)
 	{
 		_imageBarriers.reserve( 32 );
 		_bufferBarriers.reserve( 64 );
+		_memoryBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 	}
 	
 /*
 =================================================
-	Commit
+	destructor
 =================================================
 */
-	void  VBarrierManager::Commit (const VDevice &dev, VkCommandBuffer cmd)
+	inline VBarrierManager::~VBarrierManager ()
 	{
-		if ( _bufferBarriers.size() | _imageBarriers.size() )
-		{
-			dev.vkCmdPipelineBarrier( cmd, _srcStageMask, _dstStageMask, _dependencyFlags,
-									  0, null,
-									  uint(_bufferBarriers.size()), _bufferBarriers.data(),
-									  uint(_imageBarriers.size()), _imageBarriers.data() );
-			ClearBarriers();
-		}
+		ASSERT( _imageBarriers.empty() );
+		ASSERT( _bufferBarriers.empty() );
 	}
-	
-/*
-=================================================
-	ForceCommit
-=================================================
-*/
-	void  VBarrierManager::ForceCommit (const VDevice &dev, VkCommandBuffer cmd, VkPipelineStageFlagBits srcStage, VkPipelineStageFlagBits dstStage)
-	{
-		_srcStageMask |= srcStage;
-		_dstStageMask |= dstStage;
 
-		if ( _srcStageMask and _dstStageMask )
+/*
+=================================================
+	GetBarriers
+=================================================
+*/
+	inline bool  VBarrierManager::GetBarriers (OUT PipelineBarrier &result) const
+	{
+		const uint	mem_count = !!(_memoryBarrier.srcAccessMask | _memoryBarrier.dstAccessMask);
+
+		if ( mem_count | _imageBarriers.size() | _bufferBarriers.size() )
 		{
-			dev.vkCmdPipelineBarrier( cmd, _srcStageMask, _dstStageMask, _dependencyFlags,
-									  0, null,
-									  uint(_bufferBarriers.size()), _bufferBarriers.data(),
-									  uint(_imageBarriers.size()), _imageBarriers.data() );
-			ClearBarriers();
+			result.srcStageMask			= _srcStageMask;
+			result.dstStageMask			= _dstStageMask;
+			result.bufferBarriers		= _bufferBarriers.data();
+			result.bufferBarrierCount	= uint(_bufferBarriers.size());
+			result.imageBarriers		= _imageBarriers.data();
+			result.imageBarrierCount	= uint(_imageBarriers.size());
+			result.memoryBarriers		= mem_count ? &_memoryBarrier : null;
+			result.memoryBarrierCount	= mem_count;
+			return true;
 		}
+		return false;
 	}
 
 /*
@@ -139,13 +124,14 @@ namespace
 	ClearBarriers
 =================================================
 */
-	void  VBarrierManager::ClearBarriers ()
+	inline void  VBarrierManager::ClearBarriers ()
 	{
 		_imageBarriers.clear();
 		_bufferBarriers.clear();
 
+		_memoryBarrier.srcAccessMask = _memoryBarrier.dstAccessMask = 0;
+
 		_srcStageMask = _dstStageMask = Zero;
-		_dependencyFlags = Zero;
 	}
 	
 /*
@@ -153,9 +139,9 @@ namespace
 	AddBufferBarrier
 =================================================
 */
-	void  VBarrierManager::AddBufferBarrier (VkPipelineStageFlagBits		srcStageMask,
-											 VkPipelineStageFlagBits		dstStageMask,
-											 const VkBufferMemoryBarrier	&barrier)
+	inline void  VBarrierManager::AddBufferBarrier (VkPipelineStageFlagBits		srcStageMask,
+													VkPipelineStageFlagBits		dstStageMask,
+													const VkBufferMemoryBarrier	&barrier)
 	{
 		_srcStageMask |= srcStageMask;
 		_dstStageMask |= dstStageMask;
@@ -168,48 +154,33 @@ namespace
 	AddImageBarrier
 =================================================
 */
-	void  VBarrierManager::AddImageBarrier (VkPipelineStageFlagBits		srcStageMask,
-											VkPipelineStageFlagBits		dstStageMask,
-											VkDependencyFlagBits		dependencyFlags,
-											const VkImageMemoryBarrier	&barrier)
+	inline void  VBarrierManager::AddImageBarrier (VkPipelineStageFlagBits		srcStageMask,
+												   VkPipelineStageFlagBits		dstStageMask,
+												   const VkImageMemoryBarrier	&barrier)
 	{
-		_srcStageMask		|= srcStageMask;
-		_dstStageMask		|= dstStageMask;
-		_dependencyFlags	|= dependencyFlags;
+		_srcStageMask |= srcStageMask;
+		_dstStageMask |= dstStageMask;
 
 		_imageBarriers.push_back( barrier );
 	}
 	
 /*
 =================================================
-	FlushMemory
+	AddMemoryBarrier
 =================================================
 */
-	void  VBarrierManager::FlushMemory (VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size)
+	inline void  VBarrierManager::AddMemoryBarrier (VkPipelineStageFlagBits		srcStageMask,
+													VkPipelineStageFlagBits		dstStageMask,
+													const VkMemoryBarrier		&barrier)
 	{
-		_flushMemRanges.insert(MemRange{ mem, offset, size });
-	}
-	
-/*
-=================================================
-	FlushMemoryRanges
-=================================================
-*/
-	void  VBarrierManager::FlushMemoryRanges (const VDevice &dev)
-	{
-		for (auto& range : _flushMemRanges)
-		{
-			VkMappedMemoryRange	mem_range = {};
-			mem_range.sType		= VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-			mem_range.memory	= range.handle;
-			mem_range.offset	= range.offset;
-			mem_range.size		= range.size;
-
-			VK_CALL( dev.vkFlushMappedMemoryRanges( dev.GetVkDevice(), 1, &mem_range ));
-		}
-		_flushMemRanges.clear();
+		ASSERT( barrier.pNext == null );
+		_srcStageMask				 |= srcStageMask;
+		_dstStageMask				 |= dstStageMask;
+		_memoryBarrier.srcAccessMask |= barrier.srcAccessMask;
+		_memoryBarrier.dstAccessMask |= barrier.dstAccessMask;
 	}
 
 
-}	// namespace
 }	// AE::Graphics
+
+#endif	// AE_ENABLE_VULKAN

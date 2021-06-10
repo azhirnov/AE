@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_GLFW
 
@@ -22,7 +22,7 @@ namespace AE::App
 =================================================
 */
 	WindowGLFW::WindowGLFW (ApplicationGLFW &app, UniquePtr<IWndListener> listener) :
-		_listener{ std::move(listener) }, _app{ app }
+		_listener{ RVRef(listener) }, _app{ app }
 	{
 	}
 	

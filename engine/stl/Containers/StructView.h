@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -23,9 +23,9 @@ namespace AE::STL
 		struct const_iterator
 		{
 			Self const&		_ref;
-			size_t			_index = 0;
+			usize			_index = 0;
 
-			const_iterator (const Self &ref, size_t idx) : _ref{ref}, _index{idx} {}
+			const_iterator (const Self &ref, usize idx) : _ref{ref}, _index{idx} {}
 
 			const_iterator&	operator ++ ()									{ ++_index;  return *this; }
 
@@ -44,14 +44,14 @@ namespace AE::STL
 		};
 		
 
-		template <typename St, size_t Padding>
+		template <typename St, usize Padding>
 		struct _ViewerWithPaddingUnaligned final : _IViewer
 		{
 		// types
 			#pragma pack (push, 1)
 			struct Element {
 				T			value;
-				uint8_t		_padding [Padding];
+				ubyte		_padding [Padding];
 			};
 			#pragma pack (pop)
 			using ElementsPtr_t = Element const (*) [DBG_VIEW_COUNT];
@@ -65,13 +65,13 @@ namespace AE::STL
 		};
 		
 
-		template <typename St, size_t Padding>
+		template <typename St, usize Padding>
 		struct _ViewerWithPadding final : _IViewer
 		{
 		// types
 			struct Element {
 				T			value;
-				uint8_t		_padding [Padding];
+				ubyte		_padding [Padding];
 			};
 			using ElementsPtr_t = Element const (*) [DBG_VIEW_COUNT];
 			
@@ -101,7 +101,7 @@ namespace AE::STL
 	// variables
 	private:
 		void const *	_array		= null;
-		size_t			_count		= 0;
+		usize			_count		= 0;
 		uint			_stride		= 0;
 
 		DEBUG_ONLY(
@@ -133,13 +133,13 @@ namespace AE::STL
 			DEBUG_ONLY( _dbgView = _CreateView<Class, sizeof(Class)>( _array ));
 		}
 		
-		StructView (const T* ptr, size_t count) :
+		StructView (const T* ptr, usize count) :
 			_array{ ptr }, _count{ count }, _stride{ sizeof(T) }
 		{
 			DEBUG_ONLY( _dbgView = _CreateView<T, sizeof(T)>( _array ));
 		}
 
-		StructView (const void *ptr, size_t count, uint stride) :
+		StructView (const void *ptr, usize count, uint stride) :
 			_array{ptr}, _count{count}, _stride{stride}
 		{}
 
@@ -147,9 +147,9 @@ namespace AE::STL
 		{}
 
 
-		ND_ size_t		size ()					const	{ return _count; }
+		ND_ usize		size ()					const	{ return _count; }
 		ND_ bool		empty ()				const	{ return _count == 0; }
-		ND_ T const &	operator [] (size_t i)	const	{ ASSERT(i < _count);  return *static_cast<T const *>(_array + BytesU(i * _stride)); }
+		ND_ T const &	operator [] (usize i)	const	{ ASSERT(i < _count);  return *static_cast<T const *>(_array + Bytes(i * _stride)); }
 
 		ND_ T const&	front ()				const	{ return operator[] (0); }
 		ND_ T const&	back ()					const	{ return operator[] (_count-1); }
@@ -166,7 +166,7 @@ namespace AE::STL
 			if ( size() != rhs.size() )
 				return false;
 
-			for (size_t i = 0; i < size(); ++i) {
+			for (usize i = 0; i < size(); ++i) {
 				if ( not ((*this)[i] == rhs[i]) )
 					return false;
 			}
@@ -174,10 +174,10 @@ namespace AE::STL
 		}
 
 
-		ND_ StructView<T>  section (size_t first, size_t count) const
+		ND_ StructView<T>  section (usize first, usize count) const
 		{
 			return first < size() ?
-					StructView<T>{ _array + BytesU(first * _stride), Min(size() - first, count) } :
+					StructView<T>{ _array + Bytes(first * _stride), Min(size() - first, count) } :
 					StructView<T>{};
 		}
 
@@ -186,7 +186,7 @@ namespace AE::STL
 			Array<T>	result;
 			result.resize( size() );
 
-			for (size_t i = 0; i < result.size(); ++i) {
+			for (usize i = 0; i < result.size(); ++i) {
 				result[i] = (*this)[i];
 			}
 			return result;
@@ -194,11 +194,11 @@ namespace AE::STL
 
 
 	private:
-		template <typename Class, size_t Stride>
+		template <typename Class, usize Stride>
 		ND_ static UniquePtr<_IViewer>  _CreateView (const void *ptr)
 		{
 			STATIC_ASSERT( Stride >= sizeof(T) );
-			const size_t	padding = Stride - sizeof(T);
+			const usize	padding = Stride - sizeof(T);
 
 			if constexpr ( padding == 0 )
 				return MakeUnique< _ViewerImpl< Class >>( ptr );

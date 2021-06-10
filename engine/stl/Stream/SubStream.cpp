@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Stream/SubStream.h"
 
@@ -10,7 +10,7 @@ namespace AE::STL
 	constructor
 =================================================
 */
-	RSubStream::RSubStream (const SharedPtr<RStream> &stream, BytesU offset, BytesU size) :
+	RSubStream::RSubStream (const RC<RStream> &stream, Bytes offset, Bytes size) :
 		_stream{ stream }, _offset{ offset }, _size{ size }
 	{}
 		
@@ -29,7 +29,7 @@ namespace AE::STL
 	SeekSet
 =================================================
 */
-	bool  RSubStream::SeekSet (BytesU pos)
+	bool  RSubStream::SeekSet (Bytes pos)
 	{
 		ASSERT( IsOpen() );
 
@@ -49,13 +49,13 @@ namespace AE::STL
 	Read2
 =================================================
 */
-	BytesU  RSubStream::Read2 (OUT void *buffer, BytesU size)
+	Bytes  RSubStream::Read2 (OUT void *buffer, Bytes size)
 	{
 		ASSERT( IsOpen() );
 
 		if ( _stream and _stream->SeekSet( _offset + _pos ))
 		{
-			BytesU	readn = _stream->Read2( buffer, size );
+			Bytes	readn = _stream->Read2( buffer, size );
 			_pos += readn;
 			return readn;
 		}

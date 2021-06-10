@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "CPP_VM/VirtualMachine.h"
 #include "stl/Algorithms/StringUtils.h"
@@ -16,12 +16,12 @@ namespace LFAS::CPP
 	private:
 		ScriptFn				_fn;
 		const String			_name;
-		std::atomic<uint64_t>	_invocations {0};
+		std::atomic<ulong>	_invocations {0};
 
 
 	// methods
 	public:
-		explicit Script (String &&name, ScriptFn &&fn) : _fn{std::move(fn)}, _name{name} {}
+		explicit Script (String &&name, ScriptFn &&fn) : _fn{RVRef(fn)}, _name{name} {}
 		~Script () {}
 
 		void Run ()
@@ -30,7 +30,7 @@ namespace LFAS::CPP
 			++_invocations;
 		}
 
-		ND_ uint64_t  GetInvocations ()
+		ND_ ulong  GetInvocations ()
 		{
 			return _invocations;
 		}
@@ -246,7 +246,7 @@ namespace LFAS::CPP
 		EXLOCK( _atomicMapGuard );
 
 		auto	iter = _atomicMap.find( ptr );
-		CHECK_ERR( iter != _atomicMap.end(), void());
+		CHECK_ERRV( iter != _atomicMap.end() );
 
 		iter->second.isDestroyed = true;
 	}
@@ -277,7 +277,7 @@ namespace LFAS::CPP
 	StorageCreate
 =================================================
 */
-	void  VirtualMachine::StorageCreate (const void *ptr, BytesU size)
+	void  VirtualMachine::StorageCreate (const void *ptr, Bytes size)
 	{
 		EXLOCK( _storageMapGuard );
 		
@@ -303,7 +303,7 @@ namespace LFAS::CPP
 		EXLOCK( _storageMapGuard );
 		
 		auto	iter = _storageMap.find( ptr );
-		CHECK_ERR( iter != _storageMap.end(), void());
+		CHECK_ERRV( iter != _storageMap.end() );
 
 		CHECK( not iter->second.isDestroyed );
 		iter->second.isDestroyed = true;
@@ -332,12 +332,12 @@ namespace LFAS::CPP
 	StorageReadAccess
 =================================================
 */
-	void  VirtualMachine::StorageReadAccess (const void *ptr, BytesU offset, BytesU size)
+	void  VirtualMachine::StorageReadAccess (const void *ptr, Bytes offset, Bytes size)
 	{
 		EXLOCK( _storageMapGuard );
 
 		auto	iter = _storageMap.find( ptr );
-		CHECK_ERR( iter != _storageMap.end(), void());
+		CHECK_ERRV( iter != _storageMap.end() );
 		
 		ASSERT( offset + size <= iter->second.size );
 		
@@ -349,12 +349,12 @@ namespace LFAS::CPP
 	StorageWriteAccess
 =================================================
 */
-	void  VirtualMachine::StorageWriteAccess (const void *ptr, BytesU offset, BytesU size)
+	void  VirtualMachine::StorageWriteAccess (const void *ptr, Bytes offset, Bytes size)
 	{
 		EXLOCK( _storageMapGuard );
 
 		auto	iter = _storageMap.find( ptr );
-		CHECK_ERR( iter != _storageMap.end(), void());
+		CHECK_ERRV( iter != _storageMap.end() );
 		
 		ASSERT( offset + size <= iter->second.size );
 		
@@ -375,7 +375,7 @@ namespace LFAS::CPP
 		if ( name.empty() )
 			name = "Script_"s << ToString( ++_scriptCounter );
 
-		return MakeShared<Script>( std::move(name), std::move(fn) );
+		return MakeShared<Script>( RVRef(name), RVRef(fn) );
 	}
 	
 /*
@@ -385,9 +385,9 @@ namespace LFAS::CPP
 */
 	void  VirtualMachine::RunParallel (ArrayView<ScriptPtr> scripts, SecondsF timeout)
 	{
-		CHECK_ERR( scripts.size(), void());
+		CHECK_ERRV( scripts.size() );
 
-		const size_t	max_threads	= Max( 8u, std::thread::hardware_concurrency() );	// 1.5x of hw threads for more chaos
+		const usize	max_threads	= Max( 8u, std::thread::hardware_concurrency() );	// 1.5x of hw threads for more chaos
 
 		std::atomic<bool>	break_all {false};
 		Array<std::thread>	threads;
@@ -397,12 +397,12 @@ namespace LFAS::CPP
 		threads.reserve( max_threads );
 		{
 			EXLOCK( _randomGuard );
-			for (size_t i = 0; i < max_threads; ++i)
+			for (usize i = 0; i < max_threads; ++i)
 			{
 				threads.emplace_back(
 					[&scripts, &break_all, rnd = i + _random.Uniform( 1u, 9u )] ()
 					{
-						for (size_t j = rnd; not break_all; ++j)
+						for (usize j = rnd; not break_all; ++j)
 						{
 							auto&	sc = scripts[ j % scripts.size() ];
 

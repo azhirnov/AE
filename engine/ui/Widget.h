@@ -7,7 +7,7 @@
 
 namespace AE::UI
 {
-	using WidgetPtr	= SharedPtr< class Widget >;
+	using WidgetPtr	= RC< class Widget >;
 
 
 
@@ -15,7 +15,7 @@ namespace AE::UI
 	// Widget
 	//
 
-	class Widget : public std::enable_shared_from_this<Widget>
+	class Widget : public EnableRC<Widget>
 	{
 	// types
 	private:

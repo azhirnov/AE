@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -15,7 +15,7 @@ namespace AE::ECS
 	{
 	// types
 	private:
-		using					Chunk_t			= uint64_t;
+		using					Chunk_t			= ulong;
 		static constexpr uint	BitsPerChunk	= sizeof(Chunk_t) * 8;
 		static constexpr uint	ChunkCount		= ECS_Config::MaxComponents / BitsPerChunk;
 		using					CompBits_t		= StaticArray< Chunk_t, ChunkCount >;
@@ -52,7 +52,7 @@ namespace AE::ECS
 		ND_ bool		AnyOrEmpty (const ArchetypeDesc &) const;
 		ND_ bool		Equals (const ArchetypeDesc &) const;
 		ND_ bool		Empty () const;
-		ND_ size_t		Count () const;
+		ND_ usize		Count () const;
 
 		ND_ HashVal		GetHash () const;
 	};
@@ -143,7 +143,7 @@ namespace AE::ECS
 */
 	inline ArchetypeDesc&  ArchetypeDesc::Add (const ArchetypeDesc &other)
 	{
-		for (size_t i = 0; i < _bits.size(); ++i) {
+		for (usize i = 0; i < _bits.size(); ++i) {
 			_bits[i] |= other._bits[i];
 		}
 		return *this;
@@ -156,7 +156,7 @@ namespace AE::ECS
 */
 	inline ArchetypeDesc&  ArchetypeDesc::Remove (const ArchetypeDesc &other)
 	{
-		for (size_t i = 0; i < _bits.size(); ++i) {
+		for (usize i = 0; i < _bits.size(); ++i) {
 			_bits[i] &= ~other._bits[i];
 		}
 		return *this;
@@ -181,7 +181,7 @@ namespace AE::ECS
 	inline bool  ArchetypeDesc::All (const ArchetypeDesc &rhs) const
 	{
 		bool	result = true;
-		for (size_t i = 0; i < _bits.size(); ++i) {
+		for (usize i = 0; i < _bits.size(); ++i) {
 			result &= ((_bits[i] & rhs._bits[i]) == rhs._bits[i]);
 		}
 		return result;
@@ -195,7 +195,7 @@ namespace AE::ECS
 	inline bool  ArchetypeDesc::Any (const ArchetypeDesc &rhs) const
 	{
 		bool	result	= false;
-		for (size_t i = 0; i < _bits.size(); ++i) {
+		for (usize i = 0; i < _bits.size(); ++i) {
 			result |= !!(_bits[i] & rhs._bits[i]);
 		}
 		return result;
@@ -211,7 +211,7 @@ namespace AE::ECS
 		bool	result	= false;
 		bool	empty	= true;
 
-		for (size_t i = 0; i < _bits.size(); ++i)
+		for (usize i = 0; i < _bits.size(); ++i)
 		{
 			result |= !!(_bits[i] & rhs._bits[i]);
 			empty  &= !_bits[i];
@@ -227,7 +227,7 @@ namespace AE::ECS
 	inline bool  ArchetypeDesc::Equals (const ArchetypeDesc &rhs) const
 	{
 		bool	result = true;
-		for (size_t i = 0; i < _bits.size(); ++i) {
+		for (usize i = 0; i < _bits.size(); ++i) {
 			result &= (_bits[i] == rhs._bits[i]);
 		}
 		return result;
@@ -241,7 +241,7 @@ namespace AE::ECS
 	inline bool  ArchetypeDesc::Empty () const
 	{
 		bool	result = true;
-		for (size_t i = 0; i < _bits.size(); ++i) {
+		for (usize i = 0; i < _bits.size(); ++i) {
 			result &= !_bits[i];
 		}
 		return result;
@@ -252,10 +252,10 @@ namespace AE::ECS
 	Count
 =================================================
 */
-	inline size_t  ArchetypeDesc::Count () const
+	inline usize  ArchetypeDesc::Count () const
 	{
-		size_t	result = 0;
-		for (size_t i = 0; i < _bits.size(); ++i) {
+		usize	result = 0;
+		for (usize i = 0; i < _bits.size(); ++i) {
 			result += BitCount( _bits[i] );
 		}
 		return result;
@@ -269,16 +269,16 @@ namespace AE::ECS
 	inline HashVal  ArchetypeDesc::GetHash () const
 	{
 		Chunk_t	h = _bits[0];
-		for (size_t i = 1; i < _bits.size(); ++i) {
+		for (usize i = 1; i < _bits.size(); ++i) {
 			h = BitRotateLeft( h, 4 + i*4 ) ^ _bits[i];
 		}
 
 		#if PLATFORM_BITS == 64
-			STATIC_ASSERT( sizeof(size_t) == sizeof(h) );
+			STATIC_ASSERT( sizeof(usize) == sizeof(h) );
 			return HashVal{ h };
 		#else
-			STATIC_ASSERT( sizeof(size_t) != sizeof(h) );
-			return HashVal{size_t( h ^ (h >> 32) )};
+			STATIC_ASSERT( sizeof(usize) != sizeof(h) );
+			return HashVal{usize( h ^ (h >> 32) )};
 		#endif
 	}
 	
@@ -291,7 +291,7 @@ namespace AE::ECS
 	{
 		ComponentIDs_t	result;
 
-		for (size_t i = 0; i < _bits.size(); ++i)
+		for (usize i = 0; i < _bits.size(); ++i)
 		{
 			Chunk_t	u = _bits[i];
 			int		j = BitScanForward( u );

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Containers/FixedMap.h"
 #include "stl/Containers/FixedString.h"
@@ -35,7 +35,7 @@ namespace
 	
 		TEST( map.size() == 10 );
 
-		size_t	count;
+		usize	count;
 		count = map.count( 5 );		TEST( count == 1 );
 		count = map.count( 2 );		TEST( count == 1 );
 		count = map.count( 7 );		TEST( count == 1 );

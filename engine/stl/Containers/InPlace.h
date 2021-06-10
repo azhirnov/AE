@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -24,7 +24,7 @@ namespace AE::STL
 	private:
 		union {
 			T			_value;
-			uint8_t		_data [ sizeof(T) ];	// don't use it!
+			ubyte		_data [ sizeof(T) ];	// don't use it!
 		};
 		DEBUG_ONLY(
 			bool		_isCreated = false;
@@ -45,7 +45,7 @@ namespace AE::STL
 		InPlace (Self&& other)
 			DEBUG_ONLY(: _isCreated{other._isCreated})
 		{
-			PlacementNew<T>( &_value, std::move(other._value) );
+			PlacementNew<T>( &_value, RVRef(other._value) );
 		}
 
 		~InPlace ()
@@ -65,7 +65,7 @@ namespace AE::STL
 				ASSERT( not _isCreated );
 				_isCreated = true;
 			)
-			PlacementNew<T>( &_value, std::forward<Args &&>( args )... );
+			PlacementNew<T>( &_value, FwdArg<Args &&>( args )... );
 			return *this;
 		}
 

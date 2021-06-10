@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_UTF8PROC
 
@@ -13,7 +13,7 @@ namespace AE::STL
 	Utf8Decode
 =================================================
 */
-	forceinline char32_t  Utf8Decode (const char *str, size_t length, INOUT size_t &pos)
+	forceinline char32_t  Utf8Decode (const char *str, usize length, INOUT usize &pos)
 	{
 		ASSERT( pos < length );
 
@@ -26,7 +26,7 @@ namespace AE::STL
 		return ref;
 	}
 
-	forceinline char32_t  Utf8Decode (StringView str, INOUT size_t &pos)
+	forceinline char32_t  Utf8Decode (StringView str, INOUT usize &pos)
 	{
 		return Utf8Decode( str.data(), str.length(), INOUT pos );
 	}

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	Wrapper for std::filesystem that disable all exceptions except std::bad_alloc
 */
@@ -29,6 +29,10 @@ namespace AE::STL
 	private:
 		FileSystem () = delete;
 		~FileSystem () = delete;
+
+	// types
+	public:
+		using DirectoryIter	= _ae_fs_::directory_iterator;
 
 
 	// filesystem
@@ -68,14 +72,14 @@ namespace AE::STL
 		ND_ static Path  ToRelative (const Path &p, const Path &base);
 
 		// enumerate all files in directory
-		ND_ static _ae_fs_::directory_iterator  Enum (const Path &p);
+		ND_ static DirectoryIter  Enum (const Path &p);
 
 		// 
 		static bool  CopyFile (const Path &from, const Path &to);
 		static bool  CopyDirectory (const Path &from, const Path &to);
 
 		// writes file system capacity and available space
-		static bool  GetSpace (const Path &path, OUT BytesU &total, OUT BytesU &available);
+		static bool  GetSpace (const Path &path, OUT Bytes &total, OUT Bytes &available);
 
 		// replace unsupported symbols.
 		// returns 'true' if name is not modified.
@@ -168,7 +172,7 @@ namespace AE::STL
 		return _ae_fs_::relative( p, base, OUT ec );
 	}
 	
-	inline _ae_fs_::directory_iterator  FileSystem::Enum (const Path &p)
+	inline FileSystem::DirectoryIter  FileSystem::Enum (const Path &p)
 	{
 		std::error_code	ec;
 		return _ae_fs_::directory_iterator{ p, OUT ec };
@@ -187,14 +191,14 @@ namespace AE::STL
 		return not ec;
 	}
 	
-	inline bool  FileSystem::GetSpace (const Path &path, OUT BytesU &total, OUT BytesU &available)
+	inline bool  FileSystem::GetSpace (const Path &path, OUT Bytes &total, OUT Bytes &available)
 	{
 		std::error_code	ec;
 		auto	space = _ae_fs_::space( path, OUT ec );
 		if ( not ec )
 		{
-			total		= BytesU{ space.capacity };
-			available	= BytesU{ space.available };
+			total		= Bytes{ space.capacity };
+			available	= Bytes{ space.available };
 			return true;
 		}
 		return false;
@@ -204,7 +208,7 @@ namespace AE::STL
 	inline bool  FileSystem::ValidateFileName (INOUT BasicString<T> &name)
 	{
 		bool	res = true;
-		for (size_t i = 0; i < name.size(); ++i)
+		for (usize i = 0; i < name.size(); ++i)
 		{
 			T&	c = name[i];
 

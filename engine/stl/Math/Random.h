@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -63,9 +63,9 @@ namespace AE::Math
 
 	// Index //
 		template <typename Container, typename T>
-		ND_ size_t  Index (const Container &chances, T value)
+		ND_ usize  Index (const Container &chances, T value)
 		{
-			for (size_t i = 0; i < chances.size(); ++i)
+			for (usize i = 0; i < chances.size(); ++i)
 			{
 				if ( value <= chances[i] )
 					return i;

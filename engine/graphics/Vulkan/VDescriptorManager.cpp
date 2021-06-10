@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -13,10 +13,10 @@ namespace AE::Graphics
 	constructor
 =================================================
 */
-	VDescriptorManager::VDescriptorManager (VResourceManager &resMngr) :
+	VDescriptorManager::VDescriptorManager (VResourceManagerImpl &resMngr) :
 		_resMngr{ resMngr }
 	{
-		//STATIC_ASSERT( DSCachePool_t::capacity() == VResourceManager::DSLayoutPool_t::capacity() );
+		//STATIC_ASSERT( DSCachePool_t::capacity() == VResourceManagerImpl::DSLayoutPool_t::capacity() );
 	}
 	
 /*
@@ -34,7 +34,7 @@ namespace AE::Graphics
 	Initialize
 =================================================
 */
-	bool VDescriptorManager::Initialize ()
+	bool  VDescriptorManager::Initialize ()
 	{
 		EXLOCK( _dsPoolGuard );
 
@@ -47,7 +47,7 @@ namespace AE::Graphics
 	Deinitialize
 =================================================
 */
-	void VDescriptorManager::Deinitialize ()
+	void  VDescriptorManager::Deinitialize ()
 	{
 		EXLOCK( _dsPoolGuard );
 

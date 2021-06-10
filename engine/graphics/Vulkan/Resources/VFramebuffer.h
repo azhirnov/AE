@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -18,8 +18,8 @@ namespace AE::Graphics
 	{
 	// types
 	private:
-		using Attachments_t		= FixedArray< Pair<VImageID, ImageViewDesc>, GraphicsConfig::MaxAttachments >;
-		using AttachmentView_t	= ArrayView< Pair<VImageID, ImageViewDesc> >;
+		using Attachments_t		= FixedArray< Pair<ImageID, ImageViewDesc>, GraphicsConfig::MaxAttachments >;
+		using AttachmentView_t	= ArrayView< Pair<ImageID, ImageViewDesc> >;
 
 		
 	// variables
@@ -40,15 +40,15 @@ namespace AE::Graphics
 	// methods
 	public:
 		VFramebuffer () {}
-		VFramebuffer (ArrayView<Pair<VImageID, ImageViewDesc>> attachments, RenderPassID rp, uint2 dim, uint layers);
+		VFramebuffer (ArrayView<Pair<ImageID, ImageViewDesc>> attachments, RenderPassID rp, uint2 dim, uint layers);
 		~VFramebuffer ();
 		
-		bool Create (VResourceManager &, StringView dbgName);
-		void Destroy (VResourceManager &);
+		bool  Create (VResourceManagerImpl &, StringView dbgName);
+		void  Destroy (VResourceManagerImpl &);
 		
-		ND_ bool IsAllResourcesAlive (const VResourceManager &) const;
+		ND_ bool  IsAllResourcesAlive (const VResourceManagerImpl &) const;
 
-		ND_ bool operator == (const VFramebuffer &rhs) const;
+		ND_ bool  operator == (const VFramebuffer &rhs) const;
 
 		ND_ VkFramebuffer		Handle ()			const	{ SHAREDLOCK( _drCheck );  return _framebuffer; }
 		ND_ RenderPassID		GetRenderPassID ()	const	{ SHAREDLOCK( _drCheck );  return _renderPassId; }

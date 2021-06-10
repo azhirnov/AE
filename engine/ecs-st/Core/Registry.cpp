@@ -11,7 +11,7 @@ namespace AE::ECS
 =================================================
 */
 	Registry::Registry () :
-		_componentInfo{ New<ComponentMap_t::element_type>() }
+		_componentInfo{ new ComponentMap_t::element_type{} }
 	{
 		EXLOCK( _drCheck );
 	}
@@ -123,14 +123,14 @@ namespace AE::ECS
 				auto	comp_aligns	= storage->GetComponentAligns();
 				auto	comp_data	= storage->GetComponentData();
 
-				for (size_t i = 0; i < comp_ids.size(); ++i)
+				for (usize i = 0; i < comp_ids.size(); ++i)
 				{
-					size_t	comp_size = size_t(comp_sizes[i]);
+					usize	comp_size = usize(comp_sizes[i]);
 
 					if ( comp_size > 0 )
 					{
-						uint8_t*	comp_ptr = Cast<uint8_t>( comp_data[i] + BytesU{comp_size} * size_t(index) );
-						_messages.Add<MsgTag_RemovedComponent>( entId, comp_ids[i], ArrayView<uint8_t>{ comp_ptr, comp_size });
+						ubyte*	comp_ptr = Cast<ubyte>( comp_data[i] + Bytes{comp_size} * usize(index) );
+						_messages.Add<MsgTag_RemovedComponent>( entId, comp_ids[i], ArrayView<ubyte>{ comp_ptr, comp_size });
 					}
 					else
 						_messages.Add<MsgTag_RemovedComponent>( entId, comp_ids[i] );
@@ -166,7 +166,7 @@ namespace AE::ECS
 
 		if ( inserted )
 		{
-			storage.reset( New<ArchetypeStorage>( *this, key, ECS_Config::InitialtStorageSize ));
+			storage.reset( new ArchetypeStorage{ *this, key, ECS_Config::InitialtStorageSize });
 
 			_OnNewArchetype( &*iter );
 		}
@@ -220,7 +220,7 @@ namespace AE::ECS
 				if ( (src.first != null) & (dst.first != null) )
 				{
 					ASSERT( src.second == dst.second );
-					std::memcpy( OUT dst.first, src.first, size_t(src.second) );
+					MemCopy( OUT dst.first, src.first, src.second );
 				}
 			}
 
@@ -313,7 +313,7 @@ namespace AE::ECS
 			{
 				// TODO: if 'removeComps' is just a tags then you can change archetype in 'src_storage' instead of copying all data
 
-				dst_storage.reset( New<ArchetypeStorage>( *this, key, ECS_Config::InitialtStorageSize ));
+				dst_storage.reset( new ArchetypeStorage{ *this, key, ECS_Config::InitialtStorageSize });
 
 				_OnNewArchetype( &*iter );
 			}
@@ -328,29 +328,29 @@ namespace AE::ECS
 				auto		comp_ids	= dst_storage->GetComponentIDs();
 				auto		comp_sizes	= dst_storage->GetComponentSizes();
 				auto		comp_data	= dst_storage->GetComponentData();
-				size_t		count		= src_storage->Count();
+				usize		count		= src_storage->Count();
 
 				Index_t		start;
 				CHECK( dst_storage->AddEntities( ArrayView<EntityID>{ src_storage->GetEntities(), count }, OUT start ));
 
-				for (size_t i = 0; i < comp_ids.size(); ++i)
+				for (usize i = 0; i < comp_ids.size(); ++i)
 				{
 					ComponentID	comp_id		= comp_ids[i];
-					size_t		comp_size	= size_t(comp_sizes[i]);
+					Bytes		comp_size	= Bytes{comp_sizes[i]};
 					const auto*	src			= src_storage->GetComponents( comp_id );
 					auto*		dst			= comp_data[i];
 
 					if ( (src != null) & (dst != null) )
 					{
-						dst = dst + BytesU{comp_size * size_t(start)};
+						dst = dst + (comp_size * usize(start));
 
-						std::memcpy( OUT dst, src, comp_size * count );
+						MemCopy( OUT dst, src, comp_size * count );
 					}
 				}
 
-				for (size_t i = 0; i < count; ++i)
+				for (usize i = 0; i < count; ++i)
 				{
-					_entities.SetArchetype( src_storage->GetEntities()[i], dst_storage.get(), Index_t(size_t(start) + i) );
+					_entities.SetArchetype( src_storage->GetEntities()[i], dst_storage.get(), Index_t(usize(start) + i) );
 				}
 			}
 
@@ -361,19 +361,19 @@ namespace AE::ECS
 				auto	comp_sizes	= src_storage->GetComponentSizes();
 				auto	comp_data	= src_storage->GetComponentData();
 				auto*	ent			= src_storage->GetEntities();
-				size_t	count		= src_storage->Count();
+				usize	count		= src_storage->Count();
 				
-				for (size_t i = 0; i < comp_ids.size(); ++i)
+				for (usize i = 0; i < comp_ids.size(); ++i)
 				{
 					ComponentID	comp_id		= comp_ids[i];
-					size_t		comp_size	= count * size_t(comp_sizes[i]);
+					usize		comp_size	= count * usize(comp_sizes[i]);
 				
 					if ( removeComps.Exists( comp_id ) and
 						 _messages.HasListener<MsgTag_RemovedComponent>( comp_id ))
 					{
 						if ( comp_size > 0 )
 							_messages.AddMulti<MsgTag_RemovedComponent>( comp_id, ArrayView<EntityID>{ ent, count },
-																		 ArrayView<uint8_t>{ Cast<uint8_t>(comp_data[i]), comp_size });
+																		 ArrayView<ubyte>{ Cast<ubyte>(comp_data[i]), comp_size });
 						else
 							_messages.AddMulti<MsgTag_RemovedComponent>( comp_id, ArrayView<EntityID>{ ent, count });
 					}
@@ -399,7 +399,7 @@ namespace AE::ECS
 		const auto	FlushEvents = [this] ()
 		{
 			for (auto iter = _pendingEvents.rbegin(); iter != _pendingEvents.rend(); ++iter) {
-				_eventQueue.push_back( std::move(*iter) );
+				_eventQueue.push_back( RVRef(*iter) );
 			}
 			_pendingEvents.clear();
 		};
@@ -412,7 +412,7 @@ namespace AE::ECS
 
 		for (; _eventQueue.size();)
 		{
-			auto	fn = std::move( _eventQueue.back() );
+			auto	fn = RVRef( _eventQueue.back() );
 			_eventQueue.pop_back();
 
 			fn();
@@ -432,7 +432,7 @@ namespace AE::ECS
 		EXLOCK( _drCheck );
 		CHECK( desc.IsValid() );
 
-		for (size_t i = 0; i < _queries.size(); ++i)
+		for (usize i = 0; i < _queries.size(); ++i)
 		{
 			if ( desc == _queries[i].desc )
 				return QueryID{ CheckCast<uint16_t>(i), 0 };
@@ -458,7 +458,7 @@ namespace AE::ECS
 */
 	void  Registry::_OnNewArchetype (ArchetypePair_t *arch)
 	{
-		for (size_t i = 0; i < _queries.size(); ++i)
+		for (usize i = 0; i < _queries.size(); ++i)
 		{
 			auto&	q = _queries[i];
 

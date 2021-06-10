@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -15,25 +15,25 @@ namespace AE::STL
 =================================================
 */
 	template <typename T>
-	ND_ forceinline constexpr size_t  CountOf (T& value)
+	ND_ forceinline constexpr usize  CountOf (T& value)
 	{
 		return std::size( value );
 	}
 	
 	template <typename ...Types>
-	ND_ forceinline constexpr size_t  CountOf ()
+	ND_ forceinline constexpr usize  CountOf ()
 	{
 		return sizeof... (Types);
 	}
 	
-	template <typename T, size_t I, typename Class>
-	ND_ forceinline constexpr size_t  CountOf (T (Class::*) [I])
+	template <typename T, usize I, typename Class>
+	ND_ forceinline constexpr usize  CountOf (T (Class::*) [I])
 	{
 		return I;
 	}
 	
-	template <size_t I>
-	ND_ forceinline constexpr size_t  CountOf (const BitSet<I> &)
+	template <usize I>
+	ND_ forceinline constexpr usize  CountOf (const BitSet<I> &)
 	{
 		return I;
 	}
@@ -44,33 +44,33 @@ namespace AE::STL
 =================================================
 */
 	template <typename T, typename A>
-	ND_ forceinline BytesU  ArraySizeOf (const std::vector<T,A> &arr)
+	ND_ forceinline Bytes  ArraySizeOf (const std::vector<T,A> &arr)
 	{
-		return BytesU{ arr.size() * sizeof(T) };
+		return Bytes{ arr.size() * sizeof(T) };
 	}
 
-	template <typename T, size_t S>
-	ND_ forceinline BytesU  ArraySizeOf (const FixedArray<T,S> &arr)
+	template <typename T, usize S>
+	ND_ forceinline Bytes  ArraySizeOf (const FixedArray<T,S> &arr)
 	{
-		return BytesU{ arr.size() * sizeof(T) };
+		return Bytes{ arr.size() * sizeof(T) };
 	}
 
 	template <typename T>
-	ND_ forceinline BytesU  ArraySizeOf (const ArrayView<T> &arr)
+	ND_ forceinline Bytes  ArraySizeOf (const ArrayView<T> &arr)
 	{
-		return BytesU{ arr.size() * sizeof(T) };
+		return Bytes{ arr.size() * sizeof(T) };
 	}
 	
-	template <typename T, size_t S>
-	ND_ forceinline constexpr BytesU  ArraySizeOf (const StaticArray<T,S> &)
+	template <typename T, usize S>
+	ND_ forceinline constexpr Bytes  ArraySizeOf (const StaticArray<T,S> &)
 	{
-		return BytesU{ S * sizeof(T) };
+		return Bytes{ S * sizeof(T) };
 	}
 
-	template <typename T, size_t I>
-	ND_ forceinline constexpr BytesU  ArraySizeOf (const T (&)[I])
+	template <typename T, usize I>
+	ND_ forceinline constexpr Bytes  ArraySizeOf (const T (&)[I])
 	{
-		return BytesU{ sizeof(T) * I };
+		return Bytes{ sizeof(T) * I };
 	}
 	
 /*
@@ -79,21 +79,21 @@ namespace AE::STL
 =================================================
 */
 	template <typename T, typename A>
-	ND_ forceinline BytesU  StringSizeOf (const std::basic_string<T,A> &str)
+	ND_ forceinline Bytes  StringSizeOf (const std::basic_string<T,A> &str)
 	{
-		return BytesU{ str.size() * sizeof(T) };
+		return Bytes{ str.size() * sizeof(T) };
 	}
 
 	template <typename T>
-	ND_ forceinline BytesU  StringSizeOf (BasicStringView<T> str)
+	ND_ forceinline Bytes  StringSizeOf (BasicStringView<T> str)
 	{
-		return BytesU{ str.size() * sizeof(T) };
+		return Bytes{ str.size() * sizeof(T) };
 	}
 
 	template <typename T>
-	ND_ forceinline BytesU  StringSizeOf (const NtBasicStringView<T> &str)
+	ND_ forceinline Bytes  StringSizeOf (const NtBasicStringView<T> &str)
 	{
-		return BytesU{ str.size() * sizeof(T) };
+		return Bytes{ str.size() * sizeof(T) };
 	}
 
 /*
@@ -125,14 +125,14 @@ namespace AE::STL
 =================================================
 */
 	template <typename T, typename Key>
-	ND_ forceinline size_t  LowerBound (ArrayView<T> arr, const Key &key)
+	ND_ forceinline usize  LowerBound (ArrayView<T> arr, const Key &key)
 	{
-		size_t	left	= 0;
-		size_t	right	= arr.size();
+		usize	left	= 0;
+		usize	right	= arr.size();
 
 		for (; left < right; )
 		{
-			size_t	mid = (left + right) >> 1;
+			usize	mid = (left + right) >> 1;
 
 			if ( key > arr[mid] )
 				left = mid + 1;
@@ -144,7 +144,7 @@ namespace AE::STL
 	}
 	
 	template <typename T, typename Key>
-	ND_ forceinline size_t  LowerBound (const Array<T> &arr, const Key &key)
+	ND_ forceinline usize  LowerBound (const Array<T> &arr, const Key &key)
 	{
 		return LowerBound( ArrayView<T>{arr}, key );
 	}
@@ -155,7 +155,7 @@ namespace AE::STL
 =================================================
 */
 	template <typename T, typename Key>
-	ND_ forceinline size_t  BinarySearch (ArrayView<T> arr, const Key &key)
+	ND_ forceinline usize  BinarySearch (ArrayView<T> arr, const Key &key)
 	{
 		ptrdiff_t	left	= 0;
 		ptrdiff_t	right	= arr.size();
@@ -177,7 +177,7 @@ namespace AE::STL
 	}
 	
 	template <typename T, typename Key>
-	ND_ forceinline size_t  BinarySearch (const Array<T> &arr, const Key &key)
+	ND_ forceinline usize  BinarySearch (const Array<T> &arr, const Key &key)
 	{
 		return BinarySearch( ArrayView<T>{arr}, key );
 	}
@@ -188,14 +188,14 @@ namespace AE::STL
 =================================================
 */
 	template <typename T, typename Key>
-	ND_ forceinline size_t  ExponentialSearch (ArrayView<T> arr, const Key &key)
+	ND_ forceinline usize  ExponentialSearch (ArrayView<T> arr, const Key &key)
 	{
 		if ( arr.empty() )
 			return UMax;
 
-		size_t	left	= 0;
-		size_t	right	= arr.size();
-		size_t	bound	= 1;
+		usize	left	= 0;
+		usize	right	= arr.size();
+		usize	bound	= 1;
 
 		for (; bound < right and key > arr[bound]; bound *= 2)
 		{}
@@ -205,7 +205,7 @@ namespace AE::STL
 
 		for (; left < right; )
 		{
-			size_t	mid = (left + right) >> 1;
+			usize	mid = (left + right) >> 1;
 
 			if ( key > arr[mid] )
 				left = mid + 1;
@@ -217,7 +217,7 @@ namespace AE::STL
 	}
 	
 	template <typename T, typename Key>
-	ND_ forceinline size_t  ExponentialSearch (const Array<T> &arr, const Key &key)
+	ND_ forceinline usize  ExponentialSearch (const Array<T> &arr, const Key &key)
 	{
 		return ExponentialSearch( ArrayView<T>{arr}, key );
 	}
@@ -227,7 +227,7 @@ namespace AE::STL
 	Reverse
 =================================================
 */
-	namespace _ae_stl_hidden_
+	namespace _hidden_
 	{
 		template <typename Container>
 		class ReverseContainerView
@@ -242,18 +242,18 @@ namespace AE::STL
 			ND_ auto  end ()	{ return std::rend( _container ); }
 		};
 
-	}	// _ae_stl_hidden_
+	}	// _hidden_
 
 	template <typename Container>
 	ND_ auto  Reverse (Container& container)
 	{
-		return _ae_stl_hidden_::ReverseContainerView<Container>{ container };
+		return STL::_hidden_::ReverseContainerView<Container>{ container };
 	}
 
 	template <typename Container>
 	ND_ auto  Reverse (const Container& container)
 	{
-		return _ae_stl_hidden_::ReverseContainerView<const Container>{ container };
+		return STL::_hidden_::ReverseContainerView<const Container>{ container };
 	}
 
 }	// AE::STL

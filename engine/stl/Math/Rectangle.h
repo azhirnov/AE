@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -410,8 +410,8 @@ namespace std
 		#if AE_FAST_HASH
 			return	size_t( AE::STL::HashOf( this, sizeof(*this) ));
 		#else
-			return	size_t( AE::STL::HashOf( value.left )  + AE::STL::HashOf( value.bottom ) +
-							AE::STL::HashOf( value.right ) + AE::STL::HashOf( value.top ) );
+			return	size_t(	AE::STL::HashOf( value.left )  + AE::STL::HashOf( value.bottom ) +
+							AE::STL::HashOf( value.right ) + AE::STL::HashOf( value.top ));
 		#endif
 		}
 	};

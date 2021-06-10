@@ -1,8 +1,11 @@
-# Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+# Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 cmake_minimum_required( VERSION 3.10 FATAL_ERROR )
 
-project( "AE" LANGUAGES C CXX )
+project( "AE"
+		 VERSION 0.2.0
+		 LANGUAGES C CXX )
+
 message( STATUS "==========================================================================\n" )
 message( STATUS "project '${PROJECT_NAME}' generation started" )
 
@@ -14,20 +17,15 @@ message( STATUS "host system: ${CMAKE_HOST_SYSTEM_NAME} (${CMAKE_HOST_SYSTEM_VER
 #----------------------------------------------------------
 
 set( AE_ENABLE_TESTS ON CACHE BOOL "enable tests" )
-set( AE_ENABLE_SIMPLE_COMPILER_OPTIONS OFF CACHE BOOL "use simplified compiler settings if you have problem with it" )
+set( AE_ENABLE_SAMPLES ON CACHE BOOL "enable samples" )
 set( AE_ENABLE_VTUNE_API OFF CACHE BOOL "enable helper functions for Intel VTune profiling" )
-set( AE_ENABLE_MEMLEAK_CHECKS OFF CACHE BOOL "enable memory leak checking" )
-
-#----------------------------------------------------------
-# advanced settings
-
-set( AE_CI_BUILD OFF CACHE BOOL "CI settings" )
-set( AE_CI_TYPE "1" CACHE STRING "CI type: 1 - travis CI, 2 - BuildServer" )
-mark_as_advanced( AE_CI_BUILD AE_CI_TYPE )
+include( "cmake/config.cmake" )
 
 #----------------------------------------------------------
 
 set( CMAKE_DEBUG_POSTFIX "" )
+set( CMAKE_PROFILE_POSTFIX "" )
+set( CMAKE_DEVELOP_POSTFIX "" )
 set( CMAKE_RELEASE_POSTFIX "" )
 set( MAIN_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "" FORCE )
 set( MAIN_BINARY_DIR "${CMAKE_BINARY_DIR}/bin" CACHE INTERNAL "" FORCE )
@@ -45,73 +43,29 @@ endif ()
 
 include( "cmake/external.cmake" )
 add_subdirectory( "engine_tools/project_template" )
-add_subdirectory( "engine/stl" )
-add_subdirectory( "engine/scripting" )
-add_subdirectory( "engine/threading" )
-add_subdirectory( "engine/networking" )
-add_subdirectory( "engine/serializing" )
-add_subdirectory( "engine/platform" )
-add_subdirectory( "engine/graphics" )
-add_subdirectory( "engine/ui" )
-add_subdirectory( "engine/ecs-st" )
-
-#----------------------------------------------------------
-
-# backend
-if (NOT DEFINED ANDROID)
-endif ()
+add_subdirectory( "engine" )
 
 #----------------------------------------------------------
 
 # crash reporting modules
-add_subdirectory( "crash_report/crash_handler" )
-if (NOT DEFINED ANDROID)
-	add_subdirectory( "crash_report/build_server" )
-	add_subdirectory( "crash_report/minidump_parser" )
-	add_subdirectory( "crash_report/crash_report_sender" )
-	add_subdirectory( "crash_report/crash_report_server" )
-endif ()
+add_subdirectory( "crash_report" )
 
 #----------------------------------------------------------
 
 # tools
-if (NOT DEFINED ANDROID)
+if (${AE_DESKTOP})
 	include( "engine_tools/res_pack/build.cmake" )
-	add_subdirectory( "engine_tools/lfas" )
+	add_subdirectory( "engine_tools" )
 endif ()
 
 #----------------------------------------------------------
 
 # tests
 if (${AE_ENABLE_TESTS})
-	if (NOT DEFINED ANDROID)
+	if (${AE_DESKTOP})
 		enable_testing()
 	endif ()
-	
-	add_subdirectory( "tests/stl" )
-	add_subdirectory( "tests/scripting" )
-	add_subdirectory( "tests/threading" )
-	add_subdirectory( "tests/networking" )
-	add_subdirectory( "tests/serializing" )
-	add_subdirectory( "tests/platform" )
-	add_subdirectory( "tests/graphics" )
-	add_subdirectory( "tests/ui" )
-	add_subdirectory( "tests/ecs-st" )
-	
-	if (NOT DEFINED ANDROID)
-		add_subdirectory( "tests/asset_packer" )
-	endif ()
-	
-	# crash reporting modules
-	if (NOT DEFINED ANDROID)
-		add_subdirectory( "tests/minidump_parser" )
-		add_subdirectory( "tests/crash_report_server" )
-		add_subdirectory( "tests/build_server" )
-	endif ()
-
-	if (DEFINED ANDROID)
-		add_subdirectory( "tests/test_launcher" )
-	endif ()
+	add_subdirectory( "tests" )
 endif ()
 
 #----------------------------------------------------------

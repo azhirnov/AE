@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "platform/Android/AndroidWindow.h"
 
@@ -131,7 +131,7 @@ namespace {
 	GetInputEventQueue
 =================================================
 */
-	InputEventQueue const&  AndroidWindow::GetInputEventQueue ()
+	InputEventQueue&  AndroidWindow::GetInputEventQueue ()
 	{
 		EXLOCK( _drCheck );
 		return _eventQueue;
@@ -195,7 +195,7 @@ namespace {
 	{
 		CHECK( not _listener );
 
-		_listener = std::move(listener);
+		_listener = RVRef(listener);
 		
 		if ( _wndState == EState::Destroyed )
 		{
@@ -369,7 +369,7 @@ namespace {
 			{
 				window->_java.nativeWindow = ANativeWindow_fromSurface( env, surface );
 			}
-			CHECK_ERR( window->_java.nativeWindow, void());
+			CHECK_ERRV( window->_java.nativeWindow );
 
 
 			const uint2	old_size = window->_surfSize;
@@ -404,7 +404,7 @@ namespace {
 		{
 			EXLOCK( window->_drCheck );
 
-			CHECK_ERR( window->_java.nativeWindow, void());
+			CHECK_ERRV( window->_java.nativeWindow );
 
 			if ( window->_listener )
 			{
@@ -480,7 +480,7 @@ namespace {
 			JavaArray<jfloat>	touches{ touchData, /*readOnly*/true, JavaEnv{env} };
 
 			InputEventQueue::TouchEvent	ev;
-			ev.count		= uint8_t(count);
+			ev.count		= ubyte(count);
 			ev.action		= _MapTouchAction( action );
 			ev.timestamp	= Clock().Timestamp();
 
@@ -489,7 +489,7 @@ namespace {
 				ev.data[i].pos.x	= touches[j++];
 				ev.data[i].pos.y	= touches[j++];
 				ev.data[i].pressure	= touches[j++];
-				ev.data[i].id		= uint8_t(touches[j++]);
+				ev.data[i].id		= ubyte(touches[j++]);
 			}
 
 			window->_eventQueue.Push( ev );

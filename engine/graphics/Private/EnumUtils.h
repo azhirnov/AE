@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -15,7 +15,7 @@ namespace AE::Graphics
 	EIndex_SizeOf
 =================================================
 */
-	ND_ inline BytesU  EIndex_SizeOf (EIndex value)
+	ND_ inline Bytes  EIndex_SizeOf (EIndex value)
 	{
 		BEGIN_ENUM_CHECKS();
 		switch ( value ) {
@@ -67,7 +67,7 @@ namespace AE::Graphics
 	EVertexType_SizeOf
 =================================================
 */
-	ND_ inline BytesU  EVertexType_SizeOf (EVertexType type)
+	ND_ inline Bytes  EVertexType_SizeOf (EVertexType type)
 	{
 		const EVertexType	scalar_type	= (type & EVertexType::_TypeMask);
 		const uint			vec_size	= uint(type & EVertexType::_VecMask) >> uint(EVertexType::_VecOffset);
@@ -249,6 +249,7 @@ namespace AE::Graphics
 			{ EPixelFormat::RG32I,					32*2,			2,	EType::Int },
 			{ EPixelFormat::RGB32I,					32*3,			3,	EType::Int },
 			{ EPixelFormat::RGBA32I,				32*4,			4,	EType::Int },
+			{ EPixelFormat::R64I,					64*1,			1,	EType::Int },
 			{ EPixelFormat::R8U,					8*1,			1,	EType::UInt },
 			{ EPixelFormat::RG8U,					8*2,			2,	EType::UInt },
 			{ EPixelFormat::RGB8U,					8*3,			3,	EType::UInt },
@@ -262,6 +263,7 @@ namespace AE::Graphics
 			{ EPixelFormat::RGB32U,					32*3,			3,	EType::UInt },
 			{ EPixelFormat::RGBA32U,				32*4,			4,	EType::UInt },
 			{ EPixelFormat::RGB10_A2U,				10*3+2,			4,	EType::UInt },
+			{ EPixelFormat::R64U,					64*1,			1,	EType::UInt },
 			{ EPixelFormat::R16F,					16*1,			1,	EType::SFloat },
 			{ EPixelFormat::RG16F,					16*2,			2,	EType::SFloat },
 			{ EPixelFormat::RGB16F,					16*3,			3,	EType::SFloat },
@@ -348,7 +350,7 @@ namespace AE::Graphics
 	ND_ inline uint  EPixelFormat_BitPerPixel (EPixelFormat value, EImageAspect aspect)
 	{
 		auto	info = EPixelFormat_GetInfo( value );
-		ASSERT( AllBits( info.aspectMask, aspect ) );
+		ASSERT( AllBits( info.aspectMask, aspect ));
 
 		if ( aspect != EImageAspect::Stencil )
 			return info.bitsPerBlock / (info.blockSize.x * info.blockSize.y);

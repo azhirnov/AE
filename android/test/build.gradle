@@ -4,9 +4,9 @@ android {
     compileSdkVersion 28
 
     defaultConfig {
-        applicationId 'AE.Test'
-        minSdkVersion 24 // for vulkan
-        targetSdkVersion 28
+        applicationId 		'AE.Test'
+        minSdkVersion 		24 // for vulkan
+        targetSdkVersion 	28
 		
         ndk {
             abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"

@@ -46,7 +46,7 @@ namespace AE::PipelineCompiler
 
 	struct ShaderInfoHash
 	{
-		ND_ size_t  operator () (const ShaderInfo &value) const;
+		ND_ usize  operator () (const ShaderInfo &value) const;
 	};
 
 
@@ -70,8 +70,8 @@ namespace AE::PipelineCompiler
 
 		BasePipeline ();
 		void SetName (const String &value);
-		bool AddLayout (const ShaderInfo &sh, OUT size_t &merged);
-		bool MergeLayouts (const ShaderInfo &sh, OUT size_t &merged) const;
+		bool AddLayout (const ShaderInfo &sh, OUT usize &merged);
+		bool MergeLayouts (const ShaderInfo &sh, OUT usize &merged) const;
 		void Define (const String &value);
 		ND_ PipelineLayoutUID BuildLayout ();
 	};
@@ -102,8 +102,8 @@ namespace AE::PipelineCompiler
 		void SetName (const String &value)			{ BasePipeline::SetName( value ); }
 		void Define (const String &value)			{ BasePipeline::Define( value ); }
 
-		bool MergePass1 (INOUT size_t &merged);
-		bool MergePass2 (INOUT size_t &merged) const;
+		bool MergePass1 (INOUT usize &merged);
+		bool MergePass2 (INOUT usize &merged) const;
 		bool Build ();
 	};
 	using GraphicsPipelinePtr = AngelScriptHelper::SharedPtr< GraphicsPipelineScriptBinding >;
@@ -130,8 +130,8 @@ namespace AE::PipelineCompiler
 		void SetName (const String &value)			{ BasePipeline::SetName( value ); }
 		void Define (const String &value)			{ BasePipeline::Define( value ); }
 
-		bool MergePass1 (INOUT size_t &merged);
-		bool MergePass2 (INOUT size_t &merged) const;
+		bool MergePass1 (INOUT usize &merged);
+		bool MergePass2 (INOUT usize &merged) const;
 		bool Build ();
 	};
 	using MeshPipelinePtr = AngelScriptHelper::SharedPtr< MeshPipelineScriptBinding >;
@@ -152,8 +152,8 @@ namespace AE::PipelineCompiler
 		void SetName (const String &value)		{ BasePipeline::SetName( value ); }
 		void Define (const String &value)		{ BasePipeline::Define( value ); }
 
-		bool MergePass1 (INOUT size_t &merged);
-		bool MergePass2 (INOUT size_t &merged) const;
+		bool MergePass1 (INOUT usize &merged);
+		bool MergePass2 (INOUT usize &merged) const;
 		bool Build ();
 	};
 	using ComputePipelinePtr = AngelScriptHelper::SharedPtr< ComputePipelineScriptBinding >;

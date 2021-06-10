@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "scripting/Bindings/CoreBindings.h"
 #include "UnitTest_Common.h"
@@ -9,7 +9,7 @@ namespace
 	{
 		const char	script[] = R"#(
 			int main () {
-				array<int>	arr;
+				array<int16>	arr;
 				arr.push_back( 1 );
 				arr.push_back( 2 );
 				arr.insert( /*pos*/1, 3 );
@@ -98,7 +98,7 @@ namespace
 
 extern void UnitTest_Array ()
 {
-	auto	se = MakeShared<ScriptEngine>();
+	auto	se = MakeRC<ScriptEngine>();
 	TEST( se->Create() );
 
 	CoreBindings::BindArray( se );

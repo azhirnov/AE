@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -110,7 +110,7 @@ namespace AE::Math
 	
 
 
-namespace _fgc_hidden_
+namespace _fqv_hidden_
 {
 /*
 =================================================
@@ -162,7 +162,7 @@ namespace _fgc_hidden_
 		return ret;
 	}
 
-}	// _fgc_hidden_
+}	// _fqv_hidden_
 	
 
 /*
@@ -501,7 +501,7 @@ namespace _fgc_hidden_
 	template <int VecLength, typename ValueType, typename Dimension, typename Scale>
 	ND_ constexpr auto  Normalize (const TPhysicalQuantityVec<VecLength, ValueType, Dimension, Scale> &value)
 	{
-		using namespace _fgc_hidden_;
+		using namespace _fqv_hidden_;
 		return PhysicalQuantity<ValueType, Dimension, Scale>{ Normalize( PhysicalQuantityVec_GetNonScaled( value ))};
 	}
 
@@ -513,7 +513,7 @@ namespace _fgc_hidden_
 	template <int VecLength, typename ValueType, typename Dimension, typename Scale>
 	ND_ constexpr auto  Length (const TPhysicalQuantityVec<VecLength, ValueType, Dimension, Scale> &value)
 	{
-		using namespace _fgc_hidden_;
+		using namespace _fqv_hidden_;
 		return PhysicalQuantity<ValueType, Dimension, Scale>{ Length( PhysicalQuantityVec_GetNonScaled( value ))};
 	}
 	
@@ -525,7 +525,7 @@ namespace _fgc_hidden_
 	template <int VecLength, typename ValueType, typename Dimension, typename Scale>
 	ND_ constexpr auto  LengthSqr (const TPhysicalQuantityVec<VecLength, ValueType, Dimension, Scale> &value)
 	{
-		using namespace _fgc_hidden_;
+		using namespace _fqv_hidden_;
 		using DstScale = ValueScaleTempl::template Pow< Scale, 2 >;
 		return PhysicalQuantity<ValueType, Dimension, DstScale>{ LengthSqr( PhysicalQuantityVec_GetNonScaled( value ))};
 	}
@@ -540,11 +540,11 @@ namespace _fgc_hidden_
 	ND_ constexpr auto  Dot (const TPhysicalQuantityVec<VecLength, ValueType, Dimension, LhsScale> &lhs,
 							 const TPhysicalQuantityVec<VecLength, ValueType, Dimension, RhsScale> &rhs)
 	{
-		using namespace _fgc_hidden_;
+		using namespace _fqv_hidden_;
 		using Scale = ValueScaleTempl::template Mul< LhsScale, RhsScale >;
 		using Type  = PhysicalQuantity< ValueType, Dimension, Scale >;
 
-		return Type{ Dot( PhysicalQuantityVec_GetNonScaled( lhs ), PhysicalQuantityVec_GetNonScaled( rhs ) )};
+		return Type{ Dot( PhysicalQuantityVec_GetNonScaled( lhs ), PhysicalQuantityVec_GetNonScaled( rhs ))};
 	}
 
 /*
@@ -557,11 +557,11 @@ namespace _fgc_hidden_
 	ND_ constexpr auto  Cross (const TPhysicalQuantityVec<3, ValueType, Dimension, LhsScale> &lhs,
 							   const TPhysicalQuantityVec<3, ValueType, Dimension, RhsScale> &rhs)
 	{
-		using namespace _fgc_hidden_;
+		using namespace _fqv_hidden_;
 		using Scale = ValueScaleTempl::template Mul< LhsScale, RhsScale >;
 		using Type  = PhysicalQuantity< ValueType, Dimension, Scale >;
 
-		return PhysicalQuantityVec<Type,3>{ Cross( PhysicalQuantityVec_GetNonScaled( lhs ), PhysicalQuantityVec_GetNonScaled( rhs ) )};
+		return PhysicalQuantityVec<Type,3>{ Cross( PhysicalQuantityVec_GetNonScaled( lhs ), PhysicalQuantityVec_GetNonScaled( rhs ))};
 	}
 	
 /*
@@ -574,7 +574,7 @@ namespace _fgc_hidden_
 	ND_ constexpr auto  Distance (const TPhysicalQuantityVec<VecLength, ValueType, Dimension, LhsScale> &lhs,
 								  const TPhysicalQuantityVec<VecLength, ValueType, Dimension, RhsScale> &rhs)
 	{
-		using namespace _fgc_hidden_;
+		using namespace _fqv_hidden_;
 		using Scale = ValueScaleTempl::template Add< LhsScale, RhsScale >;
 		using Type  = PhysicalQuantity< ValueType, Dimension, Scale >;
 
@@ -592,7 +592,7 @@ namespace _fgc_hidden_
 	ND_ constexpr auto  DistanceSqr (const TPhysicalQuantityVec<VecLength, ValueType, Dimension, LhsScale> &lhs,
 								   const TPhysicalQuantityVec<VecLength, ValueType, Dimension, RhsScale> &rhs)
 	{
-		using namespace _fgc_hidden_;
+		using namespace _fqv_hidden_;
 		using Scale = ValueScaleTempl::template Add< LhsScale, RhsScale >;
 		using Type	= PhysicalQuantity< ValueType, Dimension, ValueScaleTempl::template Pow< Scale, 2 > >;
 		

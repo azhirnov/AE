@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -27,8 +27,8 @@ namespace AE::Graphics
 		VSampler () {}
 		~VSampler ();
 
-		bool Create (const VDevice &dev, const VkSamplerCreateInfo &info, StringView dbgName);
-		void Destroy (const VResourceManager &);
+		bool  Create (const VDevice &dev, const VkSamplerCreateInfo &info, StringView dbgName);
+		void  Destroy (const VResourceManagerImpl &);
 
 		ND_ VkSampler	Handle ()	const	{ SHAREDLOCK( _drCheck );  return _sampler; }
 	};
@@ -63,8 +63,8 @@ namespace AE::Graphics
 		VSamplerPack () {}
 		~VSamplerPack ();
 		
-		bool Create (VResourceManager &resMngr, const SharedPtr<RStream> &stream, INOUT SamplerRefs &refs);
-		void Destroy (VResourceManager &resMngr);
+		bool  Create (VResourceManagerImpl &resMngr, const RC<RStream> &stream, INOUT SamplerRefs &refs);
+		void  Destroy (VResourceManagerImpl &resMngr);
 	};
 	
 

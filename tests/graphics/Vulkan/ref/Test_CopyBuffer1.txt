@@ -1,0 +1,426 @@
+--------------------------------------------------
+name: command-buffer-5
+{
+  PipelineBarrier
+    stage: TOP_OF_PIPE ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: 0 ---> TRANSFER_WRITE
+  ----------
+
+  CopyBuffer
+    src: buf_1
+    dst: buf_2
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> TRANSFER_READ
+  ----------
+
+  CopyBuffer
+    src: buf_2
+    dst: SSRB [f:1] [q:Graphics]
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> BOTTOM_OF_PIPE
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> 0
+  ----------
+
+}
+--------------------------------------------------
+--------------------------------------------------
+name: command-buffer-6
+{
+  CopyBuffer
+    src: buf_1
+    dst: buf_2
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> TRANSFER_READ
+      range:  [0 b, 128 b)
+  ----------
+
+  CopyBuffer
+    src: buf_2
+    dst: SSRB [f:0] [q:Graphics]
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> ALL_COMMANDS
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> 0
+      range:  [0 b, 128 b)
+  ----------
+
+}
+--------------------------------------------------
+--------------------------------------------------
+name: command-buffer-7
+{
+  PipelineBarrier
+    stage: TOP_OF_PIPE ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: 0 ---> TRANSFER_WRITE
+  ----------
+
+  CopyBuffer
+    src: buf_1
+    dst: buf_2
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> TRANSFER_READ
+  ----------
+
+  CopyBuffer
+    src: buf_2
+    dst: SSRB [f:1] [q:Graphics]
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> BOTTOM_OF_PIPE
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> 0
+  ----------
+
+}
+--------------------------------------------------
+--------------------------------------------------
+name: command-buffer-8
+{
+  CopyBuffer
+    src: buf_1
+    dst: buf_2
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> TRANSFER_READ
+      range:  [0 b, 128 b)
+  ----------
+
+  CopyBuffer
+    src: buf_2
+    dst: SSRB [f:0] [q:Graphics]
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> ALL_COMMANDS
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> 0
+      range:  [0 b, 128 b)
+  ----------
+
+}
+--------------------------------------------------
+--------------------------------------------------
+name: command-buffer-9
+{
+  PipelineBarrier
+    stage: TOP_OF_PIPE ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: 0 ---> TRANSFER_WRITE
+  ----------
+
+  CopyBuffer
+    src: buf_1
+    dst: buf_2
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> TRANSFER_READ
+  ----------
+
+  CopyBuffer
+    src: buf_2
+    dst: SSRB [f:1] [q:Graphics]
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> BOTTOM_OF_PIPE
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> 0
+  ----------
+
+}
+--------------------------------------------------
+--------------------------------------------------
+name: command-buffer-10
+{
+  CopyBuffer
+    src: buf_1
+    dst: buf_2
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> TRANSFER_READ
+      range:  [0 b, 128 b)
+  ----------
+
+  CopyBuffer
+    src: buf_2
+    dst: SSRB [f:0] [q:Graphics]
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> ALL_COMMANDS
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> 0
+      range:  [0 b, 128 b)
+  ----------
+
+}
+--------------------------------------------------
+--------------------------------------------------
+name: command-buffer-11
+{
+  PipelineBarrier
+    stage: TOP_OF_PIPE ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: 0 ---> TRANSFER_WRITE
+  ----------
+
+  CopyBuffer
+    src: buf_1
+    dst: buf_2
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> TRANSFER_READ
+  ----------
+
+  CopyBuffer
+    src: buf_2
+    dst: SSRB [f:1] [q:Graphics]
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> BOTTOM_OF_PIPE
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> 0
+  ----------
+
+}
+--------------------------------------------------
+--------------------------------------------------
+name: command-buffer-12
+{
+  CopyBuffer
+    src: buf_1
+    dst: buf_2
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> TRANSFER_READ
+      range:  [0 b, 128 b)
+  ----------
+
+  CopyBuffer
+    src: buf_2
+    dst: SSRB [f:0] [q:Graphics]
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> ALL_COMMANDS
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> 0
+      range:  [0 b, 128 b)
+  ----------
+
+}
+--------------------------------------------------
+--------------------------------------------------
+name: command-buffer-13
+{
+  PipelineBarrier
+    stage: TOP_OF_PIPE ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: 0 ---> TRANSFER_WRITE
+  ----------
+
+  CopyBuffer
+    src: buf_1
+    dst: buf_2
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> TRANSFER_READ
+  ----------
+
+  CopyBuffer
+    src: buf_2
+    dst: SSRB [f:1] [q:Graphics]
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> BOTTOM_OF_PIPE
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> 0
+  ----------
+
+}
+--------------------------------------------------
+--------------------------------------------------
+name: command-buffer-14
+{
+  CopyBuffer
+    src: buf_1
+    dst: buf_2
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> TRANSFER_READ
+      range:  [0 b, 128 b)
+  ----------
+
+  CopyBuffer
+    src: buf_2
+    dst: SSRB [f:0] [q:Graphics]
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> ALL_COMMANDS
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> 0
+      range:  [0 b, 128 b)
+  ----------
+
+}
+--------------------------------------------------
+--------------------------------------------------
+name: command-buffer-15
+{
+  PipelineBarrier
+    stage: TOP_OF_PIPE ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: 0 ---> TRANSFER_WRITE
+  ----------
+
+  CopyBuffer
+    src: buf_1
+    dst: buf_2
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> TRANSFER_READ
+  ----------
+
+  CopyBuffer
+    src: buf_2
+    dst: SSRB [f:1] [q:Graphics]
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> BOTTOM_OF_PIPE
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> 0
+  ----------
+
+}
+--------------------------------------------------
+--------------------------------------------------
+name: command-buffer-16
+{
+  CopyBuffer
+    src: buf_1
+    dst: buf_2
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> TRANSFER
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> TRANSFER_READ
+      range:  [0 b, 128 b)
+  ----------
+
+  CopyBuffer
+    src: buf_2
+    dst: SSRB [f:0] [q:Graphics]
+      copy [0, 128) ---> [0, 128)
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> ALL_COMMANDS
+    BufferBarrier:
+      name:   buf_2
+      access: TRANSFER_WRITE ---> 0
+      range:  [0 b, 128 b)
+  ----------
+
+}
+--------------------------------------------------

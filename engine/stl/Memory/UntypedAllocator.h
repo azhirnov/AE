@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -20,29 +20,9 @@ namespace AE::STL
 		static constexpr bool	IsThreadSafe = true;
 
 	// methods
-	#if defined(COMPILER_MSVC) and defined(AE_ENABLE_MEMLEAK_CHECKS)
-
-		ND_ AE_ALLOCATOR static void*  Allocate (BytesU size, const char *file, int line)
+		ND_ AE_ALLOCATOR static void*  Allocate (Bytes size)
 		{
-			return _malloc_dbg( size_t(size), _NORMAL_BLOCK, file, line );
-		}
-		
-		static void  Deallocate (void *ptr)
-		{
-			_free_dbg( ptr, _NORMAL_BLOCK );
-		}
-		
-		static void  Deallocate (void *ptr, BytesU size)
-		{
-			Unused( size );
-			_free_dbg( ptr, _NORMAL_BLOCK );
-		}
-
-	#else
-
-		ND_ AE_ALLOCATOR static void*  Allocate (BytesU size)
-		{
-			return ::operator new ( size_t(size), std::nothrow_t{} );
+			return ::operator new ( usize(size), std::nothrow_t{} );
 		}
 		
 		static void  Deallocate (void *ptr)
@@ -51,12 +31,10 @@ namespace AE::STL
 		}
 		
 		// deallocation with explicit size may be faster
-		static void  Deallocate (void *ptr, BytesU size)
+		static void  Deallocate (void *ptr, Bytes size)
 		{
-			::operator delete ( ptr, size_t(size) );
+			::operator delete ( ptr, usize(size) );
 		}
-
-	#endif	// AE_ENABLE_MEMLEAK_CHECKS
 
 		ND_ bool  operator == (const UntypedAllocator &) const
 		{
@@ -78,47 +56,59 @@ namespace AE::STL
 		static constexpr bool	IsThreadSafe = true;
 
 	// methods
-	#if defined(COMPILER_MSVC) and defined(AE_ENABLE_MEMLEAK_CHECKS)
-
-		ND_ AE_ALLOCATOR static void*  Allocate (BytesU size, BytesU align, const char *file, int line)
+		ND_ AE_ALLOCATOR static void*  Allocate (Bytes size, Bytes align)
 		{
-			return _aligned_malloc_dbg( size_t(size), size_t(align), file, line );
+			return ::operator new ( usize(size), std::align_val_t(usize(align)), std::nothrow_t{} );
 		}
 		
-		static void  Deallocate (void *ptr, BytesU align)
+		static void  Deallocate (void *ptr, Bytes align)
 		{
-			Unused( align );
-			_aligned_free_dbg( ptr );
+			::operator delete ( ptr, std::align_val_t(usize(align)), std::nothrow_t() );
 		}
 		
 		// deallocation with explicit size may be faster
-		static void  Deallocate (void *ptr, BytesU size, BytesU align)
+		static void  Deallocate (void *ptr, Bytes size, Bytes align)
 		{
-			Unused( size, align );
-			_aligned_free_dbg( ptr );
+			::operator delete ( ptr, usize(size), std::align_val_t(usize(align)) );
 		}
-
-	#else
-
-		ND_ AE_ALLOCATOR static void*  Allocate (BytesU size, BytesU align)
-		{
-			return ::operator new ( size_t(size), std::align_val_t(size_t(align)), std::nothrow_t{} );
-		}
-		
-		static void  Deallocate (void *ptr, BytesU align)
-		{
-			::operator delete ( ptr, std::align_val_t(size_t(align)), std::nothrow_t() );
-		}
-		
-		// deallocation with explicit size may be faster
-		static void  Deallocate (void *ptr, BytesU size, BytesU align)
-		{
-			::operator delete ( ptr, size_t(size), std::align_val_t(size_t(align)) );
-		}
-
-	#endif
 
 		ND_ bool  operator == (const UntypedAlignedAllocator &) const
+		{
+			return true;
+		}
+	};
+
+
+	
+	//
+	// Untyped Allocator with base alignment
+	//
+
+	template <usize BaseAlign>
+	struct UntypedAllocatorBaseAlign
+	{
+	// types
+		static constexpr usize	Align			= BaseAlign;
+		static constexpr bool	IsThreadSafe	= true;
+		
+	// methods
+		ND_ AE_ALLOCATOR static void*  Allocate (Bytes size)
+		{
+			return ::operator new ( usize(size), std::align_val_t(BaseAlign), std::nothrow_t{} );
+		}
+		
+		static void  Deallocate (void *ptr)
+		{
+			::operator delete ( ptr, std::align_val_t(BaseAlign), std::nothrow_t() );
+		}
+		
+		// deallocation with explicit size may be faster
+		static void  Deallocate (void *ptr, Bytes size)
+		{
+			::operator delete ( ptr, usize(size), std::align_val_t(BaseAlign) );
+		}
+
+		ND_ bool  operator == (const UntypedAllocatorBaseAlign<BaseAlign> &) const
 		{
 			return true;
 		}
@@ -141,9 +131,5 @@ namespace AE::STL
 		StdAllocator (const UntypedAlignedAllocator &) {}
 	};
 
-	
-#ifdef AE_ENABLE_MEMLEAK_CHECKS
-#	define Allocate( ... )		Allocate( __VA_ARGS__, __FILE__, __LINE__ )
-#endif
 
 }	// AE::STL

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -116,7 +116,7 @@ namespace AE::ECS
 */
 	inline bool  EntityPool::SetArchetype (EntityID id, ArchetypeStorage* storage, LocalIndex_t index)
 	{
-		if ( IsValid( id ) )
+		if ( IsValid( id ))
 		{
 			ASSERT( (storage != null) == (index != InvalidIndex) );
 
@@ -135,7 +135,7 @@ namespace AE::ECS
 */
 	inline bool  EntityPool::GetArchetype (EntityID id, OUT ArchetypeStorage* &storage, OUT LocalIndex_t &index) const
 	{
-		if ( IsValid( id ) )
+		if ( IsValid( id ))
 		{
 			auto& item   = _entities[ id.Index() ];
 			storage	= item.storage;

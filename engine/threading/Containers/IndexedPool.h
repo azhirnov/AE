@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	TODO: use LfIndexedPool instead
 */
@@ -19,15 +19,15 @@ namespace AE::Threading
 	
 	template <typename ValueType,
 			  typename IndexType,
-			  size_t ChunkSize,
-			  size_t MaxChunks = 16,
+			  usize ChunkSize,
+			  usize MaxChunks = 16,
 			  typename AllocatorType = UntypedAlignedAllocator
 			 >
 	struct IndexedPool final
 	{
 		STATIC_ASSERT( ChunkSize > 0 and MaxChunks > 0 );
-		STATIC_ASSERT( IsPowerOfTwo( ChunkSize ) );	// must be power of 2 for best performance
-		STATIC_ASSERT( ToBitMask<size_t>(sizeof(IndexType)*8) >= (ChunkSize * MaxChunks) );
+		STATIC_ASSERT( IsPowerOfTwo( ChunkSize ));	// must be power of 2 for best performance
+		STATIC_ASSERT( ToBitMask<usize>(sizeof(IndexType)*8) >= (ChunkSize * MaxChunks) );
 
 	// types
 	public:
@@ -37,10 +37,10 @@ namespace AE::Threading
 		using Allocator_t	= AllocatorType;
 
 	private:
-		static constexpr size_t	MaxSize = ChunkSize * MaxChunks;
+		static constexpr usize	MaxSize = ChunkSize * MaxChunks;
 
-		using RawIndex_t		= Conditional< (MaxSize > std::numeric_limits<uint32_t>::max()), uint64_t, 
-									Conditional< (MaxSize > std::numeric_limits<uint16_t>::max()), uint32_t, uint16_t >>;
+		using RawIndex_t		= Conditional< (MaxSize > std::numeric_limits<uint>::max()), ulong, 
+									Conditional< (MaxSize > std::numeric_limits<ushort>::max()), uint, ushort >>;
 
 		using IndexCountArray_t	= FixedArray< RawIndex_t, MaxChunks >;
 		using IndexChunk		= StaticArray< RawIndex_t, ChunkSize >;
@@ -128,25 +128,25 @@ namespace AE::Threading
 		
 
 		template <typename ArrayType>
-		ND_ size_t  Assign (size_t numIndices, INOUT ArrayType &arr)
+		ND_ usize  Assign (usize numIndices, INOUT ArrayType &arr)
 		{
 			EXLOCK( _assignOpGuard );
 
 			numIndices = Min( numIndices, arr.capacity() - arr.size(), ChunkSize );
 			ASSERT( numIndices > 0 );
 
-			size_t	result = 0;
+			usize	result = 0;
 
-			for (size_t i = 0, count = _indexCount.size();
+			for (usize i = 0, count = _indexCount.size();
 				 i < count and result < numIndices;
 				 ++i)
 			{
 				auto&			idx_count	= _indexCount[i];
 				auto&			indices		= *_indices[i];
-				const size_t	cnt			= Min( numIndices - result, size_t(idx_count) );
+				const usize	cnt			= Min( numIndices - result, usize(idx_count) );
 				idx_count -= RawIndex_t(cnt);
 
-				for (size_t j = 0; j < cnt; ++j, ++result)
+				for (usize j = 0; j < cnt; ++j, ++result)
 				{
 					arr.emplace_back( indices[idx_count + j] );
 				}
@@ -158,17 +158,17 @@ namespace AE::Threading
 			if ( _indexCount.size() == _indexCount.capacity() )
 				return result;
 
-			const size_t	chunk_idx = _indexCount.size();
+			const usize	chunk_idx = _indexCount.size();
 			_indexCount.push_back( ChunkSize );
 			_CreateChunk( chunk_idx );
 		
 			{
 				auto&			idx_count	= _indexCount [chunk_idx];
 				auto&			indices		= *_indices [chunk_idx];
-				const size_t	cnt			= Min( numIndices - result, size_t(idx_count) );
+				const usize	cnt			= Min( numIndices - result, usize(idx_count) );
 				idx_count -= RawIndex_t(cnt);
 
-				for (size_t j = 0; j < cnt; ++j, ++result)
+				for (usize j = 0; j < cnt; ++j, ++result)
 				{
 					arr.emplace_back( indices[idx_count + j] );
 				}
@@ -181,7 +181,7 @@ namespace AE::Threading
 		{
 			EXLOCK( _assignOpGuard );
 
-			for (size_t i = 0, count = _indexCount.size(); i < count; ++i)
+			for (usize i = 0, count = _indexCount.size(); i < count; ++i)
 			{
 				auto&	idx_count = _indexCount[i];
 
@@ -198,7 +198,7 @@ namespace AE::Threading
 				return false;
 			}
 
-			const size_t	chunk_idx = _indexCount.size();
+			const usize	chunk_idx = _indexCount.size();
 			_indexCount.push_back( ChunkSize );
 			_CreateChunk( chunk_idx );
 
@@ -208,14 +208,14 @@ namespace AE::Threading
 		
 
 		template <typename ArrayType>
-		void  Unassign (size_t count, INOUT ArrayType &arr)
+		void  Unassign (usize count, INOUT ArrayType &arr)
 		{
 			EXLOCK( _assignOpGuard );
 
 			count = Min( count, arr.size() );
 
 			// unassign the last 'count' indices
-			for (size_t i = 0, j = arr.size() - count; i < count; ++i, ++j)
+			for (usize i = 0, j = arr.size() - count; i < count; ++i, ++j)
 			{
 				_Unassign( arr[j] );
 			}
@@ -257,14 +257,14 @@ namespace AE::Threading
 		}
 
 
-		ND_ size_t  size () const
+		ND_ usize  size () const
 		{
 			EXLOCK( _assignOpGuard );
 			return _indexCount.size() * ChunkSize;
 		}
 
 
-		ND_ static constexpr size_t  capacity ()
+		ND_ static constexpr usize  capacity ()
 		{
 			return MaxChunks * ChunkSize;
 		}
@@ -283,16 +283,16 @@ namespace AE::Threading
 		}
 		
 
-		ND_ static constexpr BytesU  MaxDynamicSize ()
+		ND_ static constexpr Bytes  MaxDynamicSize ()
 		{
 			return capacity() * (SizeOf<ValueType> + SizeOf<IndexType>);
 		}
 
 
-		ND_ BytesU  DynamicSize () const
+		ND_ Bytes  DynamicSize () const
 		{
 			EXLOCK( _assignOpGuard );
-			BytesU	sz { sizeof(*this) };
+			Bytes	sz { sizeof(*this) };
 
 			for (auto& idx : _indices) {
 				sz += (idx ? sizeof(*idx) : 0);
@@ -305,16 +305,16 @@ namespace AE::Threading
 
 
 	private:
-		void _CreateChunk (size_t chunkIndex)
+		void _CreateChunk (usize chunkIndex)
 		{
 			// '_indices' must be protected by '_assignOpGuard'
 
 			auto*	idx_chunk = Cast<IndexChunk>(_alloc.Allocate( SizeOf<IndexChunk>, AlignOf<IndexChunk> ));
 			_indices[ chunkIndex ] = idx_chunk;
 
-			for (size_t i = 0; i < ChunkSize; ++i)
+			for (usize i = 0; i < ChunkSize; ++i)
 			{
-				size_t	idx = (ChunkSize-1 - i) + (chunkIndex * ChunkSize);
+				usize	idx = (ChunkSize-1 - i) + (chunkIndex * ChunkSize);
 				ASSERT( idx <= std::numeric_limits<RawIndex_t>::max() );
 
 				(*idx_chunk)[i] = RawIndex_t(idx);
@@ -343,7 +343,7 @@ namespace AE::Threading
 			ASSERT( idx_count < ChunkSize );
 
 			DEBUG_ONLY(
-			for (size_t i = 0; i < idx_count; ++i) {
+			for (usize i = 0; i < idx_count; ++i) {
 				ASSERT( indices[i] != index );
 			})
 

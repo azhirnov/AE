@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "Utils/MemRanges.h"
 using namespace LFAS;
@@ -15,8 +15,8 @@ namespace
 
 	bool  CheckRangeSorting (const MemRanges &mr)
 	{
-		BytesU	prev = 0_b;
-		for (size_t i = 0; i < mr._ranges.size(); ++i)
+		Bytes	prev = 0_b;
+		for (usize i = 0; i < mr._ranges.size(); ++i)
 		{
 			auto&	curr = mr._ranges[i];
 

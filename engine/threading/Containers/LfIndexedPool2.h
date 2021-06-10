@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	This lock-free container has some limitations:
 	- write access by same index must be externally synchronized.
@@ -29,8 +29,8 @@ namespace AE::Threading
 
 	template <typename ValueType,
 			  typename IndexType,
-			  size_t ChunkSize_v = 256,
-			  size_t MaxChunks_v = 16,
+			  usize ChunkSize_v = 256,
+			  usize MaxChunks_v = 16,
 			  typename AllocatorType = UntypedAlignedAllocator
 			 >
 	struct LfIndexedPool2 final
@@ -41,7 +41,7 @@ namespace AE::Threading
 		STATIC_ASSERT( MaxChunks_v > 0 and MaxChunks_v <= 64 );
 		STATIC_ASSERT( IsPowerOfTwo( ChunkSize_v ));	// must be power of 2 to increase performance
 		STATIC_ASSERT( AllocatorType::IsThreadSafe );
-		STATIC_ASSERT( ToBitMask<size_t>(sizeof(IndexType)*8) >= (ChunkSize_v * MaxChunks_v) );
+		STATIC_ASSERT( ToBitMask<usize>(sizeof(IndexType)*8) >= (ChunkSize_v * MaxChunks_v) );
 
 	// types
 	public:
@@ -51,16 +51,16 @@ namespace AE::Threading
 		using Allocator_t		= AllocatorType;
 
 	private:
-		static constexpr size_t	ChunkSize		= ChunkSize_v;
-		static constexpr size_t	MaxChunks		= MaxChunks_v;
-		static constexpr size_t	LowLevel_Count	= (ChunkSize <= 32 ? 32 : 64);
-		static constexpr size_t	HiLevel_Count	= Max( 1u, (ChunkSize + LowLevel_Count - 1) / LowLevel_Count );
+		static constexpr usize	ChunkSize		= ChunkSize_v;
+		static constexpr usize	MaxChunks		= MaxChunks_v;
+		static constexpr usize	LowLevel_Count	= (ChunkSize <= 32 ? 32 : 64);
+		static constexpr usize	HiLevel_Count	= Max( 1u, (ChunkSize + LowLevel_Count - 1) / LowLevel_Count );
 		static constexpr uint	TopWaitCount	= 8;
 		static constexpr uint	HighWaitCount	= 8;
 
-		using LowLevelBits_t	= Conditional< (LowLevel_Count <= 32), uint, uint64_t >;
+		using LowLevelBits_t	= Conditional< (LowLevel_Count <= 32), uint, ulong >;
 		using LowLevels_t		= StaticArray< Atomic< LowLevelBits_t >, HiLevel_Count >;
-		using HiLevelBits_t		= Conditional< (HiLevel_Count <= 32), uint, uint64_t >;
+		using HiLevelBits_t		= Conditional< (HiLevel_Count <= 32), uint, ulong >;
 
 		struct alignas(AE_CACHE_LINE) ChunkInfo
 		{
@@ -73,7 +73,7 @@ namespace AE::Threading
 		using ChunkInfos_t		= StaticArray< ChunkInfo, MaxChunks >;
 		using ValueChunk_t		= StaticArray< Value_t, ChunkSize >;
 		using ChunkData_t		= StaticArray< Atomic< ValueChunk_t *>, MaxChunks >;
-		using TopLevelBits_t	= Conditional< (MaxChunks <= 32), uint, uint64_t >;
+		using TopLevelBits_t	= Conditional< (MaxChunks <= 32), uint, ulong >;
 
 		STATIC_ASSERT( LowLevels_t::value_type::is_always_lock_free );
 		STATIC_ASSERT( decltype(ChunkInfo::hiLevel)::is_always_lock_free );
@@ -127,9 +127,9 @@ namespace AE::Threading
 
 		ND_ Value_t&  operator [] (Index_t index);
 		
-		ND_ static constexpr size_t  capacity ()						{ return ChunkSize * MaxChunks; }
+		ND_ static constexpr usize  capacity ()						{ return ChunkSize * MaxChunks; }
 		
-		ND_ static constexpr BytesU  MaxSize ()							{ return (MaxChunks * SizeOf<ValueChunk_t>) + sizeof(*this); }
+		ND_ static constexpr Bytes  MaxSize ()							{ return (MaxChunks * SizeOf<ValueChunk_t>) + sizeof(Self); }
 
 
 	private:
@@ -149,17 +149,17 @@ namespace AE::Threading
 	constructor
 =================================================
 */
-	template <typename V, typename I, size_t CS, size_t MC, typename A>
+	template <typename V, typename I, usize CS, usize MC, typename A>
 	inline LfIndexedPool2<V,I,CS,MC,A>::LfIndexedPool2 (const Allocator_t &alloc) :
 		_allocator{ alloc }
 	{
 		_topLevel.store( InitialTopLevel, EMemoryOrder::Relaxed );
 
-		for (size_t i = 0; i < MaxChunks; ++i)
+		for (usize i = 0; i < MaxChunks; ++i)
 		{
 			auto&	info = _chunkInfo[i];
 
-			for (size_t j = 0; j < HiLevel_Count; ++j)
+			for (usize j = 0; j < HiLevel_Count; ++j)
 			{
 				info.lowLevel[j].store( 0, EMemoryOrder::Relaxed );
 				info.created[j].store( 0, EMemoryOrder::Relaxed );
@@ -180,7 +180,7 @@ namespace AE::Threading
 	Must be externally synchronized
 =================================================
 */
-	template <typename V, typename I, size_t CS, size_t MC, typename A>
+	template <typename V, typename I, usize CS, usize MC, typename A>
 	template <typename FN>
 	inline void  LfIndexedPool2<V,I,CS,MC,A>::Release (FN &&dtor, bool checkForAssigned)
 	{
@@ -192,7 +192,7 @@ namespace AE::Threading
 		if ( checkForAssigned )
 			CHECK( old_top_level == InitialTopLevel );	// some items is still assigned
 
-		for (size_t i = 0; i < MaxChunks; ++i)
+		for (usize i = 0; i < MaxChunks; ++i)
 		{
 			ValueChunk_t*	data = _chunkData[i].exchange( null, EMemoryOrder::Relaxed );
 			auto&			info = _chunkInfo[i];
@@ -207,7 +207,7 @@ namespace AE::Threading
 			if ( checkForAssigned )
 				CHECK( old_hi_level == InitialHighLevel );	// some items is still assigned
 
-			for (size_t j = 0; j < HiLevel_Count; ++j)
+			for (usize j = 0; j < HiLevel_Count; ++j)
 			{
 				LowLevelBits_t	old_low_level = info.lowLevel[j].exchange( 0, EMemoryOrder::Relaxed );
 				
@@ -217,7 +217,7 @@ namespace AE::Threading
 				LowLevelBits_t	ctor_bits = info.created[j].exchange( 0, EMemoryOrder::Relaxed );
 
 				// call destructor
-				for (size_t c = 0; c < LowLevel_Count; ++c)
+				for (usize c = 0; c < LowLevel_Count; ++c)
 				{
 					if ( ctor_bits & (LowLevelBits_t(1) << c) )
 						dtor( (*data)[ c + j*LowLevel_Count ] );
@@ -235,7 +235,7 @@ namespace AE::Threading
 	Assign
 =================================================
 */
-	template <typename V, typename I, size_t CS, size_t MC, typename A>
+	template <typename V, typename I, usize CS, usize MC, typename A>
 	template <typename FN>
 	inline bool  LfIndexedPool2<V,I,CS,MC,A>::Assign (OUT Index_t &outIndex, FN &&ctor)
 	{
@@ -246,7 +246,7 @@ namespace AE::Threading
 
 			if ( idx >= 0 )
 			{
-				ASSERT( size_t(idx) < _chunkInfo.size() );
+				ASSERT( usize(idx) < _chunkInfo.size() );
 
 				if ( _AssignInChunk( OUT outIndex, idx, ctor ))
 					return true;
@@ -260,7 +260,7 @@ namespace AE::Threading
 	_AssignInChunk
 =================================================
 */
-	template <typename V, typename I, size_t CS, size_t MC, typename A>
+	template <typename V, typename I, usize CS, usize MC, typename A>
 	template <typename FN>
 	inline bool  LfIndexedPool2<V,I,CS,MC,A>::_AssignInChunk (OUT Index_t &outIndex, int chunkIndex, const FN &ctor)
 	{
@@ -294,7 +294,7 @@ namespace AE::Threading
 
 			for (; idx >= 0;)
 			{
-				ASSERT( size_t(idx) < info.lowLevel.size() );
+				ASSERT( usize(idx) < info.lowLevel.size() );
 
 				if ( _AssignInLowLevel( OUT outIndex, chunkIndex, idx, *data, ctor ))
 					return true;
@@ -311,7 +311,7 @@ namespace AE::Threading
 	_AssignInLowLevel
 =================================================
 */
-	template <typename V, typename I, size_t CS, size_t MC, typename A>
+	template <typename V, typename I, usize CS, usize MC, typename A>
 	template <typename FN>
 	inline bool  LfIndexedPool2<V,I,CS,MC,A>::_AssignInLowLevel (OUT Index_t &outIndex, int chunkIndex, int hiLevelIndex, ValueChunk_t &data, const FN &ctor)
 	{
@@ -348,7 +348,7 @@ namespace AE::Threading
 	_UpdateHiLevel
 =================================================
 */
-	template <typename V, typename I, size_t CS, size_t MC, typename A>
+	template <typename V, typename I, usize CS, usize MC, typename A>
 	inline void  LfIndexedPool2<V,I,CS,MC,A>::_UpdateHiLevel (int chunkIndex, int hiLevelIndex)
 	{
 		auto&	info	= _chunkInfo[ chunkIndex ];
@@ -376,7 +376,7 @@ namespace AE::Threading
 	AssignAt
 =================================================
 */
-	template <typename V, typename I, size_t CS, size_t MC, typename A>
+	template <typename V, typename I, usize CS, usize MC, typename A>
 	template <typename FN>
 	inline bool  LfIndexedPool2<V,I,CS,MC,A>::AssignAt (Index_t index, OUT Value_t* &outValue, FN &&ctor)
 	{
@@ -460,7 +460,7 @@ namespace AE::Threading
 	Unassign
 =================================================
 */
-	template <typename V, typename I, size_t CS, size_t MC, typename A>
+	template <typename V, typename I, usize CS, usize MC, typename A>
 	inline bool  LfIndexedPool2<V,I,CS,MC,A>::Unassign (Index_t index)
 	{
 		if_unlikely( index >= capacity() )
@@ -504,7 +504,7 @@ namespace AE::Threading
 	IsAssigned
 =================================================
 */
-	template <typename V, typename I, size_t CS, size_t MC, typename A>
+	template <typename V, typename I, usize CS, usize MC, typename A>
 	inline bool  LfIndexedPool2<V,I,CS,MC,A>::IsAssigned (Index_t index)
 	{
 		if ( index < capacity() )
@@ -527,7 +527,7 @@ namespace AE::Threading
 	and flush cache after writing
 =================================================
 */
-	template <typename V, typename I, size_t CS, size_t MC, typename A>
+	template <typename V, typename I, usize CS, usize MC, typename A>
 	inline V&  LfIndexedPool2<V,I,CS,MC,A>::operator [] (Index_t index)
 	{
 		ASSERT( index < capacity() );

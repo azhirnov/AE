@@ -13,7 +13,7 @@ namespace
 
 		for (uint j = 0; j < 16; ++j)
 		{
-			for (size_t i = 0; i < count; ++i)
+			for (usize i = 0; i < count; ++i)
 			{
 				EntityID	id;
 				TEST( pool.Assign( OUT id ));

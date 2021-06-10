@@ -1,12 +1,11 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #ifdef AE_ENABLE_VULKAN
 
 # include "graphics/Vulkan/VDevice.h"
-# include "graphics/Public/ResourceManager.h"
-# include "graphics/Public/RenderGraph.h"
+# include "graphics/Public/VulkanResourceManager.h"
 
 namespace AE::App
 {
@@ -20,7 +19,7 @@ namespace AE::Graphics
 	// Vulkan Swapchain
 	//
 
-	class VSwapchain : public ISwapchain, public VulkanDeviceFn, public Noncopyable
+	class VSwapchain : protected VulkanDeviceFn, public Noncopyable
 	{
 	// types
 	public:
@@ -32,7 +31,7 @@ namespace AE::Graphics
 		static constexpr uint	MaxSwapchainLength = 8;
 
 		using Images_t		= FixedArray< VkImage, MaxSwapchainLength >;
-		using ImageIDs_t	= FixedArray< UniqueID<GfxResourceID>, MaxSwapchainLength >;
+		using ImageIDs_t	= FixedArray< UniqueID<ImageID>, MaxSwapchainLength >;
 
 
 	// variables
@@ -64,7 +63,7 @@ namespace AE::Graphics
 		explicit VSwapchain (const VDevice &dev);
 
 	public:
-		~VSwapchain () override;
+		~VSwapchain ();
 
 		ND_ bool  IsSupported (VQueuePtr queue) const;
 
@@ -74,11 +73,11 @@ namespace AE::Graphics
 		ND_ VkSurfaceKHR				GetVkSurface ()					const	{ return _vkSurface; }
 		ND_ VkSwapchainKHR				GetVkSwapchain ()				const	{ return _vkSwapchain; }
 
-		ND_ uint2						GetSurfaceSize ()	const override		{ return _surfaceSize; }
+		ND_ uint2						GetSurfaceSize ()				const	{ return _surfaceSize; }
 
 		ND_ VkFormat					GetColorFormat ()				const	{ return _colorFormat; }
 		ND_ VkColorSpaceKHR				GetColorSpace ()				const	{ return _colorSpace; }
-		ND_ VkSurfaceTransformFlagBitsKHR	GetPreTransformFlags ()		const	{ return _preTransform; }
+		ND_ VkSurfaceTransformFlagBitsKHR GetPreTransformFlags ()		const	{ return _preTransform; }
 		ND_ VkPresentModeKHR			GetPresentMode ()				const	{ return _presentMode; }
 		ND_ VkCompositeAlphaFlagBitsKHR	GetCompositeAlphaMode ()		const	{ return _compositeAlpha; }
 
@@ -88,7 +87,7 @@ namespace AE::Graphics
 
 		ND_ VkImageUsageFlagBits		GetImageUsage ()				const	{ return _colorImageUsage; }
 		ND_ VkImage						GetCurrentImage ()				const;
-		ND_ GfxResourceID				GetCurrentImageID ()			const;
+		ND_ ImageID						GetCurrentImageID ()			const;
 	};
 
 	
@@ -111,7 +110,7 @@ namespace AE::Graphics
 		
 		bool  ChooseColorFormat (INOUT VkFormat &colorFormat, INOUT VkColorSpaceKHR &colorSpace) const;
 
-		bool  Create (IResourceManager *					resMngr,
+		bool  Create (VResourceManager *					resMngr,
 					  const uint2							&viewSize,
 					  const VkFormat						colorFormat			= VK_FORMAT_B8G8R8A8_UNORM,
 					  const VkColorSpaceKHR					colorSpace			= VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
@@ -122,14 +121,14 @@ namespace AE::Graphics
 					  const VkImageUsageFlagBits			colorImageUsage		= DefaultImageUsage,
 					  StringView							dbgName				= {});
 
-		void  Destroy (IResourceManager* resMngr);
+		void  Destroy (VResourceManager* resMngr);
 
-		bool  Recreate (IResourceManager* resMngr, const uint2 &size);
+		bool  Recreate (VResourceManager* resMngr, const uint2 &size);
 		
 		ND_ static ArrayView<const char*>  GetInstanceExtensions ();
 
 	private:
-		bool  _CreateColorAttachment (IResourceManager* resMngr);
+		bool  _CreateColorAttachment (VResourceManager* resMngr);
 		void  _PrintInfo () const;
 
 		bool  _CreateSemaphores ();
@@ -159,9 +158,9 @@ namespace AE::Graphics
 	GetCurrentImageID
 =================================================
 */
-	inline GfxResourceID  VSwapchain::GetCurrentImageID () const
+	inline ImageID  VSwapchain::GetCurrentImageID () const
 	{
-		return _currImageIndex < _imageIDs.size() ? GfxResourceID{_imageIDs[_currImageIndex]} : Default;
+		return _currImageIndex < _imageIDs.size() ? ImageID{_imageIDs[_currImageIndex]} : Default;
 	}
 
 }	// AE::Graphics

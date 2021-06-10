@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -17,12 +17,12 @@ namespace AE::STL
 	{
 	// variables
 	private:
-		size_t		_value	= 0;
+		usize		_value	= 0;
 
 	// methods
 	public:
 		constexpr HashVal () {}
-		explicit constexpr HashVal (size_t val) : _value{val} {}
+		explicit constexpr HashVal (usize val) : _value{val} {}
 
 		ND_ constexpr bool	operator == (const HashVal &rhs)	const	{ return _value == rhs._value; }
 		ND_ constexpr bool	operator != (const HashVal &rhs)	const	{ return not (*this == rhs); }
@@ -31,9 +31,9 @@ namespace AE::STL
 
 		constexpr HashVal&	operator << (const HashVal &rhs)
 		{
-			const size_t	mask	= (sizeof(_value)*8 - 1);
-			size_t			val		= rhs._value;
-			size_t			shift	= 8;
+			const usize	mask	= (sizeof(_value)*8 - 1);
+			usize			val		= rhs._value;
+			usize			shift	= 8;
 
 			shift &= mask;
 			_value ^= (val << shift) | (val >> ( ~(shift-1) & mask ));	// TODO: add constant
@@ -46,7 +46,7 @@ namespace AE::STL
 			return HashVal(*this) << rhs;
 		}
 
-		ND_ explicit constexpr operator size_t () const	{ return _value; }
+		ND_ explicit constexpr operator usize () const	{ return _value; }
 	};
 //-----------------------------------------------------------------------------
 
@@ -68,13 +68,13 @@ namespace AE::STL
 	HashOf (float)
 =================================================
 */
-	ND_ forceinline HashVal  HashOf (const float &value, uint32_t ignoreMantissaBits = (23-10))
+	ND_ forceinline HashVal  HashOf (const float &value, uint ignoreMantissaBits = (23-10))
 	{
 		ASSERT( ignoreMantissaBits < 23 );
-		uint32_t	dst;
+		uint	dst;
 		std::memcpy( OUT &dst, &value, sizeof(dst) );
 		dst &= ~((1 << ignoreMantissaBits)-1);
-		return HashVal( std::hash<uint32_t>()( dst ));
+		return HashVal( std::hash<uint>()( dst ));
 	}
 
 /*
@@ -82,13 +82,13 @@ namespace AE::STL
 	HashOf (double)
 =================================================
 */
-	ND_ forceinline HashVal  HashOf (const double &value, uint32_t ignoreMantissaBits = (52-10))
+	ND_ forceinline HashVal  HashOf (const double &value, uint ignoreMantissaBits = (52-10))
 	{
 		ASSERT( ignoreMantissaBits < 52 );
-		uint64_t	dst;
+		ulong	dst;
 		std::memcpy( OUT &dst, &value, sizeof(dst) );
 		dst &= ~((1 << ignoreMantissaBits)-1);
-		return HashVal( std::hash<uint64_t>()( dst ));
+		return HashVal( std::hash<ulong>()( dst ));
 	}
 
 /*
@@ -98,7 +98,7 @@ namespace AE::STL
 	use private api to calculate hash of buffer
 =================================================
 */
-	ND_ forceinline HashVal  HashOf (const void *ptr, size_t sizeInBytes)
+	ND_ forceinline HashVal  HashOf (const void *ptr, usize sizeInBytes)
 	{
 		ASSERT( ptr and sizeInBytes );
 
@@ -106,16 +106,16 @@ namespace AE::STL
 			return HashVal{std::_Hash_array_representation( static_cast<const unsigned char*>(ptr), sizeInBytes )};
 
 		#elif defined(AE_HAS_HASHFN_Murmur2OrCityhash)
-			return HashVal{std::__murmur2_or_cityhash<size_t>()( ptr, sizeInBytes )};
+			return HashVal{std::__murmur2_or_cityhash<usize>()( ptr, sizeInBytes )};
 
 		#elif defined(AE_HAS_HASHFN_HashBytes)
 			return HashVal{std::_Hash_bytes( ptr, sizeInBytes, 0 )};
 
 		#else
 			AE_COMPILATION_MESSAGE( "used fallback hash function" )
-			const uint8_t*	buf		= static_cast<const uint8_t*>(ptr);
+			const ubyte*	buf		= static_cast<const ubyte*>(ptr);
 			HashVal			result;
-			for (size_t i = 0; i < sizeInBytes; ++i) {
+			for (usize i = 0; i < sizeInBytes; ++i) {
 				result << HashVal{buf[i]};
 			}
 			return result;

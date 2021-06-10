@@ -225,25 +225,25 @@ namespace AE::ECS::Systems
 
 		void AddSystem (EntityID entId, UniquePtr<ICameraSystem> system)
 		{
-			CHECK_ERR( system, void());
+			CHECK_ERRV( system );
 			_owner.AssignComponent<Components::CameraSystemTag>( entId );
 
-			_cameraSystems.insert_or_assign( entId, std::move(system) );
+			_cameraSystems.insert_or_assign( entId, RVRef(system) );
 		}
 
 		void Execute ()
 		{
 			// find primary cameras
 			_owner.Execute( _qPrimaryCameras,
-				[this] (ArrayView<Tuple< size_t, ReadAccess<EntityID>, ReadAccess<Components::Viewport>, Require<PrimaryCameraTag> >> chunks)
+				[this] (ArrayView<Tuple< usize, ReadAccess<EntityID>, ReadAccess<Components::Viewport>, Require<PrimaryCameraTag> >> chunks)
 				{
 					for (auto& chunk : chunks)
 					{
-						const size_t	count		= chunk.Get<0>();
+						const usize	count		= chunk.Get<0>();
 						auto			entities	= chunk.Get<1>();
 						auto			viewports	= chunk.Get<2>();
 
-						for (size_t i = 0; i < count; ++i)
+						for (usize i = 0; i < count; ++i)
 						{
 							auto	iter = _cameraSystems.find( entities[i] );
 							if ( iter != _cameraSystems.end() )

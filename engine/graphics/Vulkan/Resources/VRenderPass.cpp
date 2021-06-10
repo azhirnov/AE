@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -25,34 +25,35 @@ namespace AE::Graphics
 	constructor
 =================================================
 */
-	VRenderPass::VRenderPass (ArrayView<VLogicalRenderPass*> logicalPasses)
+	VRenderPass::VRenderPass (VResourceManagerImpl &resMngr, ArrayView<RenderPassDesc> passes)
 	{
-		_Initialize( logicalPasses );
+		_Initialize( resMngr, passes );
 	}
 		
-	bool VRenderPass::_Initialize (ArrayView<VLogicalRenderPass*> logicalPasses)
-	{
+	bool  VRenderPass::_Initialize (VResourceManagerImpl &resMngr, ArrayView<RenderPassDesc> passes)
+	{/*
 		EXLOCK( _drCheck );
-		CHECK_ERR( logicalPasses.size() == 1 );		// not supported yet
+		CHECK_ERR( passes.size() == 1 );		// not supported yet
 
-		const auto *	pass		= logicalPasses.front();
+		const auto&		pass		= passes.front();
 		uint			max_index	= 0;
 
 		_attachments.resize( _attachments.capacity() );
 
-		_subpassOutput.resize( logicalPasses.size() );
-		_subpasses.resize( logicalPasses.size() );
+		_subpassOutput.resize( passes.size() );
+		_subpasses.resize( passes.size() );
 
 		VkSubpassDescription&	subpass	= _subpasses[0];
 
 		subpass.pipelineBindPoint	= VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpass.pColorAttachments	= _attachmentRef.end();
 
-		_subpassOutput[0]			= pass->GetRenderPassOutput();
+		_subpassOutput[0]			= resMngr.GetRenderPassOutput( pass.passName );
+		CHECK_ERR( _subpassOutput[0] );
 		
 
 		// setup color attachments
-		for (auto& rt : pass->GetColorTargets())
+		for (auto& rt : pass.GetColorTargets())
 		{
 			const VkImageLayout			layout	= rt.layout;
 			VkAttachmentDescription&	desc	= _attachments[ rt.index ];
@@ -76,9 +77,9 @@ namespace AE::Graphics
 
 
 		// setup depth stencil attachment
-		if ( pass->GetDepthStencilTarget().IsDefined() )
+		if ( pass.GetDepthStencilTarget().IsDefined() )
 		{
-			const auto&					ds_target	= pass->GetDepthStencilTarget();
+			const auto&					ds_target	= pass.GetDepthStencilTarget();
 			const VkImageLayout			layout		= ds_target.layout;
 			VkAttachmentDescription&	desc		= _attachments[max_index];
 
@@ -109,7 +110,7 @@ namespace AE::Graphics
 		_createInfo.pSubpasses		= _subpasses.data();
 
 
-		_CalcHash( OUT _hash, OUT _attachmentHash, OUT _subpassesHash );
+		_CalcHash( OUT _hash, OUT _attachmentHash, OUT _subpassesHash );*/
 		return true;
 	}
 
@@ -118,7 +119,7 @@ namespace AE::Graphics
 	_CalcHash
 =================================================
 */
-	void VRenderPass::_CalcHash (OUT HashVal &mainHash, OUT HashVal &attachmentHash, OUT SubpassesHash_t &subpassesHash) const
+	void  VRenderPass::_CalcHash (OUT HashVal &mainHash, OUT HashVal &attachmentHash, OUT SubpassesHash_t &subpassesHash) const
 	{
 		ASSERT( _createInfo.pNext == null );
 		
@@ -212,7 +213,7 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool VRenderPass::Create (const VDevice &dev, StringView dbgName)
+	bool  VRenderPass::Create (const VDevice &dev, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( _renderPass == VK_NULL_HANDLE );
@@ -232,7 +233,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void VRenderPass::Destroy (VResourceManager &resMngr)
+	void  VRenderPass::Destroy (VResourceManagerImpl &resMngr)
 	{
 		EXLOCK( _drCheck );
 
@@ -269,7 +270,7 @@ namespace AE::Graphics
 	operator ==
 =================================================
 */
-	inline bool operator == (const VkAttachmentDescription &lhs, const VkAttachmentDescription &rhs)
+	ND_ inline bool  operator == (const VkAttachmentDescription &lhs, const VkAttachmentDescription &rhs)
 	{
 		return	lhs.flags			== rhs.flags			and
 				lhs.format			== rhs.format			and
@@ -287,7 +288,7 @@ namespace AE::Graphics
 	operator ==
 =================================================
 */
-	inline bool operator == (const VkAttachmentReference &lhs, const VkAttachmentReference &rhs)
+	ND_ inline bool  operator == (const VkAttachmentReference &lhs, const VkAttachmentReference &rhs)
 	{
 		return	lhs.attachment	== rhs.attachment	and
 				lhs.layout		== rhs.layout;
@@ -298,7 +299,7 @@ namespace AE::Graphics
 	operator ==
 =================================================
 */
-	inline bool operator == (const VkSubpassDescription &lhs, const VkSubpassDescription &rhs)
+	ND_ inline bool  operator == (const VkSubpassDescription &lhs, const VkSubpassDescription &rhs)
 	{
 		using AttachView	= AE::STL::ArrayView< VkAttachmentReference >;
 		using PreserveView	= AE::STL::ArrayView< uint32_t >;
@@ -321,7 +322,7 @@ namespace AE::Graphics
 	operator ==
 =================================================
 */
-	inline bool operator == (const VkSubpassDependency &lhs, const VkSubpassDependency &rhs)
+	ND_ inline bool  operator == (const VkSubpassDependency &lhs, const VkSubpassDependency &rhs)
 	{
 		return	lhs.srcSubpass		== rhs.srcSubpass		and
 				lhs.dstSubpass		== rhs.dstSubpass		and
@@ -341,7 +342,7 @@ namespace AE::Graphics
 	operator ==
 =================================================
 */
-	bool VRenderPass::operator == (const VRenderPass &rhs) const
+	bool  VRenderPass::operator == (const VRenderPass &rhs) const
 	{
 		SHAREDLOCK( _drCheck );
 		SHAREDLOCK( rhs._drCheck );

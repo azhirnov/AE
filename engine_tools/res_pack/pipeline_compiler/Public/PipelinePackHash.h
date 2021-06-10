@@ -110,7 +110,7 @@ namespace AE::PipelineCompiler
 					CHECK_ERR( un.combinedImageWithSampler.samplerOffsetInStorage + un.arraySize <= desc.samplerStorage.size() );
 					res << ImageHash( un.combinedImageWithSampler.image );
 
-					for (size_t i = 0; i < un.arraySize; ++i) {
+					for (usize i = 0; i < un.arraySize; ++i) {
 						res << HashOf( desc.samplerStorage[ un.combinedImageWithSampler.samplerOffsetInStorage + i ] );
 					}
 					break;
@@ -126,7 +126,7 @@ namespace AE::PipelineCompiler
 				case EDescriptorType::ImmutableSampler :
 					CHECK_ERR( un.immutableSampler.offsetInStorage + un.arraySize <= desc.samplerStorage.size() );
 					
-					for (size_t i = 0; i < un.arraySize; ++i) {
+					for (usize i = 0; i < un.arraySize; ++i) {
 						res << HashOf( desc.samplerStorage[ un.immutableSampler.offsetInStorage + i ] );
 					}
 					break;
@@ -298,7 +298,7 @@ namespace AE::PipelineCompiler
 			return false;
 		}
 
-		for (size_t i = 0; i < lhs.uniforms.size(); ++i)
+		for (usize i = 0; i < lhs.uniforms.size(); ++i)
 		{
 			auto&	l_pair	= lhs.uniforms[i];
 			auto&	r_pair	= rhs.uniforms[i];
@@ -355,7 +355,7 @@ namespace AE::PipelineCompiler
 					CHECK_ERR( l_un.combinedImageWithSampler.samplerOffsetInStorage + l_un.arraySize <= lhs.samplerStorage.size() );
 					CHECK_ERR( r_un.combinedImageWithSampler.samplerOffsetInStorage + r_un.arraySize <= rhs.samplerStorage.size() );
 
-					for (size_t j = 0; j < l_un.arraySize; ++j) {
+					for (usize j = 0; j < l_un.arraySize; ++j) {
 						if ( lhs.samplerStorage[ l_un.combinedImageWithSampler.samplerOffsetInStorage + j ] != rhs.samplerStorage[ r_un.combinedImageWithSampler.samplerOffsetInStorage + j ] )
 							return false;
 					}
@@ -373,7 +373,7 @@ namespace AE::PipelineCompiler
 					CHECK_ERR( l_un.immutableSampler.offsetInStorage + l_un.arraySize <= lhs.samplerStorage.size() );
 					CHECK_ERR( r_un.immutableSampler.offsetInStorage + r_un.arraySize <= rhs.samplerStorage.size() );
 
-					for (size_t j = 0; j < l_un.arraySize; ++j) {
+					for (usize j = 0; j < l_un.arraySize; ++j) {
 						if ( lhs.samplerStorage[ l_un.immutableSampler.offsetInStorage + j ] != rhs.samplerStorage[ r_un.immutableSampler.offsetInStorage + j ] )
 							return false;
 					}
@@ -414,7 +414,7 @@ namespace AE::PipelineCompiler
 		if ( lhs.size() != rhs.size() )
 			return false;
 
-		for (size_t i = 0; i < lhs.size(); ++i)
+		for (usize i = 0; i < lhs.size(); ++i)
 		{
 			if ( not (lhs[i] == rhs[i]) )
 				return false;

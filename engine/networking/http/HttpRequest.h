@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	Get		- The HTTP GET method is used to **read** (or retrieve) a representation of a resource.
 			  GET requests are used only to read data and not change it.
@@ -58,7 +58,7 @@ namespace AE::Networking
 	// methods
 	public:
 		HttpRequestDesc () {}
-		explicit HttpRequestDesc (String url) : _url{ std::move(url) } {}
+		explicit HttpRequestDesc (String url) : _url{ RVRef(url) } {}
 		
 		HttpRequestDesc&  Url (String value) &;
 		HttpRequestDesc&& Url (String value) &&;
@@ -78,8 +78,8 @@ namespace AE::Networking
 		// creates stream internally
 		template <typename T> HttpRequestDesc&  Content (ArrayView<T> value) &;
 		template <typename T> HttpRequestDesc&& Content (ArrayView<T> value) &&;
-		HttpRequestDesc&  Content (Array<uint8_t> &&value) &;
-		HttpRequestDesc&& Content (Array<uint8_t> &&value) &&;
+		HttpRequestDesc&  Content (Array<ubyte> &&value) &;
+		HttpRequestDesc&& Content (Array<ubyte> &&value) &&;
 		HttpRequestDesc&  Content (StringView value) &;
 		HttpRequestDesc&& Content (StringView value) &&;
 
@@ -89,7 +89,7 @@ namespace AE::Networking
 	};
 
 
-	using Request	= SharedPtr< class HttpRequest >;
+	using Request	= RC< class HttpRequest >;
 
 
 	//
@@ -134,7 +134,7 @@ namespace AE::Networking
 		{
 			ECode			code		= ECode::Unknown;
 			Headers_t		headers;
-			Array<uint8_t>	content;
+			Array<ubyte>	content;
 		};
 		using ResponsePtr	= UniquePtr< ResponseData >;
 
@@ -142,8 +142,8 @@ namespace AE::Networking
 	// variables
 	protected:
 		ResponsePtr			_response;
-		Atomic<size_t>		_bytesSent;
-		Atomic<size_t>		_bytesReceived;
+		Atomic<usize>		_bytesSent;
+		Atomic<usize>		_bytesReceived;
 
 
 	// methods
@@ -152,8 +152,8 @@ namespace AE::Networking
 		
 		ND_ ResponsePtr  Response ();
 		
-		ND_ BytesU		Sent ();
-		ND_ BytesU		Received ();
+		ND_ Bytes		Sent ();
+		ND_ Bytes		Received ();
 	};
 
 	
@@ -174,7 +174,7 @@ namespace AE::Networking
 	inline HttpRequestDesc&&  HttpRequestDesc::Content (ArrayView<T> value) &&
 	{
 		_content = MakeUnique<MemRStream>( value );
-		return std::move(*this);
+		return RVRef(*this);
 	}
 
 }	// AE::Networking

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -17,7 +17,7 @@ namespace AE::Graphics
 
 
 	// Float types
-#	ifdef AE_HALF_TYPE
+#	ifdef AE_HALF_TYPE // TODO
 	template <>
 	struct VertexDesc <half>
 	{
@@ -43,24 +43,24 @@ namespace AE::Graphics
 
 	// Integer types
 	template <>
-	struct VertexDesc <int8_t>
+	struct VertexDesc <sbyte>
 	{
-		typedef int8_t					type;
+		typedef sbyte					type;
 		static const EVertexType		attrib	= EVertexType::Byte;
 	};
 
 	template <>
-	struct VertexDesc <uint8_t>
+	struct VertexDesc <ubyte>
 	{
-		typedef uint8_t					type;
+		typedef ubyte					type;
 		static const EVertexType		attrib	= EVertexType::UByte;
 	};
 
 
 	template <>
-	struct VertexDesc <int16_t>
+	struct VertexDesc <sshort>
 	{
-		typedef int16_t					type;
+		typedef sshort					type;
 		static const EVertexType		attrib	= EVertexType::Short;
 	};
 
@@ -88,16 +88,16 @@ namespace AE::Graphics
 
 
 	template <>
-	struct VertexDesc <int64_t>
+	struct VertexDesc <slong>
 	{
-		typedef int64_t					type;
+		typedef slong					type;
 		static const EVertexType		attrib	= EVertexType::Long;
 	};
 
 	template <>
-	struct VertexDesc <uint64_t>
+	struct VertexDesc <ulong>
 	{
-		typedef uint64_t				type;
+		typedef ulong				type;
 		static const EVertexType		attrib	= EVertexType::ULong;
 	};
 

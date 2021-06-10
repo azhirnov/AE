@@ -1,4 +1,10 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
+
+#pragma once
+
+#ifdef AE_ENABLE_VULKAN
+# include "graphics/Vulkan/RenderGraph/VCommandPoolManager.h"
+# include "graphics/Vulkan/RenderGraph/VBakedCommands.h"
 
 namespace AE::Graphics
 {
@@ -7,399 +13,245 @@ namespace AE::Graphics
 	// Vulkan Command Batch
 	//
 
-	class VCommandBatch
+	class VCommandBatch final : public IFence
 	{
+		friend class VRenderGraph;
+		friend class VRenderTask;
+
 	// types
 	public:
-		struct OnBufferDataLoadedEvent
+
+		struct CmdBufPool
 		{
-			using Callback_t = Function< void (const BufferView &) >;
+		// types
+		public:
+			union Cmdbuf
+			{
+				VkCommandBuffer		vk;
+				VBakedCommands		baked;
+
+				Cmdbuf () {}
+			};
+			using Pool_t = StaticArray< Cmdbuf, GraphicsConfig::MaxCmdBufPerBatch >;
+
+
+		// variables
+		private:
+			Atomic<uint>	_ready;		// 1 - commands recording have been completed and added to pool
+			Atomic<uint>	_cmdTypes;	// 0 - vulkan cmd buffer, 1 - backed commands
+			Atomic<uint>	_counter;	// index in '_pool'
+			uint			_count;		// number of commands in '_pool'
+			Pool_t			_pool;
+
+			DEBUG_ONLY(
+				Threading::RWDataRaceCheck	_drCheck;	// for '_pool' and '_count'
+			)
+
+
+		// methods
+		public:
+			CmdBufPool ();
+
+			// user api
+			ND_ uint  Acquire ();
+				void  Add (INOUT uint& idx, VkCommandBuffer cmdbuf);
+				void  Add (INOUT uint& idx, VBakedCommands &&ctx);
+				void  Complete (INOUT uint& idx);
+
+			// owner api
+				void  Lock ();
+				void  Reset ();
+			ND_ bool  IsReady ();
+			ND_ bool  IsLocked ();
 			
-			Callback_t		callback;
-			BufferView		view;
-
-			OnBufferDataLoadedEvent () {}
-			OnBufferDataLoadedEvent (Callback_t&& cb, BufferView&& view) : callback{std::move(cb)}, view{std::move(view)} {}
+				void  GetCommands (OUT Array<VkCommandBuffer> &cmdbufs);
+				bool  CommitIndirectBuffers (VCommandPoolManager &cmdPoolMngr, EQueueType queue, ECommandBufferType cmdbufType);
 		};
-
-		
-		struct OnImageDataLoadedEvent
-		{
-			using Callback_t	= Function< void (const ImageView &) >;
-
-			Callback_t		callback;
-			ImageView		view;
-
-			OnImageDataLoadedEvent () {}
-			OnImageDataLoadedEvent (Callback_t&& cb, ImageView&& view) : callback{std::move(cb)}, view{std::move(view)} {}
-		};
-		//---------------------------------------------------------------------
 
 
 	private:
-		struct StagingBuffer
+		using GpuDependencies_t	= FixedArray< RC<VCommandBatch>, 8 >;
+
+		enum class EStatus : uint
 		{
-			GfxResourceID		bufferId;
-			BytesU				capacity;
-			BytesU				size;
-			StagingBufferIdx	index;
-			
-			void *				mappedPtr	= null;
-			BytesU				memOffset;					// can be used to flush memory ranges
-			VkDeviceMemory		mem			= VK_NULL_HANDLE;
-			bool				isCoherent	= false;
-
-			ND_ bool	IsFull ()	const	{ return size >= capacity; }
-			ND_ bool	Empty ()	const	{ return size == 0_b; }
+			Initial,		// after _Create()
+			Pending,		// after Submit()		// command batch is ready to be submitted to the GPU
+			Submitted,		// after _OnSubmit()	// command batch is already submitted to the GPU
+			Complete,		// after _OnComlete()	// command batch has been executed in the GPU
 		};
-		using StagingBuffers_t	= FixedArray< StagingBuffer, 8 >;
-
-
-		using Semaphores_t		= FixedArray< VkSemaphore, 16 >;
-		using Fences_t			= FixedArray< VkFence, 8 >;
-		using CmdBuffers_t		= FixedArray< UniqueID<BakedCommandBufferID>, 16 >;
 
 
 	// variables
 	private:
-		VkFence				_fence		= VK_NULL_HANDLE;
+		// for render tasks
+		CmdBufPool			_cmdPool;
 
-		Atomic<uint16_t>	_generation	{0};
+		// gpu to cpu dependency
+		VkFence				_fence			= VK_NULL_HANDLE;
+		Atomic<EStatus>		_status			{EStatus::Initial};
 
-		Semaphores_t		_semaphores;
-		Fences_t			_fences;
-		CmdBuffers_t		_cmdBuffers;
+		// dependencies from another batches
+		Threading::SpinLock	_depsQuard;
+		GpuDependencies_t	_dependsOn;
+
+		EQueueType			_queueType		= Default;
+		ubyte				_frameId		= UMax;
 		
-		// staging buffers
-		struct {
-			StagingBuffers_t					hostToDevice;	// CPU write, GPU read
-			StagingBuffers_t					deviceToHost;	// GPU write, CPU read
-			Array< OnBufferDataLoadedEvent >	onBufferLoadedEvents;
-			Array< OnImageDataLoadedEvent >		onImageLoadedEvents;
-		}					_staging;
+		const ubyte			_indexInPool;
 
-		VResourceManager&	_resMngr;
+		DEBUG_ONLY(
+			uint			_frameUID;
+			String			_dbgName;
+		)
+			
 
-		bool				_isComplete	= false;
+	// methods
+	public:
+		~VCommandBatch ();
+
+
+	// user api (thread safe)
+	public:
+		template <typename TaskType, typename ...Ctor, typename ...Deps>
+		AsyncTask	Add (const Tuple<Ctor...>&	ctor	= Default,
+						 const Tuple<Deps...>&	deps	= Default,
+						 StringView				dbgName	= Default);
+
+		bool  AddDependency (RC<VCommandBatch> batch);
+
+		bool  Submit (ESubmitMode mode = ESubmitMode::Deferred);
+
+		ND_ EQueueType	GetQueueType ()		const	{ return _queueType; }
+		ND_ uint		GetFrameIndex ()	const	{ return _frameId; }
+		ND_ bool		IsSubmitted ();
+
+
+	// IFence
+	public:
+		ND_ bool  Wait (nanoseconds timeout) override;
+		ND_ bool  IsComplete () override;
+
+
+	// render graph api
+	private:
+		explicit VCommandBatch (uint indexInPool);
+
+		bool  _Create (EQueueType queue, uint frameId, uint frameUID, StringView dbgName);
+		void  _OnSubmit ();
+		void  _OnComplete ();
+
+		void  _ReleaseObject () override;
+	};
+	
+
+
+	//
+	// Vulkan Render Task interface
+	//
+
+	class VRenderTask : public Threading::IAsyncTask
+	{
+		friend class VCommandBatch;
+
+	// variables
+	private:
+		RC<VCommandBatch>			_batch;
+		VCommandBatch::CmdBufPool&	_pool;
+		uint						_submitIdx	= UMax;
 		
-		RWDataRaceCheck		_drCheck;
+		DEBUG_ONLY(
+			const String			_dbgName;
+		)
 
 
 	// methods
 	public:
-		VCommandBatch (VResourceManager &rm) : _resMngr{rm} {}
-		~VCommandBatch () {}
-
-		void  Initialize ();
-		bool  OnComplete ();
-
-		void  AddSemaphore (VkSemaphore sem);
-		void  AddFence (VkFence fence);
-		void  AddCmdBuffer (UniqueID<BakedCommandBufferID> &&id);
-
-		// staging buffer
-		bool  GetWritable (const BytesU srcRequiredSize, const BytesU blockAlign, const BytesU offsetAlign, const BytesU dstMinSize,
-						   OUT GfxResourceID &dstBuffer, OUT BytesU &dstOffset, OUT BufferView::Data &outDataRange);
-		bool  GetReadable (const BytesU srcRequiredSize, const BytesU blockAlign, const BytesU offsetAlign, const BytesU dstMinSize,
-						   OUT GfxResourceID &dstBuffer, OUT BytesU &dstOffset, OUT BufferView::Data &outDataRange);
-		bool  AddDataLoadedEvent (OnImageDataLoadedEvent &&);
-		bool  AddDataLoadedEvent (OnBufferDataLoadedEvent &&);
-
-		ND_ bool	IsComplete ()	const	{ SHAREDLOCK( _drCheck );  return _isComplete; }
-		ND_ uint	Generation ()	const	{ SHAREDLOCK( _drCheck );  return _generation.load( EMemoryOrder::Relaxed ); }
-
-	private:
-		bool  _ReleaseFencesAndSemaphores ();
-		void  _ProcessReadOps ();
+		VRenderTask (RC<VCommandBatch> batch, StringView dbgName) :
+			IAsyncTask{ EThread::Renderer },
+			_batch{ RVRef(batch) },
+			_pool{ _batch->_cmdPool },
+			_submitIdx{ _pool.Acquire() }
+			DEBUG_ONLY(, _dbgName{ dbgName })
+		{}
 		
-		bool  _GetStaging (StagingBuffers_t &stagingBuffers, EBufferUsage usage,
-						   const BytesU srcRequiredSize, const BytesU blockAlign, const BytesU offsetAlign, const BytesU dstMinSize,
-						   OUT GfxResourceID &dstBuffer, OUT BytesU &dstOffset, OUT BufferView::Data &outDataRange);
+		ND_ RC<VCommandBatch>	GetBatch ()	const	{ return _batch; }
+
+
+	// IAsyncTask
+	public:
+		void  OnCancel () override final;
+
+		DEBUG_ONLY( NtStringView  DbgName () const override final { return _dbgName; })
+
+
+	protected:
+		void  OnFailure ();
+
+		template <typename CmdBufType>
+		void  Execute (CmdBufType &cmdbuf);
 	};
-
 	
 
+
 /*
 =================================================
-	Initialize
+	Add
 =================================================
 */
-	void  VCommandBatch::Initialize ()
+	template <typename TaskType, typename ...Ctor, typename ...Deps>
+	inline AsyncTask  VCommandBatch::Add (const Tuple<Ctor...>&	ctorArgs,
+										  const Tuple<Deps...>&	deps,
+										  StringView			dbgName)
 	{
-		_isComplete = false;
+		ASSERT( not IsSubmitted() );
+
+		auto	task = ctorArgs.Apply([this, dbgName] (auto&& ...args) { return MakeRC<TaskType>( FwdArg<decltype(args)>(args)..., GetRC(), dbgName ); });
+
+		if ( task->_submitIdx != UMax and Threading::Scheduler().Run( task, deps ))
+			return task;
+		else
+			return null;
 	}
+//-----------------------------------------------------------------------------
 
-/*
-=================================================
-	OnComplete
-=================================================
-*/
-	bool  VCommandBatch::OnComplete ()
-	{
-		EXLOCK( _drCheck );
-
-		if ( _isComplete )
-			return true;
-
-		CHECK_ERR( _ReleaseFencesAndSemaphores() );
-
-		_ProcessReadOps();
-
-		for (auto& cb : _cmdBuffers) {
-			_resMngr.ReleaseResource( cb );
-		}
-		_cmdBuffers.clear();
-
-		_isComplete = true;
-		
-		_generation.fetch_add( 1, EMemoryOrder::Relaxed );
-		return true;
-	}
-	
-/*
-=================================================
-	_ReleaseFencesAndSemaphores
-=================================================
-*/
-	bool  VCommandBatch::_ReleaseFencesAndSemaphores ()
-	{
-		auto&	dev = _resMngr.GetDevice();
-
-		if ( _fences.size() )
-		{
-			VK_CHECK( dev.vkWaitForFences( dev.GetVkDevice(), uint(_fences.size()), _fences.data(), true, UMax ));
-			_resMngr.ReleaseFences( _fences );
-			_fences.clear();
-		}
-
-		_resMngr.ReleaseSemaphores( _semaphores );
-		_semaphores.clear();
-
-		return true;
-	}
-	
-/*
-=================================================
-	_ProcessReadOps
-=================================================
-*/
-	void  VCommandBatch::_ProcessReadOps ()
-	{
-		// invalidate non-cocherent memory before reading
-		FixedArray<VkMappedMemoryRange, 32>		regions;
-		VDevice const&							dev = _resMngr.GetDevice();
-
-		for (auto& buf : _staging.deviceToHost)
-		{
-			if ( buf.isCoherent )
-				continue;
-
-			if ( regions.size() == regions.capacity() )
-			{
-				VK_CALL( dev.vkInvalidateMappedMemoryRanges( dev.GetVkDevice(), uint(regions.size()), regions.data() ));
-				regions.clear();
-			}
-
-			auto&	reg = regions.emplace_back();
-			reg.sType	= VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-			reg.pNext	= null;
-			reg.memory	= buf.mem;
-			reg.offset	= VkDeviceSize(buf.memOffset);
-			reg.size	= VkDeviceSize(buf.size);
-		}
-
-		if ( regions.size() )
-			VK_CALL( dev.vkInvalidateMappedMemoryRanges( dev.GetVkDevice(), uint(regions.size()), regions.data() ));
 
 		
-		// trigger buffer events
-		for (auto& ev : _staging.onBufferLoadedEvents)
-		{
-			ev.callback( ev.view );
-		}
-		_staging.onBufferLoadedEvents.clear();
-		
-		
-		// trigger image events
-		for (auto& ev : _staging.onImageLoadedEvents)
-		{
-			ev.callback( ev.view );
-		}
-		_staging.onImageLoadedEvents.clear();
-		
-
-		// release resources
-		{
-			for (auto& sb : _staging.hostToDevice) {
-				_resMngr.ReleaseStagingBuffer( sb.index );
-			}
-			_staging.hostToDevice.clear();
-
-			for (auto& sb : _staging.deviceToHost) {
-				_resMngr.ReleaseStagingBuffer( sb.index );
-			}
-			_staging.deviceToHost.clear();
-		}
+/*
+=================================================
+	Execute
+=================================================
+*/
+	template <typename CmdBufType>
+	inline void  VRenderTask::Execute (CmdBufType &cmdbuf)
+	{
+		if constexpr( CmdBufType::IsIndirectContext )
+			_pool.Add( INOUT _submitIdx, cmdbuf.Prepare() );
+		else
+			_pool.Add( INOUT _submitIdx, cmdbuf.ReleaseCommandBuffer() );
 	}
 
 /*
 =================================================
-	AddSemaphore
+	OnCancel
 =================================================
 */
-	void  VCommandBatch::AddSemaphore (VkSemaphore sem)
+	inline void  VRenderTask::OnCancel ()
 	{
-		EXLOCK( _drCheck );
-		_semaphores.try_push_back( sem );	// TODO: check for overflow
+		_pool.Complete( INOUT _submitIdx );
 	}
 	
 /*
 =================================================
-	AddFence
+	OnFailure
 =================================================
 */
-	void  VCommandBatch::AddFence (VkFence fence)
+	inline void  VRenderTask::OnFailure ()
 	{
-		EXLOCK( _drCheck );
-		_fences.try_push_back( fence );		// TODO: check for overflow
-	}
-	
-/*
-=================================================
-	AddCmdBuffer
-=================================================
-*/
-	void  VCommandBatch::AddCmdBuffer (UniqueID<BakedCommandBufferID>&& id)
-	{
-		EXLOCK( _drCheck );
-		_cmdBuffers.try_push_back( std::move(id) );
-	}
-	
-/*
-=================================================
-	AddDataLoadedEvent
-=================================================
-*/
-	bool  VCommandBatch::AddDataLoadedEvent (OnImageDataLoadedEvent &&ev)
-	{
-		EXLOCK( _drCheck );
-		CHECK_ERR( ev.callback and not ev.view.Parts().empty() );
-
-		_staging.onImageLoadedEvents.push_back( std::move(ev) );
-		return true;
-	}
-	
-	bool  VCommandBatch::AddDataLoadedEvent (OnBufferDataLoadedEvent &&ev)
-	{
-		EXLOCK( _drCheck );
-		CHECK_ERR( ev.callback and not ev.view.empty() );
-
-		_staging.onBufferLoadedEvents.push_back( std::move(ev) );
-		return true;
-	}
-
-/*
-=================================================
-	GetWritable
-=================================================
-*/
-	bool  VCommandBatch::GetWritable (const BytesU srcRequiredSize, const BytesU blockAlign, const BytesU offsetAlign, const BytesU dstMinSize,
-									  OUT GfxResourceID &dstBuffer, OUT BytesU &dstOffset, OUT BufferView::Data &outDataRange)
-	{
-		return _GetStaging( _staging.hostToDevice, EBufferUsage::TransferSrc,
-						    srcRequiredSize, blockAlign, offsetAlign, dstMinSize,
-						    OUT dstBuffer, OUT dstOffset, OUT outDataRange );
-	}
-	
-/*
-=================================================
-	GetReadable
-=================================================
-*/
-	bool  VCommandBatch::GetReadable (const BytesU srcRequiredSize, const BytesU blockAlign, const BytesU offsetAlign, const BytesU dstMinSize,
-									  OUT GfxResourceID &dstBuffer, OUT BytesU &dstOffset, OUT BufferView::Data &outDataRange)
-	{
-		return _GetStaging( _staging.deviceToHost, EBufferUsage::TransferDst,
-						    srcRequiredSize, blockAlign, offsetAlign, dstMinSize,
-						    OUT dstBuffer, OUT dstOffset, OUT outDataRange );
-	}
-
-/*
-=================================================
-	_GetStaging
-=================================================
-*/
-	bool  VCommandBatch::_GetStaging (StagingBuffers_t &stagingBuffers, EBufferUsage usage,
-									  const BytesU srcRequiredSize, const BytesU blockAlign, const BytesU offsetAlign, const BytesU dstMinSize,
-									  OUT GfxResourceID &dstBuffer, OUT BytesU &dstOffset, OUT BufferView::Data &outDataRange)
-	{
-		EXLOCK( _drCheck );
-		ASSERT( blockAlign > 0_b and offsetAlign > 0_b );
-		ASSERT( dstMinSize == AlignToSmaller( dstMinSize, blockAlign ));
-
-		// search in existing
-		StagingBuffer*	suitable		= null;
-		StagingBuffer*	max_available	= null;
-		BytesU			max_size;
-
-		for (auto& buf : stagingBuffers)
-		{
-			const BytesU	off	= AlignToLarger( buf.size, offsetAlign );
-			const BytesU	av	= AlignToSmaller( buf.capacity - off, blockAlign );
-
-			if ( av >= srcRequiredSize )
-			{
-				suitable = &buf;
-				break;
-			}
-
-			if ( not max_available or av > max_size )
-			{
-				max_available	= &buf;
-				max_size		= av;
-			}
-		}
-
-		// no suitable space, try to use max available block
-		if ( not suitable and max_available and max_size >= dstMinSize )
-		{
-			suitable = max_available;
-		}
-
-		// allocate new buffer
-		if ( not suitable )
-		{
-			CHECK_ERR( stagingBuffers.size() < stagingBuffers.capacity() );
-
-			GfxResourceID		buf_id;
-			StagingBufferIdx	buf_idx;
-			CHECK_ERR( _resMngr.CreateStagingBuffer( usage, OUT buf_id, OUT buf_idx ));
-
-			auto*	buffer = _resMngr.GetResource( VBufferID{ buf_id.Index(), buf_id.Generation() });
-			CHECK_ERR( buffer );
-
-			VResourceMemoryInfo		mem_info;
-			CHECK_ERR( buffer->GetMemoryInfo( OUT mem_info ));
-
-			suitable = &stagingBuffers.emplace_back();
-			suitable->bufferId	= buf_id;
-			suitable->index		= buf_idx;
-			suitable->mappedPtr	= mem_info.mappedPtr;
-			suitable->mem		= mem_info.memory;
-			suitable->capacity	= mem_info.size;
-			suitable->memOffset	= mem_info.offset;
-			suitable->isCoherent= AllBits( mem_info.flags, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT );
-		}
-
-		// write data to buffer
-		dstOffset			= AlignToLarger( suitable->size, offsetAlign );
-		outDataRange.size	= Min( AlignToSmaller( suitable->capacity - dstOffset, blockAlign ), srcRequiredSize );
-		dstBuffer			= suitable->bufferId;
-		outDataRange.ptr	= suitable->mappedPtr + dstOffset;
-
-		suitable->size = dstOffset + outDataRange.size;
-		return true;
+		_pool.Complete( INOUT _submitIdx );
+		IAsyncTask::OnFailure();
 	}
 
 
 }	// AE::Graphics
+
+#endif	// AE_ENABLE_VULKAN

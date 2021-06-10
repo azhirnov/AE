@@ -81,7 +81,7 @@ namespace AE::Scripting
 		ScriptArray&  operator = (ScriptArray &&) = delete;
 		ScriptArray&  operator = (const ScriptArray &) = delete;
 
-		ND_ size_t						size ()					const	{ return this->GetSize(); }
+		ND_ usize						size ()					const	{ return this->GetSize(); }
 		ND_ bool						empty ()				const	{ return this->IsEmpty(); }
 
 		ND_ EnableIf<is_pod, T *>		data ()							{ return static_cast<T *>( this->GetBuffer() ); };
@@ -94,13 +94,14 @@ namespace AE::Scripting
 
 		ND_ operator ArrayView<T> ()							const	{ return ArrayView<T>{ data(), size() }; }
 
-		ND_ EnableIf<is_pod, T &>		operator [] (size_t i)			{ ASSERT( i < size() );  return data()[i]; }
-		ND_ EnableIf<is_pod, T const &>	operator [] (size_t i)	const	{ ASSERT( i < size() );  return data()[i]; }
+		ND_ EnableIf<is_pod, T &>		operator [] (usize i)			{ ASSERT( i < size() );  return data()[i]; }
+		ND_ EnableIf<is_pod, T const &>	operator [] (usize i)	const	{ ASSERT( i < size() );  return data()[i]; }
 
 		void  push_back (T value)		{ this->InsertLast( &value ); }
 
-		void  resize (size_t newSize)	{ this->Resize( uint(newSize) ); }
-		void  reserve (size_t newSize)	{ this->Reserve( uint(newSize) ); }
+		void  clear ()					{ this->Resize( 0 ); }
+		void  resize (usize newSize)	{ this->Resize( uint(newSize) ); }
+		void  reserve (usize newSize)	{ this->Reserve( uint(newSize) ); }
 	};
 	
 
@@ -115,9 +116,9 @@ namespace AE::Scripting
 
 		private:
 			ScriptArray<String> *	_arr	= null;
-			size_t					_index	= UMax;
+			usize					_index	= UMax;
 
-			iterator (ScriptArray<String> &arr, size_t i) : _arr{&arr}, _index{i} {}
+			iterator (ScriptArray<String> &arr, usize i) : _arr{&arr}, _index{i} {}
 			
 		public:
 			iterator () {}
@@ -140,9 +141,9 @@ namespace AE::Scripting
 
 		private:
 			ScriptArray<String> const*	_arr	= null;
-			size_t						_index	= UMax;
+			usize						_index	= UMax;
 
-			const_iterator (const ScriptArray<String> &arr, size_t i) : _arr{&arr}, _index{i} {}
+			const_iterator (const ScriptArray<String> &arr, usize i) : _arr{&arr}, _index{i} {}
 			
 		public:
 			const_iterator () {}
@@ -168,7 +169,7 @@ namespace AE::Scripting
 		ScriptArray&  operator = (ScriptArray &&) = delete;
 		ScriptArray&  operator = (const ScriptArray &) = delete;
 		
-		ND_ size_t			size ()					const	{ return this->GetSize(); }
+		ND_ usize			size ()					const	{ return this->GetSize(); }
 		ND_ bool			empty ()				const	{ return this->IsEmpty(); }
 
 		ND_ iterator		begin ()						{ return iterator{ *this, 0 }; }
@@ -176,13 +177,14 @@ namespace AE::Scripting
 		ND_ iterator		end ()							{ return iterator{ *this, size() }; }
 		ND_ const_iterator	end ()					const	{ return const_iterator{ *this, size() }; }
 
-		ND_ String &		operator [] (size_t i)			{ ASSERT( i < size() );  return *static_cast<String *>( this->At( uint(i) ) ); }
-		ND_ String const &	operator [] (size_t i)	const	{ ASSERT( i < size() );  return *static_cast<String const *>( this->At( uint(i) ) ); }
+		ND_ String &		operator [] (usize i)			{ ASSERT( i < size() );  return *static_cast<String *>( this->At( uint(i) )); }
+		ND_ String const &	operator [] (usize i)	const	{ ASSERT( i < size() );  return *static_cast<String const *>( this->At( uint(i) )); }
 		
 		void  push_back (const String &value)	{ this->InsertLast( const_cast<String *>( &value )); }
-
-		void  resize (size_t newSize)			{ this->Resize( uint(newSize) ); }
-		void  reserve (size_t newSize)			{ this->Reserve( uint(newSize) ); }
+		
+		void  clear ()							{ this->Resize( 0 ); }
+		void  resize (usize newSize)			{ this->Resize( uint(newSize) ); }
+		void  reserve (usize newSize)			{ this->Reserve( uint(newSize) ); }
 	};
 
 

@@ -1,0 +1,90 @@
+--------------------------------------------------
+name: CmdBuf
+{
+  PipelineBarrier
+    stage: TOP_OF_PIPE ---> TRANSFER
+    BufferBarrier:
+      name:   Buffer
+      access: 0 ---> TRANSFER_WRITE
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> FRAGMENT_SHADER
+    BufferBarrier:
+      name:   Buffer
+      access: TRANSFER_WRITE ---> UNIFORM_READ
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> COMPUTE_SHADER
+    BufferBarrier:
+      name:   Buffer
+      access: TRANSFER_WRITE ---> SHADER_READ
+  ----------
+
+  PipelineBarrier
+    stage: VERTEX_SHADER | FRAGMENT_SHADER | COMPUTE_SHADER ---> COMPUTE_SHADER
+    BufferBarrier:
+      name:   Buffer
+      access: 0 ---> SHADER_READ | SHADER_WRITE
+  ----------
+
+  PipelineBarrier
+    stage: COMPUTE_SHADER ---> BOTTOM_OF_PIPE
+    BufferBarrier:
+      name:   Buffer
+      access: SHADER_READ | SHADER_WRITE ---> 0
+  ----------
+
+}
+--------------------------------------------------
+--------------------------------------------------
+name: CmdBuf
+{
+  PipelineBarrier
+    stage: TOP_OF_PIPE ---> TRANSFER
+    ImageBarrier:
+      name:    Image
+      layout:  UNDEFINED ---> TRANSFER_DST_OPTIMAL
+      access:  0 ---> TRANSFER_WRITE
+      aspect:  COLOR
+  ----------
+
+  PipelineBarrier
+    stage: TRANSFER ---> FRAGMENT_SHADER
+    ImageBarrier:
+      name:    Image
+      layout:  TRANSFER_DST_OPTIMAL ---> SHADER_READ_ONLY_OPTIMAL
+      access:  TRANSFER_WRITE ---> SHADER_READ
+      aspect:  COLOR
+  ----------
+
+  PipelineBarrier
+    stage: VERTEX_SHADER | FRAGMENT_SHADER ---> COMPUTE_SHADER
+    ImageBarrier:
+      name:    Image
+      layout:  SHADER_READ_ONLY_OPTIMAL ---> GENERAL
+      access:  0 ---> SHADER_READ
+      aspect:  COLOR
+  ----------
+
+  PipelineBarrier
+    stage: COMPUTE_SHADER ---> COMPUTE_SHADER
+    ImageBarrier:
+      name:    Image
+      layout:  GENERAL
+      access:  0 ---> SHADER_READ | SHADER_WRITE
+      aspect:  COLOR
+  ----------
+
+  PipelineBarrier
+    stage: COMPUTE_SHADER ---> BOTTOM_OF_PIPE
+    ImageBarrier:
+      name:    Image
+      layout:  GENERAL ---> SHADER_READ_ONLY_OPTIMAL
+      access:  SHADER_READ | SHADER_WRITE ---> 0
+      aspect:  COLOR
+  ----------
+
+}
+--------------------------------------------------

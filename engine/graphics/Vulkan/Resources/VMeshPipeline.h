@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -36,8 +36,8 @@ namespace AE::Graphics
 		VMeshPipeline () {}
 		~VMeshPipeline ();
 
-		bool Create (VMeshPipelineTemplateID templId, const MeshPipelineDesc &desc, VkPipeline ppln, VkPipelineLayout layout);
-		void Destroy (VResourceManager &);
+		bool  Create (VMeshPipelineTemplateID templId, const MeshPipelineDesc &desc, VkPipeline ppln, VkPipelineLayout layout);
+		void  Destroy (VResourceManagerImpl &);
 
 		ND_ MeshPipelineDesc const&		Description ()	const	{ SHAREDLOCK( _drCheck );  return _desc; }
 		ND_ VkPipeline					Handle ()		const	{ SHAREDLOCK( _drCheck );  return _handle; }
@@ -53,7 +53,7 @@ namespace AE::Graphics
 
 	class VMeshPipelineTemplate final
 	{
-		friend class VResourceManager;
+		friend class VResourceManagerImpl;
 
 	// types
 	private:
@@ -81,10 +81,10 @@ namespace AE::Graphics
 		EPrimitive				_topology				= Default;
 		uint					_maxVertices			= 0;
 		uint					_maxIndices				= 0;
-		uint3					_defaultTaskGroupSize;
-		uint3					_taskSizeSpec			{UNDEFINED_SPECIALIZATION};
-		uint3					_defaultMeshGroupSize;
-		uint3					_meshSizeSpec			{UNDEFINED_SPECIALIZATION};
+		uint					_defaultTaskGroupSize	= 0;
+		uint					_taskSizeSpec			= UNDEFINED_SPECIALIZATION;
+		uint					_defaultMeshGroupSize	= 0;
+		uint					_meshSizeSpec			= UNDEFINED_SPECIALIZATION;
 		SpecValues_t			_specialization;
 		bool					_earlyFragmentTests		= true;
 		
@@ -98,8 +98,8 @@ namespace AE::Graphics
 		VMeshPipelineTemplate () {}
 		~VMeshPipelineTemplate ();
 
-		bool Create (VPipelineLayoutID layoutId, VRenderPassOutputID rpOutputId, const PipelineCompiler::MeshPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName);
-		void Destroy (const VResourceManager &);
+		bool  Create (VPipelineLayoutID layoutId, VRenderPassOutputID rpOutputId, const PipelineCompiler::MeshPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName);
+		void  Destroy (const VResourceManagerImpl &);
 		
 		ND_ VPipelineLayoutID		GetLayoutID ()			const	{ SHAREDLOCK( _drCheck );  return _baseLayoutId; }
 		ND_ bool					IsEarlyFragmentTests ()	const	{ SHAREDLOCK( _drCheck );  return _earlyFragmentTests; }

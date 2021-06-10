@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "graphics/Public/DescriptorSet.h"
 #include "graphics/Private/DescriptorSetHelper.h"
@@ -132,7 +132,7 @@ namespace AE::Graphics
 		_allowEmptyResources{ other._allowEmptyResources },
 		_changed{ true }
 	{
-		_dataPtr = std::move(other._dataPtr);
+		_dataPtr = RVRef(other._dataPtr);
 	}
 
 /*
@@ -195,14 +195,14 @@ namespace AE::Graphics
 		if ( _dataPtr )
 		{
 			auto*	uniforms = _dataPtr->Uniforms();
-			size_t	index	 = BinarySearch( ArrayView<Uniform>{uniforms, _dataPtr->uniformCount}, name );
+			usize	index	 = BinarySearch( ArrayView<Uniform>{uniforms, _dataPtr->uniformCount}, name );
 		
 			if ( index < _dataPtr->uniformCount )
 			{
 				auto&	un = uniforms[ index ];
 				ASSERT( _CheckResourceType<T>( un.resType ));
 
-				return Cast<T>( _dataPtr.get() + BytesU{un.offset} );
+				return Cast<T>( _dataPtr.get() + Bytes{un.offset} );
 			}
 		}
 		return null;
@@ -220,7 +220,7 @@ namespace AE::Graphics
 			return false;
 		
 		auto*	uniforms = _dataPtr->Uniforms();
-		size_t	index	 = BinarySearch( ArrayView<Uniform>{uniforms, _dataPtr->uniformCount}, name );
+		usize	index	 = BinarySearch( ArrayView<Uniform>{uniforms, _dataPtr->uniformCount}, name );
 
 		if ( index >= _dataPtr->uniformCount )
 			return false;
@@ -245,7 +245,7 @@ namespace AE::Graphics
 		if ( _dataPtr )
 		{
 			auto*	uniforms = _dataPtr->Uniforms();
-			size_t	index	 = BinarySearch( ArrayView<Uniform>{uniforms, _dataPtr->uniformCount}, name );
+			usize	index	 = BinarySearch( ArrayView<Uniform>{uniforms, _dataPtr->uniformCount}, name );
 
 			return uniforms[index].resType;
 		}
@@ -257,10 +257,9 @@ namespace AE::Graphics
 	BindImage
 =================================================
 */
-	DescriptorSet&  DescriptorSet::BindImage (const UniformName &name, GfxResourceID image, uint index)
+	DescriptorSet&  DescriptorSet::BindImage (const UniformName &name, ImageID image, uint index)
 	{
 		UNIFORM_EXISTS( HasImage( name ));
-		ASSERT( image.ResourceType() == GfxResourceID::EType::Image );
 
 		if ( auto* res = _GetResource<Image>( name ))
 		{
@@ -277,10 +276,9 @@ namespace AE::Graphics
 		return *this;
 	}
 	
-	DescriptorSet&  DescriptorSet::BindImage (const UniformName &name, GfxResourceID image, const ImageViewDesc &desc, uint index)
+	DescriptorSet&  DescriptorSet::BindImage (const UniformName &name, ImageID image, const ImageViewDesc &desc, uint index)
 	{
 		UNIFORM_EXISTS( HasImage( name ));
-		ASSERT( image.ResourceType() == GfxResourceID::EType::Image );
 
 		if ( auto* res = _GetResource<Image>( name ))
 		{
@@ -303,7 +301,7 @@ namespace AE::Graphics
 	BindImages
 =================================================
 */
-	DescriptorSet&  DescriptorSet::BindImages (const UniformName &name, ArrayView<GfxResourceID> images)
+	DescriptorSet&  DescriptorSet::BindImages (const UniformName &name, ArrayView<ImageID> images)
 	{
 		UNIFORM_EXISTS( HasImage( name ));
 		ASSERT( images.size() > 0 );
@@ -315,10 +313,8 @@ namespace AE::Graphics
 			ASSERT( images.size() <= res->elementCapacity );
 			res->elementCount = uint16_t(images.size());
 
-			for (size_t i = 0; i < images.size(); ++i)
+			for (usize i = 0; i < images.size(); ++i)
 			{
-				ASSERT( images[i].ResourceType() == GfxResourceID::EType::Image );
-
 				auto&	img = res->elements[i];
 
 				_changed |= (img.imageId != images[i] or img.hasDesc);
@@ -335,10 +331,9 @@ namespace AE::Graphics
 	BindTexture
 =================================================
 */
-	DescriptorSet&  DescriptorSet::BindTexture (const UniformName &name, GfxResourceID image, const SamplerName &sampler, uint index)
+	DescriptorSet&  DescriptorSet::BindTexture (const UniformName &name, ImageID image, const SamplerName &sampler, uint index)
 	{
 		UNIFORM_EXISTS( HasTexture( name ));
-		ASSERT( image.ResourceType() == GfxResourceID::EType::Image );
 
 		if ( auto* res = _GetResource<Texture>( name ))
 		{
@@ -356,10 +351,9 @@ namespace AE::Graphics
 		return *this;
 	}
 	
-	DescriptorSet&  DescriptorSet::BindTexture (const UniformName &name, GfxResourceID image, const SamplerName &sampler, const ImageViewDesc &desc, uint index)
+	DescriptorSet&  DescriptorSet::BindTexture (const UniformName &name, ImageID image, const SamplerName &sampler, const ImageViewDesc &desc, uint index)
 	{
 		UNIFORM_EXISTS( HasTexture( name ));
-		ASSERT( image.ResourceType() == GfxResourceID::EType::Image );
 
 		if ( auto* res = _GetResource<Texture>( name ))
 		{
@@ -383,7 +377,7 @@ namespace AE::Graphics
 	BindTextures
 =================================================
 */
-	DescriptorSet&  DescriptorSet::BindTextures (const UniformName &name, ArrayView<GfxResourceID> images, const SamplerName &sampler)
+	DescriptorSet&  DescriptorSet::BindTextures (const UniformName &name, ArrayView<ImageID> images, const SamplerName &sampler)
 	{
 		UNIFORM_EXISTS( HasTexture( name ));
 		ASSERT( images.size() > 0 );
@@ -395,10 +389,8 @@ namespace AE::Graphics
 			ASSERT( images.size() <= res->elementCapacity );
 			res->elementCount = uint16_t(images.size());
 
-			for (size_t i = 0; i < images.size(); ++i)
+			for (usize i = 0; i < images.size(); ++i)
 			{
-				ASSERT( images[i].ResourceType() == GfxResourceID::EType::Image );
-
 				auto&	tex = res->elements[i];
 
 				_changed |= (tex.imageId != images[i] or tex.sampler != sampler or tex.hasDesc);
@@ -452,7 +444,7 @@ namespace AE::Graphics
 			ASSERT( samplers.size() <= res->elementCapacity );
 			res->elementCount = uint16_t(samplers.size());
 
-			for (size_t i = 0; i < samplers.size(); ++i)
+			for (usize i = 0; i < samplers.size(); ++i)
 			{
 				ASSERT( samplers[i].IsDefined() );
 
@@ -471,15 +463,14 @@ namespace AE::Graphics
 	BindBuffer
 =================================================
 */
-	DescriptorSet&  DescriptorSet::BindBuffer (const UniformName &name, GfxResourceID buffer, uint index)
+	DescriptorSet&  DescriptorSet::BindBuffer (const UniformName &name, BufferID buffer, uint index)
 	{
 		return BindBuffer( name, buffer, 0_b, ~0_b, index );
 	}
 
-	DescriptorSet&  DescriptorSet::BindBuffer (const UniformName &name, GfxResourceID buffer, BytesU offset, BytesU size, uint index)
+	DescriptorSet&  DescriptorSet::BindBuffer (const UniformName &name, BufferID buffer, Bytes offset, Bytes size, uint index)
 	{
 		UNIFORM_EXISTS( HasBuffer( name ));
-		ASSERT( buffer.ResourceType() == GfxResourceID::EType::Buffer );
 
 		if ( auto* res = _GetResource<Buffer>( name ))
 		{
@@ -522,7 +513,7 @@ namespace AE::Graphics
 	BindBuffers
 =================================================
 */
-	DescriptorSet&  DescriptorSet::BindBuffers (const UniformName &name, ArrayView<GfxResourceID> buffers)
+	DescriptorSet&  DescriptorSet::BindBuffers (const UniformName &name, ArrayView<BufferID> buffers)
 	{
 		UNIFORM_EXISTS( HasBuffer( name ));
 		ASSERT( buffers.size() > 0 );
@@ -531,16 +522,14 @@ namespace AE::Graphics
 		{
 			_changed |= (res->elementCount != buffers.size());
 
-			const BytesU	offset	= 0_b;
-			const BytesU	size	= ~0_b;	// whole size
+			const Bytes		offset	= 0_b;
+			const Bytes		size	= ~0_b;	// whole size
 		
 			ASSERT( buffers.size() <= res->elementCapacity );
 			res->elementCount = uint16_t(buffers.size());
 
-			for (size_t i = 0; i < buffers.size(); ++i)
+			for (usize i = 0; i < buffers.size(); ++i)
 			{
-				ASSERT( buffers[i].ResourceType() == GfxResourceID::EType::Buffer );
-
 				auto&	buf = res->elements[i];
 
 				_changed |= (buf.bufferId != buffers[i] or buf.size != size);
@@ -568,7 +557,7 @@ namespace AE::Graphics
 	SetBufferBase
 =================================================
 */
-	DescriptorSet&  DescriptorSet::SetBufferBase (const UniformName &name, BytesU offset, uint index)
+	DescriptorSet&  DescriptorSet::SetBufferBase (const UniformName &name, Bytes offset, uint index)
 	{
 		UNIFORM_EXISTS( HasBuffer( name ));
 
@@ -596,10 +585,9 @@ namespace AE::Graphics
 	BindTexelBuffer
 =================================================
 */
-	DescriptorSet&  DescriptorSet::BindTexelBuffer (const UniformName &name, GfxResourceID buffer, const BufferViewDesc &desc, uint index)
+	DescriptorSet&  DescriptorSet::BindTexelBuffer (const UniformName &name, BufferID buffer, const BufferViewDesc &desc, uint index)
 	{
 		UNIFORM_EXISTS( HasTexelBuffer( name ));
-		ASSERT( buffer.ResourceType() == GfxResourceID::EType::Buffer );
 
 		if ( auto* res = _GetResource<TexelBuffer>( name ))
 		{
@@ -648,15 +636,15 @@ namespace AE::Graphics
 */
 	void  DescriptorSet::Reset (const UniformName &name)
 	{
-		CHECK_ERR( _dataPtr, void());
+		CHECK_ERRV( _dataPtr );
 		
 		auto*	uniforms = _dataPtr->Uniforms();
-		size_t	index	 = BinarySearch( ArrayView<Uniform>{uniforms, _dataPtr->uniformCount}, name );
+		usize	index	 = BinarySearch( ArrayView<Uniform>{uniforms, _dataPtr->uniformCount}, name );
 		
-		CHECK_ERR( index < _dataPtr->uniformCount, void())
+		CHECK_ERRV( index < _dataPtr->uniformCount )
 		
 		auto&	un  = uniforms[ index ];
-		void*	ptr = _dataPtr.get() + BytesU{un.offset};
+		void*	ptr = _dataPtr.get() + Bytes{un.offset};
 
 		BEGIN_ENUM_CHECKS();
 		switch ( un.resType )
@@ -688,7 +676,7 @@ namespace AE::Graphics
 */
 	void  DescriptorSet::ResetAll ()
 	{
-		CHECK_ERR( _dataPtr, void());
+		CHECK_ERRV( _dataPtr );
 
 		_dataPtr->ForEachUniform( [](auto&, auto, auto& data) { data.elementCount = 0; });
 		_changed = true;
@@ -871,8 +859,8 @@ namespace {
 		{
 			auto&		lhs_un  = lhs.Uniforms()[i];
 			auto&		rhs_un	= rhs.Uniforms()[i];
-			void const*	lhs_ptr	= (&lhs + BytesU{lhs_un.offset});
-			void const*	rhs_ptr = (&rhs + BytesU{rhs_un.offset});
+			void const*	lhs_ptr	= (&lhs + Bytes{lhs_un.offset});
+			void const*	rhs_ptr = (&rhs + Bytes{rhs_un.offset});
 			bool		equals	= true;
 
 			if ( lhs_un.name	!= rhs_un.name	or
@@ -921,7 +909,7 @@ namespace {
 		ds._index	= CheckCast<uint16_t>(index);
 		ds._changed = true;
 
-		std::memcpy( OUT ds._dataPtr.get(), dataPtr.get(), size_t(dataPtr->memSize) );
+		MemCopy( OUT ds._dataPtr.get(), dataPtr.get(), dataPtr->memSize );
 		ds._dataPtr->layoutId = layoutId;
 
 		return true;
@@ -940,7 +928,7 @@ namespace {
 		auto&	data	= ds._dataPtr;
 		auto*	result	= Cast<DescriptorSet::DynamicData>( Allocator::Allocate( data->memSize ));
 		
-		std::memcpy( OUT result, data.get(), size_t(data->memSize) );
+		MemCopy( OUT result, data.get(), data->memSize );
 		return DynamicDataPtr{ result };
 	}
 	
@@ -951,7 +939,7 @@ namespace {
 */
 	DescriptorSet::DynamicDataPtr  DescriptorSetHelper::RemoveDynamicData (INOUT DescriptorSet &ds)
 	{
-		auto	temp = std::move(ds._dataPtr);
+		auto	temp = RVRef(ds._dataPtr);
 		return temp;
 	}
 
@@ -965,12 +953,12 @@ namespace {
 		using DS	= DescriptorSet;
 		using DST	= DS::EDescriptorType;
 
-		BytesU	req_size  = SizeOf<DS::DynamicData> +
+		Bytes	req_size  = SizeOf<DS::DynamicData> +
 							SizeOf<DS::Uniform> * uniforms.Get<0>() +
 							SizeOf<uint> * bufferDynamicOffsetCount;
 		
 		// calculate required size
-		for (size_t i = 0; i < uniforms.Get<0>(); ++i)
+		for (usize i = 0; i < uniforms.Get<0>(); ++i)
 		{
 			const auto&		un				= uniforms.Get<2>()[i];
 			const uint16_t	array_capacity	= uint16_t(un.arraySize); // TODO: dynamic indexing
@@ -1031,10 +1019,10 @@ namespace {
 
 		auto*	dyn_offsets			= mem.EmplaceArray<uint>( bufferDynamicOffsetCount );
 		data->dynamicOffsetsCount	= bufferDynamicOffsetCount;
-		data->dynamicOffsetsOffset	= uint(size_t(mem.OffsetOf( dyn_offsets )));
+		data->dynamicOffsetsOffset	= uint(usize(mem.OffsetOf( dyn_offsets )));
 
 		// initialize descriptors
-		for (size_t i = 0; i < uniforms.Get<0>(); ++i)
+		for (usize i = 0; i < uniforms.Get<0>(); ++i)
 		{
 			const auto&		un				= uniforms.Get<2>()[i];
 			auto&			curr			= uniforms_ptr[ un_index++ ];
@@ -1050,7 +1038,7 @@ namespace {
 				case DST::UniformBuffer :
 				{
 					auto& ubuf = un.buffer;
-					auto* ptr  = Cast<DS::Buffer>( mem.Reserve( BytesU{sizeof(DS::Buffer) + sizeof(DS::Buffer::Element) * (array_capacity-1)}, AlignOf<DS::Buffer> ));
+					auto* ptr  = Cast<DS::Buffer>( mem.Reserve( Bytes{sizeof(DS::Buffer) + sizeof(DS::Buffer::Element) * (array_capacity-1)}, AlignOf<DS::Buffer> ));
 
 					ptr->index				= un.index;
 					ptr->state				= ubuf.state;
@@ -1072,7 +1060,7 @@ namespace {
 				case DST::StorageBuffer :
 				{
 					auto& sbuf = un.buffer;
-					auto* ptr  = Cast<DS::Buffer>( mem.Reserve( BytesU{sizeof(DS::Buffer) + sizeof(DS::Buffer::Element) * (array_capacity-1)}, AlignOf<DS::Buffer> ));
+					auto* ptr  = Cast<DS::Buffer>( mem.Reserve( Bytes{sizeof(DS::Buffer) + sizeof(DS::Buffer::Element) * (array_capacity-1)}, AlignOf<DS::Buffer> ));
 
 					ptr->index				= un.index;
 					ptr->state				= sbuf.state;
@@ -1095,7 +1083,7 @@ namespace {
 				case DST::StorageTexelBuffer :
 				{
 					auto& tbuf = un.texelBuffer;
-					auto* ptr  = Cast<DS::TexelBuffer>( mem.Reserve( BytesU{sizeof(DS::TexelBuffer) + sizeof(DS::TexelBuffer::Element) * (array_capacity-1)}, AlignOf<DS::TexelBuffer> ));
+					auto* ptr  = Cast<DS::TexelBuffer>( mem.Reserve( Bytes{sizeof(DS::TexelBuffer) + sizeof(DS::TexelBuffer::Element) * (array_capacity-1)}, AlignOf<DS::TexelBuffer> ));
 					
 					ptr->index				= un.index;
 					ptr->state				= tbuf.state;
@@ -1116,7 +1104,7 @@ namespace {
 				case DST::SubpassInput :
 				{
 					auto& img = un.storageImage;
-					auto* ptr = Cast<DS::Image>( mem.Reserve( BytesU{sizeof(DS::Image) + sizeof(DS::Image::Element) * (array_capacity-1)}, AlignOf<DS::Image> ));
+					auto* ptr = Cast<DS::Image>( mem.Reserve( Bytes{sizeof(DS::Image) + sizeof(DS::Image::Element) * (array_capacity-1)}, AlignOf<DS::Image> ));
 					
 					ptr->index				= un.index;
 					ptr->state				= img.state;
@@ -1134,7 +1122,7 @@ namespace {
 				case DST::CombinedImage :
 				{
 					auto& img = un.combinedImage;
-					auto* ptr = Cast<DS::Texture>( mem.Reserve( BytesU{sizeof(DS::Texture) + sizeof(DS::Texture::Element) * (array_capacity-1)}, AlignOf<DS::Texture> ));
+					auto* ptr = Cast<DS::Texture>( mem.Reserve( Bytes{sizeof(DS::Texture) + sizeof(DS::Texture::Element) * (array_capacity-1)}, AlignOf<DS::Texture> ));
 					
 					ptr->index				= un.index;
 					ptr->state				= img.state;
@@ -1152,7 +1140,7 @@ namespace {
 				case DST::Sampler :
 				{
 					//auto& samp = un.sampler;
-					auto* ptr = Cast<DS::Sampler>( mem.Reserve( BytesU{sizeof(DS::Sampler) + sizeof(DS::Sampler::Element) * (array_capacity-1)}, AlignOf<DS::Sampler> ));
+					auto* ptr = Cast<DS::Sampler>( mem.Reserve( Bytes{sizeof(DS::Sampler) + sizeof(DS::Sampler::Element) * (array_capacity-1)}, AlignOf<DS::Sampler> ));
 					
 					ptr->index				= un.index;
 					ptr->elementCapacity	= array_capacity;
@@ -1171,7 +1159,7 @@ namespace {
 				case DST::RayTracingScene :
 				/*{
 					void* ptr = &mem.EmplaceSized<DS::RayTracingScene>(
-										BytesU{sizeof(DS::RayTracingScene) + sizeof(DS::RayTracingScene::Element) * (array_capacity-1)},
+										Bytes{sizeof(DS::RayTracingScene) + sizeof(DS::RayTracingScene::Element) * (array_capacity-1)},
 										un.index, array_capacity, array_size, Default );
 
 					curr.offset	= uint16_t(mem.OffsetOf( ptr ));
@@ -1186,7 +1174,7 @@ namespace {
 		}
 
 		std::sort( uniforms_ptr, uniforms_ptr + data->uniformCount,
-				   [] (auto& lhs, auto& rhs) { return lhs.name < rhs.name; } );
+				   [] (auto& lhs, auto& rhs) { return lhs.name < rhs.name; });
 
 		ASSERT( dbo_count == bufferDynamicOffsetCount );
 		return DynamicDataPtr{ data };

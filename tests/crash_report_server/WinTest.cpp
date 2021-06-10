@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef PLATFORM_WINDOWS
 
@@ -80,7 +80,7 @@ static bool  CheckCrashReport (WStringView userIdRef)
 	{
 		if ( FileSystem::IsFile( path ))
 		{
-			SharedPtr<RStream>	file = MakeShared<FileRStream>( path );
+			RC<RStream>		file = MakeRC<FileRStream>( path );
 			CHECK_ERR( file->IsOpen() );
 
 			CrashFileHeader	header;
@@ -96,32 +96,32 @@ static bool  CheckCrashReport (WStringView userIdRef)
 			
 			{
 				WString		user_id;
-				CHECK_ERR( mem.SeekSet( BytesU{header.userInfo.offset} ));
+				CHECK_ERR( mem.SeekSet( Bytes{header.userInfo.offset} ));
 				CHECK_ERR( mem.Read( header.userInfo.size / sizeof(wchar_t), OUT user_id ));
 				CHECK_ERR( user_id == userIdRef );
 			}{
 				WString		symbols_id;
-				CHECK_ERR( mem.SeekSet( BytesU{header.symbolsId.offset} ));
+				CHECK_ERR( mem.SeekSet( Bytes{header.symbolsId.offset} ));
 				CHECK_ERR( mem.Read( header.symbolsId.size / sizeof(wchar_t), OUT symbols_id ));
 				CHECK_ERR( symbols_id == L"" SYMBOLS_ID );
 			}{
 				Array<uint8_t>	dump_ref;
 				FileRStream		file2{ MINIDUMP_FILE };
 				CHECK_ERR( file2.IsOpen() );
-				CHECK_ERR( file2.Read( size_t(file2.RemainingSize()), OUT dump_ref ));
+				CHECK_ERR( file2.Read( usize(file2.RemainingSize()), OUT dump_ref ));
 				
 				Array<uint8_t>	dump;
-				CHECK_ERR( mem.SeekSet( BytesU{header.dump.offset} ));
+				CHECK_ERR( mem.SeekSet( Bytes{header.dump.offset} ));
 				CHECK_ERR( mem.Read( header.dump.size, OUT dump ));
 				CHECK_ERR( dump == dump_ref );
 			}{
 				String			log_ref;
 				FileRStream		file2{ LOG_FILE };
 				CHECK_ERR( file2.IsOpen() );
-				CHECK_ERR( file2.Read( size_t(file2.RemainingSize()), OUT log_ref ));
+				CHECK_ERR( file2.Read( usize(file2.RemainingSize()), OUT log_ref ));
 			
 				String			log;
-				CHECK_ERR( mem.SeekSet( BytesU{header.log.offset} ));
+				CHECK_ERR( mem.SeekSet( Bytes{header.log.offset} ));
 				CHECK_ERR( mem.Read( header.log.size, OUT log ));
 				CHECK_ERR( log == log_ref );
 			}

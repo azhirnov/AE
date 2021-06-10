@@ -17,10 +17,14 @@ namespace AE::Math
 {
 	
 	template <typename T>
-	using NearInt = Conditional< (sizeof(T) <= sizeof(int32_t)), int32_t, int64_t >;
+	using NearInt = Conditional< (sizeof(T) > sizeof(int32_t)), int64_t,
+						Conditional< (sizeof(T) > sizeof(int16_t)), int32_t,
+							Conditional< (sizeof(T) > sizeof(int8_t)), int16_t, int8_t >>>;
 
 	template <typename T>
-	using NearUInt = Conditional< (sizeof(T) <= sizeof(uint32_t)), uint32_t, uint64_t >;
+	using NearUInt = Conditional< (sizeof(T) > sizeof(uint32_t)), uint64_t,
+						Conditional< (sizeof(T) > sizeof(uint16_t)), uint32_t,
+							Conditional< (sizeof(T) > sizeof(uint8_t)), uint16_t, uint8_t >>>;
 	
 /*
 =================================================
@@ -98,6 +102,25 @@ namespace AE::Math
 
 		return !!( ToNearUInt(lhs) & ToNearUInt(rhs) );
 	}
+	
+/*
+=================================================
+	ExtractBit
+=================================================
+*/
+	template <typename T>
+	ND_ forceinline constexpr T  ExtractBit (INOUT T& value)
+	{
+		STATIC_ASSERT( IsEnum<T> or IsInteger<T> );
+		
+		using U = NearUInt<T>;
+		ASSERT( U(value) > 0 );
+
+		const U	result = U(value) & ~(U(value) - U(1));
+		value = T(U(value) & ~result);
+
+		return T(result);
+	}
 
 /*
 =================================================
@@ -112,7 +135,7 @@ namespace AE::Math
 		using U = NearUInt<T>;
 
 		U	val = U( x );
-		return (val != 0) & ((val & (val - U(1))) == T(0));
+		return (val != U(0)) & ((val & (val - U(1))) == U(0));
 	}
 	
 /*
@@ -131,14 +154,14 @@ namespace AE::Math
 		unsigned long	index;
 		
 		if constexpr( sizeof(x) == 8 )
-			return _BitScanReverse64( OUT &index, uint64_t(x) ) ? index : INVALID_INDEX;
+			return _BitScanReverse64( OUT &index, ulong(x) ) ? index : INVALID_INDEX;
 		else
 		if constexpr( sizeof(x) <= 4 )
 			return _BitScanReverse( OUT &index, uint(x) ) ? index : INVALID_INDEX;
 		
 	#elif defined(COMPILER_GCC) or defined(COMPILER_CLANG)
 		if constexpr( sizeof(x) == 8 )
-			return x ? (sizeof(x)*8)-1 - __builtin_clzll( uint64_t(x) ) : INVALID_INDEX;
+			return x ? (sizeof(x)*8)-1 - __builtin_clzll( ulong(x) ) : INVALID_INDEX;
 		else
 		if constexpr( sizeof(x) <= 4 )
 			return x ? (sizeof(x)*8)-1 - __builtin_clz( uint(x) ) : INVALID_INDEX;
@@ -169,14 +192,14 @@ namespace AE::Math
 		unsigned long	index;
 		
 		if constexpr( sizeof(x) == 8 )
-			return _BitScanForward64( OUT &index, uint64_t(x) ) ? index : INVALID_INDEX;
+			return _BitScanForward64( OUT &index, ulong(x) ) ? index : INVALID_INDEX;
 		else
 		if constexpr( sizeof(x) <= 4 )
 			return _BitScanForward( OUT &index, uint(x) ) ? index : INVALID_INDEX;
 		
 	#elif defined(COMPILER_GCC) or defined(COMPILER_CLANG)
 		if constexpr( sizeof(x) == 8 )
-			return __builtin_ffsll( uint64_t(x) ) - 1;
+			return __builtin_ffsll( ulong(x) ) - 1;
 		else
 		if constexpr( sizeof(x) <= 4 )
 			return __builtin_ffs( uint(x) ) - 1;
@@ -192,7 +215,7 @@ namespace AE::Math
 =================================================
 */
 	template <typename T>
-	ND_ forceinline size_t  BitCount (const T& x)
+	ND_ forceinline usize  BitCount (const T& x)
 	{
 		STATIC_ASSERT( IsEnum<T> or IsInteger<T> );
 		
@@ -200,21 +223,21 @@ namespace AE::Math
 		// requires CPUInfo::POPCNT
 	  #if PLATFORM_BITS == 64
 		if constexpr( sizeof(x) == 8 )
-			return T( __popcnt64( uint64_t(x) ));
+			return T( __popcnt64( ulong(x) ));
 		else
 	  #endif
 		if constexpr( sizeof(x) == 4 )
-			return T( __popcnt( uint32_t(x) ));
+			return T( __popcnt( uint(x) ));
 		else
 		if constexpr( sizeof(x) <= 2 )
-			return T( __popcnt16( uint16_t(x) ));
+			return T( __popcnt16( ushort(x) ));
 
 	#else
 		if constexpr( sizeof(x) == 8 )
-			return T( std::bitset<64>{ uint64_t(x) }.count() );
+			return T( std::bitset<64>{ ulong(x) }.count() );
 		else
 		if constexpr( sizeof(x) <= 4 )
-			return T( std::bitset<32>{ uint32_t(x) }.count() );
+			return T( std::bitset<32>{ uint(x) }.count() );
 	#endif
 	}
 	
@@ -224,7 +247,7 @@ namespace AE::Math
 =================================================
 */
 	template <typename T>
-	ND_ forceinline constexpr T  SafeLeftBitShift (const T& x, size_t shift)
+	ND_ forceinline constexpr T  SafeLeftBitShift (const T& x, usize shift)
 	{
 		STATIC_ASSERT( IsEnum<T> or IsInteger<T> );
 		
@@ -237,7 +260,7 @@ namespace AE::Math
 =================================================
 */
 	template <typename T>
-	ND_ forceinline constexpr T  SafeRightBitShift (const T& x, size_t shift)
+	ND_ forceinline constexpr T  SafeRightBitShift (const T& x, usize shift)
 	{
 		STATIC_ASSERT( IsEnum<T> or IsInteger<T> );
 
@@ -251,30 +274,30 @@ namespace AE::Math
 	from https://en.wikipedia.org/wiki/Circular_shift#Implementing_circular_shifts
 =================================================
 */
-	namespace _ae_math_hidden_
+	namespace _hidden_
 	{
 		template <typename T>
-		forceinline constexpr T _BitRotateLeft (T value, size_t shift)
+		forceinline constexpr T _BitRotateLeft (T value, usize shift)
 		{
-			const size_t	mask = (sizeof(value)*8 - 1);
+			const usize	mask = (sizeof(value)*8 - 1);
 
 			shift &= mask;
 			return (value << shift) | (value >> ( ~(shift-1) & mask ));
 		}
-	}	// _ae_math_hidden_
+	}	// _hidden_
 	
 	template <typename T>
-	ND_ forceinline constexpr T  BitRotateLeft (const T& x, size_t shift)
+	ND_ forceinline constexpr T  BitRotateLeft (const T& x, usize shift)
 	{
 		STATIC_ASSERT( IsEnum<T> or IsInteger<T> );
 		
 	#ifdef COMPILER_MSVC
 		if constexpr( sizeof(x) > sizeof(uint) )
-			return T( _rotl64( uint64_t(x), int(shift) ));
+			return T( _rotl64( ulong(x), int(shift) ));
 		else
-			return T( _rotl( uint32_t(x), int(shift) ));
+			return T( _rotl( uint(x), int(shift) ));
 	#else
-		return T( _ae_math_hidden_::_BitRotateLeft( ToNearUInt(x), shift ));
+		return T( Math::_hidden_::_BitRotateLeft( ToNearUInt(x), shift ));
 	#endif
 	}
 	
@@ -285,30 +308,30 @@ namespace AE::Math
 	from https://en.wikipedia.org/wiki/Circular_shift#Implementing_circular_shifts
 =================================================
 */
-	namespace _ae_math_hidden_
+	namespace _hidden_
 	{
 		template <typename T>
-		forceinline constexpr T _BitRotateRight (T value, size_t shift)
+		forceinline constexpr T _BitRotateRight (T value, usize shift)
 		{
-			const size_t	mask = (sizeof(value)*8 - 1);
+			const usize	mask = (sizeof(value)*8 - 1);
 
 			shift &= mask;
 			return (value >> shift) | (value << ( ~(shift-1) & mask ));
 		}
-	}	// _ae_math_hidden_
+	}	// _hidden_
 
 	template <typename T>
-	ND_ forceinline constexpr T  BitRotateRight (const T& x, size_t shift)
+	ND_ forceinline constexpr T  BitRotateRight (const T& x, usize shift)
 	{
 		STATIC_ASSERT( IsEnum<T> or IsInteger<T> );
 		
 	#ifdef COMPILER_MSVC
 		if constexpr( sizeof(x) > sizeof(uint) )
-			return T( _rotr64( uint64_t(x), int(shift) ));
+			return T( _rotr64( ulong(x), int(shift) ));
 		else
-			return T( _rotr( uint32_t(x), int(shift) ));
+			return T( _rotr( uint(x), int(shift) ));
 	#else
-		return T( _ae_math_hidden_::_BitRotateRight( ToNearUInt(x), shift ));
+		return T( Math::_hidden_::_BitRotateRight( ToNearUInt(x), shift ));
 	#endif
 	}
 	
@@ -318,7 +341,7 @@ namespace AE::Math
 =================================================
 */
 	template <typename T>
-	ND_ inline constexpr EnableIf< IsUnsignedInteger<T>, T >  ToBitMask (uint count)
+	ND_ inline constexpr EnableIf< IsUnsignedInteger<T>, T >  ToBitMask (usize count)
 	{
 		return	count >= sizeof(T)*8 ?
 					~T(0) :
@@ -326,7 +349,7 @@ namespace AE::Math
 	}
 	
 	template <typename T>
-	ND_ inline constexpr EnableIf< IsUnsignedInteger<T>, T >  ToBitMask (uint firstBit, uint count)
+	ND_ inline constexpr EnableIf< IsUnsignedInteger<T>, T >  ToBitMask (usize firstBit, usize count)
 	{
 		return SafeLeftBitShift( ToBitMask<T>( count ), firstBit );
 	}
@@ -359,7 +382,7 @@ namespace AE::Math
 
 	#elif defined(COMPILER_GCC) or defined(COMPILER_CLANG)
 		if constexpr( sizeof(x) == 2 )
-			return T(((uint16_t(x) & 0x00FF) << 8) | ((uint16_t(x) & 0xFF00) >> 8));
+			return T(((ushort(x) & 0x00FF) << 8) | ((ushort(x) & 0xFF00) >> 8));
 		else
 		if constexpr( sizeof(x) == 4 )
 			return T( __builtin_bswap32( ToNearUInt(x) ));

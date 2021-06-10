@@ -1,10 +1,10 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #ifdef AE_ENABLE_VULKAN
 
-# include "graphics/Public/NativeTypes.Vulkan.h"
+# include "graphics/Public/VulkanTypes.h"
 # include "graphics/Vulkan/Resources/VDescriptorSetLayout.h"
 # include "pipeline_compiler/Public/PipelinePack.h"
 
@@ -47,13 +47,13 @@ namespace AE::Graphics
 		VPipelineLayout () {}
 		~VPipelineLayout ();
 		
-		bool Create (const VDevice &dev, const DescriptorSets_t &descSetLayouts, const PushConstants_t &pusConstants,
-					 VkDescriptorSetLayout emptyLayout, StringView dbgName);
-		void Destroy (const VResourceManager &);
+		bool  Create (const VDevice &dev, const DescriptorSets_t &descSetLayouts, const PushConstants_t &pusConstants,
+					  VkDescriptorSetLayout emptyLayout, StringView dbgName);
+		void  Destroy (const VResourceManagerImpl &);
 		
-		bool GetDescriptorSetLayout (const DescriptorSetName &id, OUT DescriptorSetLayoutID &layout, OUT uint &binding) const;
+		bool  GetDescriptorSetLayout (const DescriptorSetName &id, OUT DescriptorSetLayoutID &layout, OUT uint &binding) const;
 
-		void GetNativeDesc (OUT VulkanPipelineInfo &) const;
+		void  GetNativeDesc (OUT VulkanPipelineInfo &) const;
 
 		ND_ VkPipelineLayout		Handle ()					const	{ SHAREDLOCK( _drCheck );  return _layout; }
 		

@@ -1,12 +1,10 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "stl/Common.h"
 
-namespace AE::STL
-{
-namespace _ae_stl_hidden_
+namespace AE::STL::_hidden_
 {
 	// from https://stackoverflow.com/questions/2111667/compile-time-string-hashing
 	static constexpr uint  crc_table[256] = {
@@ -55,24 +53,27 @@ namespace _ae_stl_hidden_
 		0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 	};
 
-	ND_ forceinline constexpr uint  crc32_hash (char const *str, size_t len, uint prev_crc)
+	ND_ forceinline constexpr uint  crc32_hash (char const *str, usize len, uint prev_crc)
 	{
 		return	(*str and len) ?
 					crc32_hash( str+1, len-1, (prev_crc >> 8) ^ crc_table[(prev_crc ^ *str) & 0xFF] ) :
 					(prev_crc ^ 0xFFFFFFFF);
 	}
 
-}	// _ae_stl_hidden_
+}	// AE::STL::_hidden_
 
+
+namespace AE::STL
+{
 
 /*
 =================================================
 	CT_Hash (string)
 =================================================
 */
-	ND_ inline constexpr HashVal  CT_Hash (const char *str, size_t len, uint seed)
+	ND_ inline constexpr HashVal  CT_Hash (const char *str, usize len, uint seed)
 	{
-		return HashVal{_ae_stl_hidden_::crc32_hash( str, len, seed )};
+		return HashVal{ STL::_hidden_::crc32_hash( str, len, seed )};
 	}
 
 

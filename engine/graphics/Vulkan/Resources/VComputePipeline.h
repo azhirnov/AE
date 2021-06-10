@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -36,8 +36,8 @@ namespace AE::Graphics
 		VComputePipeline () {}
 		~VComputePipeline ();
 
-		bool Create (VComputePipelineTemplateID templId, const ComputePipelineDesc &desc, VkPipeline ppln, VkPipelineLayout layout);
-		void Destroy (VResourceManager &);
+		bool  Create (VComputePipelineTemplateID templId, const ComputePipelineDesc &desc, VkPipeline ppln, VkPipelineLayout layout);
+		void  Destroy (VResourceManagerImpl &);
 
 		ND_ ComputePipelineDesc const&	Description ()	const	{ SHAREDLOCK( _drCheck );  return _desc; }
 		ND_ VkPipeline					Handle ()		const	{ SHAREDLOCK( _drCheck );  return _handle; }
@@ -53,7 +53,7 @@ namespace AE::Graphics
 
 	class VComputePipelineTemplate final
 	{
-		friend class VResourceManager;
+		friend class VResourceManagerImpl;
 		
 	// types
 	public:
@@ -87,12 +87,12 @@ namespace AE::Graphics
 		VComputePipelineTemplate () {}
 		~VComputePipelineTemplate ();
 
-		bool Create (VPipelineLayoutID layoutId, const PipelineCompiler::ComputePipelineDesc &desc, const ShaderModule &module, StringView dbgName);
-		void Destroy (const VResourceManager &);
+		bool  Create (VPipelineLayoutID layoutId, const PipelineCompiler::ComputePipelineDesc &desc, const ShaderModule &module, StringView dbgName);
+		void  Destroy (const VResourceManagerImpl &);
 		
-		ND_ VPipelineLayoutID		GetLayoutID ()			const	{ SHAREDLOCK( _drCheck );  return _baseLayoutId; }
+		ND_ VPipelineLayoutID	GetLayoutID ()		const	{ SHAREDLOCK( _drCheck );  return _baseLayoutId; }
 
-		ND_ StringView				GetDebugName ()			const	{ SHAREDLOCK( _drCheck );  return _debugName; }
+		ND_ StringView			GetDebugName ()		const	{ SHAREDLOCK( _drCheck );  return _debugName; }
 	};
 
 

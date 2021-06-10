@@ -1,11 +1,11 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #ifdef AE_ENABLE_VULKAN
 
 # include "graphics/Public/RenderPassDesc.h"
-# include "graphics/Vulkan/Resources/VLogicalRenderPass.h"
+# include "graphics/Vulkan/VCommon.h"
 
 namespace AE::Graphics
 {
@@ -59,13 +59,13 @@ namespace AE::Graphics
 	// methods
 	public:
 		VRenderPass () {}
-		VRenderPass (ArrayView<VLogicalRenderPass*> logicalPasses);
+		VRenderPass (VResourceManagerImpl &resMngr, ArrayView<RenderPassDesc> passes);
 		~VRenderPass ();
 
-		bool Create (const VDevice &dev, StringView dbgName);
-		void Destroy (VResourceManager &);
+		bool  Create (const VDevice &dev, StringView dbgName);
+		void  Destroy (VResourceManagerImpl &);
 
-		ND_ bool operator == (const VRenderPass &rhs) const;
+		ND_ bool  operator == (const VRenderPass &rhs) const;
 
 		ND_ VkRenderPass					Handle ()			const	{ SHAREDLOCK( _drCheck );  return _renderPass; }
 		ND_ VkRenderPassCreateInfo const&	GetCreateInfo ()	const	{ SHAREDLOCK( _drCheck );  return _createInfo; }
@@ -74,7 +74,7 @@ namespace AE::Graphics
 
 
 	private:
-		bool  _Initialize (ArrayView<VLogicalRenderPass*> logicalPasses);
+		bool  _Initialize (VResourceManagerImpl &resMngr, ArrayView<RenderPassDesc> passes);
 		void  _CalcHash (OUT HashVal &hash, OUT HashVal &attachmentHash, OUT SubpassesHash_t &subpassesHash) const;
 	};
 

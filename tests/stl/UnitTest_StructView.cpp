@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Containers/StructView.h"
 #include "UnitTest_Common.h"
@@ -13,7 +13,7 @@ namespace
 
 		TEST( CountOf( data ) == view.size() );
 
-		for (size_t i = 0; i < view.size(); ++i) {
+		for (usize i = 0; i < view.size(); ++i) {
 			TEST( data[i] == view[i] );
 		}
 	}
@@ -25,7 +25,7 @@ namespace
 		struct Data {
 			int		field1;
 			double	field2;
-			uint8_t	field3;
+			ubyte	field3;
 		};
 		#pragma pack (pop)
 
@@ -39,7 +39,7 @@ namespace
 	
 		TEST( CountOf( data ) == view.size() );
 
-		for (size_t i = 0; i < view.size(); ++i) {
+		for (usize i = 0; i < view.size(); ++i) {
 			TEST( data[i].field2 == view[i] );
 		}
 	}
@@ -50,7 +50,7 @@ namespace
 		struct Data {
 			int		field1;
 			double	field2;
-			uint8_t	field3;
+			ubyte	field3;
 		};
 
 		const Data	data[] = {
@@ -63,7 +63,7 @@ namespace
 	
 		TEST( CountOf( data ) == view.size() );
 
-		for (size_t i = 0; i < view.size(); ++i) {
+		for (usize i = 0; i < view.size(); ++i) {
 			TEST( data[i].field2 == view[i] );
 		}
 	}

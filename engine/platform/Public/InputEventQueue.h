@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -30,7 +30,7 @@ namespace AE::App
 
 		struct TouchEvent : EventBase
 		{
-			enum class EAction : uint8_t {
+			enum class EAction : ubyte {
 				Down,
 				Up,
 				Move,
@@ -41,13 +41,13 @@ namespace AE::App
 			struct Touch {
 				float2		pos;
 				float		pressure;
-				uint8_t		id;
+				ubyte		id;
 			};
 			static constexpr uint	MaxTouches	= 4;
 
 			Touch		data [MaxTouches];
 			EAction		action;
-			uint8_t		count;
+			ubyte		count;
 		};
 
 		struct MouseEvent : EventBase
@@ -69,8 +69,8 @@ namespace AE::App
 
 
 	protected:
-		static constexpr size_t	_MaxStorageSize		= MsgTypes_t::ForEach_Max< TypeListUtils::GetTypeSize >();
-		static constexpr size_t	_MaxStorageAlign	= MsgTypes_t::ForEach_Max< TypeListUtils::GetTypeAlign >();
+		static constexpr usize	_MaxStorageSize		= MsgTypes_t::ForEach_Max< TypeListUtils::GetTypeSize >();
+		static constexpr usize	_MaxStorageAlign	= MsgTypes_t::ForEach_Max< TypeListUtils::GetTypeAlign >();
 		
 		using _MsgStorage_t = std::aligned_storage_t< _MaxStorageSize, _MaxStorageAlign >;
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	EResourceState contains information about pipeline stage,
 	memory access mask, data invalidation and other.
@@ -32,7 +32,7 @@ namespace AE::Graphics
 		_Access_IndexBuffer,
 		_Access_VertexBuffer,
 		_Access_ConditionalRendering,
-		_Access_CommandProcess,
+		//_Access_CommandProcess,
 		_Access_ShadingRateImage,
 		_Access_BuildRayTracingAS,			// build/update acceleration structure for ray tracing
 		_Access_RTASBuildingBuffer,			// vertex, index, ..., scratch buffer that used when build/update acceleration structure
@@ -60,11 +60,11 @@ namespace AE::Graphics
 		_ShaderMask				= _AllGraphics | _ComputeShader | _RayTracingShaders,
 
 		// flags
-		// unused range: 21..25
+		// unused range: 21..27
 
 		// for ColorAttachment, DepthStencilAttachment
-		InvalidateBefore		= 1 << 26,				// discard image content before executing command
-		InvalidateAfter			= 1 << 27,				// discard image content after command execution
+		//InvalidateBefore		= 1 << 26,				// discard image content before executing command
+		//InvalidateAfter			= 1 << 27,				// discard image content after command execution
 
 		// for DepthStencilAttachment
 		EarlyFragmentTests		= 1 << 28,

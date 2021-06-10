@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -15,7 +15,7 @@ namespace AE::Graphics
 	struct BufferDesc
 	{
 	// variables
-		BytesU			size;
+		Bytes			size;
 		EBufferUsage	usage		= Default;
 		EQueueMask		queues		= Default;
 		EMemoryType		memType		= EMemoryType::DeviceLocal;
@@ -23,7 +23,7 @@ namespace AE::Graphics
 	// methods
 		BufferDesc () {}
 
-		BufferDesc (BytesU			size,
+		BufferDesc (Bytes			size,
 					EBufferUsage	usage,
 					EQueueMask		queues	= Default,
 					EMemoryType		memType	= EMemoryType::DeviceLocal) :
@@ -35,19 +35,19 @@ namespace AE::Graphics
 	//
 	// Virtual Buffer description
 	//
-
+	/*
 	struct VirtualBufferDesc
 	{
 	// variables
-		BytesU			size;
+		Bytes			size;
 		
 	// methods
 		VirtualBufferDesc () {}
-		explicit VirtualBufferDesc (BytesU size) : size{size} {}
+		explicit VirtualBufferDesc (Bytes size) : size{size} {}
 
 		ND_ BufferDesc  ToPhysical (EVirtualResourceUsage usage) const;
 	};
-
+	*/
 
 
 	//
@@ -58,15 +58,15 @@ namespace AE::Graphics
 	{
 	// variables
 		EPixelFormat		format	= Default;
-		BytesU				offset;
-		BytesU				size	{ ~0_b };
+		Bytes				offset;
+		Bytes				size	{ ~0_b };
 
 	// methods
 		BufferViewDesc () {}
 
 		BufferViewDesc (EPixelFormat	format,
-						BytesU			offset,
-						BytesU			size) :
+						Bytes			offset,
+						Bytes			size) :
 			format{format}, offset{offset}, size{size} {}
 
 		void Validate (const BufferDesc &desc);

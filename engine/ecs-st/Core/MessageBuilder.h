@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -21,7 +21,7 @@ namespace AE::ECS
 	private:
 		struct MessageKey
 		{
-			size_t	_value = UMax;
+			usize	_value = UMax;
 
 			MessageKey () {}
 			MessageKey (ComponentID compId, MsgTagID tagId);
@@ -30,7 +30,7 @@ namespace AE::ECS
 		};
 
 		struct MessageKeyHash {
-			size_t  operator () (const MessageKey &) const;
+			usize  operator () (const MessageKey &) const;
 		};
 		
 		struct MessageData
@@ -38,7 +38,7 @@ namespace AE::ECS
 			using Listener_t = Function< void (MessageData &) >;
 
 			Array<EntityID>			entities;
-			Array<uint8_t>			components;		// TODO: align
+			Array<ubyte>			components;		// TODO: align
 			Array< Listener_t >		listeners;
 		};
 		
@@ -59,16 +59,16 @@ namespace AE::ECS
 		void  Add (EntityID id, ComponentID compId);
 
 		template <typename Tag>
-		void  Add (EntityID id, ComponentID compId, ArrayView<uint8_t> data);
+		void  Add (EntityID id, ComponentID compId, ArrayView<ubyte> data);
 
 		template <typename Tag>
-		void  Add (EntityID id, ComponentID compId, const Pair<void*, BytesU> &data);
+		void  Add (EntityID id, ComponentID compId, const Pair<void*, Bytes> &data);
 
 		template <typename Tag, typename Comp>
 		void  Add (EntityID id, const Comp& comp);
 		
 		template <typename Tag>
-		void  AddMulti (ComponentID compId, ArrayView<EntityID> ids, ArrayView<uint8_t> data);
+		void  AddMulti (ComponentID compId, ArrayView<EntityID> ids, ArrayView<ubyte> data);
 		
 		template <typename Tag>
 		void  AddMulti (ComponentID compId, ArrayView<EntityID> ids);
@@ -86,7 +86,7 @@ namespace AE::ECS
 			
 	
 	inline MessageBuilder::MessageKey::MessageKey (ComponentID compId, MsgTagID tagId) :
-		_value{ (size_t(compId.value) << 16) | size_t(tagId.value) }
+		_value{ (usize(compId.value) << 16) | usize(tagId.value) }
 	{}
 	
 	inline bool  MessageBuilder::MessageKey::operator == (const MessageKey &rhs) const
@@ -96,7 +96,7 @@ namespace AE::ECS
 //-----------------------------------------------------------------------------
 
 
-	inline size_t  MessageBuilder::MessageKeyHash::operator () (const MessageKey &x) const
+	inline usize  MessageBuilder::MessageKeyHash::operator () (const MessageKey &x) const
 	{
 		return x._value;
 	}
@@ -134,7 +134,7 @@ namespace AE::ECS
 =================================================
 */
 	template <typename Tag>
-	inline void  MessageBuilder::Add (EntityID id, ComponentID compId, ArrayView<uint8_t> comp)
+	inline void  MessageBuilder::Add (EntityID id, ComponentID compId, ArrayView<ubyte> comp)
 	{
 		MessageKey const	key  { compId, MsgTagTypeInfo<Tag>::id };
 		auto				iter = _msgTypes.find( key );
@@ -151,9 +151,8 @@ namespace AE::ECS
 		ASSERT( msg.entities.empty() or not msg.components.empty() );
 		ASSERT( comp.size() );
 
-		const size_t	comp_size = comp.size();
-		msg.components.resize( (msg.entities.size() + 1) * comp_size );
-		std::memcpy( OUT msg.components.data() + BytesU{msg.entities.size() * comp_size}, comp.data(), comp_size );
+		msg.components.resize( (msg.entities.size() + 1) * comp.size() );
+		MemCopy( OUT msg.components.data() + Bytes{msg.entities.size() * comp.size()}, comp.data(), ArraySizeOf( comp ));
 
 		msg.entities.push_back( id );
 	}
@@ -161,14 +160,14 @@ namespace AE::ECS
 	template <typename Tag, typename Comp>
 	inline void  MessageBuilder::Add (EntityID id, const Comp& comp)
 	{
-		return Add<Tag>( id, ComponentTypeInfo<Comp>::id, ArrayView<uint8_t>{ Cast<uint8_t>(&comp), sizeof(comp) });
+		return Add<Tag>( id, ComponentTypeInfo<Comp>::id, ArrayView<ubyte>{ Cast<ubyte>(&comp), sizeof(comp) });
 	}
 	
 	template <typename Tag>
-	inline void  MessageBuilder::Add (EntityID id, ComponentID compId, const Pair<void*, BytesU> &data)
+	inline void  MessageBuilder::Add (EntityID id, ComponentID compId, const Pair<void*, Bytes> &data)
 	{
 		ASSERT( data.first );
-		return Add<Tag>( id, compId, ArrayView<uint8_t>{ Cast<uint8_t>(data.first), size_t(data.second) });
+		return Add<Tag>( id, compId, ArrayView<ubyte>{ Cast<ubyte>(data.first), usize(data.second) });
 	}
 
 /*
@@ -190,7 +189,7 @@ namespace AE::ECS
 			//STATIC_ASSERT( not IsSameTypes< Tag, MsgTag_RemovedComponent >);
 			
 			msg.listeners.push_back(
-				[fn = std::forward<Fn>(fn)] (const MessageData &msg)
+				[fn = FwdArg<Fn>(fn)] (const MessageData &msg)
 				{
 					fn( ArrayView<EntityID>{ msg.entities });
 				});
@@ -203,7 +202,7 @@ namespace AE::ECS
 			STATIC_ASSERT( IsSameTypes<typename FI::args::template Get<1>, ArrayView<Comp>> );
 			
 			msg.listeners.push_back(
-				[fn = std::forward<Fn>(fn)] (const MessageData &msg)
+				[fn = FwdArg<Fn>(fn)] (const MessageData &msg)
 				{
 					ASSERT( msg.components.size() );
 					fn( ArrayView<EntityID>{ msg.entities },
@@ -219,7 +218,7 @@ namespace AE::ECS
 =================================================
 */
 	template <typename Tag>
-	inline void  MessageBuilder::AddMulti (ComponentID compId, ArrayView<EntityID> ids, ArrayView<uint8_t> compData)
+	inline void  MessageBuilder::AddMulti (ComponentID compId, ArrayView<EntityID> ids, ArrayView<ubyte> compData)
 	{
 		MessageKey const	key  { compId, MsgTagTypeInfo<Tag>::id };
 		auto				iter = _msgTypes.find( key );
@@ -237,9 +236,9 @@ namespace AE::ECS
 		ASSERT( compData.size() );
 		ASSERT( ids.size() );
 
-		const size_t	comp_size = compData.size() / ids.size();
+		const usize	comp_size = compData.size() / ids.size();
 		msg.components.resize( (msg.entities.size() + 1) * comp_size );
-		std::memcpy( OUT msg.components.data() + BytesU{msg.entities.size() * comp_size}, compData.data(), compData.size() );
+		MemCopy( OUT msg.components.data() + Bytes{msg.entities.size() * comp_size}, compData.data(), ArraySizeOf( compData ));
 
 		msg.entities.insert( msg.entities.end(), ids.begin(), ids.end() );
 	}

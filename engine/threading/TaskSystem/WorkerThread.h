@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -24,14 +24,15 @@ namespace AE::Threading
 		std::thread				_thread;
 		Atomic<uint>			_looping;
 		const ThreadMask		_threadMask;
-		const milliseconds		_sleepOnIdle;
+		const nanoseconds		_sleepStep;
+		const nanoseconds		_maxSleepOnIdle;
 		const FixedString<64>	_name;
 
 
 	// methods
 	public:
 		WorkerThread ();
-		WorkerThread (ThreadMask mask, milliseconds sleepOnIdle, StringView name = "thread");
+		WorkerThread (ThreadMask mask, nanoseconds sleepStep, nanoseconds maxSleepOnIdle, StringView name = "thread");
 
 		bool  Attach (uint uid) override;
 		void  Detach () override;

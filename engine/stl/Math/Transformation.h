@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -94,7 +94,7 @@ namespace AE::Math
 		Vec<T,4>	perspective;
 		Unused( glm::decompose( mat._value, OUT scale3, OUT orientation._value, OUT position, OUT skew, OUT perspective ));
 
-		ASSERT( Equals( scale3.x, scale3.y ) and Equals( scale3.x, scale3.z ) );
+		ASSERT( Equals( scale3.x, scale3.y ) and Equals( scale3.x, scale3.z ));
 		scale = scale3.x;
 	}
 	

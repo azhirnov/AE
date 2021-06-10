@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -41,7 +41,7 @@ namespace AE::STL
 		LinearAllocator (Self &&other)
 		{
 			std::scoped_lock	lock{ _guard, other._guard };
-			_base = std::move(other._base);
+			_base = RVRef(other._base);
 		}
 
 		LinearAllocator (const Self &) = delete;
@@ -52,7 +52,7 @@ namespace AE::STL
 		Self& operator = (Self &&rhs)
 		{
 			std::scoped_lock	lock{ _guard, other._guard };
-			_base = std::move(other._base);
+			_base = RVRef(other._base);
 			return *this;
 		}
 
@@ -63,14 +63,14 @@ namespace AE::STL
 		}
 
 
-		void SetBlockSize (BytesU size)
+		void SetBlockSize (Bytes size)
 		{
 			EXLOCK( _guard );
 			return _base.SetBlockSize( size );
 		}
 
 
-		ND_ AE_ALLOCATOR void*  Alloc (const BytesU size, const BytesU align)
+		ND_ AE_ALLOCATOR void*  Alloc (const Bytes size, const Bytes align)
 		{
 			EXLOCK( _guard );
 			return _base.Alloc( size, align );
@@ -78,7 +78,7 @@ namespace AE::STL
 
 
 		template <typename T>
-		ND_ AE_ALLOCATOR T*  Alloc (size_t count = 1)
+		ND_ AE_ALLOCATOR T*  Alloc (usize count = 1)
 		{
 			EXLOCK( _guard );
 			return _base.Alloc<T>( count );

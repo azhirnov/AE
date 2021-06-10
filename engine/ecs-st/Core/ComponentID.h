@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -11,7 +11,7 @@ namespace AE::ECS
 	// Component ID
 	//
 
-	namespace _ae_ecs_hidden_
+	namespace _hidden_
 	{
 		template <uint UID>
 		struct _ComponentID
@@ -26,11 +26,11 @@ namespace AE::ECS
 			ND_ constexpr bool  operator == (const _ComponentID &rhs) const	{ return value == rhs.value; }
 		};
 
-	}	// _ae_ecs_hidden_
+	}	// _hidden_
 	
-	using ComponentID		= _ae_ecs_hidden_::_ComponentID<0>;
-	using TagComponentID	= _ae_ecs_hidden_::_ComponentID<1>;
-	using MsgTagID			= _ae_ecs_hidden_::_ComponentID<2>;
+	using ComponentID		= ECS::_hidden_::_ComponentID<0>;
+	using TagComponentID	= ECS::_hidden_::_ComponentID<1>;
+	using MsgTagID			= ECS::_hidden_::_ComponentID<2>;
 
 
 
@@ -46,9 +46,9 @@ namespace AE::ECS
 		STATIC_ASSERT( std::is_nothrow_destructible_v<Comp> );
 
 		using type	= Comp;
-		static inline const ComponentID		id		{ CheckCast<uint16_t>( _ae_stl_hidden_::StaticTypeIdOf< Comp, 0x1000 >::Get().Get() ) };
-		static constexpr Bytes<uint16_t>	align	{ IsEmpty<Comp> ? 0 : alignof(Comp) };
-		static constexpr Bytes<uint16_t>	size	{ IsEmpty<Comp> ? 0 : sizeof(Comp) };
+		static inline const ComponentID		id		{ CheckCast<uint16_t>( STL::_hidden_::StaticTypeIdOf< Comp, 0x1000 >::Get().Get() ) };
+		static constexpr TBytes<uint16_t>	align	{ IsEmpty<Comp> ? 0 : alignof(Comp) };
+		static constexpr TBytes<uint16_t>	size	{ IsEmpty<Comp> ? 0 : sizeof(Comp) };
 
 		static void Ctor (OUT void *comp)
 		{
@@ -71,7 +71,7 @@ namespace AE::ECS
 		STATIC_ASSERT( IsEmpty<Comp> );
 
 		using type	= Comp;
-		static inline const MsgTagID	id {CheckCast<uint16_t>( _ae_stl_hidden_::StaticTypeIdOf< Comp, 0x1002 >::Get().Get() )};
+		static inline const MsgTagID	id {CheckCast<uint16_t>( STL::_hidden_::StaticTypeIdOf< Comp, 0x1002 >::Get().Get() )};
 	};
 
 }	// AE::ECS
@@ -79,9 +79,9 @@ namespace AE::ECS
 namespace std
 {
 	template <uint32_t UID>
-	struct hash< AE::ECS::_ae_ecs_hidden_::_ComponentID<UID> >
+	struct hash< AE::ECS::_hidden_::_ComponentID<UID> >
 	{
-		ND_ size_t  operator () (const AE::ECS::_ae_ecs_hidden_::_ComponentID<UID> &id) const
+		ND_ size_t  operator () (const AE::ECS::_hidden_::_ComponentID<UID> &id) const
 		{
 			return AE::Math::BitRotateLeft( size_t(id.value), UID*8 );
 		}

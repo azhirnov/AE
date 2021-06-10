@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -11,6 +11,7 @@
 #include "stl/Utils/HandleTmpl.h"
 #include "stl/Utils/TypeId.h"
 #include "stl/Utils/Noncopyable.h"
+#include "stl/Utils/RefCounter.h"
 
 #include "stl/Containers/FixedArray.h"
 #include "stl/Containers/ArrayView.h"

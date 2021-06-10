@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	AE_BARRIER_MODE:
 		0 - WinAPI native barrier implementation, requires Windows 8 desctop.
@@ -33,7 +33,7 @@ namespace AE::Threading
 	{
 	// variables
 	private:
-		alignas(uint64_t) uint8_t	_data [32];
+		alignas(ulong) ubyte	_data [32];
 
 
 	// methods

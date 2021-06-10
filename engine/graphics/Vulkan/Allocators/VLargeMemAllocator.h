@@ -1,10 +1,10 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #ifdef AE_ENABLE_VULKAN
 
-# include "graphics/Public/GfxMemAllocator.h"
+# include "graphics/Public/VulkanResourceManager.h"
 # include "graphics/Vulkan/VCommon.h"
 
 namespace AE::Graphics
@@ -14,7 +14,7 @@ namespace AE::Graphics
 	// Vulkan Large Memory Allocator
 	//
 
-	class VLargeMemAllocator final : public IGfxMemAllocator
+	class VLargeMemAllocator final : public VMemAllocator
 	{
 	// types
 	private:
@@ -33,13 +33,13 @@ namespace AE::Graphics
 		explicit VLargeMemAllocator (const VDevice &dev);
 		~VLargeMemAllocator () override;
 		
-		bool AllocForImage (const NativeImageHandle_t &image, const ImageDesc &desc, OUT Storage_t &data) override;
-		bool AllocForBuffer (const NativeBufferHandle_t &buffer, const BufferDesc &desc, OUT Storage_t &data) override;
+		bool AllocForImage (ImageVk_t image, const ImageDesc &desc, OUT Storage_t &data) override;
+		bool AllocForBuffer (BufferVk_t buffer, const BufferDesc &desc, OUT Storage_t &data) override;
 		//bool AllocateForAccelStruct (const NativeAccelStructHandle_t &as, EMemoryType memType, OUT Storage_t &data) override;
 
 		bool Dealloc (INOUT Storage_t &data) override;
 			
-		bool GetInfo (const Storage_t &data, OUT NativeMemInfo_t &info) const override;
+		bool GetInfo (const Storage_t &data, OUT VulkanMemoryObjInfo &info) const override;
 
 
 	private:

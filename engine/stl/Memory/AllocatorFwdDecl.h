@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -8,6 +8,9 @@ namespace AE::STL
 {
 	struct UntypedAllocator;
 	struct UntypedAlignedAllocator;
+	
+	template <usize BaseAlign>
+	struct UntypedAllocatorBaseAlign;
 
 	template <typename T>
 	struct StdAllocator;

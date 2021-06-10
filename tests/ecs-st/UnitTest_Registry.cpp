@@ -38,7 +38,7 @@ namespace
 	static QueryID  CreateQuery2 (Registry &reg, ArrayView<Tuple<Args...>> const*)
 	{
 		using A = TypeList< Args... >;
-		STATIC_ASSERT(( IsSameTypes< typename A::template Get<0>, size_t > ));
+		STATIC_ASSERT(( IsSameTypes< typename A::template Get<0>, usize > ));
 		using B = typename A::PopFront::type;
 
 		return CreateQuery1( reg, (B const*)null );
@@ -49,7 +49,7 @@ namespace
 	{
 		QueryID	q = CreateQuery2( reg, (typename FunctionInfo<Fn>::args::template Get<0> *)null );
 
-		reg.Enque( q, std::forward<Fn>(fn) );
+		reg.Enque( q, FwdArg<Fn>(fn) );
 	}
 
 
@@ -352,11 +352,11 @@ namespace
 	static void  System_Test1 ()
 	{
 		Registry		reg;
-		const size_t	count = 100;
+		const usize	count = 100;
 
 		InitRegistry( reg );
 
-		for (size_t i = 0; i < count; ++i)
+		for (usize i = 0; i < count; ++i)
 		{
 			EntityID	e1 = reg.CreateEntity<Comp1, Comp2>();
 			TEST( e1 );
@@ -364,16 +364,16 @@ namespace
 
 		QueryID	q = reg.CreateQuery< Require<Comp1, Comp2> >();
 
-		size_t	cnt1 = 0;
+		usize	cnt1 = 0;
 		reg.Enque( q,
-			[&cnt1] (ArrayView<Tuple< size_t, WriteAccess<Comp1>, ReadAccess<Comp2> >> chunks)
+			[&cnt1] (ArrayView<Tuple< usize, WriteAccess<Comp1>, ReadAccess<Comp2> >> chunks)
 			{
 				for (auto& chunk : chunks)
 				{
 					chunk.Apply(
-						[&cnt1] (size_t count, WriteAccess<Comp1> comp1, ReadAccess<Comp2> comp2)
+						[&cnt1] (usize count, WriteAccess<Comp1> comp1, ReadAccess<Comp2> comp2)
 						{
-							for (size_t i = 0; i < count; ++i) {
+							for (usize i = 0; i < count; ++i) {
 								comp1[i].value = int(comp2[i].value);
 								++cnt1;
 							}
@@ -381,7 +381,7 @@ namespace
 				}
 			});
 		
-		size_t	cnt2 = 0;
+		usize	cnt2 = 0;
 		reg.Enque( q,
 			[&cnt2] (Comp1 &comp1, const Comp2 &comp2)
 			{
@@ -402,16 +402,16 @@ namespace
 	{
 		struct SingleComp1
 		{
-			size_t	sum;
+			usize	sum;
 		};
 
 		Registry		reg;
-		const size_t	count = 100;
+		const usize	count = 100;
 
 		InitRegistry( reg );
 
 		// create archetypes
-		for (size_t i = 0; i < count; ++i)
+		for (usize i = 0; i < count; ++i)
 		{
 			EntityID	e1 = reg.CreateEntity<Comp1, Comp2, Tag1>();
 			EntityID	e2 = reg.CreateEntity<Comp1>();
@@ -442,28 +442,28 @@ namespace
 			sc1.sum = 0;
 		}
 
-		size_t	cnt1 = 0;
+		usize	cnt1 = 0;
 		EnqueWithoutQuery( reg,
-			[&cnt1] (ArrayView<Tuple< size_t, ReadAccess<Comp1>, Subtractive<Tag1> >> chunks, Tuple< SingleComp1& > single)
+			[&cnt1] (ArrayView<Tuple< usize, ReadAccess<Comp1>, Subtractive<Tag1> >> chunks, Tuple< SingleComp1& > single)
 			{
-				size_t&	sum = single.Get<0>().sum;
+				usize&	sum = single.Get<0>().sum;
 
 				for (auto& chunk : chunks)
 				{
-					for (size_t i = 0; i < chunk.Get<0>(); ++i) {
+					for (usize i = 0; i < chunk.Get<0>(); ++i) {
 						sum += chunk.Get<1>()[i].value;
 						++cnt1;
 					}
 				}
 			});
 
-		size_t	cnt2 = 0;
+		usize	cnt2 = 0;
 		EnqueWithoutQuery( reg,
-			[&cnt2] (ArrayView<Tuple< size_t, ReadAccess<Comp2>, Require<Tag1, Comp1> >> chunks)
+			[&cnt2] (ArrayView<Tuple< usize, ReadAccess<Comp2>, Require<Tag1, Comp1> >> chunks)
 			{
 				for (auto& chunk : chunks)
 				{
-					for (size_t i = 0; i < chunk.Get<0>(); ++i) {
+					for (usize i = 0; i < chunk.Get<0>(); ++i) {
 						void( chunk.Get<1>()[i].value );
 						++cnt2;
 					}
@@ -498,17 +498,17 @@ namespace
 		
 		Array<uint>	arr;
 		EnqueWithoutQuery( reg,
-			[&reg, &arr] (ArrayView<Tuple< size_t, ReadAccess<Comp1> >>)
+			[&reg, &arr] (ArrayView<Tuple< usize, ReadAccess<Comp1> >>)
 			{
 				arr.push_back( 1 );
 						
-				EnqueWithoutQuery( reg,	[&arr] (ArrayView<Tuple< size_t, WriteAccess<Comp1>, ReadAccess<Comp2> >>)
+				EnqueWithoutQuery( reg,	[&arr] (ArrayView<Tuple< usize, WriteAccess<Comp1>, ReadAccess<Comp2> >>)
 										{
 											arr.push_back( 2 );
 										});
 			});
 
-		EnqueWithoutQuery( reg,	[&arr] (ArrayView<Tuple< size_t, ReadAccess<Comp2> >>)
+		EnqueWithoutQuery( reg,	[&arr] (ArrayView<Tuple< usize, ReadAccess<Comp2> >>)
 								{
 									arr.push_back( 3 );
 								});
@@ -569,11 +569,11 @@ namespace
 	static void  Messages_Test1 ()
 	{
 		Registry		reg;
-		const size_t	count = 100;
+		const usize	count = 100;
 
 		InitRegistry( reg );
 
-		size_t	cnt1 = 0;
+		usize	cnt1 = 0;
 		reg.AddMessageListener<Comp1, MsgTag_RemovedComponent>(
 			[&cnt1] (ArrayView<EntityID> entities, ArrayView<Comp1> components)
 			{
@@ -583,7 +583,7 @@ namespace
 
 		Array<EntityID>	entities;
 
-		for (size_t i = 0; i < count; ++i)
+		for (usize i = 0; i < count; ++i)
 		{
 			EntityID	e1 = reg.CreateEntity<Comp1>();
 			TEST( e1 );
@@ -593,7 +593,7 @@ namespace
 		reg.Process();
 		TEST( cnt1 == 0 );
 		
-		for (size_t i = 0; i < entities.size(); ++i)
+		for (usize i = 0; i < entities.size(); ++i)
 		{
 			reg.DestroyEntity( entities[i] );
 		}
@@ -607,32 +607,32 @@ namespace
 	static void  Messages_Test2 ()
 	{
 		Registry		reg;
-		const size_t	count = 100;
+		const usize	count = 100;
 		
 		InitRegistry( reg );
 
-		size_t	cnt1 = 0;
+		usize	cnt1 = 0;
 		reg.AddMessageListener<Comp1, MsgTag_ComponentChanged>(
 			[&cnt1] (ArrayView<EntityID> entities)
 			{
 				cnt1 += entities.size();
 			});
 		
-		for (size_t i = 0; i < count; ++i)
+		for (usize i = 0; i < count; ++i)
 		{
 			EntityID	e1 = reg.CreateEntity<Comp1>();
 			TEST( e1 );
 		}
 
 		EnqueWithoutQuery( reg,
-			[&reg] (ArrayView<Tuple< size_t, ReadAccess<Comp1>, ReadAccess<EntityID> >> chunks)
+			[&reg] (ArrayView<Tuple< usize, ReadAccess<Comp1>, ReadAccess<EntityID> >> chunks)
 			{
 				for (auto& chunk : chunks)
 				{
 					chunk.Apply(
-						[&reg] (size_t count, ReadAccess<Comp1>, ReadAccess<EntityID> entities)
+						[&reg] (usize count, ReadAccess<Comp1>, ReadAccess<EntityID> entities)
 						{
-							for (size_t i = 0; i < count; ++i)
+							for (usize i = 0; i < count; ++i)
 							{
 								reg.AddMessage<MsgTag_ComponentChanged>( entities[i], ComponentTypeInfo<Comp1>::id );
 							}

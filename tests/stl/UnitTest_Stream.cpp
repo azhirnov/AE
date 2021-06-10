@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Stream/StdStream.h"
 #include "stl/Stream/MemStream.h"
@@ -13,12 +13,12 @@ namespace
 	{
 		const String	str1 = "12i12ienmqpwom12euj1029podmksjhjbjcnalsmoiiwujkcmsalsc,posaasjncsalkmxaz";
 
-		Array<uint8_t>	file_data;
+		Array<ubyte>	file_data;
 
 		// compress
 		{
-			auto*			stream = New<MemWStream>();
-			BrotliWStream	encoder{ UniquePtr<WStream>{stream} };
+			auto			stream = MakeRC<MemWStream>();
+			BrotliWStream	encoder{ stream };
 
 			TEST( encoder.IsOpen() );
 			TEST( encoder.Write( str1 ));
@@ -29,7 +29,7 @@ namespace
 
 		// uncompress
 		{
-			BrotliRStream	decoder{ UniquePtr<RStream>{ New<MemRStream>( file_data )} };
+			BrotliRStream	decoder{ MakeRC<MemRStream>( file_data )};
 			String			str2, str3;
 
 			TEST( decoder.IsOpen() );
@@ -44,8 +44,8 @@ namespace
 
 	static void  StdStream_Test1 ()
 	{
-		String				src_str = "4324356uytsdgfh1243rttrasfdg";
-		SharedPtr<RStream>	mem = MakeShared<MemRStream>( src_str );
+		String			src_str = "4324356uytsdgfh1243rttrasfdg";
+		RC<RStream>		mem = MakeRC<MemRStream>( src_str );
 
 		StreambufWrap<char>	streambuf{ mem };
 		std::istream		stream{ &streambuf };

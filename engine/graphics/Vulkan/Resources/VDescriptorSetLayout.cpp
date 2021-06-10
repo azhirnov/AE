@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -83,7 +83,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void VDescriptorSetLayout::Destroy (const VResourceManager &resMngr)
+	void VDescriptorSetLayout::Destroy (const VResourceManagerImpl &resMngr)
 	{
 		EXLOCK( _drCheck );
 
@@ -210,7 +210,7 @@ namespace AE::Graphics
 		_maxIndex				 = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.desc.push_back( std::move(bind) );
+		binding.desc.push_back( RVRef(bind) );
 	}
 
 /*
@@ -229,7 +229,7 @@ namespace AE::Graphics
 		_maxIndex = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.desc.push_back( std::move(bind) );
+		binding.desc.push_back( RVRef(bind) );
 	}
 	
 /*
@@ -248,7 +248,7 @@ namespace AE::Graphics
 		_maxIndex = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.desc.push_back( std::move(bind) );
+		binding.desc.push_back( RVRef(bind) );
 	}
 
 /*
@@ -269,7 +269,7 @@ namespace AE::Graphics
 		_maxIndex = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.desc.push_back( std::move(bind) );
+		binding.desc.push_back( RVRef(bind) );
 	}
 	
 /*
@@ -288,7 +288,7 @@ namespace AE::Graphics
 		_maxIndex = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.desc.push_back( std::move(bind) );
+		binding.desc.push_back( RVRef(bind) );
 	}
 	
 /*
@@ -309,7 +309,7 @@ namespace AE::Graphics
 		_maxIndex = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.desc.push_back( std::move(bind) );
+		binding.desc.push_back( RVRef(bind) );
 	}
 	
 /*
@@ -330,7 +330,7 @@ namespace AE::Graphics
 		_maxIndex = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.desc.push_back( std::move(bind) );
+		binding.desc.push_back( RVRef(bind) );
 	}
 
 /*
@@ -358,7 +358,7 @@ namespace AE::Graphics
 		_maxIndex = Max( _maxIndex, bind.binding );
 		_IncDescriptorCount( bind.descriptorType );
 
-		binding.desc.push_back( std::move(bind) );
+		binding.desc.push_back( RVRef(bind) );
 	}
 	*/
 	

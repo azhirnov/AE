@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Stream/FileStream.h"
 #include "stl/Algorithms/StringUtils.h"
@@ -102,17 +102,17 @@ namespace AE::STL
 	_GetSize
 =================================================
 */
-	BytesU  FileRStream::_GetSize () const
+	Bytes  FileRStream::_GetSize () const
 	{
 		ASSERT( IsOpen() );
 
-		const int64_t	curr = ftell( _file );
+		const slong	curr = ftell( _file );
 		CHECK( fseek( _file, 0, SEEK_END ) == 0 );
 
-		const int64_t	size = ftell( _file );
+		const slong	size = ftell( _file );
 		CHECK( fseek( _file, curr, SEEK_SET ) == 0 );
 
-		return BytesU(uint64_t(size));
+		return Bytes(ulong(size));
 	}
 	
 /*
@@ -120,7 +120,7 @@ namespace AE::STL
 	SeekSet
 =================================================
 */
-	bool  FileRStream::SeekSet (BytesU pos)
+	bool  FileRStream::SeekSet (Bytes pos)
 	{
 		ASSERT( IsOpen() );
 
@@ -129,7 +129,7 @@ namespace AE::STL
 
 		_position = Min( pos, _fileSize );
 
-		return (fseek( _file, int64_t(pos), SEEK_SET ) == 0);
+		return (fseek( _file, slong(pos), SEEK_SET ) == 0);
 	}
 	
 /*
@@ -137,11 +137,11 @@ namespace AE::STL
 	Read2
 =================================================
 */
-	BytesU  FileRStream::Read2 (OUT void *buffer, BytesU size)
+	Bytes  FileRStream::Read2 (OUT void *buffer, Bytes size)
 	{
 		ASSERT( IsOpen() );
 
-		BytesU	readn{ fread( buffer, 1, size_t(size), _file )};
+		Bytes	readn{ fread( buffer, 1, usize(size), _file )};
 
 		_position += readn;
 
@@ -221,11 +221,11 @@ namespace AE::STL
 	Position
 =================================================
 */
-	BytesU  FileWStream::Position () const
+	Bytes  FileWStream::Position () const
 	{
 		ASSERT( IsOpen() );
 
-		return BytesU(uint64_t(ftell( _file )));
+		return Bytes(ulong(ftell( _file )));
 	}
 	
 /*
@@ -233,17 +233,17 @@ namespace AE::STL
 	Size
 =================================================
 */
-	BytesU  FileWStream::Size () const
+	Bytes  FileWStream::Size () const
 	{
 		ASSERT( IsOpen() );
 
-		const int64_t	curr = ftell( _file );
+		const slong	curr = ftell( _file );
 		CHECK( fseek( _file, 0, SEEK_END ) == 0 );
 
-		const int64_t	size = ftell( _file );
+		const slong	size = ftell( _file );
 		CHECK( fseek( _file, curr, SEEK_SET ) == 0 );
 
-		return BytesU(uint64_t(size));
+		return Bytes(ulong(size));
 	}
 	
 /*
@@ -251,11 +251,11 @@ namespace AE::STL
 	SeekSet
 =================================================
 */
-	bool  FileWStream::SeekSet (BytesU pos)
+	bool  FileWStream::SeekSet (Bytes pos)
 	{
 		ASSERT( IsOpen() );
 
-		return (fseek( _file, int64_t(pos), SEEK_SET ) == 0);
+		return (fseek( _file, slong(pos), SEEK_SET ) == 0);
 	}
 
 /*
@@ -263,11 +263,11 @@ namespace AE::STL
 	Write2
 =================================================
 */
-	BytesU  FileWStream::Write2 (const void *buffer, BytesU size)
+	Bytes  FileWStream::Write2 (const void *buffer, Bytes size)
 	{
 		ASSERT( IsOpen() );
 
-		return BytesU(fwrite( buffer, 1, size_t(size), _file ));
+		return Bytes(fwrite( buffer, 1, usize(size), _file ));
 	}
 	
 /*

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -33,34 +33,21 @@ namespace AE::STL
 	// Make Integer Sequence
 	//
 
-namespace _ae_stl_hidden_
-{
-	template <size_t First, typename SeqType>
-	struct MakeIntSequenceRange;
-
-	template <size_t First, size_t ...I>
-	struct MakeIntSequenceRange< First, std::integer_sequence<size_t, I...> >
+	namespace _hidden_
 	{
-		using type = std::integer_sequence< size_t, (I + First)... >;
-	};
+		template <usize First, typename SeqType>
+		struct MakeIntSequenceRange;
 
-}	// _ae_stl_hidden_
+		template <usize First, usize ...I>
+		struct MakeIntSequenceRange< First, std::integer_sequence<usize, I...> >
+		{
+			using type = std::integer_sequence< usize, (I + First)... >;
+		};
 
-	template <size_t First, size_t Count>
-	using MakeIntSequence = typename _ae_stl_hidden_::MakeIntSequenceRange< First, std::make_integer_sequence< size_t, Count > >::type;
+	}	// _hidden_
 
-
-	
-	//
-	// Unreference
-	//
-	
-namespace _ae_stl_hidden_
-{
-	template <typename T>	struct Unreference								{ using type = T; };
-	template <typename T>	struct Unreference< std::reference_wrapper<T> >	{ using type = T&; };
-}
-	template <typename T>	using Unreference = typename _ae_stl_hidden_::Unreference<T>::type;
+	template <usize First, usize Count>
+	using MakeIntSequence = typename STL::_hidden_::MakeIntSequenceRange< First, std::make_integer_sequence< usize, Count > >::type;
 
 
 }	// AE::STL

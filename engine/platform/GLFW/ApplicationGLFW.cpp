@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_GLFW
 
@@ -30,7 +30,7 @@ namespace {
 */
 	ApplicationGLFW::ApplicationGLFW (UniquePtr<IAppListener> listener) :
 		_isRunning{ true },
-		_listener{ std::move(listener) },
+		_listener{ RVRef(listener) },
 		_mainThread{ std::this_thread::get_id() }
 	{
 		glfwSetErrorCallback( &GLFW_ErrorCallback );
@@ -65,7 +65,7 @@ namespace {
 		CHECK_ERR( _isRunning.load( EMemoryOrder::Relaxed ));
 		CHECK_ERR( listener );
 
-		SharedPtr<WindowGLFW>	wnd{ new WindowGLFW{ *this, std::move(listener) }};
+		SharedPtr<WindowGLFW>	wnd{ new WindowGLFW{ *this, RVRef(listener) }};
 		CHECK_ERR( wnd->_Create( desc ));
 
 		_windows.push_back( wnd );
@@ -76,7 +76,7 @@ namespace {
 =================================================
 	CreateVRDevice
 =================================================
-*/
+*
 	VRDevicePtr  ApplicationGLFW::CreateVRDevice ()
 	{
 		EXLOCK( _drCheck );
@@ -90,7 +90,7 @@ namespace {
 	OpenResource
 =================================================
 */
-	SharedPtr<RStream>  ApplicationGLFW::OpenResource ()
+	RC<RStream>  ApplicationGLFW::OpenResource ()
 	{
 		EXLOCK( _drCheck );
 
@@ -211,7 +211,7 @@ namespace {
 
 			Threading::Scheduler().ProcessTask( Threading::IThread::EThread::Main, 0 );
 
-			for (size_t i = 0; i < _windows.size();)
+			for (usize i = 0; i < _windows.size();)
 			{
 				if ( auto wnd = _windows[i].lock(); wnd and wnd->_ProcessMessages() )
 					++i;
@@ -275,7 +275,7 @@ namespace {
 		{
 			CHECK_ERR( glfwInit() == GLFW_TRUE, 1 );
 
-			AE::App::ApplicationGLFW	app{ std::move(listener) };
+			AE::App::ApplicationGLFW	app{ RVRef(listener) };
 			app._MainLoop();
 		}
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -6,6 +6,7 @@
 
 # include "stl/Common.h"
 # include "stl/Containers/NtStringView.h"
+# include "stl/Math/BitMath.h"
 
 # if not defined(VK_NO_PROTOTYPES) and defined(VULKAN_CORE_H_)
 #	error invalid configuration, include vulkan.h after this file.
@@ -48,7 +49,7 @@ namespace AE::Graphics
 		friend class VulkanDeviceFn;
 
 	// variables
-	public:
+	private:
 #		define VKLOADER_STAGE_FNPOINTER
 #		 include "vulkan_loader/fn_vulkan_dev.h"
 #		undef  VKLOADER_STAGE_FNPOINTER
@@ -61,8 +62,8 @@ namespace AE::Graphics
 		VulkanDeviceFnTable (const VulkanDeviceFnTable &) = delete;
 		VulkanDeviceFnTable (VulkanDeviceFnTable &&) = delete;
 
-		VulkanDeviceFnTable& operator = (const VulkanDeviceFnTable &) = delete;
-		VulkanDeviceFnTable& operator = (VulkanDeviceFnTable &&) = delete;
+		VulkanDeviceFnTable&  operator = (const VulkanDeviceFnTable &) = delete;
+		VulkanDeviceFnTable&  operator = (VulkanDeviceFnTable &&) = delete;
 	};
 
 
@@ -73,16 +74,18 @@ namespace AE::Graphics
 	class VulkanDeviceFn
 	{
 	// variables
-	protected:
+	private:
 		VulkanDeviceFnTable *		_table;
 
 	// methods
+	protected:
+		void  VulkanDeviceFn_Init (const VulkanDeviceFn &other);
+		void  VulkanDeviceFn_Init (VulkanDeviceFnTable *table);
+
 	public:
 		VulkanDeviceFn () : _table{null} {}
+		VulkanDeviceFn (const VulkanDeviceFn &) = default;
 		explicit VulkanDeviceFn (VulkanDeviceFnTable *table) : _table{table} {}
-
-		void VulkanDeviceFn_Init (const VulkanDeviceFn &other);
-		void VulkanDeviceFn_Init (VulkanDeviceFnTable *table);
 
 #		define VKLOADER_STAGE_INLINEFN
 #		 include "vulkan_loader/fn_vulkan_dev.h"
@@ -98,19 +101,50 @@ namespace AE::Graphics
 	{
 		VulkanLoader () = delete;
 
-		static bool Initialize (NtStringView libName = {});
-		static void LoadInstance (VkInstance instance);
-		static void Unload ();
+		ND_ static bool  Initialize (NtStringView libName = {});
+		ND_ static bool  LoadInstance (VkInstance instance);
+			static void  Unload ();
 		
-		static void LoadDevice (VkDevice device, OUT VulkanDeviceFnTable &table);
-		static void ResetDevice (OUT VulkanDeviceFnTable &table);
+		ND_ static bool  LoadDevice (VkDevice device, OUT VulkanDeviceFnTable &table);
+			static void  ResetDevice (OUT VulkanDeviceFnTable &table);
+		
+			static void  SetupInstanceBackwardCompatibility (uint version);
+			static void  SetupDeviceBackwardCompatibility (uint version, INOUT VulkanDeviceFnTable &table);
 	};
 
 }	// AE::Graphics
 
+	
+	// debugger can't show enum names for VkFlags, so use enum instead
+#define VULKAN_ENUM_BIT_OPERATORS( _type_ ) \
+			inline constexpr _type_&  operator |= (_type_ &lhs, _type_ rhs) { return lhs = _type_( AE::Math::ToNearUInt( lhs ) | AE::Math::ToNearUInt( rhs )); } \
+		ND_ inline constexpr _type_   operator |  (_type_ lhs, _type_ rhs)	{ return _type_( AE::Math::ToNearUInt( lhs ) | AE::Math::ToNearUInt( rhs )); } \
+			inline constexpr _type_&  operator &= (_type_ &lhs, _type_ rhs) { return lhs = _type_( AE::Math::ToNearUInt( lhs ) & AE::Math::ToNearUInt( rhs )); } \
+		ND_ inline constexpr _type_   operator &  (_type_ lhs, _type_ rhs)	{ return _type_( AE::Math::ToNearUInt( lhs ) & AE::Math::ToNearUInt( rhs )); } \
+		ND_ inline constexpr _type_   operator ~  (_type_ value)			{ return _type_( ~AE::Math::ToNearUInt( value )); } \
 
-// check for 'VulkanDeviceFnTable' structure size missmatch
-# ifdef AE_CPP_DETECT_MISSMATCH
+	VULKAN_ENUM_BIT_OPERATORS( VkPipelineStageFlagBits );
+	VULKAN_ENUM_BIT_OPERATORS( VkAccessFlagBits );
+	VULKAN_ENUM_BIT_OPERATORS( VkDependencyFlagBits );
+	VULKAN_ENUM_BIT_OPERATORS( VkImageAspectFlagBits );
+	VULKAN_ENUM_BIT_OPERATORS( VkStencilFaceFlagBits );
+	VULKAN_ENUM_BIT_OPERATORS( VkShaderStageFlagBits );
+	VULKAN_ENUM_BIT_OPERATORS( VkImageCreateFlagBits );
+	VULKAN_ENUM_BIT_OPERATORS( VkQueueFlagBits );
+	VULKAN_ENUM_BIT_OPERATORS( VkImageUsageFlagBits );
+	VULKAN_ENUM_BIT_OPERATORS( VkBufferUsageFlagBits );
+	VULKAN_ENUM_BIT_OPERATORS( VkSampleCountFlagBits );
+	
+#	ifdef VK_NV_ray_tracing
+	VULKAN_ENUM_BIT_OPERATORS( VkGeometryFlagBitsNV );
+	VULKAN_ENUM_BIT_OPERATORS( VkBuildAccelerationStructureFlagBitsNV );
+#	endif
+	
+#undef VULKAN_ENUM_BIT_OPERATORS
+
+
+// check for 'VulkanDeviceFnTable' structure size mismatch
+# ifdef AE_CPP_DETECT_MISMATCH
 
 #  if defined(VK_USE_PLATFORM_ANDROID_KHR) and VK_USE_PLATFORM_ANDROID_KHR
 #	pragma detect_mismatch( "VK_USE_PLATFORM_ANDROID_KHR", "1" )
@@ -172,16 +206,22 @@ namespace AE::Graphics
 #	pragma detect_mismatch( "VK_USE_PLATFORM_XLIB_XRANDR_EXT", "0" )
 #  endif
 
-# endif	// AE_CPP_DETECT_MISSMATCH
+#  ifdef VK_VERSION_1_1
+#	pragma detect_mismatch( "VK_VERSION_1_1", "1" )
+#  else
+#	pragma detect_mismatch( "VK_VERSION_1_1", "0" )
+#  endif
+	
+#  ifdef VK_VERSION_1_2
+#	pragma detect_mismatch( "VK_VERSION_1_2", "1" )
+#  else
+#	pragma detect_mismatch( "VK_VERSION_1_2", "0" )
+#  endif
 
-#endif	// AE_ENABLE_VULKAN
-
-
-// check definitions
-#ifdef AE_CPP_DETECT_MISSMATCH
 #  ifdef AE_ENABLE_VULKAN
 #	pragma detect_mismatch( "AE_ENABLE_VULKAN", "1" )
 #  else
 #	pragma detect_mismatch( "AE_ENABLE_VULKAN", "0" )
 #  endif
 #endif	// AE_CPP_DETECT_MISSMATCH
+#endif	// AE_ENABLE_VULKAN

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -11,7 +11,7 @@ using namespace AE::Threading;
 
 struct LocalTaskScheduler
 {
-	LocalTaskScheduler (size_t maxWorkerThreads)
+	LocalTaskScheduler (usize maxWorkerThreads)
 	{
 		TaskScheduler::CreateInstance();
 		Scheduler().Setup( maxWorkerThreads );

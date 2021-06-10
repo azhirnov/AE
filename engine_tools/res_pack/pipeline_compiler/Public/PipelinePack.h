@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	Graphics_Config constants is not used here because they may be different for different platforms.
 */
@@ -128,8 +128,8 @@ namespace AE::PipelineCompiler
 		{
 			EResourceState		state;
 			uint				dynamicOffsetIndex;
-			BytesU				staticSize;
-			BytesU				arrayStride;
+			Bytes				staticSize;
+			Bytes				arrayStride;
 		};
 
 		struct TexelBuffer
@@ -150,13 +150,13 @@ namespace AE::PipelineCompiler
 
 		struct ImmutableSampler : Sampler
 		{
-			size_t				offsetInStorage;		// in 'samplerStorage'
+			usize				offsetInStorage;		// in 'samplerStorage'
 		};
 
 		struct ImageWithSampler
 		{
 			Image				image;
-			size_t				samplerOffsetInStorage;	// in 'samplerStorage'
+			usize				samplerOffsetInStorage;	// in 'samplerStorage'
 		};
 
 		struct SubpassInput : Image
@@ -201,7 +201,7 @@ namespace AE::PipelineCompiler
 	public:
 		DescriptorSetLayoutDesc () {}
 
-		bool Merge (const DescriptorSetLayoutDesc &other, OUT size_t &merged);
+		bool Merge (const DescriptorSetLayoutDesc &other, OUT usize &merged);
 		void SortUniforms ();
 
 		// ISerializable
@@ -222,11 +222,11 @@ namespace AE::PipelineCompiler
 		struct PushConst
 		{
 			EShaderStages		stageFlags;
-			Bytes<uint16_t>		offset;
-			Bytes<uint16_t>		size;
+			TBytes<ushort>		offset;
+			TBytes<ushort>		size;
 
 			PushConst () {}
-			PushConst (EShaderStages stages, BytesU offset, BytesU size) : stageFlags{stages}, offset{offset}, size{size} {}
+			PushConst (EShaderStages stages, Bytes offset, Bytes size) : stageFlags{stages}, offset{offset}, size{size} {}
 		};
 		using PushConstMap_t = FixedMap< PushConstantName, PushConst, 8 >;
 
@@ -375,10 +375,10 @@ namespace AE::PipelineCompiler
 		EPrimitive				topology				= Default;
 		uint					maxVertices				= 0;
 		uint					maxIndices				= 0;
-		uint3					defaultTaskGroupSize;
-		uint3					taskSizeSpec			{UNDEFINED_SPECIALIZATION};
-		uint3					defaultMeshGroupSize;
-		uint3					meshSizeSpec			{UNDEFINED_SPECIALIZATION};
+		uint					defaultTaskGroupSize	= 0;
+		uint					taskSizeSpec			= UNDEFINED_SPECIALIZATION;
+		uint					defaultMeshGroupSize	= 0;
+		uint					meshSizeSpec			= UNDEFINED_SPECIALIZATION;
 		SpecValues_t			specialization;
 		bool					earlyFragmentTests		= true;
 		
@@ -465,7 +465,7 @@ namespace AE::PipelineCompiler
 	{
 	// types
 	private:
-		using Hash_t					= size_t;
+		using Hash_t					= usize;
 
 		using DescriptorSetLayouts_t	= Array< DescriptorSetLayoutDesc >;
 		using DSLayoutMap_t				= HashMultiMap< Hash_t, DescrSetUID >;

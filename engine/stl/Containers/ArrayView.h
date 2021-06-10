@@ -1,8 +1,9 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
-#include "stl/Math/Vec.h"
+#include "stl/Math/Math.h"
+#include "stl/Math/Bytes.h"
 
 namespace AE::STL
 {
@@ -27,14 +28,14 @@ namespace AE::STL
 			T const *	_array;
 			T const		(*_dbgView)[400];		// debug viewer, don't use this field!
 		};
-		size_t		_count	= 0;
+		usize		_count	= 0;
 
 
 	// methods
 	public:
 		ArrayView () : _array{null} {}
 		
-		ArrayView (T const* ptr, size_t count) : _array{ptr}, _count{count}
+		ArrayView (T const* ptr, usize count) : _array{ptr}, _count{count}
 		{
 			ASSERT( (_count == 0) or (_array != null) ); 
 		}
@@ -47,19 +48,19 @@ namespace AE::STL
 			ASSERT( (_count == 0) or (_array != null) ); 
 		}
 
-		template <size_t S>
+		template <usize S>
 		ArrayView (const StaticArray<T,S> &arr) : _array{arr.data()}, _count{arr.size()} {}
 
-		template <size_t S>
+		template <usize S>
 		ArrayView (const T (&arr)[S]) : _array{arr}, _count{S} {}
 
 		ND_ explicit operator Array<T> ()			const	{ return Array<T>{ begin(), end() }; }
 
-		ND_ size_t			size ()					const	{ return _count; }
+		ND_ usize			size ()					const	{ return _count; }
 		ND_ bool			empty ()				const	{ return _count == 0; }
 		ND_ T const *		data ()					const	{ return _array; }
 
-		ND_ T const &		operator [] (size_t i)	const	{ ASSERT( i < _count );  return _array[i]; }
+		ND_ T const &		operator [] (usize i)	const	{ ASSERT( i < _count );  return _array[i]; }
 
 		ND_ const_iterator	begin ()				const	{ return _array; }
 		ND_ const_iterator	end ()					const	{ return _array + _count; }
@@ -76,7 +77,7 @@ namespace AE::STL
 			if ( size() != rhs.size() )
 				return false;
 
-			for (size_t i = 0; i < size(); ++i) {
+			for (usize i = 0; i < size(); ++i) {
 				if ( not (_array[i] == rhs[i]) )
 					return false;
 			}
@@ -88,7 +89,7 @@ namespace AE::STL
 			if ( size() != rhs.size() )
 				return size() > rhs.size();
 
-			for (size_t i = 0; i < size(); ++i)
+			for (usize i = 0; i < size(); ++i)
 			{
 				if ( not (_array[i] == rhs[i]) )
 					return _array[i] > rhs[i];
@@ -102,7 +103,7 @@ namespace AE::STL
 		ND_ bool  operator <= (ArrayView<T> rhs) const	{ return not (*this > rhs); }
 
 
-		ND_ ArrayView<T> section (size_t first, size_t count) const
+		ND_ ArrayView<T> section (usize first, usize count) const
 		{
 			return first < size() ?
 					ArrayView<T>{ data() + first, Min(size() - first, count) } :
@@ -143,7 +144,7 @@ namespace std
 	{
 		ND_ size_t  operator () (const vector<T> &value) const
 		{
-			return size_t(AE::STL::HashOf( AE::STL::ArrayView<T>{ value } ));
+			return size_t(AE::STL::HashOf( AE::STL::ArrayView<T>{ value }));
 		}
 	};
 
@@ -153,7 +154,7 @@ namespace std
 	{
 		ND_ size_t  operator () (const array<T,S> &value) const
 		{
-			return size_t(AE::STL::HashOf( AE::STL::ArrayView<T>{ value } ));
+			return size_t(AE::STL::HashOf( AE::STL::ArrayView<T>{ value }));
 		}
 	};
 

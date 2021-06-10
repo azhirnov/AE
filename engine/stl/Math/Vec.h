@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -151,21 +151,21 @@ namespace AE::Math
 	using bool3		= Vec< bool, 3 >;
 	using bool4		= Vec< bool, 4 >;
 
-	using byte2		= Vec< int8_t, 2 >;
-	using byte3		= Vec< int8_t, 3 >;
-	using byte4		= Vec< int8_t, 4 >;
+	using sbyte2	= Vec< sbyte, 2 >;
+	using sbyte3	= Vec< sbyte, 3 >;
+	using sbyte4	= Vec< sbyte, 4 >;
 	
-	using ubyte2	= Vec< uint8_t, 2 >;
-	using ubyte3	= Vec< uint8_t, 3 >;
-	using ubyte4	= Vec< uint8_t, 4 >;
+	using ubyte2	= Vec< ubyte, 2 >;
+	using ubyte3	= Vec< ubyte, 3 >;
+	using ubyte4	= Vec< ubyte, 4 >;
 
-	using short2	= Vec< int16_t, 2 >;
-	using short3	= Vec< int16_t, 3 >;
-	using short4	= Vec< int16_t, 4 >;
+	using short2	= Vec< short, 2 >;
+	using short3	= Vec< short, 3 >;
+	using short4	= Vec< short, 4 >;
 	
-	using ushort2	= Vec< uint16_t, 2 >;
-	using ushort3	= Vec< uint16_t, 3 >;
-	using ushort4	= Vec< uint16_t, 4 >;
+	using ushort2	= Vec< ushort, 2 >;
+	using ushort3	= Vec< ushort, 3 >;
+	using ushort4	= Vec< ushort, 4 >;
 
 	using uint2		= Vec< uint, 2 >;
 	using uint3		= Vec< uint, 3 >;
@@ -188,7 +188,7 @@ namespace AE::Math
 	IsVec
 =================================================
 */
-	namespace _ae_math_hidden_
+	namespace _hidden_
 	{
 		template <typename T>
 		struct _IsVec {
@@ -199,17 +199,18 @@ namespace AE::Math
 		struct _IsVec< Vec<T,I> > {
 			static constexpr bool	value = true;
 		};
-	}
+
+	}	// _hidden_
 
 	template <typename T>
-	static constexpr bool  IsVec = _ae_math_hidden_::_IsVec<T>::value;
+	static constexpr bool  IsVec = Math::_hidden_::_IsVec<T>::value;
 	
 /*
 =================================================
 	VecSize
 =================================================
 */
-	namespace _ae_math_hidden_
+	namespace _hidden_
 	{
 		template <typename T>
 		struct _VecSize {
@@ -219,10 +220,11 @@ namespace AE::Math
 		struct _VecSize< Vec<T,I> > {
 			static constexpr int	value = I;
 		};
-	}
+
+	}	// _hidden_
 
 	template <typename T>
-	static constexpr uint  VecSize = _ae_math_hidden_::_VecSize<T>::value;
+	static constexpr uint  VecSize = Math::_hidden_::_VecSize<T>::value;
 
 /*
 =================================================
@@ -465,7 +467,7 @@ namespace AE::Math
 	ND_ forceinline constexpr auto  Clamp (const ValT &value, const MinT &minVal, const MaxT &maxVal)
 	{
 		ASSERT(All( minVal <= maxVal ));
-		return Min( maxVal, Max( value, minVal ) );
+		return Min( maxVal, Max( value, minVal ));
 	}
 
 /*
@@ -587,6 +589,24 @@ namespace AE::Math
 	SafeDiv
 =================================================
 */
+	template <typename T1, typename T2, typename T3,
+			  typename = EnableIf<IsScalarOrEnum<T1> and IsScalarOrEnum<T2> and IsScalarOrEnum<T3>>
+			 >
+	ND_ forceinline constexpr auto  SafeDiv (const T1& lhs, const T2& rhs, const T3& defVal)
+	{
+		using T = decltype( lhs + rhs + defVal );
+
+		return not Equals( rhs, T(0) ) ? (T(lhs) / T(rhs)) : T(defVal);
+	}
+	
+	template <typename T1, typename T2,
+			  typename = EnableIf<IsScalarOrEnum<T1> and IsScalarOrEnum<T2>>
+			 >
+	ND_ forceinline constexpr auto  SafeDiv (const T1& lhs, const T2& rhs)
+	{
+		return SafeDiv( lhs, rhs, T1(0) );
+	}
+
 	template <typename T, int I, typename S>
 	ND_ forceinline GLM_CONSTEXPR Vec<T,I>  SafeDiv (const Vec<T,I>& lhs, const Vec<T,I>& rhs, const S& defVal)
 	{
@@ -617,24 +637,6 @@ namespace AE::Math
 	ND_ forceinline GLM_CONSTEXPR Vec<T,I>  SafeDiv (const Vec<T,I>& lhs, const Vec<T,I>& rhs)
 	{
 		return SafeDiv( lhs, rhs, T(0) );
-	}
-
-	template <typename T1, typename T2, typename T3,
-			  typename = EnableIf<IsScalarOrEnum<T1> and IsScalarOrEnum<T2> and IsScalarOrEnum<T3>>
-			 >
-	ND_ forceinline constexpr auto  SafeDiv (const T1& lhs, const T2& rhs, const T3& defVal)
-	{
-		using T = decltype( lhs + rhs + defVal );
-
-		return not Equals( rhs, T(0) ) ? (T(lhs) / T(rhs)) : T(defVal);
-	}
-	
-	template <typename T1, typename T2,
-			  typename = EnableIf<IsScalarOrEnum<T1> and IsScalarOrEnum<T2>>
-			 >
-	ND_ forceinline constexpr auto  SafeDiv (const T1& lhs, const T2& rhs)
-	{
-		return SafeDiv( lhs, rhs, T1(0) );
 	}
 	
 /*

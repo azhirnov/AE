@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	This virtual machine emulates C++ memory model that described in standard.
 	https://en.cppreference.com/w/cpp/atomic/memory_order
@@ -78,7 +78,7 @@ namespace LFAS::CPP
 
 		struct StorageInfo
 		{
-			BytesU		size;
+			Bytes		size;
 			MemRanges	ranges;
 			bool		isDestroyed	= true;
 		};
@@ -137,10 +137,10 @@ namespace LFAS::CPP
 
 
 	// memory ranges
-		void StorageCreate (const void *ptr, BytesU size);
+		void StorageCreate (const void *ptr, Bytes size);
 		void StorageDestroy (const void *ptr);
-		void StorageReadAccess (const void *ptr, BytesU offset, BytesU size);
-		void StorageWriteAccess (const void *ptr, BytesU offset, BytesU size);
+		void StorageReadAccess (const void *ptr, Bytes offset, Bytes size);
+		void StorageWriteAccess (const void *ptr, Bytes offset, Bytes size);
 
 
 	// instance
@@ -154,13 +154,13 @@ namespace LFAS::CPP
 	template <typename FN>
 	inline VirtualMachine::ScriptPtr  VirtualMachine::CreateScript (StringView name, FN &&fn)
 	{
-		return CreateScript( name, ScriptFn{std::forward<FN>(fn)} );
+		return CreateScript( name, ScriptFn{FwdArg<FN>(fn)} );
 	}
 	
 	template <typename FN>
 	inline VirtualMachine::ScriptPtr  VirtualMachine::CreateScript (FN &&fn)
 	{
-		return CreateScript( Default, ScriptFn{std::forward<FN>(fn)} );
+		return CreateScript( Default, ScriptFn{FwdArg<FN>(fn)} );
 	}
 
 }	// LFAS::CPP

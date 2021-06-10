@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/CompileTime/TypeList.h"
 #include "UnitTest_Common.h"
@@ -7,9 +7,9 @@ namespace
 {
 	struct TL_Visitor 
 	{
-		size_t sizeof_sum = 0;
+		usize sizeof_sum = 0;
 
-		template <typename T, size_t I>
+		template <typename T, usize I>
 		void operator () () {
 			sizeof_sum += sizeof(T);
 		}
@@ -22,7 +22,7 @@ namespace
 
 	template <typename T>
 	struct TypeSize {
-		static constexpr size_t	value = sizeof(T);
+		static constexpr usize	value = sizeof(T);
 	};
 }
 
@@ -48,7 +48,7 @@ extern void UnitTest_TypeList ()
 		STATIC_ASSERT( TL::Index<float> == 1 );
 		STATIC_ASSERT( TL::Index<bool> == 2 );
 		STATIC_ASSERT( TL::Index<double> == 3 );
-		STATIC_ASSERT( TL::Index<int64_t> == UMax );
+		STATIC_ASSERT( TL::Index<slong> == UMax );
 	}
 	{
 		using TL = TypeList< int, bool, int, float >;
@@ -74,26 +74,31 @@ extern void UnitTest_TypeList ()
 		using TL2 = TL::PushBack<int>;
 		STATIC_ASSERT( TL2::Count == 1 );
 		STATIC_ASSERT( IsSameTypes< TL2::Get<0>, int >);
+		STATIC_ASSERT( IsSameTypes< TL2, TypeList<int> >);
 		
 		using TL3 = TL2::PushBack<float>;
 		STATIC_ASSERT( TL3::Count == 2 );
 		STATIC_ASSERT( IsSameTypes< TL3::Get<0>, int >);
 		STATIC_ASSERT( IsSameTypes< TL3::Get<1>, float >);
+		STATIC_ASSERT(( IsSameTypes< TL3, TypeList<int, float> >));
 		
 		using TL4 = TL3::PushFront<bool>;
 		STATIC_ASSERT( TL4::Count == 3 );
 		STATIC_ASSERT( IsSameTypes< TL4::Get<0>, bool >);
 		STATIC_ASSERT( IsSameTypes< TL4::Get<1>, int >);
 		STATIC_ASSERT( IsSameTypes< TL4::Get<2>, float >);
+		STATIC_ASSERT(( IsSameTypes< TL4, TypeList<bool, int, float> >));
 
 		using TL5 = TL4::PopBack::type;
 		STATIC_ASSERT( TL5::Count == 2 );
 		STATIC_ASSERT( IsSameTypes< TL5::Get<0>, bool >);
 		STATIC_ASSERT( IsSameTypes< TL5::Get<1>, int >);
+		STATIC_ASSERT(( IsSameTypes< TL5, TypeList<bool, int> >));
 
 		using TL6 = TL5::PopFront::type;
 		STATIC_ASSERT( TL6::Count == 1 );
 		STATIC_ASSERT( IsSameTypes< TL6::Get<0>, int >);
+		STATIC_ASSERT(( IsSameTypes< TL6, TypeList<int> >));
 	}
 	{
 		using TL = TypeList< int, float, bool, double >;
@@ -104,13 +109,13 @@ extern void UnitTest_TypeList ()
 		constexpr bool		val2	= TL::ForEach_And< GreaterThen4 >();
 		STATIC_ASSERT( not val2 );
 
-		constexpr size_t	val3	= TL::ForEach_Add< TypeSize >();
+		constexpr usize	val3	= TL::ForEach_Add< TypeSize >();
 		STATIC_ASSERT( val3 == 4+4+1+8 );
 		
-		constexpr size_t	val4	= TL::ForEach_Max< TypeSize >();
+		constexpr usize	val4	= TL::ForEach_Max< TypeSize >();
 		STATIC_ASSERT( val4 == 8 );
 		
-		constexpr size_t	val5	= TL::ForEach_Min< TypeSize >();
+		constexpr usize	val5	= TL::ForEach_Min< TypeSize >();
 		STATIC_ASSERT( val5 == 1 );
 	}
 	{

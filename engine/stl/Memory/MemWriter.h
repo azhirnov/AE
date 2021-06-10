@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -18,22 +18,22 @@ namespace AE::STL
 	// variables
 	private:
 		void *		_ptr	= null;
-		size_t		_offset	= 0;
-		BytesU		_size;
+		usize		_offset	= 0;
+		Bytes		_size;
 
 
 	// methods
 	public:
 		MemWriter () {}
-		MemWriter (void *ptr, BytesU size) : _ptr{ptr}, _size{size} {}
+		MemWriter (void *ptr, Bytes size) : _ptr{ptr}, _size{size} {}
 
 
-		ND_ void*  Reserve (BytesU size, BytesU align)
+		ND_ void*  Reserve (Bytes size, Bytes align)
 		{
 			ASSERT( _ptr );
-			size_t	result = AlignToLarger( size_t(_ptr) + _offset, size_t(align) );
+			usize	result = AlignToLarger( usize(_ptr) + _offset, usize(align) );
 
-			_offset = (result - size_t(_ptr)) + size_t(size);
+			_offset = (result - usize(_ptr)) + usize(size);
 			ASSERT( _offset <= _size );
 
 			return BitCast<void *>( result );
@@ -49,30 +49,30 @@ namespace AE::STL
 		template <typename T, typename ...Args>
 		ND_ T&  Emplace (Args&& ...args)
 		{
-			return *PlacementNew<T>( &Reserve<T>(), std::forward<Args>( args )... );
+			return *PlacementNew<T>( &Reserve<T>(), FwdArg<Args>( args )... );
 		}
 
 		template <typename T, typename ...Args>
-		ND_ T&  EmplaceSized (BytesU size, Args&& ...args)
+		ND_ T&  EmplaceSized (Bytes size, Args&& ...args)
 		{
 			ASSERT( size >= SizeOf<T> );
-			return *PlacementNew<T>( Reserve( size, AlignOf<T> ), std::forward<Args>( args )... );
+			return *PlacementNew<T>( Reserve( size, AlignOf<T> ), FwdArg<Args>( args )... );
 		}
 
 
 		template <typename T>
-		ND_ T*  ReserveArray (size_t count)
+		ND_ T*  ReserveArray (usize count)
 		{
 			return count ? Cast<T>( Reserve( SizeOf<T> * count, AlignOf<T> )) : null;
 		}
 
 		template <typename T, typename ...Args>
-		ND_ T*  EmplaceArray (size_t count, Args&& ...args)
+		ND_ T*  EmplaceArray (usize count, Args&& ...args)
 		{
 			T*	result = ReserveArray<T>( count );
 
-			for (size_t i = 0; i < count; ++i) {
-				PlacementNew<T>( result + i, std::forward<Args>( args )... );
+			for (usize i = 0; i < count; ++i) {
+				PlacementNew<T>( result + i, FwdArg<Args>( args )... );
 			}
 			return result;
 		}
@@ -81,15 +81,15 @@ namespace AE::STL
 		void Clear ()
 		{
 			ASSERT( _ptr );
-			memset( _ptr, 0, size_t(_size) );
+			memset( _ptr, 0, usize(_size) );
 		}
 
 
-		ND_ BytesU  OffsetOf (void *ptr, BytesU defaultValue = ~0_b) const
+		ND_ Bytes  OffsetOf (void *ptr, Bytes defaultValue = ~0_b) const
 		{
 			if ( ptr ) {
 				ASSERT( ptr >= _ptr and ptr < _ptr + _size );
-				return BytesU{size_t(ptr) - size_t(_ptr)};
+				return Bytes{usize(ptr) - usize(_ptr)};
 			}
 			return defaultValue;
 		}

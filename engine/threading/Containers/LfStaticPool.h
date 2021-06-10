@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	This class uses lock-free algorithm to put and exteract values without any order (but not really in random order).
 	You can use 'Put', 'Extract' methods without any syncs.
@@ -36,7 +36,7 @@ namespace AE::Threading
 		static constexpr uint	Level1_Count	= ((Count + Level2_Count - 1) / Level2_Count);
 		static constexpr uint	WaitCount		= 10;
 		
-		using Bitfield_t	= Conditional< (Level2_Count <= 32), uint, uint64_t >;
+		using Bitfield_t	= Conditional< (Level2_Count <= 32), uint, ulong >;
 		using AssignBits_t	= StaticArray< Atomic< Bitfield_t >, Level1_Count >;
 		
 		STATIC_ASSERT( AssignBits_t::value_type::is_always_lock_free );
@@ -49,7 +49,7 @@ namespace AE::Threading
 
 		union {
 			T			_values  [ Count ];
-			uint8_t		_arrData [ Count * sizeof(T) ];
+			ubyte		_arrData [ Count * sizeof(T) ];
 		};
 
 
@@ -76,7 +76,7 @@ namespace AE::Threading
 		Self&  operator = (Self &&) = delete;
 
 
-		ND_ static constexpr size_t  capacity ()	{ return Count; }
+		ND_ static constexpr usize  capacity ()		{ return Count; }
 
 		
 		void Clear ()
@@ -134,7 +134,7 @@ namespace AE::Threading
 							uint	idx = Index_t(j) | (Index_t(i) * Level2_Count);
 
 							ASSERT( idx < Count );
-							PlacementNew<T>( &_values[idx], std::forward<V>(value) );
+							PlacementNew<T>( &_values[idx], FwdArg<V>(value) );
 							
 							// flush cache after writing and set availability bit
 							Bitfield_t	old_available = _availableBits[i].fetch_xor( mask, EMemoryOrder::Release );	// 1 -> 0
@@ -171,7 +171,7 @@ namespace AE::Threading
 							Index_t	idx = Index_t(j) | (Index_t(i) * Level2_Count);
 
 							ASSERT( idx < Count );
-							outValue = std::move( _values[idx] );
+							outValue = RVRef( _values[idx] );
 							
 							_values[idx].~T();
 							DEBUG_ONLY( std::memset( &_values[idx], 0xCD, sizeof(T) ));

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Math/Vec.h"
 #include "UnitTest_Common.h"
@@ -48,7 +48,7 @@ namespace
 		TestVecAlign<float>();
 		TestVecAlign<int>();
 		TestVecAlign<double>();
-		TestVecAlign<int64_t>();
+		TestVecAlign<slong>();
 		TestVecAlign<uint16_t>();
 	}
 

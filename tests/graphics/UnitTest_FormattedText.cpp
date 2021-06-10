@@ -1,5 +1,6 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
+#if 0
 #include "graphics/Font/FormattedText.h"
 
 #define TEST	CHECK_FATAL
@@ -171,3 +172,5 @@ extern void UnitTest_FormattedText ()
 
 	AE_LOGI( "UnitTest_FormattedText - passed" );
 }
+
+#endif

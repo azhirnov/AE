@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	This string_view type guaranties that contains non-null pointer to null-terminated string (C-style string).
 	Use NtStringView only as function argument.
@@ -33,7 +33,7 @@ namespace AE::STL
 	// variables
 	private:
 		T const *	_data;
-		size_t		_length;
+		usize		_length;
 		T			_buffer [32];
 		bool		_isAllocated	= false;
 
@@ -46,8 +46,8 @@ namespace AE::STL
 		NtBasicStringView (BasicStringView<T> str);
 		NtBasicStringView (const BasicString<T> &str);
 		NtBasicStringView (const T* str);
-		NtBasicStringView (const T* str, size_t length);
-		template <size_t S> NtBasicStringView (const TFixedString<T,S> &str);
+		NtBasicStringView (const T* str, usize length);
+		template <usize S> NtBasicStringView (const TFixedString<T,S> &str);
 		~NtBasicStringView ();
 
 		// TODO: why they ignored by compiler ?
@@ -62,8 +62,8 @@ namespace AE::STL
 
 		//ND_ T const*	data ()			const	{ return _data; }
 		ND_ T const*	c_str ()		const	{ return _data; }
-		ND_ size_t		size ()			const	{ return _length; }
-		ND_ size_t		length ()		const	{ return _length; }
+		ND_ usize		size ()			const	{ return _length; }
+		ND_ usize		length ()		const	{ return _length; }
 		ND_ bool		empty ()		const	{ return _length == 0; }
 
 	private:
@@ -133,14 +133,14 @@ namespace AE::STL
 	}
 
 	template <typename T>
-	inline NtBasicStringView<T>::NtBasicStringView (const T* str, size_t length) :
+	inline NtBasicStringView<T>::NtBasicStringView (const T* str, usize length) :
 		_data{ str }, _length{ length }
 	{
 		_Validate();
 	}
 	
 	template <typename T>
-	template <size_t S>
+	template <usize S>
 	inline NtBasicStringView<T>::NtBasicStringView (const TFixedString<T,S> &str) :
 		_data{ str.c_str() }, _length{ str.length() }
 	{}
@@ -167,7 +167,7 @@ namespace AE::STL
 			return false;
 		
 		T *		new_data;
-		BytesU	size	= SizeOf<T> * (_length+1);
+		Bytes	size	= SizeOf<T> * (_length+1);
 
 		if ( size > sizeof(_buffer) )
 		{
@@ -177,7 +177,7 @@ namespace AE::STL
 		else
 			new_data	= _buffer;
 
-		memcpy( OUT new_data, _data, size_t(size) );
+		memcpy( OUT new_data, _data, usize(size) );
 		new_data[_length] = NullChar;
 		_data = new_data;
 

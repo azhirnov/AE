@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -82,19 +82,19 @@ namespace AE::Graphics
 		VPipelinePack () {}
 		~VPipelinePack ();
 
-		bool Create (VResourceManager &resMngr, const SharedPtr<RStream> &stream, INOUT PipelineRefs &refs);
-		void Destroy (VResourceManager &resMngr);
+		bool  Create (VResourceManagerImpl &resMngr, const RC<RStream> &stream, INOUT PipelineRefs &refs);
+		void  Destroy (VResourceManagerImpl &resMngr);
 
 	private:
-		bool _LoadDescrSetLayouts (VResourceManager &resMngr, Serializing::Deserializer &, StackAllocator_t &);
-		bool _LoadPipelineLayouts (VResourceManager &resMngr, Serializing::Deserializer &);
-		bool _LoadRenderPasses (VResourceManager &resMngr, Serializing::Deserializer &, INOUT PipelineRefs &refs);
-		bool _LoadSpirvShaders (const VDevice &dev, Serializing::Deserializer &, StackAllocator_t &);
-		bool _LoadGraphicsPipelines (VResourceManager &resMngr, Serializing::Deserializer &, StackAllocator_t &allocator);
-		bool _LoadMeshPipelines (VResourceManager &resMngr, Serializing::Deserializer &, StackAllocator_t &allocator);
-		bool _LoadComputePipelines (VResourceManager &resMngr, Serializing::Deserializer &);
-		bool _LoadRayTracingPipelines (VResourceManager &resMngr, Serializing::Deserializer &);
-		bool _LoadPipelineNames (Serializing::Deserializer &des, INOUT PipelineRefs &refs);
+		bool  _LoadDescrSetLayouts (VResourceManagerImpl &resMngr, Serializing::Deserializer &, StackAllocator_t &);
+		bool  _LoadPipelineLayouts (VResourceManagerImpl &resMngr, Serializing::Deserializer &);
+		bool  _LoadRenderPasses (VResourceManagerImpl &resMngr, Serializing::Deserializer &, INOUT PipelineRefs &refs);
+		bool  _LoadSpirvShaders (const VDevice &dev, Serializing::Deserializer &, StackAllocator_t &);
+		bool  _LoadGraphicsPipelines (VResourceManagerImpl &resMngr, Serializing::Deserializer &, StackAllocator_t &allocator);
+		bool  _LoadMeshPipelines (VResourceManagerImpl &resMngr, Serializing::Deserializer &, StackAllocator_t &allocator);
+		bool  _LoadComputePipelines (VResourceManagerImpl &resMngr, Serializing::Deserializer &);
+		bool  _LoadRayTracingPipelines (VResourceManagerImpl &resMngr, Serializing::Deserializer &);
+		bool  _LoadPipelineNames (Serializing::Deserializer &des, INOUT PipelineRefs &refs);
 	};
 
 

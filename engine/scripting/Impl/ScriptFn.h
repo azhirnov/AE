@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -17,7 +17,7 @@ namespace AE::Scripting
 	//
 
 	template <typename R, typename ...Args>
-	class ScriptFn< R (Args...) > final : public std::enable_shared_from_this< ScriptFn<R (Args...)> >
+	class ScriptFn< R (Args...) > final : public EnableRC< ScriptFn<R (Args...)> >
 	{
 		friend class ScriptEngine;
 
@@ -33,11 +33,12 @@ namespace AE::Scripting
 
 
 	// methods
-	public:
+	private:
 		ScriptFn (const ScriptModulePtr &mod, AngelScript::asIScriptContext* ctx) :
 			_module{ mod }, _ctx{ ctx }
 		{}
 
+	public:
 		~ScriptFn ()
 		{
 			if ( _ctx )
@@ -48,7 +49,7 @@ namespace AE::Scripting
 		{
 			using namespace AngelScript;
 
-			_ae_scripting_hidden_::SetContextArgs<Args...>::Set( _ctx, 0, std::forward<Args>(args)... );
+			Scripting::_hidden_::SetContextArgs<Args...>::Set( _ctx, 0, FwdArg<Args>(args)... );
 
 			const int exec_res = _ctx->Execute();
 			
@@ -62,7 +63,7 @@ namespace AE::Scripting
 			else
 			{
 				if ( exec_res == asEXECUTION_FINISHED ) {
-					return {_ae_scripting_hidden_::ContextSetterGetter<R>::Get( _ctx )};
+					return {Scripting::_hidden_::ContextSetterGetter<R>::Get( _ctx )};
 				}
 				_CheckError( exec_res );
 				return {};

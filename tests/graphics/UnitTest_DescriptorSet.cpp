@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "graphics/Public/DescriptorSet.h"
 #include "graphics/Private/DescriptorSetHelper.h"
@@ -37,7 +37,7 @@ namespace
 		TEST( ds.IsChanged() );
 		TEST( ds.Index() == 0 );
 
-		GfxResourceID	buf_id{ 0, 0, GfxResourceID::EType::Buffer };
+		BufferID	buf_id{ 0, 0 };
 
 		ds.BindBuffer( UniformName{"buf"}, buf_id, 64_b, 128_b );
 		TEST( ds.GetDynamicOffsets().size() == 1 );

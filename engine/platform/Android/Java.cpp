@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "platform/Android/Java.h"
 
@@ -129,7 +129,7 @@ namespace {
 */
 	void JavaEnv::ThrowException (NtStringView msg) const
 	{
-		CHECK_ERR( _env, void());
+		CHECK_ERRV( _env );
 
 		JavaClass	jc{ "java/lang/Error" };
 		_env->ThrowNew( jc.Get(), msg.c_str() );
@@ -142,7 +142,7 @@ namespace {
 */
 	void JavaEnv::ExceptionClear () const
 	{
-		CHECK_ERR( _env, void());
+		CHECK_ERRV( _env );
 
 		_env->ExceptionClear();
 	}

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -118,8 +118,8 @@ namespace AE::Scripting
 	template <typename T>
 	inline bool EnumBinder<T>::AddValue (StringView valueName, T value)
 	{
-		ASSERT( int64_t(value) >= std::numeric_limits<int>::min() and
-				int64_t(value) <= std::numeric_limits<int>::max() );
+		ASSERT( slong(value) >= std::numeric_limits<int>::min() and
+				slong(value) <= std::numeric_limits<int>::max() );
 
 		AS_CALL_R( _engine->Get()->RegisterEnumValue( _name.c_str(), (String(_name) << '_' << valueName).c_str(), int(value) ));
 		return true;

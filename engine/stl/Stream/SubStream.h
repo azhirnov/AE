@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 /*
 	Warning: you can not simultaneously use 'sub-stream' that created from 'stream' and 'stream',
 	because 'sub-stream' modifies offset in 'stream'.
@@ -19,22 +19,22 @@ namespace AE::STL
 	{
 	// variables
 	private:
-		SharedPtr<RStream>	_stream;
-		BytesU				_pos;
-		const BytesU		_offset;
-		const BytesU		_size;
+		RC<RStream>		_stream;
+		Bytes			_pos;
+		const Bytes		_offset;
+		const Bytes		_size;
 
 
 	// methods
 	public:
-		RSubStream (const SharedPtr<RStream> &stream, BytesU offset, BytesU size);
+		RSubStream (const RC<RStream> &stream, Bytes offset, Bytes size);
 		
 		bool	IsOpen ()	const override;
-		BytesU	Position ()	const override	{ return _pos; }
-		BytesU	Size ()		const override	{ return _size; }
+		Bytes	Position ()	const override	{ return _pos; }
+		Bytes	Size ()		const override	{ return _size; }
 
-		bool	SeekSet (BytesU pos) override;
-		BytesU	Read2 (OUT void *buffer, BytesU size) override;
+		bool	SeekSet (Bytes pos) override;
+		Bytes	Read2 (OUT void *buffer, Bytes size) override;
 	};
 
 

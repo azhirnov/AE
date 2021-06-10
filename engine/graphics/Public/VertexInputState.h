@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -31,12 +31,12 @@ namespace AE::Graphics
 		// variables
 			EVertexType			type;	// src type, if src type is normalized short3, then dst type is float3.
 			uint				index;
-			Bytes<uint>			offset;
+			TBytes<uint>			offset;
 			uint				bufferBinding;
 
 		// methods
 			VertexInput ();
-			VertexInput (EVertexType type, Bytes<uint> offset, uint bufferBinding);
+			VertexInput (EVertexType type, TBytes<uint> offset, uint bufferBinding);
 			
 			ND_ EVertexType ToDstType () const;
 
@@ -48,12 +48,12 @@ namespace AE::Graphics
 		{
 		// variables
 			uint				index;
-			Bytes<uint>			stride;
+			TBytes<uint>			stride;
 			EVertexInputRate	rate;
 
 		// methods
 			BufferBinding ();
-			BufferBinding (uint index, Bytes<uint> stride, EVertexInputRate rate);
+			BufferBinding (uint index, TBytes<uint> stride, EVertexInputRate rate);
 			
 			ND_ bool  operator == (const BufferBinding &rhs) const;
 		};
@@ -84,12 +84,12 @@ namespace AE::Graphics
 		Self & Add (const VertexName &id, ValueType ClassType:: *vertex, const VertexBufferName &bufferId = Default);
 
 		template <typename ClassType, typename ValueType>
-		Self & Add (const VertexName &id, ValueType ClassType:: *vertex, bool norm, const VertexBufferName &bufferId = Default);
+		Self & Add (const VertexName &id, ValueType ClassType:: *vertex, Bool norm, const VertexBufferName &bufferId = Default);
 
-		Self & Add (const VertexName &id, EVertexType type, BytesU offset, const VertexBufferName &bufferId = Default);
+		Self & Add (const VertexName &id, EVertexType type, Bytes offset, const VertexBufferName &bufferId = Default);
 
-		Self & Bind (const VertexBufferName &bufferId, Bytes<uint> stride, uint index = BindingIndex_Auto, EVertexInputRate rate = EVertexInputRate::Vertex);
-		Self & Bind (const VertexBufferName &bufferId, BytesU stride, uint index = BindingIndex_Auto, EVertexInputRate rate = EVertexInputRate::Vertex);
+		Self & Bind (const VertexBufferName &bufferId, TBytes<uint> stride, uint index = BindingIndex_Auto, EVertexInputRate rate = EVertexInputRate::Vertex);
+		Self & Bind (const VertexBufferName &bufferId, Bytes stride, uint index = BindingIndex_Auto, EVertexInputRate rate = EVertexInputRate::Vertex);
 
 		void  Clear ();
 
@@ -123,7 +123,7 @@ namespace AE::Graphics
 =================================================
 */
 	template <typename ClassType, typename ValueType>
-	inline VertexInputState&  VertexInputState::Add (const VertexName &id, ValueType ClassType:: *vertex, bool norm, const VertexBufferName &bufferId)
+	inline VertexInputState&  VertexInputState::Add (const VertexName &id, ValueType ClassType:: *vertex, Bool norm, const VertexBufferName &bufferId)
 	{
 		const EVertexType	attrib = VertexDesc< ValueType >::attrib;
 

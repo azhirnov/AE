@@ -1,10 +1,9 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "ecs-st/Hierarchy/Components.h"
 #include "ecs-st/Core/Archetype.h"
-
 
 namespace AE::ECS::Systems
 {
@@ -18,10 +17,10 @@ namespace AE::ECS::Systems
 	// types
 	private:
 
-		class Node final : public std::enable_shared_from_this< Node >
+		class Node final : public EnableRC< Node >
 		{
 		public:
-			using NodePtr = SharedPtr< Node >;
+			using NodePtr = RC< Node >;
 
 		public:
 			NodePtr			parent;
@@ -38,7 +37,7 @@ namespace AE::ECS::Systems
 			void RemoveFromChilds ();
 		};
 
-		using NodePtr			= SharedPtr< Node >;
+		using NodePtr			= RC< Node >;
 		using EntityToNode_t	= HashMap< EntityID, NodePtr >;
 
 

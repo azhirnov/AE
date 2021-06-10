@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -82,7 +82,7 @@ namespace AE::Serializing
 		CHECK_ERR( _objectTypes.insert({ typeid(T), iter.operator->() }).second );
 		
 		#if not AE_OPTIMIZE_IDS
-			_hashToObj.insert({ uint(size_t(id.GetHash())), iter.operator->() });
+			_hashToObj.insert({ uint(usize(id.GetHash())), iter.operator->() });
 		#endif
 
 		DEBUG_ONLY( _hashCollisionCheck.Add( id ));
@@ -118,7 +118,7 @@ namespace AE::Serializing
 		auto	iter = _objectTypes.find( typeid(T) );
 		CHECK_ERR( iter != _objectTypes.end() );
 
-		CHECK_ERR( ser.stream->Write( uint(size_t(iter->second->first.GetHash())) ) and
+		CHECK_ERR( ser.stream->Write( uint(usize(iter->second->first.GetHash())) ) and
 				   iter->second->second.serialize( ser, &obj ));
 		return true;
 	}
@@ -139,7 +139,7 @@ namespace AE::Serializing
 
 		uint	id;
 		CHECK_ERR( deser.stream->Read( OUT id )							and
-				   id == uint(size_t(iter->second->first.GetHash()))	and
+				   id == uint(usize(iter->second->first.GetHash()))	and
 				   iter->second->second.deserialize( deser, INOUT &obj, false ));
 		return true;
 	}
@@ -171,57 +171,8 @@ namespace AE::Serializing
 		CHECK_ERR( info->deserialize( deser, INOUT obj, true ));
 		return true;
 	}
-//-----------------------------------------------------------------------------
-
-	
-/*
-=================================================
-	Serializer::_SerializeObj
-=================================================
-*/
-	template <typename T>
-	inline bool  Serializer::_SerializeObj (const T &obj)
-	{
-		if ( factory )
-			return factory->Serialize( *this, obj );
-		
-		if constexpr( IsBaseOf< ISerializable, T >)
-			return obj.Serialize( *this );
-		else
-		{
-			ASSERT( !"unknown type" );
-			return false;
-		}
-	}
-	
-/*
-=================================================
-	Deserializer::_DeserializeObj
-=================================================
-*/
-	template <typename T>
-	inline bool  Deserializer::_DeserializeObj (INOUT T &obj) const
-	{
-		if ( factory )
-			return factory->Deserialize( *this, INOUT obj );
-		
-		if constexpr( IsBaseOf< ISerializable, T >)
-			return obj.Deserialize( *this );
-		else
-		{
-			ASSERT( !"unknown type" );
-			return false;
-		}
-	}
-	
-	inline bool  Deserializer::operator () (INOUT void *obj) const
-	{
-		if ( factory )
-			return factory->Deserialize( *this, INOUT obj );
-		
-		ASSERT( !"unknown type" );
-		return false;
-	}
-
 
 }	// AE::Serializing
+
+#include "serializing/Serializer.inl.h"
+#include "serializing/Deserializer.inl.h"

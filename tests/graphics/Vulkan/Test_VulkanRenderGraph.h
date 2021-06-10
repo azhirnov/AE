@@ -1,21 +1,24 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #ifdef AE_ENABLE_VULKAN
 
-# include "graphics/Public/ResourceManager.h"
-# include "graphics/Public/RenderGraph.h"
+# include "stl/Utils/FileSystem.h"
+# include "stl/Algorithms/StringUtils.h"
 
 # include "graphics/Vulkan/VDevice.h"
 # include "graphics/Vulkan/VSwapchain.h"
+# include "graphics/Vulkan/VResourceManager.h"
+# include "graphics/Vulkan/VCommandBufferTypes.h"
 
 # include "platform/Public/IWindow.h"
 # include "platform/Public/IApplication.h"
 
-# include "stl/Algorithms/StringUtils.h"
-
 using namespace AE::Graphics;
+
+using AE::Threading::Scheduler;
+using EStatus = AE::Threading::IAsyncTask::EStatus;
 
 
 class VRGTest
@@ -31,15 +34,14 @@ public:
 	VDeviceInitializer			_vulkan;
 	VSwapchainInitializer		_swapchain;
 
-	UniquePtr<IResourceManager>	_resourceMngr;
-	UniquePtr<IRenderGraph>		_renderGraph;
-
 	UniqueID<PipelinePackID>	_pipelinePack;
 
 	TestQueue_t					_tests;
 	uint						_testsPassed		= 0;
 	uint						_testsFailed		= 0;
 	
+	Path						_refDumpPath;
+
 
 // methods
 public:
@@ -53,6 +55,12 @@ private:
 	bool  _RunTests ();
 	void  _Destroy ();
 
+	void  _AddVulkanHooks ();
+	void  _RemoveVulkanHooks ();
+	void  _EnableLogging (bool enable);
+	void  _GetLog (OUT String &log) const;
+	bool  _CompareDumps (StringView filename) const;
+
 	bool  _CompilePipelines ();
 	
 	template <typename Arg0, typename ...Args>
@@ -61,17 +69,10 @@ private:
 	ND_ static String  _GetFuncName (StringView src);
 
 private:
-	bool  Test_Buffer ();
-	bool  Test_Image ();
-	bool  Test_CopyBuffer1 ();
-	bool  Test_CopyBuffer2 ();
-	bool  Test_CopyImage1 ();
-	bool  Test_VirtualRes1 ();
-	
-	bool  Test_Draw1 ();
-	bool  Test_DrawAsync1 ();
+	bool  Test_LocalResManager ();
+	bool  Test_LocalResRangesManager ();
 
-	bool  Test_Compute1 ();
+	bool  Test_CopyBuffer1 ();
 };
 
 
@@ -79,16 +80,16 @@ private:
 template <typename Arg0, typename ...Args>
 inline void  VRGTest::DeleteResources (Arg0 &arg0, Args& ...args)
 {
-	CHECK( _resourceMngr->ReleaseResource( INOUT arg0 ));	// must be released
+	CHECK( RenderGraph().GetResourceManager().ReleaseResource( INOUT arg0 ));	// must be released
 		
 	if constexpr ( CountOf<Args...>() > 0 )
-		DeleteResources( std::forward<Args&>( args )... );
+		DeleteResources( FwdArg<Args&>( args )... );
 }
 	
 
 inline String  VRGTest::_GetFuncName (StringView src)
 {
-	size_t	pos = src.find_last_of( "::" );
+	usize	pos = src.find_last_of( "::" );
 
 	if ( pos != StringView::npos )
 		return String{ src.substr( pos+1 )};

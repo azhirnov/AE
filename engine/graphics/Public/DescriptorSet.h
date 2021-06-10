@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -45,16 +45,16 @@ namespace AE::Graphics
 		struct Buffer
 		{
 			struct Element {
-				GfxResourceID	bufferId;
-				BytesU			offset;
-				BytesU			size;
+				BufferID		bufferId;
+				Bytes			offset;
+				Bytes			size;
 			};
 
 			BindingIndex_t		index				= UMax;
 			EResourceState		state				= Default;
 			uint				dynamicOffsetIndex	= UMax;
-			BytesU				staticSize;
-			BytesU				arrayStride;
+			Bytes				staticSize;
+			Bytes				arrayStride;
 			ArraySize_t			elementCapacity		= 0;
 			ArraySize_t			elementCount		= 0;
 			Element				elements[1];
@@ -63,7 +63,7 @@ namespace AE::Graphics
 		struct TexelBuffer
 		{
 			struct Element {
-				GfxResourceID	bufferId;
+				BufferID		bufferId;
 				BufferViewDesc	desc;
 			};
 
@@ -77,7 +77,7 @@ namespace AE::Graphics
 		struct Image
 		{
 			struct Element {
-				GfxResourceID	imageId;
+				ImageID			imageId;
 				ImageViewDesc	desc;
 				bool			hasDesc		= false;
 			};
@@ -92,7 +92,7 @@ namespace AE::Graphics
 		struct Texture
 		{
 			struct Element {
-				GfxResourceID	imageId;
+				ImageID			imageId;
 				SamplerName		sampler;
 				ImageViewDesc	desc;
 				bool			hasDesc		= false;
@@ -155,13 +155,13 @@ namespace AE::Graphics
 			uint					uniformsOffset		= 0;
 			uint					dynamicOffsetsCount	= 0;
 			uint					dynamicOffsetsOffset= 0;
-			BytesU					memSize;
+			Bytes					memSize;
 
 			DynamicData () {}
 
-			ND_ Uniform	*		Uniforms ()					{ return Cast<Uniform>(this + BytesU{uniformsOffset}); }
-			ND_ Uniform	const*	Uniforms ()			const	{ return Cast<Uniform>(this + BytesU{uniformsOffset}); }
-			ND_ uint*			DynamicOffsets ()			{ return Cast<uint>(this + BytesU{dynamicOffsetsOffset}); }
+			ND_ Uniform	*		Uniforms ()					{ return Cast<Uniform>(this + Bytes{uniformsOffset}); }
+			ND_ Uniform	const*	Uniforms ()			const	{ return Cast<Uniform>(this + Bytes{uniformsOffset}); }
+			ND_ uint*			DynamicOffsets ()			{ return Cast<uint>(this + Bytes{dynamicOffsetsOffset}); }
 
 			ND_ HashVal			CalcHash () const;
 			ND_ bool			operator == (const DynamicData &) const;
@@ -203,23 +203,23 @@ namespace AE::Graphics
 
 		ND_ DescriptorSet  Clone () const;
 
-		Self&  BindImage (const UniformName &name, GfxResourceID image, uint elementIndex = 0);
-		Self&  BindImage (const UniformName &name, GfxResourceID image, const ImageViewDesc &desc, uint elementIndex = 0);
-		Self&  BindImages (const UniformName &name, ArrayView<GfxResourceID> images);
+		Self&  BindImage (const UniformName &name, ImageID image, uint elementIndex = 0);
+		Self&  BindImage (const UniformName &name, ImageID image, const ImageViewDesc &desc, uint elementIndex = 0);
+		Self&  BindImages (const UniformName &name, ArrayView<ImageID> images);
 
-		Self&  BindTexture (const UniformName &name, GfxResourceID image, const SamplerName &sampler, uint elementIndex = 0);
-		Self&  BindTexture (const UniformName &name, GfxResourceID image, const SamplerName &sampler, const ImageViewDesc &desc, uint elementIndex = 0);
-		Self&  BindTextures (const UniformName &name, ArrayView<GfxResourceID> images, const SamplerName &sampler);
+		Self&  BindTexture (const UniformName &name, ImageID image, const SamplerName &sampler, uint elementIndex = 0);
+		Self&  BindTexture (const UniformName &name, ImageID image, const SamplerName &sampler, const ImageViewDesc &desc, uint elementIndex = 0);
+		Self&  BindTextures (const UniformName &name, ArrayView<ImageID> images, const SamplerName &sampler);
 
 		Self&  BindSampler (const UniformName &name, const SamplerName &sampler, uint elementIndex = 0);
 		Self&  BindSamplers (const UniformName &name, ArrayView<SamplerName> samplers);
 
-		Self&  BindBuffer (const UniformName &name, GfxResourceID buffer, uint elementIndex = 0);
-		Self&  BindBuffer (const UniformName &name, GfxResourceID buffer, BytesU offset, BytesU size, uint elementIndex = 0);
-		Self&  BindBuffers (const UniformName &name, ArrayView<GfxResourceID> buffers);
-		Self&  SetBufferBase (const UniformName &name, BytesU offset, uint elementIndex = 0);
+		Self&  BindBuffer (const UniformName &name, BufferID buffer, uint elementIndex = 0);
+		Self&  BindBuffer (const UniformName &name, BufferID buffer, Bytes offset, Bytes size, uint elementIndex = 0);
+		Self&  BindBuffers (const UniformName &name, ArrayView<BufferID> buffers);
+		Self&  SetBufferBase (const UniformName &name, Bytes offset, uint elementIndex = 0);
 
-		Self&  BindTexelBuffer (const UniformName &name, GfxResourceID buffer, const BufferViewDesc &desc, uint elementIndex = 0);
+		Self&  BindTexelBuffer (const UniformName &name, BufferID buffer, const BufferViewDesc &desc, uint elementIndex = 0);
 
 		//Self&  BindRayTracingScene (const UniformName &name, RawRTSceneID scene, uint elementIndex = 0);
 		
@@ -272,12 +272,12 @@ namespace AE::Graphics
 	template <typename T, typename Fn>
 	inline void  DescriptorSet::DynamicData::_ForEachUniform (T&& self, Fn&& fn)
 	{
-		STATIC_ASSERT( IsSameTypes< std::remove_cv_t<std::remove_reference_t<T>>, DynamicData > );
+		STATIC_ASSERT( IsSameTypes< RemoveCV<RemoveReference<T>>, DynamicData > );
 
 		for (uint i = 0, cnt = self.uniformCount; i < cnt; ++i)
 		{
 			auto&	un  = self.Uniforms()[i];
-			auto*	ptr = (&self + BytesU{un.offset});
+			auto*	ptr = (&self + Bytes{un.offset});
 
 			BEGIN_ENUM_CHECKS();
 			switch ( un.resType )

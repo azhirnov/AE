@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Containers/NtStringView.h"
 #include "stl/Stream/BrotliStream.h"
@@ -76,7 +76,8 @@ namespace
 		CHECK_ERR( _connection );
 		
 		_options = {};
-		_options.document_root = ".";
+		_options.document_root				= ".";
+		_options.enable_directory_listing	= "no";
 
 		mg_register_http_endpoint( _connection, "/upload", _HandleUpload, this );
 
@@ -181,7 +182,7 @@ namespace
 		String	result;
 		result.reserve( CountOf(addr) );
 
-		for (size_t i = 0; (i < CountOf(addr)) and (addr[i] != '\0'); ++i)
+		for (usize i = 0; (i < CountOf(addr)) and (addr[i] != '\0'); ++i)
 		{
 			const char	c = addr[i];
 
@@ -213,7 +214,7 @@ namespace
 				{
 					auto*	msg = Cast<http_message>(eventData);
 				
-					if ( file.Write( msg->body.p, BytesU{msg->body.len} ))
+					if ( file.Write( msg->body.p, Bytes{msg->body.len} ))
 					{
 						mg_printf( nc, "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n" );
 						nc->flags |= MG_F_SEND_AND_CLOSE;
@@ -240,21 +241,21 @@ namespace
 			case MG_EV_HTTP_PART_BEGIN :
 			{
 				auto*	mp = Cast<mg_http_multipart_part>(eventData);
-				AE_LOGI( "MG_EV_HTTP_PART_BEGIN: "s << ToString<16>( size_t(mp->user_data) ));
+				AE_LOGI( "MG_EV_HTTP_PART_BEGIN: "s << ToString<16>( usize(mp->user_data) ));
 				break;
 			}
 
 			case MG_EV_HTTP_PART_DATA :
 			{
 				auto*	mp = Cast<mg_http_multipart_part>(eventData);
-				AE_LOGI( "MG_EV_HTTP_PART_DATA: "s << ToString<16>( size_t(mp->user_data) ));
+				AE_LOGI( "MG_EV_HTTP_PART_DATA: "s << ToString<16>( usize(mp->user_data) ));
 				break;
 			}
 			
 			case MG_EV_HTTP_PART_END :
 			{
 				auto*	mp = Cast<mg_http_multipart_part>(eventData);
-				AE_LOGI( "MG_EV_HTTP_PART_END: "s << ToString<16>( size_t(mp->user_data) ));
+				AE_LOGI( "MG_EV_HTTP_PART_END: "s << ToString<16>( usize(mp->user_data) ));
 				break;
 			}
 		}

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 //
 // see http://www.angelcode.com/angelscript/
 //
@@ -13,6 +13,7 @@
 #include "stl/CompileTime/TypeList.h"
 #include "stl/CompileTime/FunctionInfo.h"
 #include "stl/Math/BitMath.h"
+#include "stl/Utils/RefCounter.h"
 
 // AngelScript + Addons //
 #include "angelscript.h"
@@ -21,14 +22,14 @@ namespace AE::Scripting
 {
 	using namespace AE::STL;
 
-	using ScriptModulePtr = SharedPtr< class ScriptModule >;
-	using ScriptEnginePtr = SharedPtr< class ScriptEngine >;
+	using ScriptModulePtr = RC< class ScriptModule >;
+	using ScriptEnginePtr = RC< class ScriptEngine >;
 	
 	template <typename Fn>
 	class ScriptFn;
 
 	template <typename Fn>
-	using ScriptFnPtr = SharedPtr< ScriptFn<Fn> >;
+	using ScriptFnPtr = RC< ScriptFn<Fn> >;
 	
 
 
@@ -36,7 +37,7 @@ namespace AE::Scripting
 	// Script Module
 	//
 
-	class ScriptModule final : public std::enable_shared_from_this<ScriptModule>
+	class ScriptModule final : public EnableRC<ScriptModule>
 	{
 		friend class ScriptEngine;
 	// variables
@@ -44,8 +45,9 @@ namespace AE::Scripting
 		AngelScript::asIScriptModule*	_module;
 		
 	// methods
-	public:
+	private:
 		explicit ScriptModule (AngelScript::asIScriptModule* mod);
+	public:
 		~ScriptModule ();
 	};
 
@@ -55,7 +57,7 @@ namespace AE::Scripting
 	// Script Engine
 	//
 
-	class ScriptEngine final : public std::enable_shared_from_this<ScriptEngine>
+	class ScriptEngine final : public EnableRC<ScriptEngine>
 	{
 	// types
 	public:
@@ -66,14 +68,14 @@ namespace AE::Scripting
 
 			ModuleSource () {}
 			ModuleSource (StringView name, StringView script) : name{name}, script{script} {}
-			ModuleSource (String&& name, String&& script) : name{std::move(name)}, script{std::move(script)} {}
+			ModuleSource (String&& name, String&& script) : name{RVRef(name)}, script{RVRef(script)} {}
 		};
 
 
 	// variables
 	private:
 		Ptr< AngelScript::asIScriptEngine >		_engine;
-		size_t									_moduleIndex	= 0;
+		usize									_moduleIndex	= 0;
 
 
 	// methods
@@ -154,7 +156,7 @@ namespace AE::Scripting
 #	define AS_CALL_R( ... ) \
 	{ \
 		int __as_result = ( __VA_ARGS__ ); \
-		if ( not ::AE::Scripting::ScriptEngine::_CheckError( __as_result, AE_PRIVATE_TOSTRING( __VA_ARGS__ ), AE_FUNCTION_NAME, __FILE__, __LINE__ ) ) \
+		if ( not ::AE::Scripting::ScriptEngine::_CheckError( __as_result, AE_PRIVATE_TOSTRING( __VA_ARGS__ ), AE_FUNCTION_NAME, __FILE__, __LINE__ )) \
 			return Default; \
 	}
 	

@@ -4,10 +4,10 @@ android {
     compileSdkVersion 28
 
     defaultConfig {
-        minSdkVersion 24 // for vulkan
-        targetSdkVersion 28
-        versionCode 1
-        versionName "1.0"
+        minSdkVersion 		24 // for vulkan
+        targetSdkVersion 	28
+        versionCode 		1
+        versionName 		"1.0"
     }
 
     buildTypes {

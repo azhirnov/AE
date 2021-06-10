@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -6,7 +6,6 @@
 # include "graphics/Vulkan/VEnumCast.h"
 # include "graphics/Vulkan/VResourceManager.h"
 
-# include "serializing/Deserializer.h"
 # include "serializing/ObjectFactory.h"
 
 # include "sampler_packer/Private/SamplerDesc.h"
@@ -31,7 +30,7 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool VSampler::Create (const VDevice &dev, const VkSamplerCreateInfo &info, StringView dbgName)
+	bool  VSampler::Create (const VDevice &dev, const VkSamplerCreateInfo &info, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( not _sampler );
@@ -49,7 +48,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void VSampler::Destroy (const VResourceManager &resMngr)
+	void  VSampler::Destroy (const VResourceManagerImpl &resMngr)
 	{
 		EXLOCK( _drCheck );
 
@@ -234,7 +233,7 @@ namespace {
 	Create
 =================================================
 */
-	bool VSamplerPack::Create (VResourceManager &resMngr, const SharedPtr<RStream> &stream, INOUT SamplerRefs &refs)
+	bool  VSamplerPack::Create (VResourceManagerImpl &resMngr, const RC<RStream> &stream, INOUT SamplerRefs &refs)
 	{
 		EXLOCK( _drCheck );
 		
@@ -266,8 +265,8 @@ namespace {
 		EXLOCK( refs.guard );
 		for (auto&[name, uid] : samp_names)
 		{
-			CHECK_ERR( size_t(uid) < _samplers.size() );
-			CHECK( refs.map.insert_or_assign( name, _samplers[size_t(uid)] ).second );
+			CHECK_ERR( usize(uid) < _samplers.size() );
+			CHECK( refs.map.insert_or_assign( name, _samplers[usize(uid)] ).second );
 		}
 
 		return true;
@@ -278,7 +277,7 @@ namespace {
 	Destroy
 =================================================
 */
-	void VSamplerPack::Destroy (VResourceManager &resMngr)
+	void  VSamplerPack::Destroy (VResourceManagerImpl &resMngr)
 	{
 		EXLOCK( _drCheck );
 

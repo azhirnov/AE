@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Algorithms/ArrayUtils.h"
 #include "UnitTest_Common.h"
@@ -10,7 +10,7 @@ namespace
 	{
 		Array<int>	arr = { 0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 7, 7, 7, 7, 8, 9, 10, 11, 12 };
 		ArrayView	view = arr;
-		size_t		pos;
+		usize		pos;
 	
 		pos = LowerBound( view, 5 );		TEST( pos == 7 );
 		pos = LowerBound( view, 9 );		TEST( pos == 15 );
@@ -26,7 +26,7 @@ namespace
 	{
 		Array<int>	arr = { 0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 7, 7, 7, 7, 8, 9, 10, 11, 12 };
 		ArrayView	view = arr;
-		size_t		pos;
+		usize		pos;
 	
 		pos = BinarySearch( view, 0 );		TEST( pos == 0 );
 		pos = BinarySearch( view, 5 );		TEST( pos == 7 );
@@ -43,7 +43,7 @@ namespace
 	{
 		Array<int>	arr = { 0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 7, 7, 7, 7, 8, 9, 10, 11, 12, 13 };
 		ArrayView	view = arr;
-		size_t		pos;
+		usize		pos;
 	
 		pos = BinarySearch( view, 0 );		TEST( pos == 0 );
 		pos = BinarySearch( view, 5 );		TEST( pos == 7 );
@@ -60,7 +60,7 @@ namespace
 	{
 		Array<int>	arr1 = { 0 };
 		Array<int>	arr2 = { 1, 2 };
-		size_t		pos;
+		usize		pos;
 	
 		pos = BinarySearch( arr1, 0 );		TEST( pos == 0 );
 		pos = BinarySearch( arr1, -1 );		TEST( pos == UMax );
@@ -77,7 +77,7 @@ namespace
 	{
 		Array<int>	arr = { 0, 1, 2, 3, 4, 4, 4, 5, 6, 7, 7, 7, 7, 7, 8, 9, 10, 11, 12 };
 		ArrayView	view = arr;
-		size_t		pos;
+		usize		pos;
 	
 		pos = ExponentialSearch( view, 5 );		TEST( pos == 7 );
 		pos = ExponentialSearch( view, 9 );		TEST( pos == 15 );

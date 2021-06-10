@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -7,7 +7,7 @@
 
 namespace AE::STL
 {
-	namespace _ae_stl_hidden_
+	namespace _hidden_
 	{
 		template <typename... Types>	struct overloaded final : Types... { using Types::operator()...; };
 
@@ -29,15 +29,15 @@ namespace AE::STL
 	template <typename ...Types, typename ...Funcs>
 	forceinline constexpr decltype(auto)  Visit (Union<Types...> &un, Funcs&&... fn)
 	{
-		using namespace _ae_stl_hidden_;
-		return std::visit( overloaded{ std::forward<Funcs &&>(fn)... }, un );
+		using namespace STL::_hidden_;
+		return std::visit( overloaded{ FwdArg<Funcs &&>(fn)... }, un );
 	}
 
 	template <typename ...Types, typename ...Funcs>
 	forceinline constexpr decltype(auto)  Visit (const Union<Types...> &un, Funcs&&... fn)
 	{
-		using namespace _ae_stl_hidden_;
-		return std::visit( overloaded{ std::forward<Funcs &&>(fn)... }, un );
+		using namespace STL::_hidden_;
+		return std::visit( overloaded{ FwdArg<Funcs &&>(fn)... }, un );
 	}
 	
 /*

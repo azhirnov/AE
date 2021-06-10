@@ -2,6 +2,7 @@
 
 #include "stl/Common.h"
 
+//extern void UnitTest_Temp ();
 extern void UnitTest_Archetype ();
 extern void UnitTest_EntityPool ();
 extern void UnitTest_Registry ();
@@ -19,10 +20,7 @@ int main ()
 	UnitTest_EntityPool();
 	UnitTest_Registry();
 	//UnitTest_Transformation();
-
-#if !defined(AE_CI_BUILD) or (defined(AE_CI_TYPE) and (AE_CI_TYPE == 2))
 	//UnitTest_RendererVk();
-#endif
 
 	CHECK_FATAL( AE_DUMP_MEMLEAKS() );
 

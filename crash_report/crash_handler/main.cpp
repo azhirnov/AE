@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Platforms/WindowsHeader.h"
 
@@ -58,7 +58,7 @@ namespace
 
 			int	result = ::MessageBoxExW( null, str.c_str(), caption,
 										  MB_YESNO | MB_ICONSTOP | MB_SETFOREGROUND | MB_TOPMOST | MB_DEFBUTTON1,
-										  MAKELANGID( LANG_ENGLISH, SUBLANG_ENGLISH_US ) );
+										  MAKELANGID( LANG_ENGLISH, SUBLANG_ENGLISH_US ));
 			switch ( result )
 			{
 				case IDYES :	break;
@@ -108,11 +108,11 @@ namespace AE
 		ASSERT( FileSystem::IsDirectory( minidumpPath ));
 		ASSERT( FileSystem::IsFile( crashReporterPath ));
 
-		g_CrashReporterPath = std::move(crashReporterPath);
-		g_LogFilePath		= std::move(logPath);
-		g_CrashServerUrl	= std::move(url);
-		g_UserInfo			= std::move(userInfo);
-		g_SymbolFileID		= std::move(symbolFileID);
+		g_CrashReporterPath = RVRef( crashReporterPath );
+		g_LogFilePath		= RVRef( logPath );
+		g_CrashServerUrl	= RVRef( url );
+		g_UserInfo			= RVRef( userInfo );
+		g_SymbolFileID		= RVRef( symbolFileID );
 
 		g_Handler = new ExceptionHandler(
 			minidumpPath.wstring(),

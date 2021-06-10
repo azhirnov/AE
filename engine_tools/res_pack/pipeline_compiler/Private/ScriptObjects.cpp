@@ -41,8 +41,8 @@ namespace {
 	{
 		const auto	CmpStrings = [](StringView lhs, StringView rhs) -> bool
 		{
-			const size_t	len = Min( lhs.size(), rhs.size() );
-			for (size_t i = 0; i < len; ++i)
+			const usize	len = Min( lhs.size(), rhs.size() );
+			for (usize i = 0; i < len; ++i)
 			{
 				if ( lhs[i] == rhs[i] )
 					continue;
@@ -105,9 +105,9 @@ namespace {
 	hash
 =================================================
 */
-	size_t  ShaderInfoHash::operator () (const ShaderInfo &value) const
+	usize  ShaderInfoHash::operator () (const ShaderInfo &value) const
 	{
-		return size_t(HashOf( value.filename ) + HashOf( value.type ) +
+		return usize(HashOf( value.filename ) + HashOf( value.type ) +
 					  HashOf( value.version )  + HashOf( value.defines ));
 	}
 //-----------------------------------------------------------------------------
@@ -153,7 +153,7 @@ namespace {
 	AddLayout
 =================================================
 */
-	bool  BasePipeline::AddLayout (const ShaderInfo &sh, OUT size_t &merged)
+	bool  BasePipeline::AddLayout (const ShaderInfo &sh, OUT usize &merged)
 	{
 		merged = 0;
 
@@ -180,7 +180,7 @@ namespace {
 			else
 				CHECK_ERR( _dsLayoutNames[ds.bindingIndex] == ds.name );
 
-			size_t	count = 0;
+			usize	count = 0;
 			CHECK_ERR( _dsLayouts[ds.bindingIndex].Merge( ds.layout, OUT count ));
 			merged += count;
 
@@ -201,7 +201,7 @@ namespace {
 	MergeLayouts
 =================================================
 */
-	bool  BasePipeline::MergeLayouts (const ShaderInfo &sh, OUT size_t &merged) const
+	bool  BasePipeline::MergeLayouts (const ShaderInfo &sh, OUT usize &merged) const
 	{
 		merged = 0;
 
@@ -216,7 +216,7 @@ namespace {
 			if ( ds.bindingIndex >= _dsLayouts.size() )
 				continue;
 
-			size_t	count = 0;
+			usize	count = 0;
 			CHECK_ERR( ds.layout.Merge( _dsLayouts[ds.bindingIndex], OUT count ));
 			merged += count;
 		}
@@ -235,7 +235,7 @@ namespace {
 
 		desc.pushConstants = _pushConstants;
 
-		for (size_t i = 0; i < _dsLayouts.size(); ++i)
+		for (usize i = 0; i < _dsLayouts.size(); ++i)
 		{
 			if ( _dsLayouts[i].uniforms.empty() )
 				continue;
@@ -341,9 +341,9 @@ namespace {
 	MergePass1
 =================================================
 */
-	bool  GraphicsPipelineScriptBinding::MergePass1 (INOUT size_t &merged)
+	bool  GraphicsPipelineScriptBinding::MergePass1 (INOUT usize &merged)
 	{
-		size_t	count;
+		usize	count;
 		CHECK_ERR( AddLayout( vertex,      OUT count ));	merged += count;
 		CHECK_ERR( AddLayout( tessControl, OUT count ));	merged += count;
 		CHECK_ERR( AddLayout( tessEval,    OUT count ));	merged += count;
@@ -357,9 +357,9 @@ namespace {
 	MergePass2
 =================================================
 */
-	bool  GraphicsPipelineScriptBinding::MergePass2 (INOUT size_t &merged) const
+	bool  GraphicsPipelineScriptBinding::MergePass2 (INOUT usize &merged) const
 	{
-		size_t	count;
+		usize	count;
 		CHECK_ERR( MergeLayouts( vertex,      OUT count ));	merged += count;
 		CHECK_ERR( MergeLayouts( tessControl, OUT count ));	merged += count;
 		CHECK_ERR( MergeLayouts( tessEval,    OUT count ));	merged += count;
@@ -416,7 +416,7 @@ namespace {
 */
 	static void  MergePrimitiveTopology (const GraphicsPipelineDesc::TopologyBits_t &src, INOUT GraphicsPipelineDesc::TopologyBits_t &dst)
 	{
-		for (size_t i = 0; i < src.size(); ++i)
+		for (usize i = 0; i < src.size(); ++i)
 		{
 			if ( src.test( i ) )
 				dst.set( i );
@@ -563,9 +563,9 @@ namespace {
 	MergePass1
 =================================================
 */
-	bool  MeshPipelineScriptBinding::MergePass1 (INOUT size_t &merged)
+	bool  MeshPipelineScriptBinding::MergePass1 (INOUT usize &merged)
 	{
-		size_t	count;
+		usize	count;
 		CHECK_ERR( AddLayout( task,     OUT count ));	merged += count;
 		CHECK_ERR( AddLayout( mesh,     OUT count ));	merged += count;
 		CHECK_ERR( AddLayout( fragment, OUT count ));	merged += count;
@@ -577,9 +577,9 @@ namespace {
 	MergePass2
 =================================================
 */
-	bool  MeshPipelineScriptBinding::MergePass2 (INOUT size_t &merged) const
+	bool  MeshPipelineScriptBinding::MergePass2 (INOUT usize &merged) const
 	{
-		size_t	count;
+		usize	count;
 		CHECK_ERR( MergeLayouts( task,     OUT count ));	merged += count;
 		CHECK_ERR( MergeLayouts( mesh,     OUT count ));	merged += count;
 		CHECK_ERR( MergeLayouts( fragment, OUT count ));	merged += count;
@@ -678,9 +678,9 @@ namespace {
 	MergePass1
 =================================================
 */
-	bool  ComputePipelineScriptBinding::MergePass1 (INOUT size_t &merged)
+	bool  ComputePipelineScriptBinding::MergePass1 (INOUT usize &merged)
 	{
-		size_t	count;
+		usize	count;
 		CHECK_ERR( AddLayout( shader, OUT count ));	merged += count;
 		return true;
 	}
@@ -690,9 +690,9 @@ namespace {
 	MergePass2
 =================================================
 */
-	bool  ComputePipelineScriptBinding::MergePass2 (INOUT size_t &merged) const
+	bool  ComputePipelineScriptBinding::MergePass2 (INOUT usize &merged) const
 	{
-		size_t	count;
+		usize	count;
 		CHECK_ERR( MergeLayouts( shader, OUT count ));	merged += count;
 		return true;
 	}
@@ -936,8 +936,8 @@ namespace {
 		// graphics
 		for (;;)
 		{
-			size_t	counter1 = 0;
-			size_t	counter2 = 0;
+			usize	counter1 = 0;
+			usize	counter2 = 0;
 
 			for (auto& ppln : gpipelines)
 			{
@@ -965,8 +965,8 @@ namespace {
 		// compute
 		for (;;)
 		{
-			size_t	counter1 = 0;
-			size_t	counter2 = 0;
+			usize	counter1 = 0;
+			usize	counter2 = 0;
 
 			for (auto& ppln : cpipelines)
 			{

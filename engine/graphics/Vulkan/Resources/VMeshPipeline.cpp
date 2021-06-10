@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -29,7 +29,7 @@ namespace AE::Graphics
 		EXLOCK( _drCheck );
 		CHECK_ERR( not _handle and not _layout );
 		
-		// _desc.renderPassId reference has been acquired by VResourceManager
+		// _desc.renderPassId reference has been acquired by VResourceManagerImpl
 
 		_templ	= templId;
 		_desc	= desc;
@@ -44,7 +44,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void VMeshPipeline::Destroy (VResourceManager &resMngr)
+	void VMeshPipeline::Destroy (VResourceManagerImpl &resMngr)
 	{
 		EXLOCK( _drCheck );
 
@@ -112,7 +112,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void  VMeshPipelineTemplate::Destroy (const VResourceManager &)
+	void  VMeshPipelineTemplate::Destroy (const VResourceManagerImpl &)
 	{
 		EXLOCK( _drCheck );
 

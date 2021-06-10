@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "platform/Public/IApplication.h"
 
@@ -22,9 +22,7 @@ extern int Test_Platform (IApplication &app, IWindow &wnd)
 
 	UniquePtr<IApplication::IAppListener>  AE_OnAppCreated ()
 	{
-		#if AE_HAS_GRAPHICS
-			Test_GLFW();
-		#endif
+		Test_GLFW();
 
 		CHECK_FATAL( AE_DUMP_MEMLEAKS() );
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -23,7 +23,7 @@ namespace AE::Threading
 	{
 	// variables
 	private:
-		mutable Atomic<size_t>		_state  { 0 };
+		mutable Atomic<usize>		_state  { 0 };
 
 
 	// methods
@@ -32,8 +32,8 @@ namespace AE::Threading
 
 		ND_ bool  Lock () const
 		{
-			const size_t	id		= size_t(HashOf( std::this_thread::get_id() ));
-			size_t			curr	= _state.load( EMemoryOrder::Acquire );
+			const usize	id		= usize(HashOf( std::this_thread::get_id() ));
+			usize		curr	= _state.load( EMemoryOrder::Relaxed );
 			
 			if ( curr == id )
 				return true;	// recursive lock
@@ -42,6 +42,7 @@ namespace AE::Threading
 			bool	locked	= _state.compare_exchange_strong( INOUT curr, id, EMemoryOrder::Relaxed );
 			DRC_CHECK( curr == 0 );		// locked by another thread - race condition detected!
 			DRC_CHECK( locked );
+
 			return true;
 		}
 
@@ -75,11 +76,13 @@ namespace AE::Threading
 			bool	locked = _lockWrite.try_lock();
 			DRC_CHECK( locked );	// locked by another thread - race condition detected!
 
-			int		expected = _readCounter.load( EMemoryOrder::Acquire );
+			int		expected = _readCounter.load( EMemoryOrder::Relaxed );
 			DRC_CHECK( expected <= 0 );	// has read lock(s) - race condition detected!
 
+			// loop does not nedded here because mutex allow only single thread
 			_readCounter.compare_exchange_strong( INOUT expected, expected-1, EMemoryOrder::Relaxed );
 			DRC_CHECK( expected <= 0 );	// has read lock(s) - race condition detected!
+
 			return true;
 		}
 

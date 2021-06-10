@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -23,7 +23,7 @@ namespace AE::Graphics
 	IsAllResourcesAlive
 =================================================
 */
-	bool VFramebuffer::IsAllResourcesAlive (const VResourceManager &resMngr) const
+	bool VFramebuffer::IsAllResourcesAlive (const VResourceManagerImpl &resMngr) const
 	{
 		SHAREDLOCK( _drCheck );
 
@@ -59,7 +59,7 @@ namespace AE::Graphics
 	constructor
 =================================================
 */
-	VFramebuffer::VFramebuffer (ArrayView<Pair<VImageID, ImageViewDesc>> attachments, RenderPassID rp, uint2 dim, uint layers) :
+	VFramebuffer::VFramebuffer (ArrayView<Pair<ImageID, ImageViewDesc>> attachments, RenderPassID rp, uint2 dim, uint layers) :
 		_renderPassId{ rp },
 		_dimension{ dim },
 		_layers{ ImageLayer{layers} },
@@ -81,7 +81,7 @@ namespace AE::Graphics
 	Create
 =================================================
 */
-	bool VFramebuffer::Create (VResourceManager &resMngr, StringView dbgName)
+	bool VFramebuffer::Create (VResourceManagerImpl &resMngr, StringView dbgName)
 	{
 		EXLOCK( _drCheck );
 		CHECK_ERR( not _framebuffer );
@@ -96,7 +96,7 @@ namespace AE::Graphics
 			auto*		image = resMngr.GetResource( rt.first );
 			CHECK_ERR( image );
 
-			VkImageView	view = image->GetView( dev, false, INOUT rt.second );
+			VkImageView	view = image->GetView( dev, False{"not default"}, INOUT rt.second );
 			CHECK_ERR( view );
 
 			image_views.push_back( view );
@@ -126,7 +126,7 @@ namespace AE::Graphics
 	Destroy
 =================================================
 */
-	void VFramebuffer::Destroy (VResourceManager &resMngr)
+	void VFramebuffer::Destroy (VResourceManagerImpl &resMngr)
 	{
 		EXLOCK( _drCheck );
 

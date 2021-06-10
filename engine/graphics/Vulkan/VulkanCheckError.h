@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -18,12 +18,12 @@
 #	define AE_PRIVATE_VK_CALL_R( _func_, _ret_, ... ) \
 	{ \
 		const ::VkResult __vk_err__ = (_func_); \
-		if ( not ::AE::Graphics::__vk_CheckErrors( __vk_err__, AE_PRIVATE_TOSTRING( _func_ ), AE_FUNCTION_NAME, __FILE__, __LINE__ ) ) \
+		if ( not ::AE::Graphics::__vk_CheckErrors( __vk_err__, AE_PRIVATE_TOSTRING( _func_ ), AE_FUNCTION_NAME, __FILE__, __LINE__ )) \
 			return _ret_; \
 	}
 
 #	define VK_CHECK( ... ) \
-		AE_PRIVATE_VK_CALL_R( AE_PRIVATE_GETARG_0( __VA_ARGS__ ), AE_PRIVATE_GETARG_1( __VA_ARGS__, ::AE::STL::Default ) )
+		AE_PRIVATE_VK_CALL_R( AE_PRIVATE_GETARG_0( __VA_ARGS__ ), AE_PRIVATE_GETARG_1( __VA_ARGS__, ::AE::STL::Default ))
 #endif
 
 

@@ -1,8 +1,8 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
-#include "stl/Common.h"
+#include "stl/Math/Bytes.h"
 
 namespace AE::Math
 {
@@ -12,7 +12,7 @@ namespace AE::Math
 	helpers
 =================================================
 */
-	namespace _ae_math_hidden_
+	namespace _hidden_
 	{
 		template <typename T1, typename T2, typename Result>
 		using EnableForInt		= EnableIf< IsSignedInteger<T1> and IsSignedInteger<T2>, Result >;
@@ -20,7 +20,7 @@ namespace AE::Math
 		template <typename T1, typename T2, typename Result>
 		using EnableForUInt		= EnableIf< IsUnsignedInteger<T1> and IsUnsignedInteger<T2>, Result >;
 
-	}	// _ae_math_hidden_
+	}	// _hidden_
 	
 /*
 =================================================
@@ -28,7 +28,7 @@ namespace AE::Math
 =================================================
 */
 	template <typename T1, typename T2>
-	ND_ forceinline constexpr _ae_math_hidden_::EnableForInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
+	ND_ forceinline constexpr Math::_hidden_::EnableForInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
 	{
 		STATIC_ASSERT( IsScalar<T1> and IsScalar<T2> );
 
@@ -50,7 +50,7 @@ namespace AE::Math
 =================================================
 */
 	template <typename T1, typename T2>
-	ND_ forceinline constexpr _ae_math_hidden_::EnableForUInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
+	ND_ forceinline constexpr Math::_hidden_::EnableForUInt<T1, T2, bool>  AdditionIsSafe (const T1 a, const T2 b)
 	{
 		STATIC_ASSERT( IsScalar<T1> and IsScalar<T2> );
 		
@@ -71,7 +71,13 @@ namespace AE::Math
 	ND_ forceinline constexpr auto  AlignToSmaller (const T0 &value, const T1 &align)
 	{
 		ASSERT( align > 0 );
-		return (value / align) * align;
+		if constexpr( IsPointer<T0> )
+		{
+			Bytes	byte_align{ align };
+			return BitCast<T0>( (BitCast<usize>(value) / byte_align) * byte_align );
+		}
+		else
+			return (value / align) * align;
 	}
 
 /*
@@ -83,7 +89,30 @@ namespace AE::Math
 	ND_ forceinline constexpr auto  AlignToLarger (const T0 &value, const T1 &align)
 	{
 		ASSERT( align > 0 );
-		return ((value + align-1) / align) * align;
+		if constexpr( IsPointer<T0> )
+		{
+			Bytes	byte_align{ align };
+			return BitCast<T0>( ((BitCast<usize>(value) + byte_align-1) / byte_align) * byte_align );
+		}
+		else
+			return ((value + align-1) / align) * align;
+	}
+	
+/*
+=================================================
+	IsAligned
+=================================================
+*/
+	template <typename T0, typename T1>
+	ND_ forceinline constexpr bool  IsAligned (const T0 &value, const T1 &align)
+	{
+		ASSERT( align > 0 );
+		if constexpr( IsPointer<T0> )
+		{
+			return BitCast<usize>(value) % Bytes{align} == 0;
+		}
+		else
+			return value % align == 0;
 	}
 
 /*
@@ -215,8 +244,8 @@ namespace AE::Math
 	{
 		STATIC_ASSERT( IsFloatPoint<T> );
 		
-		if constexpr( sizeof(T) >= sizeof(int64_t) )
-			return int64_t(std::round( x ));
+		if constexpr( sizeof(T) >= sizeof(slong) )
+			return slong(std::round( x ));
 
 		if constexpr( sizeof(T) >= sizeof(int32_t) )
 			return int32_t(std::round( x ));
@@ -227,11 +256,11 @@ namespace AE::Math
 	{
 		STATIC_ASSERT( IsFloatPoint<T> );
 		
-		if constexpr( sizeof(T) >= sizeof(uint64_t) )
-			return uint64_t(std::round( x ));
+		if constexpr( sizeof(T) >= sizeof(ulong) )
+			return ulong(std::round( x ));
 
-		if constexpr( sizeof(T) >= sizeof(uint32_t) )
-			return uint32_t(std::round( x ));
+		if constexpr( sizeof(T) >= sizeof(uint) )
+			return uint(std::round( x ));
 	}
 
 /*
@@ -371,21 +400,39 @@ namespace AE::Math
 =================================================
 */
 	template <typename T>
-	ND_ forceinline EnableIf<IsScalar<T>, T>  Sign (const T &value)
+	ND_ forceinline constexpr EnableIf<IsScalar<T>, T>  Sign (const T &value)
 	{
-		if constexpr( std::is_signed_v<T> )
+		if constexpr( IsSigned<T> )
 			return value < T(0) ? T(-1) : T(1);
 		else
 			return T(1);
 	}
 
 	template <typename T>
-	ND_ forceinline EnableIf<IsScalar<T>, T>  SignOrZero (const T &value)
+	ND_ forceinline constexpr EnableIf<IsScalar<T>, T>  SignOrZero (const T &value)
 	{
-		if constexpr( std::is_signed_v<T> )
+		if constexpr( IsSigned<T> )
 			return value < T(0) ? T(-1) : value > T(0) ? T(1) : T(0);
 		else
 			return value > T(0) ? T(1) : T(0);
 	}
+	
+/*
+=================================================
+	AnyEqual
+=================================================
+*/
+	template <typename Lhs, typename Rhs0, typename ...Rhs>
+	ND_ forceinline constexpr bool  AnyEqual (const Lhs &lhs, const Rhs0 &rhs0, const Rhs& ...rhs)
+	{
+		if ( All( lhs == rhs0 ))
+			return true;
+
+		if constexpr( CountOf<Rhs...>() == 0 )
+			return false;
+		else
+			return AnyEqual( lhs, rhs... );
+	}
+
 
 }	// AE::Math

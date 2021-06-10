@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -39,8 +39,8 @@ namespace AE::Graphics
 		VGraphicsPipeline () {}
 		~VGraphicsPipeline ();
 
-		bool Create (VGraphicsPipelineTemplateID, const GraphicsPipelineDesc &, VkPipeline, VkPipelineLayout);
-		void Destroy (VResourceManager &);
+		bool  Create (VGraphicsPipelineTemplateID, const GraphicsPipelineDesc &, VkPipeline, VkPipelineLayout);
+		void  Destroy (VResourceManagerImpl &);
 
 		ND_ GraphicsPipelineDesc const&	Description ()	const	{ SHAREDLOCK( _drCheck );  return _desc; }
 		ND_ VkPipeline					Handle ()		const	{ SHAREDLOCK( _drCheck );  return _handle; }
@@ -56,7 +56,7 @@ namespace AE::Graphics
 
 	class VGraphicsPipelineTemplate final
 	{
-		friend class VResourceManager;
+		friend class VResourceManagerImpl;
 
 	// types
 	public:
@@ -104,8 +104,8 @@ namespace AE::Graphics
 		VGraphicsPipelineTemplate () {}
 		~VGraphicsPipelineTemplate ();
 
-		bool Create (VPipelineLayoutID layoutId, VRenderPassOutputID rpOutputId, const PipelineCompiler::GraphicsPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName);
-		void Destroy (const VResourceManager &);
+		bool  Create (VPipelineLayoutID layoutId, VRenderPassOutputID rpOutputId, const PipelineCompiler::GraphicsPipelineDesc &desc, ArrayView<ShaderModule> modules, StringView dbgName);
+		void  Destroy (const VResourceManagerImpl &);
 		
 		ND_ VPipelineLayoutID		GetLayoutID ()			const	{ SHAREDLOCK( _drCheck );  return _baseLayoutId; }
 		ND_ ArrayView<VertexAttrib>	GetVertexAttribs ()		const	{ SHAREDLOCK( _drCheck );  return _vertexAttribs; }

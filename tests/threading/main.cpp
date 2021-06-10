@@ -1,9 +1,10 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Common.h"
 
 extern void UnitTest_Promise ();
 extern void UnitTest_TaskDeps ();
+extern void UnitTest_TaskUsage ();
 extern void PerfTest_Threading ();
 
 extern void UnitTest_IndexedPool ();
@@ -26,11 +27,12 @@ int main ()
 	UnitTest_LfStaticPool();
 
 	UnitTest_TaskDeps();
+	UnitTest_TaskUsage();
 	UnitTest_Promise();
-
+	
 	// too slow
 #if (not defined(AE_CI_BUILD)) and (not defined(PLATFORM_ANDROID))
-	PerfTest_Threading();
+	//PerfTest_Threading();
 #endif
 	
 	CHECK_FATAL( AE_DUMP_MEMLEAKS() );

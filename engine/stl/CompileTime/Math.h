@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -12,7 +12,7 @@ namespace AE::STL
 	CT_IntLog2
 =================================================
 */
-namespace _ae_stl_hidden_
+namespace _hidden_
 {
 	template <typename T, T X, uint Bit>
 	struct _IntLog2 {
@@ -24,10 +24,10 @@ namespace _ae_stl_hidden_
 		static const int	value = 0;
 	};
 
-}	// _ae_stl_hidden_
+}	// _hidden_
 
 	template <auto X>
-	static constexpr int	CT_IntLog2 = (X ? _ae_stl_hidden_::_IntLog2< decltype(X), X, sizeof(X)*8-1 >::value : -1);
+	static constexpr int	CT_IntLog2 = (X ? STL::_hidden_::_IntLog2< decltype(X), X, sizeof(X)*8-1 >::value : -1);
 
 	
 /*

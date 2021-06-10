@@ -3,8 +3,7 @@
 #include "ui/ControllerClasses.h"
 #include "ui/LayoutClasses.h"
 
-#include "serializing/Serializer.h"
-#include "serializing/Deserializer.h"
+#include "serializing/ObjectFactory.h"
 
 namespace AE::UI
 {

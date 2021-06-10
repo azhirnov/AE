@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -34,7 +34,7 @@ namespace AE::Scripting
 	};
 
 
-	namespace _ae_scripting_hidden_
+	namespace _hidden_
 	{
 		struct OperatorBinderHelper
 		{
@@ -47,7 +47,7 @@ namespace AE::Scripting
 		template <typename Func>
 		ND_ constexpr bool IsGlobal ();
 
-	}	// _ae_scripting_hidden_
+	}	// _hidden_
 
 
 
@@ -68,7 +68,7 @@ namespace AE::Scripting
 		// Operator Binder (helper class)
 		// see http://www.angelcode.com/angelscript/sdk/docs/manual/doc_script_class_ops.html
 		//
-		struct OperatorBinder final : _ae_scripting_hidden_::OperatorBinderHelper
+		struct OperatorBinder final : Scripting::_hidden_::OperatorBinderHelper
 		{
 			friend struct ClassBinder<T>;
 
@@ -141,7 +141,7 @@ namespace AE::Scripting
 
 		bool CreatePodValue (int flags = 0);
 		bool CreateClassValue (int flags = 0);
-		bool CreateRef (int flags = 0, bool hasFactory = true);
+		bool CreateRef (int flags = 0, Bool hasFactory = true);
 		bool CreateRef (T* (*create)(), void (T:: *addRef)(), void (T:: *releaseRef)(), int flags = 0);
 
 
@@ -184,18 +184,18 @@ namespace AE::Scripting
 	};
 
 	
-namespace _ae_scripting_hidden_ {
 /*
 =================================================
 	IsGlobal
 =================================================
 */
+namespace _hidden_ {
 	template <typename Func>
 	inline constexpr bool IsGlobal ()
 	{
 		return IsSameTypes< typename FunctionInfo<Func>::clazz, void >;
 	}
-}	// _ae_scripting_hidden_
+}	// _hidden_
 
 
 /*
@@ -286,7 +286,7 @@ namespace _ae_scripting_hidden_ {
 =================================================
 */
 	template <typename T>
-	inline bool ClassBinder<T>::CreateRef (int flags, const bool hasFactory)
+	inline bool ClassBinder<T>::CreateRef (int flags, const Bool hasFactory)
 	{
 		typedef T * (* constructor_t) ();
 
@@ -333,7 +333,7 @@ namespace _ae_scripting_hidden_ {
 		/*
 		AS_CALL_R( GetASEngine()->RegisterObjectMethod( _name.c_str(),
 										(String(_name) << " & opAssign(const " << _name << " &in)").c_str(),
-										asMETHOD( T, operator = ), asCALL_THISCALL ) );
+										asMETHOD( T, operator = ), asCALL_THISCALL ));
 		*/
 		return true;
 	}
@@ -349,21 +349,21 @@ namespace _ae_scripting_hidden_ {
 		using namespace AngelScript;
 
 		// constructor
-		if ( AllBits( flags, asOBJ_APP_CLASS_CONSTRUCTOR ) )
+		if ( AllBits( flags, asOBJ_APP_CLASS_CONSTRUCTOR ))
 		{
 			AS_CALL_R( GetASEngine()->RegisterObjectBehaviour( _name.c_str(), asBEHAVE_CONSTRUCT, "void f()",
 											asFUNCTION( &AngelScriptHelper::Constructor<T> ), asCALL_GENERIC ));
 		}
 
 		// destructor
-		if ( AllBits( flags, asOBJ_APP_CLASS_DESTRUCTOR ) )
+		if ( AllBits( flags, asOBJ_APP_CLASS_DESTRUCTOR ))
 		{
 			AS_CALL_R( GetASEngine()->RegisterObjectBehaviour( _name.c_str(), asBEHAVE_DESTRUCT,  "void f()",
 											asFUNCTION( &AngelScriptHelper::Destructor<T> ), asCALL_GENERIC ));
 		}
 
 		// copy constructor
-		if ( AllBits( flags, asOBJ_APP_CLASS_COPY_CONSTRUCTOR ) )
+		if ( AllBits( flags, asOBJ_APP_CLASS_COPY_CONSTRUCTOR ))
 		{
 			AS_CALL_R( GetASEngine()->RegisterObjectBehaviour( _name.c_str(), asBEHAVE_CONSTRUCT,
 											(String("void f(const ") + _name + " &in)").c_str(),
@@ -371,7 +371,7 @@ namespace _ae_scripting_hidden_ {
 		}
 
 		// assignment 
-		if ( AllBits( flags, asOBJ_APP_CLASS_ASSIGNMENT ) )
+		if ( AllBits( flags, asOBJ_APP_CLASS_ASSIGNMENT ))
 		{
 			AS_CALL_R( GetASEngine()->RegisterObjectMethod( _name.c_str(),
 											(String(_name) + " & opAssign(const " + _name + " &in)").c_str(),
@@ -499,7 +499,7 @@ namespace _ae_scripting_hidden_ {
 		String	signature;
 		GlobalFunction<Func>::GetDescriptor( OUT signature, name, 1, 0 );
 
-		if constexpr( IsConst< FrontArg > or IsConst<std::remove_all_extents_t< FrontArg >> )
+		if constexpr( IsConst< FrontArg > or IsConst<RemoveAllExtents< FrontArg >> )
 		{
 			signature += " const";
 		}
@@ -527,7 +527,7 @@ namespace _ae_scripting_hidden_ {
 		String	signature;
 		GlobalFunction<Func>::GetDescriptor( OUT signature, name, 0, 1 );
 		
-		if constexpr( IsConst< BackArg > or IsConst<std::remove_all_extents_t< BackArg >> )
+		if constexpr( IsConst< BackArg > or IsConst<RemoveAllExtents< BackArg >> )
 		{
 			signature += " const";
 		}
@@ -544,10 +544,10 @@ namespace _ae_scripting_hidden_ {
 	template <typename T> template <typename Func>
 	inline typename ClassBinder<T>::OperatorBinder&  ClassBinder<T>::OperatorBinder::Unary (EUnaryOperator op, Func func)
 	{
-		if constexpr( _ae_scripting_hidden_::IsGlobal<Func>() )
+		if constexpr( Scripting::_hidden_::IsGlobal<Func>() )
 			_binder->AddMethodFromGlobalObjFirst( func, _UnaryToStr( op ));
 		else
-			_binder->AddMethod( func, _UnaryToStr( op ) );
+			_binder->AddMethod( func, _UnaryToStr( op ));
 		
 		return *this;
 	}
@@ -560,10 +560,10 @@ namespace _ae_scripting_hidden_ {
 	template <typename T> template <typename Func>
 	inline typename ClassBinder<T>::OperatorBinder&  ClassBinder<T>::OperatorBinder::BinaryAssign (EBinaryOperator op, Func func)
 	{
-		if constexpr( _ae_scripting_hidden_::IsGlobal<Func>() )
+		if constexpr( Scripting::_hidden_::IsGlobal<Func>() )
 			_binder->AddMethodFromGlobalObjFirst( func, _BinAssignToStr( op ));
 		else
-			_binder->AddMethod( func, _BinAssignToStr( op ) );
+			_binder->AddMethod( func, _BinAssignToStr( op ));
 
 		return *this;
 	}
@@ -585,7 +585,7 @@ namespace _ae_scripting_hidden_ {
 	template <typename T> template <typename Func>
 	inline typename ClassBinder<T>::OperatorBinder&  ClassBinder<T>::OperatorBinder::Index (Func func)
 	{
-		if constexpr( _ae_scripting_hidden_::IsGlobal<Func>() )
+		if constexpr( Scripting::_hidden_::IsGlobal<Func>() )
 			_binder->AddMethodFromGlobalObjFirst( func, "opIndex" );
 		else
 			_binder->AddMethod( func, "opIndex" );
@@ -659,7 +659,7 @@ namespace _ae_scripting_hidden_ {
 	template <typename T> template <typename OutType>
 	inline typename ClassBinder<T>::OperatorBinder&  ClassBinder<T>::OperatorBinder::Cast ()
 	{
-		return Cast( static_cast< OutType const& (T::*) () const >( &T::operator OutType ) );
+		return Cast( static_cast< OutType const& (T::*) () const >( &T::operator OutType ));
 	}
 	
 	template <typename T> template <typename OutType>
@@ -698,10 +698,10 @@ namespace _ae_scripting_hidden_ {
 	template <typename T> template <typename Func>
 	inline typename ClassBinder<T>::OperatorBinder&  ClassBinder<T>::OperatorBinder::Binary (EBinaryOperator op, Func func)
 	{
-		if constexpr( _ae_scripting_hidden_::IsGlobal<Func>() )
+		if constexpr( Scripting::_hidden_::IsGlobal<Func>() )
 			_binder->AddMethodFromGlobalObjFirst( func, _BinToStr( op ));
 		else
-			_binder->AddMethod( func, _BinToStr( op ) );
+			_binder->AddMethod( func, _BinToStr( op ));
 		
 		return *this;
 	}
@@ -714,7 +714,7 @@ namespace _ae_scripting_hidden_ {
 	template <typename T> template <typename Func>
 	inline typename ClassBinder<T>::OperatorBinder&  ClassBinder<T>::OperatorBinder::BinaryRH (EBinaryOperator op, Func func)
 	{
-		STATIC_ASSERT( _ae_scripting_hidden_::IsGlobal<Func>() );
+		STATIC_ASSERT( Scripting::_hidden_::IsGlobal<Func>() );
 		
 		_binder->AddMethodFromGlobalObjLast( func, _BinRightToStr( op ));
 		return *this;
@@ -732,7 +732,7 @@ namespace _ae_scripting_hidden_ {
 
 		STATIC_ASSERT( IsSameTypes< typename FuncInfo::result, bool > );
 		
-		if constexpr( _ae_scripting_hidden_::IsGlobal<Func>() )
+		if constexpr( Scripting::_hidden_::IsGlobal<Func>() )
 		{
 			STATIC_ASSERT( FuncInfo::args::Count == 2 );
 			STATIC_ASSERT(( IsSameTypes< typename FuncInfo::args::template Get<0>, T > or IsSameTypes< typename FuncInfo::args::template Get<0>, const T& > ));
@@ -761,7 +761,7 @@ namespace _ae_scripting_hidden_ {
 		STATIC_ASSERT(( IsSameTypes< typename FuncInfo::args::template Get<0>, T > or IsSameTypes< typename FuncInfo::args::template Get<0>, const T& > ));
 		STATIC_ASSERT(( IsSameTypes< typename FuncInfo::args::template Get<1>, T > or IsSameTypes< typename FuncInfo::args::template Get<1>, const T& > ));
 		
-		if constexpr( _ae_scripting_hidden_::IsGlobal<Func>() )
+		if constexpr( Scripting::_hidden_::IsGlobal<Func>() )
 			_binder->AddMethodFromGlobalObjFirst( func, "opCmp" );
 		else
 			_binder->AddMethod( func, "opCmp" );

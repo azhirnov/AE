@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #ifdef AE_ENABLE_VULKAN
 
@@ -7,24 +7,6 @@
 
 namespace AE::Graphics
 {
-	
-	bool  VDevice::InstanceVersion::operator == (const InstanceVersion &rhs) const
-	{
-		return major == rhs.major and minor == rhs.minor;
-	}
-
-	bool  VDevice::InstanceVersion::operator >  (const InstanceVersion &rhs) const
-	{
-		return	major != rhs.major ? major > rhs.major :
-									 minor > rhs.minor;
-	}
-
-	bool  VDevice::InstanceVersion::operator >= (const InstanceVersion &rhs) const
-	{
-		return not (rhs > *this);
-	}
-//-----------------------------------------------------------------------------
-
 	
 /*
 =================================================
@@ -107,9 +89,9 @@ namespace AE::Graphics
 	{
 		result.clear();
 
-		for (uint i = 0; i <= uint(mask); ++i)
+		for (uint i = 0; (1u << i) <= uint(mask); ++i)
 		{
-			if ( not AllBits( mask, i ))
+			if ( not AllBits( mask, 1u << i ))
 				continue;
 
 			auto	q = GetQueue( EQueueType(i) );
@@ -118,6 +100,56 @@ namespace AE::Graphics
 
 			result.push_back( uint(q->familyIndex) );
 		}
+	}
+
+/*
+=================================================
+	GetMemoryTypeIndex
+=================================================
+*/
+	bool  VDevice::GetMemoryTypeIndex (const uint memoryTypeBits, VkMemoryPropertyFlagBits includeFlags, VkMemoryPropertyFlagBits optFlags,
+									   VkMemoryPropertyFlagBits excludeFlags, OUT uint &memoryTypeIndex) const
+	{
+		memoryTypeIndex = UMax;
+
+		auto&	mem_props		= GetProperties().memoryProperties;
+		uint	without_opt		= UMax;
+		uint	without_exclude	= UMax;
+
+		for (uint32_t i = 0; i < mem_props.memoryTypeCount; ++i)
+		{
+			const auto&		mem_type = mem_props.memoryTypes[i];
+			const auto		flags	 = mem_type.propertyFlags;
+
+			if ( AllBits( memoryTypeBits, 1u << i ) and AllBits( flags, includeFlags ))
+			{
+				if ( not AnyBits( flags, excludeFlags ))
+				{
+					if ( AllBits( flags, optFlags ))
+					{
+						memoryTypeIndex = i;
+						return true;
+					}
+
+					without_opt = i;
+				}
+				else
+					without_exclude = i;
+			}
+		}
+
+		if ( without_opt != UMax )
+		{
+			memoryTypeIndex = without_opt;
+			return true;
+		}
+
+		if ( without_exclude != UMax )
+		{
+			memoryTypeIndex = without_exclude;
+			return true;
+		}
+		return false;
 	}
 //-----------------------------------------------------------------------------
 
@@ -128,7 +160,8 @@ namespace AE::Graphics
 	constructor
 =================================================
 */
-	VDeviceInitializer::VDeviceInitializer ()
+	VDeviceInitializer::VDeviceInitializer (bool enableInfoLog) :
+		_enableInfoLog{ enableInfoLog }
 	{
 		_tempObjectDbgInfos.reserve( 16 );
 		_tempString.reserve( 1024 );
@@ -205,16 +238,17 @@ namespace AE::Graphics
 
 		VK_CHECK( vkCreateInstance( &instance_create_info, null, OUT &_vkInstance ));
 
-		VulkanLoader::LoadInstance( _vkInstance );
+		CHECK_ERR( VulkanLoader::LoadInstance( _vkInstance ));
 
 		for (auto inst : instance_extensions) {
 			_instanceExtensions.insert( inst );
 		}
 
-		_SetupInstanceBackwardCompatibility();
+		_LogPhysicalDevices();
+		VulkanLoader::SetupInstanceBackwardCompatibility( vk_ver );
 		return true;
 	}
-	
+
 /*
 =================================================
 	SetInstance
@@ -228,7 +262,7 @@ namespace AE::Graphics
 
 		_vkInstance = newInstance;
 
-		VulkanLoader::LoadInstance( _vkInstance );
+		CHECK_ERR( VulkanLoader::LoadInstance( _vkInstance ));
 		
 		for (auto inst : instanceExtensions) {
 			_instanceExtensions.insert( inst );
@@ -238,10 +272,11 @@ namespace AE::Graphics
 		_ValidateInstanceVersion( INOUT vk_ver );
 		_UpdateInstanceVersion( vk_ver );
 
-		_SetupInstanceBackwardCompatibility();
+		_LogPhysicalDevices();
+		VulkanLoader::SetupInstanceBackwardCompatibility( vk_ver );
 		return true;
 	}
-	
+
 /*
 =================================================
 	DestroyInstance
@@ -262,7 +297,9 @@ namespace AE::Graphics
 		
 		_instanceExtensions.clear();
 
-		AE_LOGD( "Destroyed Vulkan instance" );
+		if ( _enableInfoLog )
+			AE_LOGD( "Destroyed Vulkan instance" );
+
 		return true;
 	}
 
@@ -275,14 +312,16 @@ namespace {
 	template <typename Fn>
 	void  WithPhysicalDevices (const VDevice &vulkan, Fn &&fn)
 	{
-		uint						count	= 0;
-		Array< VkPhysicalDevice >	devices;
+		uint								count	= 0;
+		FixedArray< VkPhysicalDevice, 16 >	devices;
 		
 		VK_CALL( vkEnumeratePhysicalDevices( vulkan.GetVkInstance(), OUT &count, null ));
-		CHECK_ERR( count > 0, void());
+		CHECK_ERRV( count > 0 );
 
 		devices.resize( count );
+		count = uint(devices.size());
 		VK_CALL( vkEnumeratePhysicalDevices( vulkan.GetVkInstance(), OUT &count, OUT devices.data() ));
+		devices.resize( Min( count, devices.size() ));
 
 		for (auto& dev : devices)
 		{
@@ -293,8 +332,6 @@ namespace {
 			vkGetPhysicalDeviceProperties( dev, OUT &prop );
 			vkGetPhysicalDeviceFeatures( dev, OUT &feat );
 			vkGetPhysicalDeviceMemoryProperties( dev, OUT &mem_prop );
-
-			AE_LOGI( "Found Vulkan device: "s << prop.deviceName );
 
 			fn( dev, prop, feat, mem_prop );
 		}
@@ -328,19 +365,19 @@ namespace {
 =================================================
 */
 namespace {
-	ND_ BytesU  CalcTotalMemory (VkPhysicalDeviceMemoryProperties memProps)
+	ND_ Bytes  CalcTotalMemory (VkPhysicalDeviceMemoryProperties memProps)
 	{
-		BytesU	total;
+		Bytes	total;
 
 		for (uint32_t j = 0; j < memProps.memoryTypeCount; ++j)
 		{
-			if ( AllBits( memProps.memoryTypes[j].propertyFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) )
+			if ( AllBits( memProps.memoryTypes[j].propertyFlags, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ))
 			{
 				const uint32_t idx = memProps.memoryTypes[j].heapIndex;
 
-				if ( AllBits( memProps.memoryHeaps[idx].flags, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT ) )
+				if ( AllBits( memProps.memoryHeaps[idx].flags, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT ))
 				{
-					total += BytesU( memProps.memoryHeaps[idx].size );
+					total += Bytes( memProps.memoryHeaps[idx].size );
 					memProps.memoryHeaps[idx].size = 0;
 				}
 			}
@@ -358,6 +395,9 @@ namespace {
 		CHECK_ERR( _vkInstance );
 		CHECK_ERR( not _vkLogicalDevice );
 
+		if ( deviceName.empty() )
+			return false;
+
 		VkPhysicalDevice	pdev = VK_NULL_HANDLE;
 
 		WithPhysicalDevices( *this,
@@ -370,10 +410,11 @@ namespace {
 				if ( math and not pdev )
 					pdev = dev;
 			});
+		
+		if ( pdev == VK_NULL_HANDLE )
+			return false;
 
 		_vkPhysicalDevice = pdev;
-		CHECK_ERR( _vkPhysicalDevice );
-
 		return true;
 	}
 	
@@ -398,9 +439,9 @@ namespace {
 											 prop.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU);
 				const bool	is_integrated = prop.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
 
-				//const BytesU global_mem   = CalcTotalMemory( mem );
+				//const Bytes global_mem   = CalcTotalMemory( mem );
 																										// magic function:
-				const float	perf	=	//float(global_mem.Mb()) / 1024.0f +									// commented because of bug on Intel (incorrect heap size)
+				const float	perf	=	//float(global_mem.Mb()) / 1024.0f +								// commented because of bug on Intel (incorrect heap size)
 										float(prop.limits.maxComputeSharedMemorySize >> 10) / 64.0f +		// big local cache is good
 										float(is_gpu and not is_integrated ? 4 : 1) +						// 
 										float(prop.limits.maxComputeWorkGroupInvocations) / 1024.0f +		// 
@@ -445,9 +486,7 @@ namespace {
 	struct DeviceFeatures
 	{
 		VkPhysicalDeviceFeatures								main;
-		//VkDeviceGeneratedCommandsFeaturesNVX					generatedCommands;
 		VkPhysicalDeviceMultiviewFeatures						multiview;
-		//VkPhysicalDeviceShaderAtomicInt64FeaturesKHR			shaderAtomicI64;
 		VkPhysicalDevice8BitStorageFeaturesKHR					storage8Bit;
 		VkPhysicalDevice16BitStorageFeatures					storage16Bit;
 		VkPhysicalDeviceSamplerYcbcrConversionFeatures			samplerYcbcrConversion;
@@ -458,53 +497,68 @@ namespace {
 		#ifdef VK_NV_mesh_shader
 		VkPhysicalDeviceMeshShaderFeaturesNV					meshShader;
 		#endif
-
+		#ifdef VK_EXT_descriptor_indexing
 		VkPhysicalDeviceDescriptorIndexingFeaturesEXT			descriptorIndexing;
-		//VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT		vertexAttribDivisor;
-		//VkPhysicalDeviceASTCDecodeFeaturesEXT					astcDecode;
-		
+		#endif
 		#ifdef VK_KHR_vulkan_memory_model
 		VkPhysicalDeviceVulkanMemoryModelFeaturesKHR			memoryModel;
 		#endif
-
 		#ifdef VK_EXT_inline_uniform_block
 		VkPhysicalDeviceInlineUniformBlockFeaturesEXT			inlineUniformBlock;
 		#endif
-
 		#ifdef VK_NV_representative_fragment_test
 		VkPhysicalDeviceRepresentativeFragmentTestFeaturesNV	representativeFragmentTest;
 		#endif
-
-		//VkPhysicalDeviceExclusiveScissorFeaturesNV			exclusiveScissorTest;
-		//VkPhysicalDeviceCornerSampledImageFeaturesNV			cornerSampledImage;
-		//VkPhysicalDeviceComputeShaderDerivativesFeaturesNV	computeShaderDerivatives;
-
 		#ifdef VK_NV_fragment_shader_barycentric
 		VkPhysicalDeviceFragmentShaderBarycentricFeaturesNV		fragmentShaderBarycentric;
 		#endif
-
 		#ifdef VK_NV_shader_image_footprint
 		VkPhysicalDeviceShaderImageFootprintFeaturesNV			shaderImageFootprint;
 		#endif
-
 		#ifdef VK_NV_shading_rate_image
 		VkPhysicalDeviceShadingRateImageFeaturesNV				shadingRateImage;
 		#endif
-		
 		#ifdef VK_KHR_shader_float16_int8
 		VkPhysicalDeviceShaderFloat16Int8FeaturesKHR			shaderFloat16Int8;
 		#endif
-
 		#ifdef VK_KHR_timeline_semaphore
 		VkPhysicalDeviceTimelineSemaphoreFeaturesKHR			timelineSemaphore;
 		#endif
-		
 		#ifdef VK_KHR_buffer_device_address
 		VkPhysicalDeviceBufferDeviceAddressFeaturesKHR			bufferDeviceAddress;
 		#endif
-		
 		#ifdef VK_KHR_shader_atomic_int64
 		VkPhysicalDeviceShaderAtomicInt64FeaturesKHR			shaderAtomicInt64;
+		#endif
+		#ifdef VK_KHR_shader_clock
+		VkPhysicalDeviceShaderClockFeaturesKHR					shaderClock;
+		#endif
+		#ifdef VK_EXT_extended_dynamic_state
+		VkPhysicalDeviceExtendedDynamicStateFeaturesEXT			extendedDynamicState;
+		#endif
+		#ifdef VK_NV_compute_shader_derivatives
+		VkPhysicalDeviceComputeShaderDerivativesFeaturesNV		compShaderDerivativesNV;
+		#endif
+		#ifdef VK_NV_shader_sm_builtins
+		VkPhysicalDeviceShaderSMBuiltinsFeaturesNV				shaderSMBuiltinsNV;
+		#endif
+		#ifdef VK_KHR_acceleration_structure
+		VkPhysicalDeviceAccelerationStructureFeaturesKHR		accelerationStructure;
+		#endif
+		#ifdef VK_KHR_ray_tracing_pipeline
+		VkPhysicalDeviceRayTracingPipelineFeaturesKHR			rayTracingPipeline;
+		#endif
+		#ifdef VK_KHR_ray_query
+		VkPhysicalDeviceRayQueryFeaturesKHR						rayQuery;
+		#endif
+		#ifdef VK_KHR_pipeline_executable_properties
+		VkPhysicalDevicePipelineExecutablePropertiesFeaturesKHR	pipelineExecutableProperties;
+		#endif
+		#ifdef VK_EXT_host_query_reset
+		VkPhysicalDeviceHostQueryResetFeaturesEXT				hostQueryReset;
+		#endif
+		#ifdef VK_KHR_shader_subgroup_extended_types
+		VkPhysicalDeviceShaderSubgroupExtendedTypesFeaturesKHR	subgroupExtendedTypes;
 		#endif
 
 		DeviceFeatures () {
@@ -531,6 +585,16 @@ namespace {
 		bool	timelineSemaphore				: 1;
 		bool	bufferDeviceAddress				: 1;
 		bool	shaderAtomicInt64				: 1;
+		bool	shaderClock						: 1;
+		bool	extendedDynamicState			: 1;
+		bool	compShaderDerivativesNV			: 1;
+		bool	shaderSMBuiltinsNV				: 1;
+		bool	accelerationStructure			: 1;
+		bool	rayTracingPipeline				: 1;
+		bool	rayQuery						: 1;
+		bool	pipelineExecutableProperties	: 1;
+		bool	hostQueryReset					: 1;
+		bool	subgroupExtendedTypes			: 1;
 		
 		EnabledExtensions () {
 			std::memset( this, 0, sizeof(*this) );
@@ -559,84 +623,137 @@ namespace {
 
 		for (StringView ext : extensions)
 		{
-			if ( ext == VK_KHR_MULTIVIEW_EXTENSION_NAME )					{ enabled.multiview = true;						continue; }
-			if ( ext == VK_KHR_8BIT_STORAGE_EXTENSION_NAME )				{ enabled.storage8Bit = true;					continue; }
-			if ( ext == VK_KHR_16BIT_STORAGE_EXTENSION_NAME )				{ enabled.storage16Bit = true;					continue; }
-			if ( ext == VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME )	{ enabled.samplerYcbcr = true;					continue; }
-			if ( ext == VK_EXT_BLEND_OPERATION_ADVANCED_EXTENSION_NAME )	{ enabled.blendOpAdvanced = true;				continue; }
-			if ( ext == VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME )			{ enabled.descriptorIndexing = true;			continue; }
-				
+			#ifdef VK_KHR_multiview
+			if ( ext == VK_KHR_MULTIVIEW_EXTENSION_NAME )						{ enabled.multiview = true;						continue; }
+			#endif
+			#ifdef VK_KHR_8bit_storage
+			if ( ext == VK_KHR_8BIT_STORAGE_EXTENSION_NAME )					{ enabled.storage8Bit = true;					continue; }
+			#endif
+			#ifdef VK_KHR_16bit_storage
+			if ( ext == VK_KHR_16BIT_STORAGE_EXTENSION_NAME )					{ enabled.storage16Bit = true;					continue; }
+			#endif
+			#ifdef VK_KHR_sampler_ycbcr_conversion
+			if ( ext == VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME )		{ enabled.samplerYcbcr = true;					continue; }
+			#endif
+			#ifdef VK_EXT_blend_operation_advanced
+			if ( ext == VK_EXT_BLEND_OPERATION_ADVANCED_EXTENSION_NAME )		{ enabled.blendOpAdvanced = true;				continue; }
+			#endif
+			#ifdef VK_EXT_descriptor_indexing
+			if ( ext == VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME )				{ enabled.descriptorIndexing = true;			continue; }
+			#endif
 			#ifdef VK_NV_mesh_shader
-			if ( ext == VK_NV_MESH_SHADER_EXTENSION_NAME )					{ enabled.meshShaderNV = true;					continue; }
+			if ( ext == VK_NV_MESH_SHADER_EXTENSION_NAME )						{ enabled.meshShaderNV = true;					continue; }
 			#endif
 			#ifdef VK_KHR_vulkan_memory_model
-			if ( ext == VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME )			{ enabled.memoryModel = true;					continue; }
+			if ( ext == VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME )				{ enabled.memoryModel = true;					continue; }
 			#endif
 			#ifdef VK_EXT_inline_uniform_block
-			if ( ext == VK_EXT_INLINE_UNIFORM_BLOCK_EXTENSION_NAME )		{ enabled.inlineUniformBlock = true;			continue; }
+			if ( ext == VK_EXT_INLINE_UNIFORM_BLOCK_EXTENSION_NAME )			{ enabled.inlineUniformBlock = true;			continue; }
 			#endif
 			#ifdef VK_NV_representative_fragment_test
-			if ( ext == VK_NV_REPRESENTATIVE_FRAGMENT_TEST_EXTENSION_NAME )	{ enabled.representativeFragmentTestNV = true;	continue; }
+			if ( ext == VK_NV_REPRESENTATIVE_FRAGMENT_TEST_EXTENSION_NAME )		{ enabled.representativeFragmentTestNV = true;	continue; }
 			#endif
 			#ifdef VK_NV_fragment_shader_barycentric
-			if ( ext == VK_NV_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME )	{ enabled.fragmentShaderBarycentricNV = true;	continue; }
+			if ( ext == VK_NV_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME )		{ enabled.fragmentShaderBarycentricNV = true;	continue; }
 			#endif
 			#ifdef VK_NV_shader_image_footprint
-			if ( ext == VK_NV_SHADER_IMAGE_FOOTPRINT_EXTENSION_NAME )		{ enabled.imageFootprintNV = true;				continue; }
+			if ( ext == VK_NV_SHADER_IMAGE_FOOTPRINT_EXTENSION_NAME )			{ enabled.imageFootprintNV = true;				continue; }
 			#endif
 			#ifdef VK_NV_shading_rate_image
-			if ( ext == VK_NV_SHADING_RATE_IMAGE_EXTENSION_NAME )			{ enabled.shadingRateImageNV = true;			continue; }
+			if ( ext == VK_NV_SHADING_RATE_IMAGE_EXTENSION_NAME )				{ enabled.shadingRateImageNV = true;			continue; }
 			#endif
 			#ifdef VK_KHR_shader_float16_int8
-			if ( ext == VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME )			{ enabled.shaderFloat16Int8 = true;				continue; }
+			if ( ext == VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME )				{ enabled.shaderFloat16Int8 = true;				continue; }
 			#endif
 			#ifdef VK_KHR_timeline_semaphore
-			if ( ext == VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME )			{ enabled.timelineSemaphore = true;				continue; }
+			if ( ext == VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME )				{ enabled.timelineSemaphore = true;				continue; }
 			#endif
 			#ifdef VK_KHR_buffer_device_address
-			if ( ext == VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME )		{ enabled.bufferDeviceAddress = true;			continue; }
+			if ( ext == VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME )			{ enabled.bufferDeviceAddress = true;			continue; }
 			#endif
 			#ifdef VK_KHR_shader_atomic_int64
-			if ( ext == VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME )			{ enabled.shaderAtomicInt64 = true;				continue; }
+			if ( ext == VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME )				{ enabled.shaderAtomicInt64 = true;				continue; }
+			#endif
+			#ifdef VK_KHR_shader_clock
+			if ( ext == VK_KHR_SHADER_CLOCK_EXTENSION_NAME )					{ enabled.shaderClock = true;					continue; }
+			#endif
+			#ifdef VK_EXT_extended_dynamic_state
+			if ( ext == VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME )			{ enabled.extendedDynamicState = true;			continue; }
+			#endif
+			#ifdef VK_NV_compute_shader_derivatives
+			if ( ext == VK_NV_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME )		{ enabled.compShaderDerivativesNV = true;		continue; }
+			#endif
+			#ifdef VK_NV_shader_sm_builtins
+			if ( ext == VK_NV_SHADER_SM_BUILTINS_EXTENSION_NAME )				{ enabled.shaderSMBuiltinsNV = true;			continue; }
+			#endif
+			#ifdef VK_KHR_acceleration_structure
+			if ( ext == VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME )			{ enabled.accelerationStructure = true;			continue; }
+			#endif
+			#ifdef VK_KHR_ray_tracing_pipeline
+			if ( ext == VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME )			{ enabled.rayTracingPipeline = true;			continue; }
+			#endif
+			#ifdef VK_KHR_ray_query
+			if ( ext == VK_KHR_RAY_QUERY_EXTENSION_NAME )						{ enabled.rayQuery = true;						continue; }
+			#endif
+			#ifdef VK_KHR_pipeline_executable_properties
+			if ( ext == VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME )	{ enabled.pipelineExecutableProperties = true;	continue; }
+			#endif
+			#ifdef VK_EXT_host_query_reset
+			if ( ext == VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME )				{ enabled.hostQueryReset = true;				continue; }
+			#endif
+			#ifdef VK_KHR_shader_subgroup_extended_types
+			if ( ext == VK_KHR_SHADER_SUBGROUP_EXTENDED_TYPES_EXTENSION_NAME )	{ enabled.subgroupExtendedTypes = true;			continue; }
 			#endif
 		}
-
+		
+		#ifdef VK_KHR_multiview
 		if ( enabled.multiview )
 		{
 			*next_feat	= *nextExt		= &features.multiview;
 			next_feat	= nextExt		= &features.multiview.pNext;
 			features.multiview.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
 		}
+		#endif
+		#ifdef VK_KHR_8bit_storage
 		if ( enabled.storage8Bit )
 		{
 			*next_feat	= *nextExt		= &features.storage8Bit;
 			next_feat	= nextExt		= &features.storage8Bit.pNext;
 			features.storage8Bit.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES_KHR;
 		}
+		#endif
+		#ifdef VK_KHR_16bit_storage
 		if ( enabled.storage16Bit )
 		{
 			*next_feat	= *nextExt		= &features.storage16Bit;
 			next_feat	= nextExt		= &features.storage16Bit.pNext;
 			features.storage16Bit.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
 		}
+		#endif
+		#ifdef VK_KHR_sampler_ycbcr_conversion
 		if ( enabled.samplerYcbcr )
 		{
 			*next_feat	= *nextExt					= &features.samplerYcbcrConversion;
 			next_feat	= nextExt					= &features.samplerYcbcrConversion.pNext;
 			features.samplerYcbcrConversion.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES;
 		}
+		#endif
+		#ifdef VK_EXT_blend_operation_advanced
 		if ( enabled.blendOpAdvanced )
 		{
 			*next_feat	= *nextExt			= &features.blendOpAdvanced;
 			next_feat	= nextExt			= &features.blendOpAdvanced.pNext;
 			features.blendOpAdvanced.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BLEND_OPERATION_ADVANCED_FEATURES_EXT;
 		}
+		#endif
+		#ifdef VK_EXT_descriptor_indexing
 		if ( enabled.descriptorIndexing or is_vk_1_2 )
 		{
 			*next_feat	= *nextExt				= &features.descriptorIndexing;
 			next_feat	= nextExt				= &features.descriptorIndexing.pNext;
 			features.descriptorIndexing.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
 		}
+		#endif
 		#ifdef VK_NV_mesh_shader
 		if ( enabled.meshShaderNV )
 		{
@@ -696,41 +813,123 @@ namespace {
 		#ifdef VK_KHR_shader_float16_int8
 		if ( enabled.shaderFloat16Int8 or is_vk_1_2 )
 		{
-			*next_feat	= *nextExt			= &features.shaderFloat16Int8;
-			next_feat	= nextExt			= &features.shaderFloat16Int8.pNext;
-			features.shaderFloat16Int8.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR;
+			*next_feat	= *nextExt				= &features.shaderFloat16Int8;
+			next_feat	= nextExt				= &features.shaderFloat16Int8.pNext;
+			features.shaderFloat16Int8.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR;
 		}
 		#endif
 		#ifdef VK_KHR_timeline_semaphore
 		if ( enabled.timelineSemaphore or is_vk_1_2 )
 		{
-			*next_feat	= *nextExt			= &features.timelineSemaphore;
-			next_feat	= nextExt			= &features.timelineSemaphore.pNext;
-			features.timelineSemaphore.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR;
+			*next_feat	= *nextExt				= &features.timelineSemaphore;
+			next_feat	= nextExt				= &features.timelineSemaphore.pNext;
+			features.timelineSemaphore.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES_KHR;
 		}
 		#endif
 		#ifdef VK_KHR_buffer_device_address
 		if ( enabled.bufferDeviceAddress or is_vk_1_2 )
 		{
-			*next_feat	= *nextExt			= &features.bufferDeviceAddress;
-			next_feat	= nextExt			= &features.bufferDeviceAddress.pNext;
-			features.bufferDeviceAddress.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
+			*next_feat	= *nextExt				= &features.bufferDeviceAddress;
+			next_feat	= nextExt				= &features.bufferDeviceAddress.pNext;
+			features.bufferDeviceAddress.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
 		}
 		#endif
 		#ifdef VK_KHR_shader_atomic_int64
 		if ( enabled.shaderAtomicInt64 or is_vk_1_2 )
 		{
-			*next_feat	= *nextExt			= &features.shaderAtomicInt64;
-			next_feat	= nextExt			= &features.shaderAtomicInt64.pNext;
-			features.shaderAtomicInt64.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES_KHR;
+			*next_feat	= *nextExt				= &features.shaderAtomicInt64;
+			next_feat	= nextExt				= &features.shaderAtomicInt64.pNext;
+			features.shaderAtomicInt64.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES_KHR;
 		}
 		#endif
-		
-		*next_feat	= *nextExt				= &features.shaderDrawParameters;
-		next_feat	= nextExt				= &features.shaderDrawParameters.pNext;
-		features.shaderDrawParameters.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETER_FEATURES;
+		#ifdef VK_KHR_shader_clock
+		if ( enabled.shaderClock )
+		{
+			*next_feat	= *nextExt		= &features.shaderClock;
+			next_feat	= nextExt		= &features.shaderClock.pNext;
+			features.shaderClock.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR;
+		}
+		#endif
+		#ifdef VK_EXT_extended_dynamic_state
+		if ( enabled.extendedDynamicState )
+		{
+			*next_feat	= *nextExt				= &features.extendedDynamicState;
+			next_feat	= nextExt				= &features.extendedDynamicState.pNext;
+			features.extendedDynamicState.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT;
+		}
+		#endif
+		#ifdef VK_NV_compute_shader_derivatives
+		if ( enabled.compShaderDerivativesNV )
+		{
+			*next_feat	= *nextExt					= &features.compShaderDerivativesNV;
+			next_feat	= nextExt					= &features.compShaderDerivativesNV.pNext;
+			features.compShaderDerivativesNV.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COMPUTE_SHADER_DERIVATIVES_FEATURES_NV;
+		}
+		#endif
+		#ifdef VK_NV_shader_sm_builtins
+		if ( enabled.shaderSMBuiltinsNV )
+		{
+			*next_feat	= *nextExt				= &features.shaderSMBuiltinsNV;
+			next_feat	= nextExt				= &features.shaderSMBuiltinsNV.pNext;
+			features.shaderSMBuiltinsNV.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SM_BUILTINS_FEATURES_NV;
+		}
+		#endif
+		#ifdef VK_KHR_acceleration_structure
+		if ( enabled.accelerationStructure )
+		{
+			*next_feat	= *nextExt					= &features.accelerationStructure;
+			next_feat	= nextExt					= &features.accelerationStructure.pNext;
+			features.accelerationStructure.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+		}
+		#endif
+		#ifdef VK_KHR_ray_tracing_pipeline
+		if ( enabled.rayTracingPipeline )
+		{
+			*next_feat	= *nextExt				= &features.rayTracingPipeline;
+			next_feat	= nextExt				= &features.rayTracingPipeline.pNext;
+			features.rayTracingPipeline.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+		}
+		#endif
+		#ifdef VK_KHR_ray_query
+		if ( enabled.rayQuery )
+		{
+			*next_feat	= *nextExt	= &features.rayQuery;
+			next_feat	= nextExt	= &features.rayQuery.pNext;
+			features.rayQuery.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+		}
+		#endif
+		#ifdef VK_KHR_pipeline_executable_properties
+		if ( enabled.pipelineExecutableProperties )
+		{
+			*next_feat	= *nextExt						= &features.pipelineExecutableProperties;
+			next_feat	= nextExt						= &features.pipelineExecutableProperties.pNext;
+			features.pipelineExecutableProperties.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_EXECUTABLE_PROPERTIES_FEATURES_KHR;
+		}
+		#endif
+		#ifdef VK_EXT_host_query_reset
+		if ( enabled.hostQueryReset or is_vk_1_2 )
+		{
+			*next_feat	= *nextExt			= &features.hostQueryReset;
+			next_feat	= nextExt			= &features.hostQueryReset.pNext;
+			features.hostQueryReset.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES_EXT;
+		}
+		#endif
+		#ifdef VK_KHR_shader_subgroup_extended_types
+		if ( enabled.subgroupExtendedTypes or is_vk_1_2 )
+		{
+			*next_feat	= *nextExt			= &features.subgroupExtendedTypes;
+			next_feat	= nextExt			= &features.subgroupExtendedTypes.pNext;
+			features.subgroupExtendedTypes.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SUBGROUP_EXTENDED_TYPES_FEATURES_KHR;
+		}
+		#endif
+		if ( is_vk_1_1 )
+		{
+			*next_feat	= *nextExt				= &features.shaderDrawParameters;
+			next_feat	= nextExt				= &features.shaderDrawParameters.pNext;
+			features.shaderDrawParameters.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETER_FEATURES;
+		}
 
-		vkGetPhysicalDeviceFeatures2KHR( pdev, &feat2 );
+		vkGetPhysicalDeviceFeatures2KHR( pdev, OUT &feat2 );
 		return true;
 	}
 }
@@ -777,7 +976,7 @@ namespace {
 			queue_infos.resize( max_queue_families );
 			priorities.resize( max_queue_families );
 
-			for (size_t i = 0; i < queue_infos.size(); ++i)
+			for (usize i = 0; i < queue_infos.size(); ++i)
 			{
 				auto&	ci = queue_infos[i];
 
@@ -790,8 +989,13 @@ namespace {
 
 			for (auto& q : _vkQueues)
 			{
-				q.queueIndex = (queue_infos[ uint(q.familyIndex) ].queueCount++);
-				priorities[ uint(q.familyIndex) ].push_back( q.priority );
+				auto&	qinfo = queue_infos[ uint(q.familyIndex) ];
+				auto&	prior = priorities[ uint(q.familyIndex) ];
+
+				CHECK_ERR( qinfo.queueCount < priorities[0].capacity() );
+
+				q.queueIndex = qinfo.queueCount++;
+				prior.push_back( q.priority );
 			}
 
 			// remove unused queues
@@ -820,7 +1024,7 @@ namespace {
 		VK_CHECK( vkCreateDevice( _vkPhysicalDevice, &device_info, null, OUT &_vkLogicalDevice ));
 		
 
-		VulkanLoader::LoadDevice( _vkLogicalDevice, OUT _deviceFnTable );
+		CHECK_ERR( VulkanLoader::LoadDevice( _vkLogicalDevice, OUT _deviceFnTable ));
 
 		for (auto& q : _vkQueues) {
 			vkGetDeviceQueue( _vkLogicalDevice, uint(q.familyIndex), q.queueIndex, OUT &q.handle );
@@ -839,7 +1043,7 @@ namespace {
 =================================================
 	SetLogicalDevice
 =================================================
-*/
+*
 	bool  VDeviceInitializer::SetLogicalDevice (VkDevice newDevice, ArrayView<const char*> extensions)
 	{
 		CHECK_ERR( _vkPhysicalDevice );
@@ -849,7 +1053,7 @@ namespace {
 
 		_vkLogicalDevice = newDevice;
 
-		VulkanLoader::LoadDevice( _vkLogicalDevice, OUT _deviceFnTable );
+		CHECK_ERR( VulkanLoader::LoadDevice( _vkLogicalDevice, OUT _deviceFnTable ));
 
 		for (auto ext : extensions) {
 			_deviceExtensions.insert( ext );
@@ -879,8 +1083,10 @@ namespace {
 		_vkQueues.clear();
 		
 		_deviceExtensions.clear();
+		
+		if ( _enableInfoLog )
+			AE_LOGD( "Destroyed Vulkan logical device" );
 
-		AE_LOGD( "Destroyed Vulkan logical device" );
 		return true;
 	}
 	
@@ -894,9 +1100,11 @@ namespace {
 		_vkVersion = { VK_VERSION_MAJOR(ver), VK_VERSION_MINOR(ver) };
 
 		// Vulkan loader has backward compatibility for some extensions for example:
-		// VK_KHR_get_physical_device_properties2 extension added to core 1.1 and function vkGetPhysicalDeviceFeatures2KHR may be removed in 1.1+ so you need to use vkGetPhysicalDeviceFeatures2 function
-		// But engine uses only vkGetPhysicalDeviceFeatures2KHR and in vulkan loaded pointer to vkGetPhysicalDeviceFeatures2 setted into vkGetPhysicalDeviceFeatures2KHR.
-		// The problem is if you use headers for 1.0 and actual version is 1.1 then vkGetPhysicalDeviceFeatures2 is not presented in headers and backward compatibility has no effect.
+		// 'VK_KHR_get_physical_device_properties2' extension added to core 1.1 and function 'vkGetPhysicalDeviceFeatures2KHR' may be removed in 1.1+,
+		// so you need to use 'vkGetPhysicalDeviceFeatures2' function in 1.1+.
+		// But engine uses only 'vkGetPhysicalDeviceFeatures2KHR' and vulkan loader copy pointer from 'vkGetPhysicalDeviceFeatures2' to 'vkGetPhysicalDeviceFeatures2KHR'.
+		// The problem is if you use headers for 1.0 and actual version is 1.1+ then 'vkGetPhysicalDeviceFeatures2' is not presented in headers,
+		// loader can not copy pointer from 'vkGetPhysicalDeviceFeatures2' and backward compatibility will be broken.
 		bool	problem_detected = false;
 
 	#if defined(VK_VERSION_1_2)
@@ -912,7 +1120,7 @@ namespace {
 			problem_detected = true;
 	#endif
 
-		if ( problem_detected )
+		if ( problem_detected and _enableInfoLog )
 			AE_LOGI( "Current Vulkan version is greater than headers version, some extensions may be missed" );
 	}
 
@@ -926,29 +1134,61 @@ namespace {
 		vkGetPhysicalDeviceFeatures( _vkPhysicalDevice, OUT &_properties.features );
 		vkGetPhysicalDeviceProperties( _vkPhysicalDevice, OUT &_properties.properties );
 		vkGetPhysicalDeviceMemoryProperties( _vkPhysicalDevice, OUT &_properties.memoryProperties );
-
-		// get api version
-		{
-			_vkVersion.major = VK_VERSION_MAJOR( _properties.properties.apiVersion );
-			_vkVersion.minor = VK_VERSION_MINOR( _properties.properties.apiVersion );
-		}
 		
-		_features.surface					= HasInstanceExtension( VK_KHR_SURFACE_EXTENSION_NAME );
-		_features.surfaceCaps2				= HasInstanceExtension( VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME );
-		_features.swapchain					= HasDeviceExtension( VK_KHR_SWAPCHAIN_EXTENSION_NAME );
-		_features.debugUtils				= HasInstanceExtension( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
-		_features.bindMemory2				= _vkVersion >= InstanceVersion{1,1} or (HasDeviceExtension( VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME ) and HasDeviceExtension( VK_KHR_BIND_MEMORY_2_EXTENSION_NAME ));
-		_features.dedicatedAllocation		= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME );
-		_features.descriptorUpdateTemplate	= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME );
-		_features.imageViewUsage			= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE2_EXTENSION_NAME );
-		_features.create2DArrayCompatible	= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE1_EXTENSION_NAME );
-		_features.commandPoolTrim			= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE1_EXTENSION_NAME );
-		_features.dispatchBase				= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_DEVICE_GROUP_EXTENSION_NAME );
-		_features.renderPass2				= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME );
-		_features.samplerMirrorClamp		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME );
-		_features.descriptorIndexing		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME );
-		_features.drawIndirectCount			= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME );
+		VulkanLoader::SetupInstanceBackwardCompatibility( _properties.properties.apiVersion );
 
+		#ifdef VK_VERSION_1_1
+		_features.subgroup					= _vkVersion >= InstanceVersion{1,1};
+		#endif
+		#ifdef VK_KHR_surface
+		_features.surface					= HasInstanceExtension( VK_KHR_SURFACE_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_get_surface_capabilities2
+		_features.surfaceCaps2				= HasInstanceExtension( VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_swapchain
+		_features.swapchain					= HasDeviceExtension( VK_KHR_SWAPCHAIN_EXTENSION_NAME );
+		#endif
+		#ifdef VK_EXT_debug_utils
+		_features.debugUtils				= HasInstanceExtension( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+		#endif
+		#if defined(VK_KHR_get_memory_requirements2) and defined(VK_KHR_bind_memory2)
+		_features.bindMemory2				= _vkVersion >= InstanceVersion{1,1} or (HasDeviceExtension( VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME ) and HasDeviceExtension( VK_KHR_BIND_MEMORY_2_EXTENSION_NAME ));
+		#endif
+		#ifdef VK_KHR_dedicated_allocation
+		_features.dedicatedAllocation		= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_descriptor_update_template
+		_features.descriptorUpdateTemplate	= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_DESCRIPTOR_UPDATE_TEMPLATE_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_maintenance1
+		const bool	has_maintenance1		= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE1_EXTENSION_NAME );
+		_features.commandPoolTrim			= has_maintenance1;
+		_features.array2DCompatible			= has_maintenance1;
+		#endif
+		#ifdef VK_KHR_maintenance2
+		const bool	has_maintenance2		= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE2_EXTENSION_NAME );
+		_features.imageViewUsage			= has_maintenance2;
+		_features.blockTexelView			= has_maintenance2;
+		#endif
+		#ifdef VK_KHR_maintenance3
+		_features.maintenance3				= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_MAINTENANCE3_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_device_group
+		_features.dispatchBase				= _vkVersion >= InstanceVersion{1,1} or HasDeviceExtension( VK_KHR_DEVICE_GROUP_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_create_renderpass2
+		_features.renderPass2				= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_sampler_mirror_clamp_to_edge
+		_features.samplerMirrorClamp		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_draw_indirect_count
+		_features.drawIndirectCount			= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME );
+		#endif
+		#ifdef VK_EXT_descriptor_indexing
+		_features.descriptorIndexing		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME );
+		#endif
 		#ifdef VK_NV_mesh_shader
 		_features.meshShaderNV				= HasDeviceExtension( VK_NV_MESH_SHADER_EXTENSION_NAME );
 		#endif
@@ -958,11 +1198,18 @@ namespace {
 		#ifdef VK_NV_shading_rate_image
 		_features.shadingRateImageNV		= HasDeviceExtension( VK_NV_SHADING_RATE_IMAGE_EXTENSION_NAME );
 		#endif
+		#ifdef VK_NV_shader_image_footprint
+		_features.imageFootprintNV			= HasDeviceExtension( VK_NV_SHADER_IMAGE_FOOTPRINT_EXTENSION_NAME );
+		#endif
+		#ifdef VK_NV_fragment_shader_barycentric
+		_features.fragmentBarycentricNV		= HasDeviceExtension( VK_NV_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME );
+		#endif
 		#ifdef VK_KHR_shader_clock
 		_features.shaderClock				= HasDeviceExtension( VK_KHR_SHADER_CLOCK_EXTENSION_NAME );
 		#endif
 		#ifdef VK_KHR_shader_float16_int8
 		_features.float16Arithmetic			= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME );
+		_features.int8Arithmetic			= _features.float16Arithmetic;
 		#endif
 		#ifdef VK_KHR_timeline_semaphore
 		_features.timelineSemaphore			= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME ),
@@ -982,6 +1229,47 @@ namespace {
 		#ifdef VK_KHR_push_descriptor
 		_features.pushDescriptor			= HasDeviceExtension( VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME );
 		#endif
+		#ifdef VK_KHR_vulkan_memory_model
+		_features.memoryModel				= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME );
+		#endif
+		#ifdef VK_EXT_robustness2
+		_features.robustness2				= HasDeviceExtension( VK_EXT_ROBUSTNESS_2_EXTENSION_NAME );
+		#endif
+		#ifdef VK_EXT_sampler_filter_minmax
+		_features.samplerFilterMinmax		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME );
+		#endif
+		#ifdef VK_EXT_shader_stencil_export
+		_features.shaderStencilExport		= HasDeviceExtension( VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME );
+		#endif
+		#ifdef VK_EXT_extended_dynamic_state
+		_features.extendedDynamicState		= HasDeviceExtension( VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME );
+		#endif
+		#ifdef VK_NV_compute_shader_derivatives
+		_features.compShaderDerivativesNV	= HasDeviceExtension( VK_NV_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME );
+		#endif
+		#ifdef VK_NV_shader_sm_builtins
+		_features.shaderSMBuiltinsNV		= HasDeviceExtension( VK_NV_SHADER_SM_BUILTINS_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_acceleration_structure
+		_features.accelerationStructure		= _features.descriptorIndexing and _features.bufferAddress and
+											  HasDeviceExtension( VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME ) and
+											  HasDeviceExtension( VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_ray_tracing_pipeline
+		_features.rayTracingPipeline		= _features.spirv14 and _features.accelerationStructure and HasDeviceExtension( VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_ray_query
+		_features.rayQuery					= _features.spirv14 and _features.accelerationStructure and HasDeviceExtension( VK_KHR_RAY_QUERY_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_pipeline_executable_properties
+		_features.pipelineExecutableProps	= HasDeviceExtension( VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME );
+		#endif
+		#ifdef VK_EXT_host_query_reset
+		_features.hostQueryReset			= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME );
+		#endif
+		#ifdef VK_KHR_shader_subgroup_extended_types
+		_features.subgroupExtendedTypes		= _vkVersion >= InstanceVersion{1,2} or HasDeviceExtension( VK_KHR_SHADER_SUBGROUP_EXTENDED_TYPES_EXTENSION_NAME );
+		#endif
 
 		// load extensions
 		if ( _vkVersion >= InstanceVersion{1,1} or HasInstanceExtension( VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME ))
@@ -991,32 +1279,51 @@ namespace {
 			feat2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 			
 			#ifdef VK_NV_mesh_shader
+			VkPhysicalDeviceMeshShaderFeaturesNV	meshShaderNVFeatures = {};
 			if ( _features.meshShaderNV )
 			{
-				*next_feat	= &_properties.meshShaderFeatures;
-				next_feat	= &_properties.meshShaderFeatures.pNext;
-				_properties.meshShaderFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+				*next_feat	= &meshShaderNVFeatures;
+				next_feat	= &meshShaderNVFeatures.pNext;
+				meshShaderNVFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
 			}
 			#endif
 			#ifdef VK_NV_shading_rate_image
 			if ( _features.shadingRateImageNV )
 			{
-				*next_feat	= &_properties.shadingRateImageFeatures;
-				next_feat	= &_properties.shadingRateImageFeatures.pNext;
-				_properties.shadingRateImageFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_FEATURES_NV;
+				*next_feat	= &_properties.shadingRateImageNVFeatures;
+				next_feat	= &_properties.shadingRateImageNVFeatures.pNext;
+				_properties.shadingRateImageNVFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_FEATURES_NV;
+			}
+			#endif
+			#ifdef VK_NV_shader_image_footprint
+			VkPhysicalDeviceShaderImageFootprintFeaturesNV	shaderImageFootprintNVFeatures = {};
+			if ( _features.imageFootprintNV )
+			{
+				*next_feat	= &shaderImageFootprintNVFeatures;
+				next_feat	= &shaderImageFootprintNVFeatures.pNext;
+				shaderImageFootprintNVFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_FEATURES_NV;
+			}
+			#endif
+			#ifdef VK_NV_fragment_shader_barycentric
+			VkPhysicalDeviceFragmentShaderBarycentricFeaturesNV	fragmentBarycentricNVFeatures = {};
+			if ( _features.fragmentBarycentricNV )
+			{
+				*next_feat	= &fragmentBarycentricNVFeatures;
+				next_feat	= &fragmentBarycentricNVFeatures.pNext;
+				fragmentBarycentricNVFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_NV;
 			}
 			#endif
 			#ifdef VK_KHR_shader_clock
 			if ( _features.shaderClock )
 			{
-				*next_feat	= &_properties.shaderClock;
-				next_feat	= &_properties.shaderClock.pNext;
-				_properties.shaderClock.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR;
+				*next_feat	= &_properties.shaderClockFeatures;
+				next_feat	= &_properties.shaderClockFeatures.pNext;
+				_properties.shaderClockFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR;
 			}
 			#endif
 			#ifdef VK_KHR_shader_float16_int8
 			VkPhysicalDeviceShaderFloat16Int8FeaturesKHR	shader_float16_int8_feat = {};
-			if ( _features.float16Arithmetic )
+			if ( _features.float16Arithmetic or _features.int8Arithmetic )
 			{
 				*next_feat	= &shader_float16_int8_feat;
 				next_feat	= &shader_float16_int8_feat.pNext;
@@ -1048,30 +1355,177 @@ namespace {
 				_properties.shaderAtomicInt64.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES_KHR;
 			}
 			#endif
+			#ifdef VK_KHR_vulkan_memory_model
+			if ( _features.memoryModel )
+			{
+				*next_feat	= &_properties.memoryModel;
+				next_feat	= &_properties.memoryModel.pNext;
+				_properties.memoryModel.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES_KHR;
+			}
+			#endif
+			#ifdef VK_EXT_descriptor_indexing
+			if ( _features.descriptorIndexing )
+			{
+				*next_feat	= &_properties.descriptorIndexingFeatures;
+				next_feat	= &_properties.descriptorIndexingFeatures.pNext;
+				_properties.descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+			}
+			#endif
+			#ifdef VK_EXT_robustness2
+			if ( _features.robustness2 )
+			{
+				*next_feat	= &_properties.robustness2Features;
+				next_feat	= &_properties.robustness2Features.pNext;
+				_properties.robustness2Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
+			}
+			#endif
+			#ifdef VK_EXT_extended_dynamic_state
+			VkPhysicalDeviceExtendedDynamicStateFeaturesEXT	extendedDynamicStateFeatures = {};
+			if ( _features.extendedDynamicState )
+			{
+				*next_feat	= &extendedDynamicStateFeatures;
+				next_feat	= &extendedDynamicStateFeatures.pNext;
+				extendedDynamicStateFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT;
+			}
+			#endif
+			#ifdef VK_NV_compute_shader_derivatives
+			if ( _features.compShaderDerivativesNV )
+			{
+				*next_feat	= &_properties.computeShaderDerivativesNVFeatures;
+				next_feat	= &_properties.computeShaderDerivativesNVFeatures.pNext;
+				_properties.computeShaderDerivativesNVFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COMPUTE_SHADER_DERIVATIVES_FEATURES_NV;
+			}
+			#endif
+			#ifdef VK_NV_shader_sm_builtins
+			VkPhysicalDeviceShaderSMBuiltinsFeaturesNV	shaderSMBuiltinsNVFeatures = {};
+			if ( _features.shaderSMBuiltinsNV )
+			{
+				*next_feat	= &shaderSMBuiltinsNVFeatures;
+				next_feat	= &shaderSMBuiltinsNVFeatures.pNext;
+				shaderSMBuiltinsNVFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SM_BUILTINS_FEATURES_NV;
+			}
+			#endif
+			#ifdef VK_KHR_acceleration_structure
+			if ( _features.accelerationStructure )
+			{
+				*next_feat	= &_properties.accelerationStructureFeatures;
+				next_feat	= &_properties.accelerationStructureFeatures.pNext;
+				_properties.accelerationStructureFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+			}
+			#endif
+			#ifdef VK_KHR_ray_tracing_pipeline
+			if ( _features.rayTracingPipeline )
+			{
+				*next_feat	= &_properties.rayTracingPipelineFeatures;
+				next_feat	= &_properties.rayTracingPipelineFeatures.pNext;
+				_properties.rayTracingPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+			}
+			#endif
+			#ifdef VK_KHR_ray_query
+			VkPhysicalDeviceRayQueryFeaturesKHR	rayQueryFeatures = {};
+			if ( _features.rayQuery )
+			{
+				*next_feat	= &rayQueryFeatures;
+				next_feat	= &rayQueryFeatures.pNext;
+				rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+			}
+			#endif
+			#ifdef VK_KHR_pipeline_executable_properties
+			VkPhysicalDevicePipelineExecutablePropertiesFeaturesKHR	pipelineExecutablePropsFeatures = {};
+			if ( _features.pipelineExecutableProps )
+			{
+				*next_feat	= &pipelineExecutablePropsFeatures;
+				next_feat	= &pipelineExecutablePropsFeatures.pNext;
+				pipelineExecutablePropsFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_EXECUTABLE_PROPERTIES_FEATURES_KHR;
+			}
+			#endif
+			#ifdef VK_EXT_host_query_reset
+			VkPhysicalDeviceHostQueryResetFeaturesEXT	hostQueryResetFeatures = {};
+			if ( _features.hostQueryReset )
+			{
+				*next_feat	= &hostQueryResetFeatures;
+				next_feat	= &hostQueryResetFeatures.pNext;
+				hostQueryResetFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES_EXT;
+			}
+			#endif
+			#ifdef VK_KHR_shader_subgroup_extended_types
+			VkPhysicalDeviceShaderSubgroupExtendedTypesFeaturesKHR	subgroupExtendedTypesFeatures = {};
+			if ( _features.subgroupExtendedTypes )
+			{
+				*next_feat	= &subgroupExtendedTypesFeatures;
+				next_feat	= &subgroupExtendedTypesFeatures.pNext;
+				subgroupExtendedTypesFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SUBGROUP_EXTENDED_TYPES_FEATURES_KHR;
+			}
+			#endif
 			Unused( next_feat );
 
 			vkGetPhysicalDeviceFeatures2KHR( GetVkPhysicalDevice(), OUT &feat2 );
 			
 			#ifdef VK_NV_mesh_shader
-			_features.meshShaderNV			&= (_properties.meshShaderFeatures.meshShader or _properties.meshShaderFeatures.taskShader);
+			_features.meshShaderNV				&= (meshShaderNVFeatures.meshShader == VK_TRUE) and
+												   (meshShaderNVFeatures.taskShader == VK_TRUE);
 			#endif
 			#ifdef VK_NV_shading_rate_image
-			_features.shadingRateImageNV	&= (_properties.shadingRateImageFeatures.shadingRateImage == VK_TRUE);
+			_features.shadingRateImageNV		&= (_properties.shadingRateImageNVFeatures.shadingRateImage == VK_TRUE);
+			#endif
+			#ifdef VK_NV_shader_image_footprint
+			_features.imageFootprintNV			&= (shaderImageFootprintNVFeatures.imageFootprint == VK_TRUE);
+			#endif
+			#ifdef VK_NV_fragment_shader_barycentric
+			_features.fragmentBarycentricNV		&= (fragmentBarycentricNVFeatures.fragmentShaderBarycentric == VK_TRUE);
 			#endif
 			#ifdef VK_KHR_shader_clock
-			_features.shaderClock			&= !!(_properties.shaderClock.shaderDeviceClock | _properties.shaderClock.shaderSubgroupClock);
+			_features.shaderClock				&= (_properties.shaderClockFeatures.shaderDeviceClock   == VK_TRUE) or
+												   (_properties.shaderClockFeatures.shaderSubgroupClock == VK_TRUE);
 			#endif
 			#ifdef VK_KHR_shader_float16_int8
-			_features.float16Arithmetic		&= (shader_float16_int8_feat.shaderFloat16 == VK_TRUE);
+			_features.float16Arithmetic			&= (shader_float16_int8_feat.shaderFloat16 == VK_TRUE);
+			_features.int8Arithmetic			&= (shader_float16_int8_feat.shaderInt8 == VK_TRUE);
 			#endif
 			#ifdef VK_KHR_timeline_semaphore
-			_features.timelineSemaphore		&= (timeline_sem_feat.timelineSemaphore == VK_TRUE);
+			_features.timelineSemaphore			&= (timeline_sem_feat.timelineSemaphore == VK_TRUE);
 			#endif
 			#ifdef VK_KHR_buffer_device_address
-			_features.bufferAddress			&= (_properties.bufferDeviceAddress.bufferDeviceAddress == VK_TRUE);
+			_features.bufferAddress				&= (_properties.bufferDeviceAddress.bufferDeviceAddress == VK_TRUE);
 			#endif
 			#ifdef VK_KHR_shader_atomic_int64
-			_features.shaderAtomicInt64		&= (_properties.shaderAtomicInt64.shaderBufferInt64Atomics == VK_TRUE);
+			_features.shaderAtomicInt64			&= (_properties.shaderAtomicInt64.shaderBufferInt64Atomics == VK_TRUE);
+			#endif
+			#ifdef VK_KHR_vulkan_memory_model
+			_features.memoryModel				&= (_properties.memoryModel.vulkanMemoryModel == VK_TRUE);
+			#endif
+			#ifdef VK_EXT_robustness2
+			_features.robustness2				&= (_properties.robustness2Features.robustBufferAccess2 == VK_TRUE) or
+												   (_properties.robustness2Features.robustImageAccess2  == VK_TRUE) or
+												   (_properties.robustness2Features.nullDescriptor      == VK_TRUE);
+			#endif
+			#ifdef VK_EXT_extended_dynamic_state
+			_features.extendedDynamicState		&= (extendedDynamicStateFeatures.extendedDynamicState == VK_TRUE);
+			#endif
+			#ifdef VK_NV_compute_shader_derivatives
+			_features.compShaderDerivativesNV	&= (_properties.computeShaderDerivativesNVFeatures.computeDerivativeGroupQuads == VK_TRUE) or
+												   (_properties.computeShaderDerivativesNVFeatures.computeDerivativeGroupQuads == VK_TRUE);
+			#endif
+			#ifdef VK_NV_shader_sm_builtins
+			_features.shaderSMBuiltinsNV		&= (shaderSMBuiltinsNVFeatures.shaderSMBuiltins == VK_TRUE);
+			#endif
+			#ifdef VK_KHR_acceleration_structure
+			_features.accelerationStructure		&= (_properties.accelerationStructureFeatures.accelerationStructure == VK_TRUE);
+			#endif
+			#ifdef VK_KHR_ray_tracing_pipeline
+			_features.rayTracingPipeline		&= (_properties.rayTracingPipelineFeatures.rayTracingPipeline == VK_TRUE);
+			#endif
+			#ifdef VK_KHR_ray_query
+			_features.rayQuery					&= (rayQueryFeatures.rayQuery == VK_TRUE);
+			#endif
+			#ifdef VK_KHR_pipeline_executable_properties
+			_features.pipelineExecutableProps	&= (pipelineExecutablePropsFeatures.pipelineExecutableInfo == VK_TRUE);
+			#endif
+			#ifdef VK_EXT_host_query_reset
+			_features.hostQueryReset			&= (hostQueryResetFeatures.hostQueryReset == VK_TRUE);
+			#endif
+			#ifdef VK_KHR_shader_subgroup_extended_types
+			_features.subgroupExtendedTypes		&= (subgroupExtendedTypesFeatures.shaderSubgroupExtendedTypes == VK_TRUE);
 			#endif
 
 			VkPhysicalDeviceProperties2	props2		= {};
@@ -1081,25 +1535,25 @@ namespace {
 			#ifdef VK_NV_mesh_shader
 			if ( _features.meshShaderNV )
 			{
-				*next_props	= &_properties.meshShaderProperties;
-				next_props	= &_properties.meshShaderProperties.pNext;
-				_properties.meshShaderProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
+				*next_props	= &_properties.meshShaderNVProperties;
+				next_props	= &_properties.meshShaderNVProperties.pNext;
+				_properties.meshShaderNVProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
 			}
 			#endif
 			#ifdef VK_NV_shading_rate_image
 			if ( _features.shadingRateImageNV )
 			{
-				*next_props	= &_properties.shadingRateImageProperties;
-				next_props	= &_properties.shadingRateImageProperties.pNext;
-				_properties.shadingRateImageProperties.sType	= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_PROPERTIES_NV;
+				*next_props	= &_properties.shadingRateImageNVProperties;
+				next_props	= &_properties.shadingRateImageNVProperties.pNext;
+				_properties.shadingRateImageNVProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADING_RATE_IMAGE_PROPERTIES_NV;
 			}
 			#endif
 			#ifdef VK_NV_ray_tracing
 			if ( _features.rayTracingNV )
 			{
-				*next_props	= &_properties.rayTracingProperties;
-				next_props	= &_properties.rayTracingProperties.pNext;
-				_properties.rayTracingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV;
+				*next_props	= &_properties.rayTracingNVProperties;
+				next_props	= &_properties.rayTracingNVProperties.pNext;
+				_properties.rayTracingNVProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV;
 			}
 			#endif
 			#ifdef VK_KHR_timeline_semaphore
@@ -1119,37 +1573,194 @@ namespace {
 			}
 			#endif
 			#ifdef VK_VERSION_1_2
-			if ( _vkVersion >= InstanceVersion{1,2} )
+			//if ( _vkVersion >= InstanceVersion{1,2} )
+			//{
+			//	*next_props	= &_properties.properties120;
+			//	next_props	= &_properties.properties120.pNext;
+			//	_properties.properties120.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
+			//
+			//	*next_props	= &_properties.properties110;
+			//	next_props	= &_properties.properties110.pNext;
+			//	_properties.properties110.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
+			//}
+			#endif
+			#ifdef VK_VERSION_1_1
+			if ( _vkVersion >= InstanceVersion{1,1} )
 			{
-				*next_props	= &_properties.properties120;
-				next_props	= &_properties.properties120.pNext;
-				_properties.properties120.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
-
-				*next_props	= &_properties.properties110;
-				next_props	= &_properties.properties110.pNext;
-				_properties.properties110.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
+				*next_props	= &_properties.subgroup;
+				next_props	= &_properties.subgroup.pNext;
+				_properties.subgroup.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES;
+			}
+			#endif
+			#ifdef VK_EXT_descriptor_indexing
+			if ( _features.descriptorIndexing )
+			{
+				*next_props	= &_properties.descriptorIndexingProperties;
+				next_props	= &_properties.descriptorIndexingProperties.pNext;
+				_properties.descriptorIndexingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT;
+			}
+			#endif
+			#ifdef VK_EXT_robustness2
+			if ( _features.robustness2 )
+			{
+				*next_props	= &_properties.robustness2Properties;
+				next_props	= &_properties.robustness2Properties.pNext;
+				_properties.robustness2Properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_PROPERTIES_EXT;
+			}
+			#endif
+			#ifdef VK_KHR_maintenance3
+			if ( _features.maintenance3 )
+			{
+				*next_props	= &_properties.maintenance3Properties;
+				next_props	= &_properties.maintenance3Properties.pNext;
+				_properties.maintenance3Properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES_KHR;
+			}
+			#endif
+			#ifdef VK_EXT_sampler_filter_minmax
+			if ( _features.samplerFilterMinmax )
+			{
+				*next_props	= &_properties.samplerFilerMinmaxProperties;
+				next_props	= &_properties.samplerFilerMinmaxProperties.pNext;
+				_properties.samplerFilerMinmaxProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_FILTER_MINMAX_PROPERTIES_EXT;
+			}
+			#endif
+			#ifdef VK_NV_shader_sm_builtins
+			if ( _features.shaderSMBuiltinsNV )
+			{
+				*next_props	= &_properties.shaderSMBuiltinsNVProperties;
+				next_props	= &_properties.shaderSMBuiltinsNVProperties.pNext;
+				_properties.shaderSMBuiltinsNVProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SM_BUILTINS_PROPERTIES_NV;
+			}
+			#endif
+			#ifdef VK_KHR_acceleration_structure
+			if ( _features.accelerationStructure )
+			{
+				*next_props	= &_properties.accelerationStructureProperties;
+				next_props	= &_properties.accelerationStructureProperties.pNext;
+				_properties.accelerationStructureProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
+			}
+			#endif
+			#ifdef VK_KHR_ray_tracing_pipeline
+			if ( _features.rayTracingPipeline )
+			{
+				*next_props	= &_properties.rayTracingPipelineProperties;
+				next_props	= &_properties.rayTracingPipelineProperties.pNext;
+				_properties.rayTracingPipelineProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
 			}
 			#endif
 			Unused( next_props );
 
 			vkGetPhysicalDeviceProperties2KHR( GetVkPhysicalDevice(), OUT &props2 );
 		}
+		
+		if ( _enableInfoLog )
+		{
+			AE_LOGI( "Created vulkan device: "s 
+				<< "\n  vendorName:               " << GetVendorNameByID( _properties.properties.vendorID )
+				<< "\n  deviceName:               " << _properties.properties.deviceName
+				<< "\n  apiVersion:               " << ToString(VK_VERSION_MAJOR( _properties.properties.apiVersion )) << '.'
+													<< ToString(VK_VERSION_MINOR( _properties.properties.apiVersion )) << '.'
+													<< ToString(VK_VERSION_PATCH( _properties.properties.apiVersion ))
+				<< "\n  driverVersion:            " << ToString(VK_VERSION_MAJOR( _properties.properties.driverVersion )) << '.'
+													<< ToString(VK_VERSION_MINOR( _properties.properties.driverVersion )) << '.'
+													<< ToString(VK_VERSION_PATCH( _properties.properties.driverVersion ))
+				<< "\n  ---------- 1.1 ----------"
+				<< "\n  bindMemory2:              " << ToString( _features.bindMemory2 )
+				<< "\n  dedicatedAllocation:      " << ToString( _features.dedicatedAllocation )
+				<< "\n  descriptorUpdateTemplate: " << ToString( _features.descriptorUpdateTemplate )
+				<< "\n  imageViewUsage:           " << ToString( _features.imageViewUsage )
+				<< "\n  commandPoolTrim:          " << ToString( _features.commandPoolTrim )
+				<< "\n  dispatchBase:             " << ToString( _features.dispatchBase )
+				<< "\n  array2DCompatible:        " << ToString( _features.array2DCompatible )
+				<< "\n  blockTexelView:           " << ToString( _features.blockTexelView )
+				<< "\n  maintenance3:             " << ToString( _features.maintenance3 )
+				<< "\n  ---------- 1.2 ----------"
+				<< "\n  samplerMirrorClamp:       " << ToString( _features.samplerMirrorClamp )
+				<< "\n  shaderAtomicInt64:        " << ToString( _features.shaderAtomicInt64 )
+				<< "\n  float16Arithmetic:        " << ToString( _features.float16Arithmetic )
+				<< "\n  bufferAddress:            " << ToString( _features.bufferAddress )
+				<< "\n  descriptorIndexing:       " << ToString( _features.descriptorIndexing )
+				<< "\n  renderPass2:              " << ToString( _features.renderPass2 )
+				<< "\n  depthStencilResolve:      " << ToString( _features.depthStencilResolve )
+				<< "\n  drawIndirectCount:        " << ToString( _features.drawIndirectCount )
+				<< "\n  spirv14:                  " << ToString( _features.spirv14 )
+				<< "\n  memoryModel:              " << ToString( _features.memoryModel )
+				<< "\n  samplerFilterMinmax:      " << ToString( _features.samplerFilterMinmax )
+				<< "\n  hostQueryReset:           " << ToString( _features.hostQueryReset )
+				<< "\n  subgroupExtendedTypes:    " << ToString( _features.subgroupExtendedTypes )
+				<< "\n  ---------- Ext ----------"
+				<< "\n  surface:                  " << ToString( _features.surface )
+				<< "\n  surfaceCaps2:             " << ToString( _features.surfaceCaps2 )
+				<< "\n  swapchain:                " << ToString( _features.swapchain )
+				<< "\n  debug_utils:              " << ToString( _features.debugUtils )
+				<< "\n  shaderClock:              " << ToString( _features.shaderClock )
+				<< "\n  timelineSemaphore:        " << ToString( _features.timelineSemaphore )
+				<< "\n  pushDescriptor:           " << ToString( _features.pushDescriptor )
+				<< "\n  robustness2:              " << ToString( _features.robustness2 )
+				<< "\n  shaderStencilExport:      " << ToString( _features.shaderStencilExport )
+				<< "\n  extendedDynamicState:     " << ToString( _features.extendedDynamicState )
+				<< "\n  accelerationStructure:    " << ToString( _features.accelerationStructure )
+				<< "\n  rayTracingPipeline:       " << ToString( _features.rayTracingPipeline )
+				<< "\n  rayQuery:                 " << ToString( _features.rayQuery )
+				<< "\n  pipelineExecutableProps:  " << ToString( _features.pipelineExecutableProps )
+				<< "\n  ---------- NV Ext ----------"
+				<< "\n  computeShaderDerivatives: " << ToString( _features.compShaderDerivativesNV )
+				<< "\n  shaderSMBuiltins:         " << ToString( _features.shaderSMBuiltinsNV )
+				<< "\n  meshShader:               " << ToString( _features.meshShaderNV )
+				<< "\n  rayTracing:               " << ToString( _features.rayTracingNV )
+				<< "\n  shadingRateImage:         " << ToString( _features.shadingRateImageNV )
+				<< "\n  imageFootprint:           " << ToString( _features.imageFootprintNV )
+				<< "\n  fragmentBarycentric:      " << ToString( _features.fragmentBarycentricNV )
+				<< "\n  ----------"
+			);
+		}
 
-		AE_LOGI( "Created vulkan device on GPU: "s << _properties.properties.deviceName
-			<< "\n  version:             " << ToString(_vkVersion.major) << '.' << ToString(_vkVersion.minor)
-			<< "\n  debug_utils:         " << ToString( _features.debugUtils )
-			<< "\n  mesh_shader:         " << ToString( _features.meshShaderNV )
-			<< "\n  ray_tracing:         " << ToString( _features.rayTracingNV )
-			<< "\n  shading_rate_image:  " << ToString( _features.shadingRateImageNV )
-			<< "\n  descriptor_indexing: " << ToString( _features.descriptorIndexing )
-			<< "\n  shader_clock:        " << ToString( _features.shaderClock )
-			<< "\n  buffer address:      " << ToString( _features.bufferAddress )
-		);
-
-		_SetupDeviceBackwardCompatibility();
+		VulkanLoader::SetupDeviceBackwardCompatibility( _properties.properties.apiVersion, INOUT _deviceFnTable );
 		return true;
 	}
 	
+/*
+=================================================
+	_InitDeviceFlags
+=================================================
+*/
+	void  VDeviceInitializer::_InitDeviceFlags ()
+	{
+		// add shader stages
+		/*{
+			_flags.graphicsShaderStages = EResourceState::_VertexShader | EResourceState::_FragmentShader;
+
+			if ( _properties.features.tessellationShader )
+				_flags.graphicsShaderStages |= (EResourceState::_TessControlShader | EResourceState::_TessEvaluationShader);
+
+			if ( _properties.features.geometryShader )
+				_flags.graphicsShaderStages |= (EResourceState::_GeometryShader);
+
+			if ( _features.meshShaderNV )
+				_flags.graphicsShaderStages |= (EResourceState::_MeshTaskShader | EResourceState::_MeshShader);
+		}*/
+
+		// pipeline stages
+		{
+			_flags.allWritableStages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+			_flags.allReadableStages = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+			#ifdef VK_NV_ray_tracing
+			//if ( _features.rayTracingNV )
+			//	_allReadableStages |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV | VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV;
+			#endif
+		}
+
+		// image create flags
+		{
+			_flags.imageCreateFlags =
+				VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT |
+				VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT |
+				(_features.array2DCompatible ? VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT : Zero) |
+				(_features.blockTexelView ? VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT : Zero);	
+		}
+	}
+
 /*
 =================================================
 	_SetupQueueTypes
@@ -1199,23 +1810,36 @@ namespace {
 	{
 		VQueuePtr	best_match;
 		VQueuePtr	compatible;
+		VQueuePtr	best_presentable;
+		VQueuePtr	presentable;
 
 		for (auto& queue : _vkQueues)
 		{
 			const bool	is_unique		= IsUniqueQueue( &queue, _queueTypes );
 			const bool	has_graphics	= AllBits( queue.familyFlags, VK_QUEUE_GRAPHICS_BIT );
+			VkBool32	supports_present = false;
 
 			if ( has_graphics )
 			{
 				compatible = &queue;
 
-				if ( is_unique ) {
+				if ( is_unique )
+				{
+					if ( supports_present )
+						best_presentable = &queue;
+
 					best_match = &queue;
 					break;
 				}
 			}
 		}
 		
+		if ( best_presentable )
+			best_match = best_presentable;
+		
+		if ( presentable )
+			best_match = presentable;
+
 		if ( not best_match )
 			best_match = compatible;
 
@@ -1343,7 +1967,7 @@ namespace {
 
 		Pair<VkQueueFlagBits, uint>		compatible { Zero, UMax };
 
-		for (size_t i = 0; i < queueFamilyProps.size(); ++i)
+		for (usize i = 0; i < queueFamilyProps.size(); ++i)
 		{
 			const auto&		prop		 = queueFamilyProps[i];
 			VkQueueFlagBits	curr_flags	 = BitCast<VkQueueFlagBits>( prop.queueFlags );
@@ -1368,7 +1992,7 @@ namespace {
 			return true;
 		}
 
-		RETURN_ERR( "no suitable queue family found!" );
+		return false;
 	}
 
 /*
@@ -1390,8 +2014,9 @@ namespace {
 		
 		QueueFamilyProperties_t  queue_family_props;
 		queue_family_props.resize( Min( count, queue_family_props.capacity() ));
-		vkGetPhysicalDeviceQueueFamilyProperties( _vkPhysicalDevice, OUT &count, OUT queue_family_props.data() );
 
+		vkGetPhysicalDeviceQueueFamilyProperties( _vkPhysicalDevice, OUT &count, OUT queue_family_props.data() );
+		queue_family_props.resize( Min( count, queue_family_props.size() ));
 
 		// setup default queue
 		if ( queues.empty() )
@@ -1409,7 +2034,7 @@ namespace {
 											   queue_family_props[family_index].minImageTransferGranularity.height,
 											   queue_family_props[family_index].minImageTransferGranularity.depth };
 
-			_vkQueues.push_back( std::move(vq) );
+			_vkQueues.push_back( RVRef(vq) );
 			return true;
 		}
 
@@ -1419,7 +2044,8 @@ namespace {
 		{
 			uint			family_index	= 0;
 			VkQueueFlagBits	flags			= q.flags;
-			CHECK_ERR( _ChooseQueueIndex( queue_family_props, INOUT flags, OUT family_index ));
+			if ( not _ChooseQueueIndex( queue_family_props, INOUT flags, OUT family_index ))
+				continue;
 
 			if ( qcount[family_index]++ < queue_family_props[family_index].queueCount )
 			{
@@ -1431,11 +2057,12 @@ namespace {
 				vq.minImageTransferGranularity = { queue_family_props[family_index].minImageTransferGranularity.width,
 												   queue_family_props[family_index].minImageTransferGranularity.height,
 												   queue_family_props[family_index].minImageTransferGranularity.depth };
-				
-				_vkQueues.push_back( std::move(vq) );
+
+				_vkQueues.push_back( RVRef(vq) );
 			}
 		}
-
+		
+		CHECK_ERR( _vkQueues.size() );
 		return true;
 	}
 
@@ -1458,7 +2085,7 @@ namespace {
 
 		version = Min( Max( version, min_ver ), Max( current_ver, min_ver ));
 		
-		if ( old_ver != version )
+		if ( old_ver != version and _enableInfoLog )
 			AE_LOGI( "Vulkan instance version changed to: "s << ToString(VK_VERSION_MAJOR(version)) << '.' << ToString(VK_VERSION_MINOR(version)) );
 	}
 
@@ -1469,8 +2096,6 @@ namespace {
 */
 	void  VDeviceInitializer::_ValidateInstanceLayers (INOUT Array<const char*> &layers) const
 	{
-		Array<VkLayerProperties> inst_layers;
-
 		// load supported layers
 		uint	count = 0;
 		VK_CALL( vkEnumerateInstanceLayerProperties( OUT &count, null ));
@@ -1481,9 +2106,11 @@ namespace {
 			return;
 		}
 
+		Array<VkLayerProperties> inst_layers;
 		inst_layers.resize( count );
-		VK_CALL( vkEnumerateInstanceLayerProperties( OUT &count, OUT inst_layers.data() ));
 
+		VK_CALL( vkEnumerateInstanceLayerProperties( OUT &count, OUT inst_layers.data() ));
+		inst_layers.resize( Min( count, inst_layers.size() ));
 
 		// validate
 		for (auto iter = layers.begin(); iter != layers.end();)
@@ -1500,7 +2127,8 @@ namespace {
 
 			if ( not found )
 			{
-				AE_LOGI( "Vulkan layer \""s << (*iter) << "\" not supported and will be removed" );
+				if ( _enableInfoLog )
+					AE_LOGI( "Removed layer '"s << (*iter) << "'" );
 
 				iter = layers.erase( iter );
 			}
@@ -1535,6 +2163,7 @@ namespace {
 		inst_ext.resize( count );
 
 		VK_CALL( vkEnumerateInstanceExtensionProperties( null, OUT &count, OUT inst_ext.data() ));
+		inst_ext.resize( Min( count, inst_ext.size() ));
 
 		for (auto& ext : inst_ext) {
 			instance_extensions.insert( StringView(ext.extensionName) );
@@ -1546,7 +2175,8 @@ namespace {
 		{
 			if ( instance_extensions.find( ExtName_t{*iter} ) == instance_extensions.end() )
 			{
-				AE_LOGI( "Vulkan instance extension \""s << (*iter) << "\" not supported and will be removed" );
+				if ( _enableInfoLog )
+					AE_LOGI( "Removed instance extension '"s << (*iter) << "'" );
 
 				iter = extensions.erase( iter );
 			}
@@ -1576,6 +2206,7 @@ namespace {
 		dev_ext.resize( count );
 
 		VK_CALL( vkEnumerateDeviceExtensionProperties( _vkPhysicalDevice, null, OUT &count, OUT dev_ext.data() ));
+		dev_ext.resize( Min( count, dev_ext.size() ));
 
 
 		// validate
@@ -1594,7 +2225,8 @@ namespace {
 
 			if ( not found )
 			{
-				AE_LOGI( "Vulkan device extension \""s << (*iter) << "\" not supported and will be removed" );
+				if ( _enableInfoLog )
+					AE_LOGI( "Removed device extension '"s << (*iter) << "'" );
 
 				iter = extensions.erase( iter );
 			}
@@ -1605,93 +2237,81 @@ namespace {
 	
 /*
 =================================================
-	_SetupInstanceBackwardCompatibility
+	_LogPhysicalDevices
 =================================================
 */
-	void  VDeviceInitializer::_SetupInstanceBackwardCompatibility ()
+	void  VDeviceInitializer::_LogPhysicalDevices () const
 	{
-	#ifdef VK_VERSION_1_1
-		if ( _vkVersion >= InstanceVersion{1,1} )
+		uint								count	= 0;
+		FixedArray< VkPhysicalDevice, 16 >	devices;
+		
+		VK_CALL( vkEnumeratePhysicalDevices( GetVkInstance(), OUT &count, null ));
+		CHECK_ERRV( count > 0 );
+
+		devices.resize( count );
+		count = uint(devices.size());
+
+		VK_CALL( vkEnumeratePhysicalDevices( GetVkInstance(), OUT &count, OUT devices.data() ));
+		devices.resize( Min( count, devices.size() ));
+
+		for (auto& dev : devices)
 		{
-		// VK_KHR_get_physical_device_properties2
-			_var_vkGetPhysicalDeviceFeatures2KHR					= _var_vkGetPhysicalDeviceFeatures2;
-			_var_vkGetPhysicalDeviceProperties2KHR					= _var_vkGetPhysicalDeviceProperties2;
-			_var_vkGetPhysicalDeviceFormatProperties2KHR			= _var_vkGetPhysicalDeviceFormatProperties2;
-			_var_vkGetPhysicalDeviceImageFormatProperties2KHR		= _var_vkGetPhysicalDeviceImageFormatProperties2;
-			_var_vkGetPhysicalDeviceQueueFamilyProperties2KHR		= _var_vkGetPhysicalDeviceQueueFamilyProperties2;
-			_var_vkGetPhysicalDeviceMemoryProperties2KHR			= _var_vkGetPhysicalDeviceMemoryProperties2;
-			_var_vkGetPhysicalDeviceSparseImageFormatProperties2KHR	= _var_vkGetPhysicalDeviceSparseImageFormatProperties2;
+			VkPhysicalDeviceProperties	prop = {};
+			vkGetPhysicalDeviceProperties( dev, OUT &prop );
+
+			if ( _enableInfoLog )
+				AE_LOGI( "Found Vulkan device: "s << prop.deviceName );
 		}
-	#endif
-	#ifdef VK_VERSION_1_2
-		if ( _vkVersion >= InstanceVersion{1,2} )
-		{
-		}
-	#endif
 	}
 	
 /*
 =================================================
-	_SetupDeviceBackwardCompatibility
+	CheckConstantLimits
 =================================================
 */
-	void  VDeviceInitializer::_SetupDeviceBackwardCompatibility ()
+	bool  VDeviceInitializer::CheckConstantLimits () const
 	{
-		// for backward compatibility
-	#ifdef VK_VERSION_1_1
-		if ( _vkVersion >= InstanceVersion{1,1} )
+		auto&	limits	= _properties.properties.limits;
+		bool	result	= true;
+
+		const auto	CheckLimitLess = [&limits] (VkDeviceSize curr, VkDeviceSize constant, const char* name)
 		{
-		// VK_KHR_maintenance1
-			_table->_var_vkTrimCommandPoolKHR	= _table->_var_vkTrimCommandPool;
+			if ( curr <= constant )
+				return true;
 
-		// VK_KHR_bind_memory2
-			_table->_var_vkBindBufferMemory2KHR	= _table->_var_vkBindBufferMemory2;
-			_table->_var_vkBindImageMemory2KHR	= _table->_var_vkBindImageMemory2;
-
-		// VK_KHR_get_memory_requirements2
-			_table->_var_vkGetImageMemoryRequirements2KHR		= _table->_var_vkGetImageMemoryRequirements2;
-			_table->_var_vkGetBufferMemoryRequirements2KHR		= _table->_var_vkGetBufferMemoryRequirements2;
-			_table->_var_vkGetImageSparseMemoryRequirements2KHR	= _table->_var_vkGetImageSparseMemoryRequirements2;
-
-		// VK_KHR_sampler_ycbcr_conversion
-			_table->_var_vkCreateSamplerYcbcrConversionKHR	= _table->_var_vkCreateSamplerYcbcrConversion;
-			_table->_var_vkDestroySamplerYcbcrConversionKHR	= _table->_var_vkDestroySamplerYcbcrConversion;
-
-		// VK_KHR_descriptor_update_template
-			_table->_var_vkCreateDescriptorUpdateTemplateKHR	= _table->_var_vkCreateDescriptorUpdateTemplate;
-			_table->_var_vkDestroyDescriptorUpdateTemplateKHR	= _table->_var_vkDestroyDescriptorUpdateTemplate;
-			_table->_var_vkUpdateDescriptorSetWithTemplateKHR	= _table->_var_vkUpdateDescriptorSetWithTemplate;
-			
-		// VK_KHR_device_group
-			_table->_var_vkCmdDispatchBaseKHR	= _table->_var_vkCmdDispatchBase;
-		}
-	#endif
-	#ifdef VK_VERSION_1_2
-		if ( _vkVersion >= InstanceVersion{1,2} )
+			AE_LOGI( "Current device limit for '"s << name << "' (" << ToString(curr) << ") must be <= to constant limit (" << ToString(constant) << ')' );
+			return false;
+		};
+		const auto	CheckLimitGreater = [&limits] (VkDeviceSize curr, VkDeviceSize constant, const char* name)
 		{
-		// VK_KHR_draw_indirect_count
-			_table->_var_vkCmdDrawIndirectCountKHR			= _table->_var_vkCmdDrawIndirectCount;
-			_table->_var_vkCmdDrawIndexedIndirectCountKHR	= _table->_var_vkCmdDrawIndexedIndirectCountKHR;
+			if ( curr >= constant )
+				return true;
 
-		// VK_KHR_create_renderpass2
-			_table->_var_vkCreateRenderPass2KHR		= _table->_var_vkCreateRenderPass2;
-			_table->_var_vkCmdBeginRenderPass2KHR	= _table->_var_vkCmdBeginRenderPass2;
-			_table->_var_vkCmdNextSubpass2KHR		= _table->_var_vkCmdNextSubpass2;
-			_table->_var_vkCmdEndRenderPass2KHR		= _table->_var_vkCmdEndRenderPass2;
+			AE_LOGI( "Current device limit for '"s << name << "' (" << ToString(curr) << ") must be >= to constant limit (" << ToString(constant) << ')' );
+			return false;
+		};
 
-		// VK_KHR_timeline_semaphore
-			_table->_var_vkGetSemaphoreCounterValueKHR	= _table->_var_vkGetSemaphoreCounterValue;
-			_table->_var_vkWaitSemaphoresKHR			= _table->_var_vkWaitSemaphores;
-			_table->_var_vkSignalSemaphoreKHR			= _table->_var_vkSignalSemaphore;
+		result &= CheckLimitLess(	 limits.minUniformBufferOffsetAlignment,		DeviceLimits::MinUniformBufferOffsetAlignment,			"minUniformBufferOffsetAlignment" );
+		result &= CheckLimitLess(	 limits.minStorageBufferOffsetAlignment,		DeviceLimits::MinStorageBufferOffsetAlignment,			"minStorageBufferOffsetAlignment" );
+		result &= CheckLimitLess(	 limits.minTexelBufferOffsetAlignment,			DeviceLimits::MinTexelBufferOffsetAlignment,			"minTexelBufferOffsetAlignment" );
+		result &= CheckLimitLess(	 limits.minMemoryMapAlignment,					DeviceLimits::MinMemoryMapAlignment,					"minMemoryMapAlignment" );
+		result &= CheckLimitLess(	 limits.nonCoherentAtomSize,					DeviceLimits::MinNonCoherentAtomSize,					"nonCoherentAtomSize" );
+		result &= CheckLimitGreater( limits.maxUniformBufferRange,					DeviceLimits::MaxUniformBufferRange,					"maxUniformBufferRange" );
+		result &= CheckLimitGreater( limits.maxDescriptorSetUniformBuffersDynamic,	DeviceLimits::MaxDescriptorSetUniformBuffersDynamic,	"maxDescriptorSetUniformBuffersDynamic" );
+		result &= CheckLimitGreater( limits.maxDescriptorSetStorageBuffersDynamic,	DeviceLimits::MaxDescriptorSetStorageBuffersDynamic,	"maxDescriptorSetStorageBuffersDynamic" );
+		result &= CheckLimitGreater( limits.maxDescriptorSetInputAttachments,		DeviceLimits::MaxDescriptorSetInputAttachments,			"maxDescriptorSetInputAttachments" );
+		result &= CheckLimitGreater( limits.maxColorAttachments,					DeviceLimits::MaxColorAttachments,						"maxColorAttachments" );
+		result &= CheckLimitGreater( limits.maxBoundDescriptorSets,					DeviceLimits::MaxBoundDescriptorSets,					"maxBoundDescriptorSets" );
+		result &= CheckLimitGreater( limits.maxVertexInputAttributes,				DeviceLimits::MaxVertexInputAttributes,					"maxVertexInputAttributes" );
+		result &= CheckLimitLess(	 limits.optimalBufferCopyOffsetAlignment,		DeviceLimits::MinOptimalBufferCopyOffsetAlignment,		"optimalBufferCopyOffsetAlignment" );
+		result &= CheckLimitLess(	 limits.optimalBufferCopyRowPitchAlignment,		DeviceLimits::MinOptimalBufferCopyRowPitchAlignment,	"optimalBufferCopyRowPitchAlignment" );
+		result &= CheckLimitGreater( limits.maxPushConstantsSize,					DeviceLimits::MaxPushConstantsSize,						"maxPushConstantsSize" );
+		result &= CheckLimitGreater( limits.maxComputeWorkGroupInvocations,			DeviceLimits::MinComputeWorkgroupInvocations,			"maxComputeWorkGroupInvocations" );
+		result &= CheckLimitGreater( limits.maxFramebufferLayers,					DeviceLimits::MaxFramebufferLayers,						"maxFramebufferLayers" );
 
-		// VK_KHR_buffer_device_address
-			_table->_var_vkGetBufferDeviceAddressKHR				= _table->_var_vkGetBufferDeviceAddress;
-			_table->_var_vkGetBufferOpaqueCaptureAddressKHR			= _table->_var_vkGetBufferOpaqueCaptureAddress;
-			_table->_var_vkGetDeviceMemoryOpaqueCaptureAddressKHR	= _table->_var_vkGetDeviceMemoryOpaqueCaptureAddress;
-		}
-	#endif
+		return result;
 	}
-	
+
 /*
 =================================================
 	CreateDebugCallback
@@ -1716,7 +2336,7 @@ namespace {
 
 		VK_CHECK( vkCreateDebugUtilsMessengerEXT( GetVkInstance(), &info, NULL, &_debugUtilsMessenger ));
 
-		_callback = std::move(callback);
+		_callback = RVRef(callback);
 		return true;
 	}
 	
@@ -1727,9 +2347,11 @@ namespace {
 */
 	void  VDeviceInitializer::DestroyDebugCallback ()
 	{
-		if ( _debugUtilsMessenger ) {
+		if ( GetVkInstance() and _debugUtilsMessenger ) {
 			vkDestroyDebugUtilsMessengerEXT( GetVkInstance(), _debugUtilsMessenger, null );
 		}
+
+		_debugUtilsMessenger = VK_NULL_HANDLE;
 	}
 
 /*
@@ -1771,36 +2393,56 @@ namespace {
 			case VK_OBJECT_TYPE_SWAPCHAIN_KHR		: return "Swapchain";
 			case VK_OBJECT_TYPE_DISPLAY_KHR			: return "Display";
 			case VK_OBJECT_TYPE_DISPLAY_MODE_KHR	: return "DisplayMode";
-
-			#ifdef VK_NVX_device_generated_commands
+				
+			#ifdef VK_NV_device_generated_commands
+			case VK_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NV : return "IndirectCommandsLayoutNv";
+			#elif defined(VK_NVX_device_generated_commands)
 			case VK_OBJECT_TYPE_OBJECT_TABLE_NVX	: return "ObjectTableNvx";
 			case VK_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NVX: return "IndirectCommandsLayoutNvx";
 			#endif
+
 			#ifdef VK_NV_ray_tracing
 			case VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_NV	: return "AccelerationStructureNv";
 			#endif
+			#ifdef VK_KHR_acceleration_structure
+			case VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR	: return "AccelerationStructure";
+			#endif
+
 			#ifdef VK_EXT_debug_report
 			case VK_OBJECT_TYPE_DEBUG_REPORT_CALLBACK_EXT	: return "DebugReportCallback";
 			#endif
+
 			#ifdef VK_EXT_debug_utils
 			case VK_OBJECT_TYPE_DEBUG_UTILS_MESSENGER_EXT	: return "DebugUtilsMessenger";
 			#endif
+
 			case VK_OBJECT_TYPE_SAMPLER_YCBCR_CONVERSION	: return "SamplerYcBr";
 			#ifdef VK_INTEL_performance_query
 			case VK_OBJECT_TYPE_PERFORMANCE_CONFIGURATION_INTEL: return "PerformanceConfigIntel";
 			#endif
 
-			case VK_OBJECT_TYPE_UNKNOWN :
-			case VK_OBJECT_TYPE_DESCRIPTOR_UPDATE_TEMPLATE :
-			case VK_OBJECT_TYPE_VALIDATION_CACHE_EXT :
+			#ifdef VK_EXT_private_data
+			case VK_OBJECT_TYPE_PRIVATE_DATA_SLOT_EXT		: return "PrivateDataSlot";
+			#endif
+
+			#ifdef VK_KHR_deferred_host_operations
+			case VK_OBJECT_TYPE_DEFERRED_OPERATION_KHR		: return "DeferredOperation";
+			#endif
+
+			#ifndef VK_VERSION_1_2
 			case VK_OBJECT_TYPE_RANGE_SIZE :
+			#endif
+
+			#ifdef VK_KHR_descriptor_update_template
+			case VK_OBJECT_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_KHR	: return "DescriptorUpdateTemplate";
+			#endif
+
+			case VK_OBJECT_TYPE_UNKNOWN :
+			case VK_OBJECT_TYPE_VALIDATION_CACHE_EXT :
 			case VK_OBJECT_TYPE_MAX_ENUM :
 				break;	// used to shutup compilation warnings
 		}
 		END_ENUM_CHECKS();
-
-		CHECK(	objType >= VK_OBJECT_TYPE_BEGIN_RANGE and
-				objType <= VK_OBJECT_TYPE_END_RANGE );
 		return "unknown";
 	}
 
@@ -1816,6 +2458,7 @@ namespace {
 												 void*											pUserData)
 	{
 		auto* self = static_cast<VDeviceInitializer *>(pUserData);
+		EXLOCK( self->_guard );
 		
 		self->_tempObjectDbgInfos.resize( pCallbackData->objectCount );
 
@@ -1902,20 +2545,15 @@ namespace {
 	{
 		#ifdef PLATFORM_ANDROID
 			static const char*	instance_layers[] = {
-				"VK_LAYER_GOOGLE_threading",
-				"VK_LAYER_LUNARG_parameter_validation",
-				"VK_LAYER_LUNARG_object_tracker",
-				"VK_LAYER_LUNARG_core_validation",
-				"VK_LAYER_GOOGLE_unique_objects",
+				"VK_LAYER_KHRONOS_validation",
 
 				// may be unsupported:
-				"VK_LAYER_LUNARG_vktrace",
 				"VK_LAYER_ARM_MGD",
 				"VK_LAYER_ARM_mali_perf_doc"
 			};
 		#else
 			static const char*	instance_layers[] = {
-				"VK_LAYER_LUNARG_standard_validation"
+				"VK_LAYER_KHRONOS_validation"
 			};
 		#endif
 		return instance_layers;
@@ -2025,6 +2663,9 @@ namespace {
 			#ifdef VK_KHR_maintenance2
 				VK_KHR_MAINTENANCE2_EXTENSION_NAME,
 			#endif
+			#ifdef VK_KHR_maintenance3
+				VK_KHR_MAINTENANCE3_EXTENSION_NAME,
+			#endif
 			#ifdef VK_KHR_create_renderpass2
 				VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME,
 			#endif
@@ -2040,9 +2681,11 @@ namespace {
 			#ifdef VK_EXT_depth_range_unrestricted
 				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
 			#endif
-			#ifdef VK_EXT_filter_cubic
-				VK_IMG_FILTER_CUBIC_EXTENSION_NAME,
-				VK_EXT_FILTER_CUBIC_EXTENSION_NAME,
+			#ifdef VK_EXT_sampler_filter_minmax
+				VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_shader_stencil_export
+				VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME,
 			#endif
 		};
 		return device_extensions;
@@ -2087,6 +2730,9 @@ namespace {
 			#ifdef VK_EXT_blend_operation_advanced
 				VK_EXT_BLEND_OPERATION_ADVANCED_EXTENSION_NAME,
 			#endif
+			#ifdef VK_KHR_maintenance1
+				VK_KHR_MAINTENANCE1_EXTENSION_NAME,		// required for VK_EXT_inline_uniform_block
+			#endif
 			#ifdef VK_EXT_inline_uniform_block
 				VK_EXT_INLINE_UNIFORM_BLOCK_EXTENSION_NAME,
 			#endif
@@ -2108,10 +2754,6 @@ namespace {
 			#ifdef VK_KHR_performance_query
 				VK_KHR_PERFORMANCE_QUERY_EXTENSION_NAME,
 			#endif
-			#ifdef VK_EXT_filter_cubic
-				VK_IMG_FILTER_CUBIC_EXTENSION_NAME,
-				VK_EXT_FILTER_CUBIC_EXTENSION_NAME,
-			#endif
 			#ifdef VK_KHR_spirv_1_4
 				VK_KHR_SPIRV_1_4_EXTENSION_NAME,
 			#endif
@@ -2123,6 +2765,18 @@ namespace {
 			#endif
 			#ifdef VK_EXT_depth_range_unrestricted
 				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_sampler_filter_minmax
+				VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_shader_stencil_export
+				VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_host_query_reset
+				VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_shader_subgroup_extended_types
+				VK_KHR_SHADER_SUBGROUP_EXTENDED_TYPES_EXTENSION_NAME,
 			#endif
 
 			// Vendor specific extensions
@@ -2140,6 +2794,12 @@ namespace {
 			#endif
 			#ifdef VK_NV_ray_tracing
 				VK_NV_RAY_TRACING_EXTENSION_NAME,
+			#endif
+			#ifdef VK_NV_shader_sm_builtins
+				VK_NV_SHADER_SM_BUILTINS_EXTENSION_NAME,
+			#endif
+			#ifdef VK_NV_compute_shader_derivatives
+				VK_NV_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME,
 			#endif
 
 			#ifdef VK_AMD_shader_info
@@ -2179,6 +2839,9 @@ namespace {
 			#ifdef VK_EXT_blend_operation_advanced
 				VK_EXT_BLEND_OPERATION_ADVANCED_EXTENSION_NAME,
 			#endif
+			#ifdef VK_KHR_maintenance1
+				VK_KHR_MAINTENANCE1_EXTENSION_NAME,		// required for VK_EXT_inline_uniform_block
+			#endif
 			#ifdef VK_EXT_inline_uniform_block
 				VK_EXT_INLINE_UNIFORM_BLOCK_EXTENSION_NAME,
 			#endif
@@ -2194,12 +2857,29 @@ namespace {
 			#ifdef VK_KHR_performance_query
 				VK_KHR_PERFORMANCE_QUERY_EXTENSION_NAME,
 			#endif
-			#ifdef VK_EXT_filter_cubic
-				VK_IMG_FILTER_CUBIC_EXTENSION_NAME,
-				VK_EXT_FILTER_CUBIC_EXTENSION_NAME,
-			#endif
 			#ifdef VK_EXT_depth_range_unrestricted
 				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_extended_dynamic_state
+				VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME,
+			#endif
+			#ifdef VK_EXT_shader_stencil_export
+				VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_deferred_host_operations
+				VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_acceleration_structure
+				VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_ray_tracing_pipeline
+				VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_ray_query
+				VK_KHR_RAY_QUERY_EXTENSION_NAME,
+			#endif
+			#ifdef VK_KHR_pipeline_executable_properties
+				VK_KHR_PIPELINE_EXECUTABLE_PROPERTIES_EXTENSION_NAME,
 			#endif
 
 			// Vendor specific extensions
@@ -2217,6 +2897,12 @@ namespace {
 			#endif
 			#ifdef VK_NV_ray_tracing
 				VK_NV_RAY_TRACING_EXTENSION_NAME,
+			#endif
+			#ifdef VK_NV_shader_sm_builtins
+				VK_NV_SHADER_SM_BUILTINS_EXTENSION_NAME,
+			#endif
+			#ifdef VK_NV_compute_shader_derivatives
+				VK_NV_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME,
 			#endif
 
 			#ifdef VK_AMD_shader_info

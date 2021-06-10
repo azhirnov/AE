@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -34,8 +34,8 @@ namespace AE::STL
 		struct Block
 		{
 			void *		ptr			= null;
-			BytesU		size;		// used memory size
-			BytesU		capacity;	// size of block
+			Bytes		size;		// used memory size
+			Bytes		capacity;	// size of block
 		};
 		using Blocks_t = FixedArray< Block, MaxBlocks >;
 
@@ -43,9 +43,9 @@ namespace AE::STL
 	// variables
 	private:
 		Blocks_t					_blocks;
-		BytesU						_blockSize	= 1024_b;
+		Bytes						_blockSize	= 1024_b;
 		Allocator_t					_alloc;
-		static constexpr BytesU		_ptrAlign	= SizeOf<void *>;
+		static constexpr Bytes		_ptrAlign	= SizeOf<void *>;
 
 
 	// methods
@@ -56,22 +56,22 @@ namespace AE::STL
 		{}
 		
 		LinearAllocator (Self &&other) :
-			_blocks{ std::move(other._blocks) },
+			_blocks{ RVRef(other._blocks) },
 			_blockSize{ other._blockSize },
-			_alloc{ std::move(other._alloc) }
+			_alloc{ RVRef(other._alloc) }
 		{}
 
 		LinearAllocator (const Self &) = delete;
 
-		Self& operator = (const Self &) = delete;
+		Self&  operator = (const Self &) = delete;
 
 
-		Self& operator = (Self &&rhs)
+		Self&  operator = (Self &&rhs)
 		{
 			Release();
-			_blocks		= std::move(rhs._blocks);
+			_blocks		= RVRef(rhs._blocks);
 			_blockSize	= rhs._blockSize;
-			_alloc		= std::move(rhs._alloc);
+			_alloc		= RVRef(rhs._alloc);
 			return *this;
 		}
 
@@ -82,17 +82,17 @@ namespace AE::STL
 		}
 
 
-		void SetBlockSize (BytesU size)
+		void  SetBlockSize (Bytes size)
 		{
 			_blockSize = size;
 		}
 
 
-		ND_ AE_ALLOCATOR void*  Alloc (const BytesU size, const BytesU align)
+		ND_ AE_ALLOCATOR void*  Alloc (const Bytes size, const Bytes align)
 		{
 			for (auto& block : _blocks)
 			{
-				BytesU	offset	= AlignToLarger( size_t(block.ptr) + block.size, align ) - size_t(block.ptr);
+				Bytes	offset	= AlignToLarger( usize(block.ptr) + block.size, align ) - usize(block.ptr);
 
 				if ( size <= (block.capacity - offset) )
 				{
@@ -107,7 +107,7 @@ namespace AE::STL
 				return null;
 			}
 
-			BytesU	block_size	= _blockSize * (1 + _blocks.size()/2);
+			Bytes	block_size	= _blockSize * (1 + _blocks.size()/2);
 					block_size	= size*2 < block_size ? block_size : size*2;
 			void*	ptr			= _alloc.Allocate( block_size, _ptrAlign );
 
@@ -118,9 +118,9 @@ namespace AE::STL
 			}
 
 			auto&	block		= _blocks.emplace_back(Block{ ptr, 0_b, block_size });
-			BytesU	offset		= AlignToLarger( size_t(block.ptr) + block.size, align ) - size_t(block.ptr);
+			Bytes	offset		= AlignToLarger( usize(block.ptr) + block.size, align ) - usize(block.ptr);
 
-			DEBUG_ONLY( std::memset( block.ptr, 0xCD, size_t(block.capacity) ));
+			DEBUG_ONLY( std::memset( block.ptr, 0xCD, usize(block.capacity) ));
 			
 			block.size = offset + size;
 			return block.ptr + offset;
@@ -128,27 +128,41 @@ namespace AE::STL
 
 
 		template <typename T>
-		ND_ AE_ALLOCATOR T*  Alloc (size_t count = 1)
+		ND_ AE_ALLOCATOR T*  Alloc (usize count = 1)
 		{
 			return Cast<T>( Alloc( SizeOf<T> * count, AlignOf<T> ));
 		}
 
 
-		void Discard ()
+		void  Discard ()
 		{
 			for (auto& block : _blocks)
 			{
 				block.size = 0_b;
-				DEBUG_ONLY( std::memset( block.ptr, 0xCD, size_t(block.capacity) ));
+				DEBUG_ONLY( std::memset( block.ptr, 0xCD, usize(block.capacity) ));
 			}
 		}
 
-		void Release ()
+		void  Release ()
 		{
 			for (auto& block : _blocks) {
 				_alloc.Deallocate( block.ptr, block.capacity, _ptrAlign );
 			}
 			_blocks.clear();
+		}
+
+		ND_ Bytes  TotalSize () const
+		{
+			Bytes	size;
+			for (auto& block : _blocks) {
+				size += block.capacity;
+			}
+			return size;
+		}
+
+		ND_ ArrayView<Block>  GetBlocks () const
+		{
+			return _blocks;
 		}
 	};
 
@@ -188,29 +202,16 @@ namespace AE::STL
 		UntypedLinearAllocator (Self &&other) : _alloc{other._alloc} {}
 		UntypedLinearAllocator (const Self &other) : _alloc{other._alloc} {}
 		UntypedLinearAllocator (LinearAllocator_t &alloc) : _alloc{alloc} {}
-		
-		#pragma push_macro("Allocate")
-		#undef Allocate
 
-		ND_ AE_ALLOCATOR void*  Allocate (BytesU size, BytesU align)
+		ND_ AE_ALLOCATOR void*  Allocate (Bytes size, Bytes align)
 		{
 			return _alloc.Alloc( size, align );
 		}
 		
-	#ifdef AE_ENABLE_MEMLEAK_CHECKS
-		ND_ AE_ALLOCATOR void*  Allocate (BytesU size, BytesU align, const char *file, int line)
-		{
-			Unused( file, line );
-			return _alloc.Alloc( size, align );
-		}
-	#endif
-		
-		#pragma pop_macro("Allocate")
-
-		void  Deallocate (void *, BytesU)
+		void  Deallocate (void *, Bytes)
 		{}
 
-		void  Deallocate (void *, BytesU, BytesU)
+		void  Deallocate (void *, Bytes, Bytes)
 		{}
 
 		ND_ LinearAllocator_t&  GetAllocatorRef () const
@@ -218,7 +219,7 @@ namespace AE::STL
 			return _alloc;
 		}
 
-		ND_ bool operator == (const Self &rhs) const
+		ND_ bool  operator == (const Self &rhs) const
 		{
 			return &_alloc == &rhs._alloc;
 		}
@@ -264,15 +265,15 @@ namespace AE::STL
 		template <typename B>
 		StdLinearAllocator (const StdLinearAllocator<B,Allocator_t>& other) : _alloc{other.GetAllocatorRef()} {}
 
-		Self& operator = (const Self &) = delete;
+		Self&  operator = (const Self &) = delete;
 
 		
-		ND_ AE_ALLOCATOR T*  allocate (const size_t count)
+		ND_ AE_ALLOCATOR T*  allocate (const usize count)
 		{
 			return _alloc.template Alloc<T>( count );
 		}
 
-		void deallocate (T * const, const size_t)
+		void  deallocate (T * const, const usize)
 		{
 		}
 
@@ -281,12 +282,12 @@ namespace AE::STL
 			return Self{ _alloc };
 		}
 
-		ND_ LinearAllocator_t&  GetAllocatorRef () const
+		ND_ LinearAllocator_t&   GetAllocatorRef () const
 		{
 			return _alloc;
 		}
 
-		ND_ bool operator == (const Self &rhs) const
+		ND_ bool  operator == (const Self &rhs) const
 		{
 			return &_alloc == &rhs._alloc;
 		}

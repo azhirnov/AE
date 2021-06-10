@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "threading/TaskSystem/WorkerThread.h"
 #include "UnitTest_Common.h"
@@ -174,13 +174,13 @@ namespace
 	static void  Http_Test4 ()
 	{
 		LocalHttpClient	network;
-		Scheduler().AddThread( MakeShared<WorkerThread>() );
+		Scheduler().AddThread( MakeRC<WorkerThread>() );
 
 		{
 			Atomic<bool>	p1_ok = false;
 
 			auto	p0 = network->Download( "https://httpbin.org/image/png" );
-			auto	p1 = p0.Then( [&p1_ok] (const Array<uint8_t> &content) { p1_ok = (content.size() == 8'090); });
+			auto	p1 = p0.Then( [&p1_ok] (const Array<ubyte> &content) { p1_ok = (content.size() == 8'090); });
 
 			TEST( Scheduler().Wait( {AsyncTask(p1)} ));
 			TEST( AsyncTask(p1)->Status() == EStatus::Completed );
@@ -193,7 +193,7 @@ namespace
 			Atomic<bool>	p3_ok = false;
 
 			auto	p0 = network->Download( "https://httpbin.org/image11111" );
-			auto	p1 = p0.Then( [&p1_ok] (const Array<uint8_t> &) { p1_ok = true; });
+			auto	p1 = p0.Then( [&p1_ok] (const Array<ubyte> &) { p1_ok = true; });
 			auto	p2 = p0.Except( [&p2_ok] () { p2_ok = true; });
 			auto	p3 = p2.Then( [&p3_ok] () { p3_ok = true; });
 

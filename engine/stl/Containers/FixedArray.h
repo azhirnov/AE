@@ -1,9 +1,10 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
 #include "stl/Containers/ArrayView.h"
 #include "stl/Memory/MemUtils.h"
+#include "stl/Math/Vec.h"
 
 namespace AE::STL
 {
@@ -12,7 +13,7 @@ namespace AE::STL
 	// Fixed Size Array
 	//
 
-	template <typename T, size_t ArraySize>
+	template <typename T, usize ArraySize>
 	struct FixedArray
 	{
 		STATIC_ASSERT( ArraySize < 256 );
@@ -24,7 +25,7 @@ namespace AE::STL
 		using Self				= FixedArray< T, ArraySize >;
 
 	private:
-		using Count_t			= Conditional< alignof(T) < 4, uint8_t, uint32_t >;
+		using Count_t			= ubyte;
 
 
 	// variables
@@ -64,10 +65,10 @@ namespace AE::STL
 
 		constexpr FixedArray (Self &&other) : _count{other._count}
 		{
-			ASSERT( not _IsMemoryAliased( other.begin(), other.end() ) );
+			ASSERT( not _IsMemoryAliased( other.begin(), other.end() ));
 
-			for (size_t i = 0, cnt = _count; i < cnt; ++i) {
-				PlacementNew<T>( data() + i, std::move(other._array[i]) );
+			for (usize i = 0, cnt = _count; i < cnt; ++i) {
+				PlacementNew<T>( data() + i, RVRef(other._array[i]) );
 			}
 			other.clear();
 		}
@@ -79,14 +80,15 @@ namespace AE::STL
 
 
 		ND_ constexpr operator ArrayView<T> ()					const	{ return ArrayView<T>{ data(), size() }; }
+		ND_ constexpr ArrayView<T>		ToArrayView()			const	{ return *this; }
 
-		ND_ constexpr size_t			size ()					const	{ return _count; }
+		ND_ constexpr usize				size ()					const	{ return _count; }
 		ND_ constexpr bool				empty ()				const	{ return _count == 0; }
 		ND_ constexpr T *				data ()							{ return std::addressof( _array[0] ); }
 		ND_ constexpr T const *			data ()					const	{ return std::addressof( _array[0] ); }
 
-		ND_ constexpr T &				operator [] (size_t i)			{ ASSERT( i < _count );  return _array[i]; }
-		ND_ constexpr T const &			operator [] (size_t i)	const	{ ASSERT( i < _count );  return _array[i]; }
+		ND_ constexpr T &				operator [] (usize i)			{ ASSERT( i < _count );  return _array[i]; }
+		ND_ constexpr T const &			operator [] (usize i)	const	{ ASSERT( i < _count );  return _array[i]; }
 
 		ND_ constexpr iterator			begin ()						{ return data(); }
 		ND_ constexpr const_iterator	begin ()				const	{ return data(); }
@@ -98,7 +100,7 @@ namespace AE::STL
 		ND_ constexpr T &				back ()							{ ASSERT( _count > 0 );  return _array[_count-1]; }
 		ND_ constexpr T const&			back ()					const	{ ASSERT( _count > 0 );  return _array[_count-1]; }
 		
-		ND_ static constexpr size_t		capacity ()						{ return ArraySize; }
+		ND_ static constexpr usize		capacity ()						{ return ArraySize; }
 		
 		ND_ constexpr bool  operator == (ArrayView<T> rhs)		const	{ return ArrayView<T>{*this} == rhs; }
 		ND_ constexpr bool  operator != (ArrayView<T> rhs)		const	{ return ArrayView<T>{*this} != rhs; }
@@ -123,13 +125,13 @@ namespace AE::STL
 
 		constexpr FixedArray&  operator = (Self &&rhs)
 		{
-			ASSERT( not _IsMemoryAliased( rhs.begin(), rhs.end() ) );
+			ASSERT( not _IsMemoryAliased( rhs.begin(), rhs.end() ));
 
 			clear();
 			_count = rhs._count;
 
-			for (size_t i = 0, cnt = _count; i < cnt; ++i) {
-				PlacementNew<T>( data() + i, std::move(rhs._array[i]) );
+			for (usize i = 0, cnt = _count; i < cnt; ++i) {
+				PlacementNew<T>( data() + i, RVRef(rhs._array[i]) );
 			}
 			rhs.clear();
 			return *this;
@@ -139,7 +141,7 @@ namespace AE::STL
 		constexpr void  assign (const_iterator beginIter, const_iterator endIter)
 		{
 			ASSERT( beginIter <= endIter );
-			ASSERT( not _IsMemoryAliased( beginIter, endIter ) );
+			ASSERT( not _IsMemoryAliased( beginIter, endIter ));
 
 			clear();
 
@@ -167,7 +169,7 @@ namespace AE::STL
 		constexpr void  push_back (T &&value)
 		{
 			ASSERT( _count < capacity() );
-			PlacementNew<T>( data() + (_count++), std::move(value) );
+			PlacementNew<T>( data() + (_count++), RVRef(value) );
 		}
 
 
@@ -176,7 +178,7 @@ namespace AE::STL
 		{
 			ASSERT( _count < capacity() );
 			T* ptr = data() + (_count++);
-			PlacementNew<T>( ptr, std::forward<Args &&>( args )... );
+			PlacementNew<T>( ptr, FwdArg<Args &&>( args )... );
 			return *ptr;
 		}
 
@@ -205,36 +207,47 @@ namespace AE::STL
 		{
 			if ( _count < capacity() )
 			{
-				PlacementNew<T>( data() + (_count++), std::move(value) );
+				PlacementNew<T>( data() + (_count++), RVRef(value) );
+				return true;
+			}
+			return false;
+		}
+		
+		template <typename ...Args>
+		constexpr bool  try_emplace_back (Args&& ...args)
+		{
+			if ( _count < capacity() )
+			{
+				PlacementNew<T>( data() + (_count++), FwdArg<Args &&>( args )... );
 				return true;
 			}
 			return false;
 		}
 
 
-		constexpr void  insert (size_t pos, T &&value)
+		constexpr void  insert (usize pos, T &&value)
 		{
 			ASSERT( _count < capacity() );
 
 			if ( pos >= _count )
-				return push_back( std::move(value) );
+				return push_back( RVRef(value) );
 
-			for (size_t i = _count++; i > pos; --i) {
-				PlacementNew<T>( data() + i, std::move(data()[i-1]) );
+			for (usize i = _count++; i > pos; --i) {
+				PlacementNew<T>( data() + i, RVRef(data()[i-1]) );
 			}
 
-			PlacementNew<T>( data() + pos, std::move(value) );
+			PlacementNew<T>( data() + pos, RVRef(value) );
 		}
 
 
-		constexpr void  resize (size_t newSize)
+		constexpr void  resize (usize newSize)
 		{
 			newSize = Min( newSize, capacity() );
 
 			if ( newSize < _count )
 			{
 				// delete elements
-				for (size_t i = newSize; i < _count; ++i)
+				for (usize i = newSize; i < _count; ++i)
 				{
 					_array[i].~T();
 				}
@@ -244,7 +257,7 @@ namespace AE::STL
 			if ( newSize > _count )
 			{
 				// create elements
-				for (size_t i = _count; i < newSize; ++i)
+				for (usize i = _count; i < newSize; ++i)
 				{
 					PlacementNew<T>( data() + i );
 				}
@@ -256,7 +269,7 @@ namespace AE::STL
 
 		constexpr void  clear ()
 		{
-			for (size_t i = 0; i < _count; ++i)
+			for (usize i = 0; i < _count; ++i)
 			{
 				_array[i].~T();
 			}
@@ -267,7 +280,7 @@ namespace AE::STL
 		}
 
 
-		constexpr void  fast_erase (size_t index)
+		constexpr void  fast_erase (usize index)
 		{
 			ASSERT( index < _count );
 
@@ -282,7 +295,7 @@ namespace AE::STL
 			{
 				// move element from back to 'index'
 				_array[index].~T();
-				PlacementNew<T>( data() + index, std::move(_array[_count]) );
+				PlacementNew<T>( data() + index, RVRef(_array[_count]) );
 			}
 
 			DEBUG_ONLY( memset( data() + _count, 0, sizeof(T) ));
@@ -307,7 +320,7 @@ namespace std
 	{
 		ND_ size_t  operator () (const AE::STL::FixedArray<T, ArraySize> &value) const
 		{
-			return size_t(AE::STL::HashOf( AE::STL::ArrayView<T>{ value } ));
+			return size_t(AE::STL::HashOf( AE::STL::ArrayView<T>{ value }));
 		}
 	};
 

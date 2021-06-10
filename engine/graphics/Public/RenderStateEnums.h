@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -74,7 +74,7 @@ namespace AE::Graphics
 	};
 
 
-	enum class ECompareOp : uint8_t
+	enum class ECompareOp : ubyte
 	{
 		Never,			// false
 		Less,			// <
@@ -84,11 +84,11 @@ namespace AE::Graphics
 		NotEqual,		// !=
 		GEqual,			// >=
 		Always,			// true
-		Unknown			= uint8_t(~0),
+		Unknown			= ubyte(~0),
 	};
 
 
-	enum class EStencilOp : uint8_t
+	enum class EStencilOp : ubyte
 	{
 		Keep,			// s
 		Zero,			// 0
@@ -98,7 +98,7 @@ namespace AE::Graphics
 		Decr,			// max( --s, 0 )
 		DecrWrap,		// --s & maxvalue
 		Invert,			// ~s
-		Unknown			= uint8_t(~0),
+		Unknown			= ubyte(~0),
 	};
 
 
@@ -133,7 +133,7 @@ namespace AE::Graphics
 	};
 	
 
-	enum class ECullMode : uint8_t
+	enum class ECullMode : ubyte
 	{
 		None		= 0,
 		Front		= 1	<< 0,
@@ -144,7 +144,7 @@ namespace AE::Graphics
 	AE_BIT_OPERATORS( ECullMode );
 
 
-	enum class EStencilFace : uint8_t
+	enum class EStencilFace : ubyte
 	{
 		Front			= 1 << 0,
 		Back			= 1 << 1,
@@ -154,7 +154,7 @@ namespace AE::Graphics
 	AE_BIT_OPERATORS( EStencilFace );
 	
 
-	enum class EPipelineDynamicState : uint8_t
+	enum class EPipelineDynamicState : ubyte
 	{
 		Unknown					= 0,
 		Viewport				= 1 << 0,

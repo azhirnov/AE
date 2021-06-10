@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -20,7 +20,7 @@ namespace AE::Graphics
 		
 		struct RT
 		{
-			GfxResourceID				image;		// may be image module in initial state (created by CreateRenderTarget or other)
+			ImageID						image;		// may be image module in initial state (created by CreateRenderTarget or other)
 			Optional< ImageViewDesc >	desc;		// may be used to specialize level, layer, different format, layout, ...
 			ClearValue_t				clearValue;	// default is black color
 			EAttachmentLoadOp			loadOp		= EAttachmentLoadOp::Load;
@@ -59,15 +59,15 @@ namespace AE::Graphics
 
 
 		// render target
-		RenderPassDesc&  AddTarget (RenderTargetName id, GfxResourceID image);
-		RenderPassDesc&  AddTarget (RenderTargetName id, GfxResourceID image, EAttachmentLoadOp loadOp, EAttachmentStoreOp storeOp);
+		RenderPassDesc&  AddTarget (RenderTargetName id, ImageID image);
+		RenderPassDesc&  AddTarget (RenderTargetName id, ImageID image, EAttachmentLoadOp loadOp, EAttachmentStoreOp storeOp);
 		
 		template <typename ClearVal>
-		RenderPassDesc&  AddTarget (RenderTargetName id, GfxResourceID image, const ClearVal &clearValue, EAttachmentStoreOp storeOp);
-		RenderPassDesc&  AddTarget (RenderTargetName id, GfxResourceID image, const ImageViewDesc &desc, EAttachmentLoadOp loadOp, EAttachmentStoreOp storeOp);
+		RenderPassDesc&  AddTarget (RenderTargetName id, ImageID image, const ClearVal &clearValue, EAttachmentStoreOp storeOp);
+		RenderPassDesc&  AddTarget (RenderTargetName id, ImageID image, const ImageViewDesc &desc, EAttachmentLoadOp loadOp, EAttachmentStoreOp storeOp);
 
 		template <typename ClearVal>
-		RenderPassDesc&  AddTarget (RenderTargetName id, GfxResourceID image, const ImageViewDesc &desc, const ClearVal &clearValue, EAttachmentStoreOp storeOp);
+		RenderPassDesc&  AddTarget (RenderTargetName id, ImageID image, const ImageViewDesc &desc, const ClearVal &clearValue, EAttachmentStoreOp storeOp);
 
 
 		// viewport
@@ -80,17 +80,15 @@ namespace AE::Graphics
 
 	
 
-	inline RenderPassDesc&  RenderPassDesc::AddTarget (RenderTargetName id, GfxResourceID image)
+	inline RenderPassDesc&  RenderPassDesc::AddTarget (RenderTargetName id, ImageID image)
 	{
 		return AddTarget( id, image, EAttachmentLoadOp::Load, EAttachmentStoreOp::Store );
 	}
 
 
-	inline RenderPassDesc&  RenderPassDesc::AddTarget (RenderTargetName id, GfxResourceID image, EAttachmentLoadOp loadOp, EAttachmentStoreOp storeOp)
+	inline RenderPassDesc&  RenderPassDesc::AddTarget (RenderTargetName id, ImageID image, EAttachmentLoadOp loadOp, EAttachmentStoreOp storeOp)
 	{
 		ASSERT( image );
-		ASSERT( image.ResourceType() == GfxResourceID::EType::Image or
-				image.ResourceType() == GfxResourceID::EType::VirtualImage );
 		ASSERT( loadOp != EAttachmentLoadOp::Clear );	// clear value is not defined
 
 		renderTargets.insert_or_assign( id, RT{ image, {}, ClearValue_t{}, loadOp, storeOp });
@@ -99,22 +97,18 @@ namespace AE::Graphics
 	
 
 	template <typename ClearVal>
-	inline RenderPassDesc&  RenderPassDesc::AddTarget (RenderTargetName id, GfxResourceID image, const ClearVal &clearValue, EAttachmentStoreOp storeOp)
+	inline RenderPassDesc&  RenderPassDesc::AddTarget (RenderTargetName id, ImageID image, const ClearVal &clearValue, EAttachmentStoreOp storeOp)
 	{
 		ASSERT( image );
-		ASSERT( image.ResourceType() == GfxResourceID::EType::Image or
-				image.ResourceType() == GfxResourceID::EType::VirtualImage );
 
 		renderTargets.insert_or_assign( id, RT{ image, {}, clearValue, EAttachmentLoadOp::Clear, storeOp });
 		return *this;
 	}
 	
 
-	inline RenderPassDesc&  RenderPassDesc::AddTarget (RenderTargetName id, GfxResourceID image, const ImageViewDesc &desc, EAttachmentLoadOp loadOp, EAttachmentStoreOp storeOp)
+	inline RenderPassDesc&  RenderPassDesc::AddTarget (RenderTargetName id, ImageID image, const ImageViewDesc &desc, EAttachmentLoadOp loadOp, EAttachmentStoreOp storeOp)
 	{
 		ASSERT( image );
-		ASSERT( image.ResourceType() == GfxResourceID::EType::Image or
-				image.ResourceType() == GfxResourceID::EType::VirtualImage );
 		ASSERT( loadOp != EAttachmentLoadOp::Clear );	// clear value is not defined
 
 		renderTargets.insert_or_assign( id, RT{ image, desc, ClearValue_t{}, loadOp, storeOp });
@@ -123,11 +117,9 @@ namespace AE::Graphics
 
 
 	template <typename ClearVal>
-	inline RenderPassDesc&  RenderPassDesc::AddTarget (RenderTargetName id, GfxResourceID image, const ImageViewDesc &desc, const ClearVal &clearValue, EAttachmentStoreOp storeOp)
+	inline RenderPassDesc&  RenderPassDesc::AddTarget (RenderTargetName id, ImageID image, const ImageViewDesc &desc, const ClearVal &clearValue, EAttachmentStoreOp storeOp)
 	{
 		ASSERT( image );
-		ASSERT( image.ResourceType() == GfxResourceID::EType::Image or
-				image.ResourceType() == GfxResourceID::EType::VirtualImage );
 
 		renderTargets.insert_or_assign( id, RT{ image, desc, clearValue, EAttachmentLoadOp::Clear, storeOp });
 		return *this;

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Utils/FileSystem.h"
 #include "stl/Stream/FileStream.h"
@@ -26,7 +26,7 @@ static void  Minidump_Test1 ()
 
 static void CrashReport_Test1 ()
 {
-	SharedPtr<RStream>	stream = MakeShared<FileRStream>( "crash_report.bin" );
+	RC<RStream>	stream = MakeRC<FileRStream>( "crash_report.bin" );
 	TEST( stream->IsOpen() );
 
 	AE::MinidumpParser::CrashInfo	info;

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "threading/TaskSystem/Promise.h"
 #include "threading/TaskSystem/WorkerThread.h"
@@ -23,7 +23,7 @@ namespace
 	static void  Promise_Test1 ()
 	{
 		LocalTaskScheduler	scheduler {1};
-		scheduler->AddThread( MakeShared<WorkerThread>() );
+		scheduler->AddThread( MakeRC<WorkerThread>() );
 
 		auto p = MakePromise( [] () { return "a"s; })
 			.Then([] (const String &in) { return in + "b"; });
@@ -35,7 +35,7 @@ namespace
 	static void  Promise_Test2 ()
 	{
 		LocalTaskScheduler	scheduler {1};
-		scheduler->AddThread( MakeShared<WorkerThread>() );
+		scheduler->AddThread( MakeRC<WorkerThread>() );
 
 		auto p0 = MakePromise( [] () { return "a"s; });
 		auto p1 = MakePromise( [] () -> String { return "b"s; });
@@ -53,7 +53,7 @@ namespace
 	static void  Promise_Test3 ()
 	{
 		LocalTaskScheduler	scheduler {1};
-		scheduler->AddThread( MakeShared<WorkerThread>() );
+		scheduler->AddThread( MakeRC<WorkerThread>() );
 		
 		auto p0 = MakePromise( [] () { return PromiseResult<String>{ "a"s }; });
 		auto p1 = MakePromise( [] () -> PromiseResult<String> { return CancelPromise; });	// canceled promise
@@ -81,7 +81,7 @@ namespace
 	static void  Promise_Test4 ()
 	{
 		LocalTaskScheduler	scheduler {1};
-		scheduler->AddThread( MakeShared<WorkerThread>() );
+		scheduler->AddThread( MakeRC<WorkerThread>() );
 
 		Promise<int> pe;
 
@@ -96,6 +96,33 @@ namespace
 
 		TestResult( p4, "a.b.1.0"s );
 	}
+	
+
+	static void  Promise_Test5 ()
+	{
+		LocalTaskScheduler	scheduler {1};
+		scheduler->AddThread( MakeRC<WorkerThread>() );
+
+		auto p0 = MakePromise( [] () { return PromiseResult<String>{ "a"s }; });
+		auto p1 = MakePromise( [] () -> PromiseResult<String> { return CancelPromise; });	// canceled promise
+		
+		TEST( Scheduler().Wait({ AsyncTask(p0), AsyncTask(p1) }));
+		TEST( AsyncTask(p0)->Status() == EStatus::Completed );
+		TEST( AsyncTask(p1)->Status() == EStatus::Failed );
+		
+		Atomic<bool>	p2_ok = false;
+		Atomic<bool>	p3_ok = false;
+
+		auto p2 = p1.Except( [&p2_ok] () { p2_ok = true; });
+		TEST( p2_ok );
+		TEST( AsyncTask(p2)->Status() == EStatus::Canceled );
+		
+		auto p3 = p2.Then( [&p3_ok] () { p3_ok = true; });
+		
+		TEST( Scheduler().Wait({ AsyncTask(p3) }));
+		TEST( p3_ok );
+		TEST( AsyncTask(p3)->Status() == EStatus::Completed );
+	}
 }
 
 
@@ -105,6 +132,7 @@ extern void UnitTest_Promise ()
 	Promise_Test2();
 	Promise_Test3();
 	Promise_Test4();
+	Promise_Test5();
 
 	AE_LOGI( "UnitTest_Promise - passed" );
 }

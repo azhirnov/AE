@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #pragma once
 
@@ -21,8 +21,8 @@ namespace AE::STL
 	// variables
 	private:
 		AAsset *	_asset		= null;
-		BytesU		_fileSize;
-		BytesU		_position;
+		Bytes		_fileSize;
+		Bytes		_position;
 
 
 	// methods
@@ -39,17 +39,17 @@ namespace AE::STL
 		}
 
 		bool	IsOpen ()	const override		{ return _asset != null; }
-		BytesU	Position ()	const override		{ return _position; }
-		BytesU	Size ()		const override		{ return _fileSize; }
+		Bytes	Position ()	const override		{ return _position; }
+		Bytes	Size ()		const override		{ return _fileSize; }
 		
-		bool	SeekSet (BytesU pos) override
+		bool	SeekSet (Bytes pos) override
 		{
-			return AAsset_seek( _asset, size_t(pos), SEEK_SET ) != -1;
+			return AAsset_seek( _asset, usize(pos), SEEK_SET ) != -1;
 		}
 
-		BytesU	Read2 (OUT void *buffer, BytesU size) override
+		Bytes	Read2 (OUT void *buffer, Bytes size) override
 		{
-			return BytesU{ AAsset_read( _asset, buffer, size_t(size) )};
+			return Bytes{ AAsset_read( _asset, buffer, usize(size) )};
 		}
 	};
 

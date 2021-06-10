@@ -9,6 +9,12 @@ set_property( TARGET "Tests.Graphics" PROPERTY FOLDER "EngineTests" )
 target_link_libraries( "Tests.Graphics" PUBLIC "Graphics" )
 target_compile_definitions( "Tests.Graphics" PUBLIC AE_TEST_GRAPHICS )
 
+target_compile_definitions( "Tests.Graphics" PUBLIC
+	AE_PIPELINE_COMPILER_LIBRARY="${AE_PIPELINE_COMPILER_LIBRARY}"
+	AE_SAMPLER_PACKER_LIBRARY="${AE_SAMPLER_PACKER_LIBRARY}"
+	AE_CURRENT_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+)
+
 if (TARGET "ResourcePacker")
 	add_dependencies( "Tests.Graphics" "ResourcePacker" )
 endif ()

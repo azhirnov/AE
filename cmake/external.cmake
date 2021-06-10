@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+# Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 # detect target platform
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")

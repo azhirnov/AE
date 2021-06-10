@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020,  Zhirnov Andrey. For more information see 'LICENSE'
+// Copyright (c) 2018-2021,  Zhirnov Andrey. For more information see 'LICENSE'
 
 #include "stl/Containers/FixedArray.h"
 #include "UnitTest_Common.h"
@@ -72,7 +72,7 @@ namespace
 			FixedArray< T, 16 >	arr2 = { T(6), T(7), T(8), T(9), T(3), T(4) };
 
 			arr2 = ArrayView<T>( arr1 );
-			TEST( arr2 == arr1 );
+			TEST( arr2.ToArrayView() == arr1.ToArrayView() ); // TODO: fix
 
 			//arr1 = arr1;	// error
 		}
@@ -82,17 +82,23 @@ namespace
 
 	static void  FixedArray_Test4 ()
 	{
-		constexpr size_t	a1 = sizeof(FixedArray<char, 8>);
-		constexpr size_t	a2 = alignof(FixedArray<char, 8>);
+		constexpr usize	a1 = sizeof(FixedArray<char, 8>);
+		constexpr usize	a2 = alignof(FixedArray<char, 8>);
 
-		STATIC_ASSERT( a1 == 9 );
+		STATIC_ASSERT( a1 == (1 + 8) );
 		STATIC_ASSERT( a2 == 1 );
 		
-		constexpr size_t	b1 = sizeof(FixedArray<double, 8>);
-		constexpr size_t	b2 = alignof(FixedArray<double, 8>);
+		constexpr usize	b1 = sizeof(FixedArray<double, 8>);
+		constexpr usize	b2 = alignof(FixedArray<double, 8>);
 
-		STATIC_ASSERT( b1 == 8*9 );
+	#if defined(PLATFORM_ANDROID) and defined(__i386__)
+		STATIC_ASSERT( alignof(double) == 4 );
+		STATIC_ASSERT( b1 == (4 + 8*8) );
+		STATIC_ASSERT( b2 == 4 );
+	#else
+		STATIC_ASSERT( b1 == (8 + 8*8) );
 		STATIC_ASSERT( b2 == 8 );
+	#endif
 	}
 }
 

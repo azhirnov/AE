@@ -127,6 +127,11 @@ UniquePtr<IApplication::IAppListener>  AE_OnAppCreated ()
     return MakeUnique<AppListener>();
 }
 
+void  AE_OnAppDestroyed ()
+{
+    // do nothing
+}
+
 extern "C" JNIEXPORT jint  JNI_OnLoad (JavaVM* vm, void*)
 {
 return AndroidApplication::OnJniLoad( vm );
